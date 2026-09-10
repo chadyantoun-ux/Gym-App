@@ -677,3 +677,43 @@ committed **before its author had finished or reported it**, and the history att
 unrelated change. The branch was not rewritten because another agent was committing to it.
 **Rule, now in CLAUDE.md §4b:** commit named paths, never `-A`, whenever anything else is in flight —
 and if you don't know what else is running, name paths anyway.
+
+### 2026-09-10 — Ghost, not prefill — and the argument is a data bug, not a purity one
+The design prefills the weight field from last session. `ux-designer` ruled **ghost**, and the decisive
+reason is not provenance: the prototype prefills `w` and leaves `r` blank, which is WO-001's
+`incomplete` — so **every exercise he skips becomes a blocked save with a `no reps` token, on a screen
+he never visited.** A convenience feature that silently arms a refusal.
+The ergonomics are bought back another way: **the first `+` on an empty weight field adopts last
+session's weight; the second steps from it.** He tapped for it, so provenance is intact. That is
+WO-001 §2.8's "normalise, don't also step" precedent reused.
+
+### 2026-09-10 — In a mono-signal palette, refusal is form, not colour
+2a has one signal colour, so a refusal cannot be distinguished from advice by hue. Four carriers at
+once: a four-sided border where advice has a left rule, a literal `!`, the headline `Not saved.`, and
+tappable rows — the only block in the app that has them.
+**The new problem one-exercise-per-screen creates:** the offending row can be on a screen he is not
+looking at. So a problem row **navigates**, and a fixed-height **fix bar** rides that screen
+(`{p} sets left to fix.` / `BACK TO SAVE`) and never disappears while a refusal stands.
+
+### 2026-09-10 — The verdict kicker names the block, not the finding
+`PHAT.verdict` returns `{t,x,x2,rule}` where `t` is a direction token, not a label — it has no kicker
+string and **must not gain one**. The design's `Overload` / `Hold` / `Volume up` kickers have no engine
+source, and authoring them in the view would be a second, shorter verdict that can disagree with `x`.
+Ruled: four fixed view-owned labels that say what the block *is* — `WAITING` / `VERDICT` /
+`SPEED WORK` / `DELOAD WEEK` — with the silence body `Nothing to say until all {s} sets are in.`
+
+### 2026-09-10 — No control anywhere reduces the length of the log
+`SWITCH TO AN EMPTY LOG` is **deleted, not confirmed.** Demo mode already gives him a clean slate to
+look at, so a control whose only function is to destroy history has no job left. Demo mode carries a
+visible band on all ten screens; the demo store is a separate key and the real log is never written.
+**Rules out:** any button, anywhere, that shortens `phat:v1:log`. Export exists for leaving; deletion
+is not a feature.
+
+### 2026-09-10 — A third contrast failure, found by measuring on the right surface
+`.lbl` at `.50` opacity is **4.3 : 1 on `--surface`** — the earlier audit measured it on `--bg` and
+passed it. It is used inside every surface card.
+**And the pips:** raising `.18` to a passing `.45` would erase the done/upcoming distinction the
+opacity was carrying. So the meaning moves to text (`Exercise 3 of 7`), the strip becomes
+`aria-hidden`, and the painted pips distinguish by **form** — filled, amber double-height, outline-only.
+**Worth keeping as a method:** when a contrast fix would destroy the signal the colour was carrying,
+move the signal to text and let the graphic become decoration.
