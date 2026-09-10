@@ -24,13 +24,26 @@
           `includeCut` STAYS ON DISK: a later item stops reading it, and
           deleting a key his data already contains is data loss with a tidy
           justification (WO-003 Decision 6).
-     A store written by any earlier version must still load, forever. */
-  var SCHEMA_VERSION = 3;
-  /* The version that introduced the dateBasis marking pass. A store at or past
-     this has already been marked; running the pass again would relabel rows
-     written AFTER WO-001 (which are local-dated) as "utc". Gate on this, never
-     on SCHEMA_VERSION. */
+       4  WO-004 — the plan document. Sessions written from here on may carry
+          `planId`. NOTHING existing is stamped: an absent planId MEANS the
+          shipped PHAT plan, resolved at read time by planIdOf, so the v4 pass
+          touches not one stored session and adds not one key to the log store.
+          The only thing it writes is the version itself, so the store stops
+          understating its own shape to WO-002's importer and to sync.
+          Plans live in their own store (`phat:v1:plans`), not in the log.
+     A store written by any earlier version must still load, forever.
+     WO-002's importer therefore owes schema 2, 3 AND 4. */
+  var SCHEMA_VERSION = 4;
+  /* EVERY migration pass gates on its OWN constant, never on SCHEMA_VERSION.
+     The near-miss on record (decisions.md, "Schema 3, and what it obliges"):
+     the dateBasis pass was gated on `logVer < SCHEMA_VERSION`, so bumping the
+     constant would have re-run it over a v2 store and relabelled correctly
+     local-dated, post-WO-001 sessions as "utc" — silently corrupting the
+     provenance flag every date window depends on. Bumping to 4 is the same
+     trap one version later, which is why V_STATEKEYS exists below. */
   var V_DATEBASIS = 2;
+  var V_STATEKEYS = 3;   /* the four V1/D1/W1 keys — was `logVer < SCHEMA_VERSION` */
+  var V_PLAN = 4;        /* the plan document */
   /* The keys schema 3 adds to the log store, and their defaults. Built fresh
      on every call — a shared {} default would be handed to two stores. */
   var V3_KEYS = ["reintro", "lastReintroDate", "calChangedAt", "deload"];
@@ -370,8 +383,8 @@
     return { status: "ok", draft: v };
   }
 
-  /* buildSession(draft, dayId, dateStr, id)
-       → { id, date, dayId, entries } | null
+  /* buildSession(draft, dayId, dateStr, id, planId)
+       → { id, date, dayId, planId?, entries } | null
 
      The exact object finish() hands to save(), built with no DOM and no S, so
      the serialized JSON can be asserted directly (W2).
@@ -392,8 +405,15 @@
 
      Zero complete sets is NOT a refusal — a notes-only entry is preserved and
      returned. Whether an empty session is worth saving is UI policy and stays
-     in finish() ("Nothing logged yet."), so that this function is pure shape. */
-  function buildSession(draft, dayId, dateStr, id) {
+     in finish() ("Nothing logged yet."), so that this function is pure shape.
+
+     `planId` (schema 4) is OPTIONAL and is omitted from the object entirely
+     when it is not a non-empty string — the four-argument call is byte-for-byte
+     the session it always built. Absence is not a hole: planIdOf() reads an
+     absent planId as the shipped PHAT plan, which is what every session logged
+     before schema 4 was. It is NOT a refusal like a missing date, because a
+     missing date is unrecoverable and a missing planId is not. */
+  function buildSession(draft, dayId, dateStr, id, planId) {
     var v = validateDraft(draft);
     if (!v.ok) return null;
 
@@ -417,7 +437,10 @@
 
     /* Key order is the draft's insertion order, so JSON.stringify is stable
        and QA can assert on the string. */
-    return { id: sid, date: date, dayId: day, entries: v.entries };
+    var out = { id: sid, date: date, dayId: day };
+    if (typeof planId === "string" && planId.trim() !== "") out.planId = planId.trim();
+    out.entries = v.entries;
+    return out;
   }
 
   /* --------------------------------------------------- session history */
@@ -609,10 +632,692 @@
     return null;
   }
 
+  /* ====================================================== the plan document
+
+     WO-004 W2. The structure a plan lives in, and the identity rules that make
+     a logged set findable forever.
+
+     IDENTITY, and why it is opaque
+     ------------------------------
+     An exercise is identified by `id`. The id is generated once, is never
+     derived from a name, and is NEVER rewritten - not by a rename, not by a
+     reorder, not by copying the plan. `n` is a display field and nothing else.
+
+     The design prototype keyed exercises `slug(name) + ":" + kind`. Combined
+     with a plan editor that can rename, that makes a typo a data-loss event:
+     every engine in this file reads history by exercise id (`lastFor`,
+     `e1rmByDate`, `liftDays`, `speedLoad`, `d1Rows`, `painWindow`, and the
+     `entries` object of every stored session is keyed by it), so a renamed
+     exercise would orphan its entire history in silence. It also collapsed the
+     two "Skull crusher" slots - d1h is 3x6-10 on a power day, d5i is 3x12-15
+     on a hypertrophy day - into one history, which is a second bug wearing the
+     same coat. Rejected outright (WO-004 C-6, CLAUDE.md 3.3).
+
+     `lift` - two ids, one lift
+     --------------------------
+     The design's trend requirement is real and is kept by a SEPARATE field.
+     `lift` is an explicit "this is the same movement as" grouping. d1h and d5i
+     share `lift`, so the Trend tab can chart one Skull crusher line, while
+     `lastFor("d1h")` and `lastFor("d5i")` stay two different histories.
+
+     Nothing that reads stored sets may group by `lift`. `lift` is plan data:
+     it is read live off the plan document, it is never written into a session,
+     and it can therefore be re-grouped later without touching a logged number.
+     `lift` is also an opaque id and is NOT rewritten by a rename, or the
+     grouping would break on the same rename this whole section exists to
+     survive. The lift's DISPLAY name is resolved at read time from the plan
+     (`liftName`), so renaming an exercise renames its trend line, correctly.
+
+     The id space
+     ------------
+     Day ids, exercise ids and lift ids share ONE namespace per plan, so a
+     minted id cannot collide across kinds either. Minted ids look like
+     `x_3f9dz01`. The shipped plan's ids (`d1`..`d5`, `d1a`..`d5j`, `l_row`...)
+     are hand-authored FROZEN TOKENS in that same space: they read like words,
+     they were never derived from a name, and no code may ever recompute them
+     from `n`. `d1..d5` and `d1a..d5j` do not move, ever - `REINTRO_ORDER`,
+     `SPEED_SRC` and the caller's `KEY_LIFTS` are all keyed by them, and the
+     stored `reintro` counter is keyed by dayId (WO-004 C-5).
+
+     Purity. Nothing in this section reads the clock, the DOM or storage, and
+     no function here mutates its argument: every editor returns a NEW plan. */
+
+  var PHAT_PLAN_ID = "phat";
+  var PLAN_KINDS = ["power", "hyp", "speed"];
+  /* Rule I1's implement tags. Exported so an add-exercise form cannot drift
+     from the validator, for the same reason LIMITS is exported. */
+  var PLAN_IMPLEMENTS = ["bb", "db", "machine", "cable", "bodyweight"];
+
+  var ID_KIND = { ex: "x", day: "y", lift: "l", plan: "p" };
+  var idSeq = 0;
+
+  function tok36() {
+    return Math.floor(Math.random() * 1679616).toString(36);
+  }
+
+  /* mintId(taken, kind) -> a fresh opaque id.
+
+     `taken` is an object used as a set (see takenIds) or an array of ids.
+     Math.random rather than crypto.randomUUID: this has to run from file://
+     on any browser, and the value is probed against `taken` regardless - the
+     guarantee is the probe, not the entropy. The function CANNOT return an id
+     that is already taken: if 64 random draws all collide it falls through to
+     a deterministic walk that terminates on the first free id. */
+  function mintId(taken, kind) {
+    var k = own(ID_KIND, str(kind)) ? ID_KIND[str(kind)] : "x";
+    var used = {}, i, id;
+    if (Array.isArray(taken)) {
+      for (i = 0; i < taken.length; i++) if (typeof taken[i] === "string") used[taken[i]] = true;
+    } else if (isObj(taken)) {
+      used = taken;
+    }
+    for (i = 0; i < 64; i++) {
+      idSeq = (idSeq + 1) % 1679616;
+      id = k + "_" + tok36() + tok36() + idSeq.toString(36);
+      if (!own(used, id)) return id;
+    }
+    i = 0;
+    do { id = k + "_z" + (i++).toString(36); } while (own(used, id));
+    return id;
+  }
+
+  /* Every id in use anywhere in a plan, as a set. Plan id, day ids, exercise
+     ids and lift ids together - one namespace (see above). */
+  function takenIds(plan) {
+    var t = {};
+    if (!isObj(plan)) return t;
+    if (typeof plan.planId === "string" && plan.planId !== "") t[plan.planId] = true;
+    var days = Array.isArray(plan.days) ? plan.days : [];
+    for (var i = 0; i < days.length; i++) {
+      var d = days[i];
+      if (!isObj(d)) continue;
+      if (typeof d.id === "string" && d.id !== "") t[d.id] = true;
+      var ex = Array.isArray(d.ex) ? d.ex : [];
+      for (var j = 0; j < ex.length; j++) {
+        var e = ex[j];
+        if (!isObj(e)) continue;
+        if (typeof e.id === "string" && e.id !== "") t[e.id] = true;
+        if (typeof e.lift === "string" && e.lift !== "") t[e.lift] = true;
+      }
+    }
+    return t;
+  }
+
+  function newExId(plan) { return mintId(takenIds(plan), "ex"); }
+  function newDayId(plan) { return mintId(takenIds(plan), "day"); }
+  function newLiftId(plan) { return mintId(takenIds(plan), "lift"); }
+
+  /* A structural clone. JSON, deliberately: it drops functions, prototypes and
+     cycles, which is exactly what a plan document is not allowed to contain.
+     Returns null rather than throwing on anything unclonable. */
+  function clonePlan(plan) {
+    try { return JSON.parse(JSON.stringify(plan)); }
+    catch (e) { return null; }
+  }
+
+  function deepFreeze(o) {
+    if (o === null || typeof o !== "object" || Object.isFrozen(o)) return o;
+    Object.freeze(o);
+    Object.keys(o).forEach(function (k) { deepFreeze(o[k]); });
+    return o;
+  }
+
+  /* ----------------------------------------------------------- reading */
+
+  /* planIdOf(session) -> the plan a session belongs to.
+
+     A session written before schema 4 carries no planId. Its absence MEANS the
+     shipped PHAT plan: there was only ever one plan, and its ids are d1..d5 /
+     d1a..d5j. Resolving that at READ time is why the v4 migration does not
+     have to touch a single stored session (see migrateStore). */
+  function planIdOf(session) {
+    if (isObj(session) && typeof session.planId === "string" && session.planId.trim() !== "") {
+      return session.planId.trim();
+    }
+    return PHAT_PLAN_ID;
+  }
+
+  function planDays(plan) {
+    if (Array.isArray(plan)) return plan;              /* a bare days array */
+    return (isObj(plan) && Array.isArray(plan.days)) ? plan.days : [];
+  }
+
+  function exById(plan, exId) {
+    var id = str(exId).trim();
+    if (id === "") return null;
+    var days = planDays(plan);
+    for (var i = 0; i < days.length; i++) {
+      var ex = isObj(days[i]) && Array.isArray(days[i].ex) ? days[i].ex : [];
+      for (var j = 0; j < ex.length; j++) {
+        if (isObj(ex[j]) && str(ex[j].id).trim() === id) return ex[j];
+      }
+    }
+    return null;
+  }
+
+  /* The id of the day an exercise sits on, or null. */
+  function dayIdOfEx(plan, exId) {
+    var id = str(exId).trim();
+    if (id === "") return null;
+    var days = planDays(plan);
+    for (var i = 0; i < days.length; i++) {
+      var ex = isObj(days[i]) && Array.isArray(days[i].ex) ? days[i].ex : [];
+      for (var j = 0; j < ex.length; j++) {
+        if (isObj(ex[j]) && str(ex[j].id).trim() === id) return str(days[i].id).trim() || null;
+      }
+    }
+    return null;
+  }
+
+  function liftOf(plan, exId) {
+    var e = exById(plan, exId);
+    if (!e) return null;
+    var l = str(e.lift).trim();
+    return l === "" ? null : l;
+  }
+
+  /* Every exercise id in a lift group, in plan order. This is the ONLY sanctioned
+     way to widen a per-exercise read into a per-lift one: the Trend tab calls the
+     existing id-keyed engines once per id and merges. No engine takes a liftId. */
+  function exIdsForLift(plan, liftId) {
+    var want = str(liftId).trim(), out = [];
+    if (want === "") return out;
+    var days = planDays(plan);
+    for (var i = 0; i < days.length; i++) {
+      var ex = isObj(days[i]) && Array.isArray(days[i].ex) ? days[i].ex : [];
+      for (var j = 0; j < ex.length; j++) {
+        if (isObj(ex[j]) && str(ex[j].lift).trim() === want) {
+          var id = str(ex[j].id).trim();
+          if (id !== "" && out.indexOf(id) < 0) out.push(id);
+        }
+      }
+    }
+    return out;
+  }
+
+  /* The display name of a lift group: the name of the FIRST exercise in plan
+     order carrying it. Resolved at read time on purpose - rename the exercise
+     and its trend line is renamed with it, which is the whole point of keeping
+     the name out of the identity. */
+  function liftName(plan, liftId) {
+    var want = str(liftId).trim();
+    if (want === "") return "";
+    var days = planDays(plan);
+    for (var i = 0; i < days.length; i++) {
+      var ex = isObj(days[i]) && Array.isArray(days[i].ex) ? days[i].ex : [];
+      for (var j = 0; j < ex.length; j++) {
+        if (isObj(ex[j]) && str(ex[j].lift).trim() === want) {
+          var n = str(ex[j].n).trim();
+          return n !== "" ? n : want;
+        }
+      }
+    }
+    return want;
+  }
+
+  /* Every lift group in a plan: [{lift, name, exIds}] in plan order. The Trend
+     tab's index. */
+  function planLifts(plan) {
+    var seen = {}, out = [];
+    var days = planDays(plan);
+    for (var i = 0; i < days.length; i++) {
+      var ex = isObj(days[i]) && Array.isArray(days[i].ex) ? days[i].ex : [];
+      for (var j = 0; j < ex.length; j++) {
+        if (!isObj(ex[j])) continue;
+        var l = str(ex[j].lift).trim();
+        if (l === "" || own(seen, l)) continue;
+        seen[l] = true;
+        out.push({ lift: l, name: liftName(plan, l), exIds: exIdsForLift(plan, l) });
+      }
+    }
+    return out;
+  }
+
+  /* ---------------------------------------------------------- validation */
+
+  function isInt(v, lo, hi) {
+    return typeof v === "number" && isFinite(v) && Math.floor(v) === v && v >= lo && v <= hi;
+  }
+
+  /* validatePlan(plan) -> {ok, problems:[{scope, id, field, reason}]}
+
+     Rejects loudly; it never repairs and never drops. Reasons are developer
+     signals, never copy (decisions.md, 2026-09-10: "A reason is a developer
+     signal, never copy").
+
+     The load-bearing rule: NO exercise may exist without `k` and `implement`
+     (WO-004 C-7). `k` selects P1 vs H1 vs the speed branch and R1's rest row;
+     `implement` drives Z2's load word and I2's increment line. An untyped
+     exercise is an exercise the app would guess about, out loud, in kilograms. */
+  function validatePlan(plan) {
+    var problems = [];
+    function bad(scope, id, field, reason) {
+      problems.push({ scope: scope, id: id, field: field, reason: reason });
+    }
+    if (!isObj(plan)) {
+      bad("plan", null, null, "missing");
+      return { ok: false, problems: problems };
+    }
+    if (typeof plan.planId !== "string" || plan.planId.trim() === "") bad("plan", null, "planId", "missing");
+    if (typeof plan.name !== "string" || plan.name.trim() === "") bad("plan", str(plan.planId), "name", "missing");
+    if (!Array.isArray(plan.days)) {
+      bad("plan", str(plan.planId), "days", "type");
+      return { ok: false, problems: problems };
+    }
+    var seen = {};
+    if (typeof plan.planId === "string" && plan.planId.trim() !== "") seen[plan.planId.trim()] = true;
+    plan.days.forEach(function (d, di) {
+      if (!isObj(d)) { bad("day", String(di), null, "type"); return; }
+      var did = str(d.id).trim();
+      if (did === "") bad("day", String(di), "id", "missing");
+      else if (own(seen, did)) bad("day", did, "id", "duplicate");
+      else seen[did] = true;
+      if (typeof d.name !== "string" || d.name.trim() === "") bad("day", did || String(di), "name", "missing");
+      if (!Array.isArray(d.ex)) { bad("day", did || String(di), "ex", "type"); return; }
+      d.ex.forEach(function (e, ei) {
+        var where = did + "[" + ei + "]";
+        if (!isObj(e)) { bad("ex", where, null, "type"); return; }
+        var id = str(e.id).trim();
+        if (id === "") bad("ex", where, "id", "missing");
+        else if (own(seen, id)) bad("ex", id, "id", "duplicate");
+        else seen[id] = true;
+        if (typeof e.n !== "string" || e.n.trim() === "") bad("ex", id || where, "n", "missing");
+        if (!isInt(e.s, 1, 20)) bad("ex", id || where, "s", "range");
+        if (!isInt(e.lo, R_MIN, R_MAX)) bad("ex", id || where, "lo", "range");
+        if (!isInt(e.hi, R_MIN, R_MAX)) bad("ex", id || where, "hi", "range");
+        if (isInt(e.lo, R_MIN, R_MAX) && isInt(e.hi, R_MIN, R_MAX) && e.lo > e.hi) {
+          bad("ex", id || where, "hi", "range");
+        }
+        if (PLAN_KINDS.indexOf(e.k) < 0) bad("ex", id || where, "k", "enum");
+        if (PLAN_IMPLEMENTS.indexOf(e.implement) < 0) bad("ex", id || where, "implement", "enum");
+        if (str(e.lift).trim() === "") bad("ex", id || where, "lift", "missing");
+        if (e.cut !== undefined && e.cut !== 1) bad("ex", id || where, "cut", "type");
+        if (e.cue !== undefined && typeof e.cue !== "string") bad("ex", id || where, "cue", "type");
+      });
+    });
+    /* Second pass, after every day and exercise id is known. A lift token is
+       SHARED on purpose (d1h and d5i are both l_skull), so it is not checked
+       for duplication against itself - only against the id namespace, where a
+       collision would make one token mean two things. */
+    plan.days.forEach(function (d) {
+      if (!isObj(d) || !Array.isArray(d.ex)) return;
+      d.ex.forEach(function (e) {
+        if (!isObj(e)) return;
+        var lift = str(e.lift).trim();
+        if (lift !== "" && own(seen, lift)) bad("ex", str(e.id).trim(), "lift", "duplicate");
+      });
+    });
+    return { ok: problems.length === 0, problems: problems };
+  }
+
+  /* ------------------------------------------------------------- editing
+
+     Every function below returns {ok, plan, ...}. On ok:false the ORIGINAL
+     plan comes back untouched and `problems` says why - a rejected edit must
+     never half-apply. */
+
+  function editFail(plan, problems) {
+    return { ok: false, plan: plan, problems: problems };
+  }
+
+  /* renameExercise(plan, exId, name) -> {ok, plan, problems}
+
+     The proof that a rename is cosmetic. It writes `n`. It does not touch
+     `id`, it does not touch `lift`, it does not touch a stored session, and
+     the history keyed by `id` is exactly as reachable afterwards. */
+  function renameExercise(plan, exId, name) {
+    var id = str(exId).trim();
+    var nm = (typeof name === "string") ? name.trim() : "";
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (id === "") return editFail(plan, [{ scope: "ex", id: null, field: "id", reason: "missing" }]);
+    if (nm === "") return editFail(plan, [{ scope: "ex", id: id, field: "n", reason: "empty" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (!exById(plan, id)) return editFail(plan, [{ scope: "ex", id: id, field: "id", reason: "unknown" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var target = exById(next, id);
+    target.n = nm;
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  function renameDay(plan, dayId, name) {
+    var id = str(dayId).trim();
+    var nm = (typeof name === "string") ? name.trim() : "";
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (nm === "") return editFail(plan, [{ scope: "day", id: id, field: "name", reason: "empty" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var days = planDays(next), hit = null;
+    for (var i = 0; i < days.length; i++) if (str(days[i].id).trim() === id) hit = days[i];
+    if (!hit) return editFail(plan, [{ scope: "day", id: id, field: "id", reason: "unknown" }]);
+    hit.name = nm;
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  /* addExercise(plan, dayId, spec) -> {ok, plan, exId, lift, problems}
+
+     `k` and `implement` are REQUIRED. There is no path to an untyped exercise
+     and no default is guessed here (WO-004 C-7): the add flow asks, or the add
+     is refused. `lift` is optional - supply one to say "this is the same
+     movement as that other slot", omit it and a fresh lift group is minted. */
+  function addExercise(plan, dayId, spec) {
+    var did = str(dayId).trim();
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (!isObj(spec)) return editFail(plan, [{ scope: "ex", id: null, field: null, reason: "missing" }]);
+
+    var problems = [];
+    var nm = (typeof spec.n === "string") ? spec.n.trim() : "";
+    if (nm === "") problems.push({ scope: "ex", id: null, field: "n", reason: "missing" });
+    if (!isInt(spec.s, 1, 20)) problems.push({ scope: "ex", id: null, field: "s", reason: "range" });
+    if (!isInt(spec.lo, R_MIN, R_MAX)) problems.push({ scope: "ex", id: null, field: "lo", reason: "range" });
+    if (!isInt(spec.hi, R_MIN, R_MAX)) problems.push({ scope: "ex", id: null, field: "hi", reason: "range" });
+    if (isInt(spec.lo, R_MIN, R_MAX) && isInt(spec.hi, R_MIN, R_MAX) && spec.lo > spec.hi) {
+      problems.push({ scope: "ex", id: null, field: "hi", reason: "range" });
+    }
+    if (PLAN_KINDS.indexOf(spec.k) < 0) problems.push({ scope: "ex", id: null, field: "k", reason: "enum" });
+    if (PLAN_IMPLEMENTS.indexOf(spec.implement) < 0) problems.push({ scope: "ex", id: null, field: "implement", reason: "enum" });
+    if (spec.cut !== undefined && spec.cut !== 1) problems.push({ scope: "ex", id: null, field: "cut", reason: "type" });
+    if (spec.cue !== undefined && typeof spec.cue !== "string") problems.push({ scope: "ex", id: null, field: "cue", reason: "type" });
+    if (problems.length) return { ok: false, plan: plan, exId: null, lift: null, problems: problems };
+
+    var next = clonePlan(plan);
+    if (!next) return { ok: false, plan: plan, exId: null, lift: null,
+                        problems: [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }] };
+    var days = planDays(next), day = null, i;
+    for (i = 0; i < days.length; i++) if (str(days[i].id).trim() === did) day = days[i];
+    if (!day) return { ok: false, plan: plan, exId: null, lift: null,
+                       problems: [{ scope: "day", id: did, field: "id", reason: "unknown" }] };
+    if (!Array.isArray(day.ex)) day.ex = [];
+
+    var taken = takenIds(next);
+    var exId = mintId(taken, "ex");
+    taken[exId] = true;                                  /* before the lift mint */
+    var lift = (typeof spec.lift === "string" && spec.lift.trim() !== "")
+      ? spec.lift.trim()
+      : mintId(taken, "lift");
+
+    var e = { id: exId, n: nm, s: spec.s, lo: spec.lo, hi: spec.hi,
+              k: spec.k, implement: spec.implement, lift: lift };
+    if (spec.cut === 1) e.cut = 1;
+    if (typeof spec.cue === "string" && spec.cue.trim() !== "") e.cue = spec.cue.trim();
+    day.ex.push(e);
+    return { ok: true, plan: next, exId: exId, lift: lift, problems: [] };
+  }
+
+  function addDay(plan, name) {
+    var nm = (typeof name === "string") ? name.trim() : "";
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (nm === "") return editFail(plan, [{ scope: "day", id: null, field: "name", reason: "missing" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    if (!Array.isArray(next.days)) next.days = [];
+    var id = mintId(takenIds(next), "day");
+    next.days.push({ id: id, name: nm, ex: [] });
+    return { ok: true, plan: next, dayId: id, problems: [] };
+  }
+
+  /* moveExercise(plan, dayId, from, to) -> {ok, plan, problems}
+     Reorder within a day. Order is presentation; no id moves. */
+  function moveExercise(plan, dayId, from, to) {
+    var did = str(dayId).trim();
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var days = planDays(next), day = null, i;
+    for (i = 0; i < days.length; i++) if (str(days[i].id).trim() === did) day = days[i];
+    if (!day || !Array.isArray(day.ex)) return editFail(plan, [{ scope: "day", id: did, field: "id", reason: "unknown" }]);
+    var n = day.ex.length;
+    if (!isInt(from, 0, n - 1) || !isInt(to, 0, n - 1)) {
+      return editFail(plan, [{ scope: "day", id: did, field: "index", reason: "range" }]);
+    }
+    day.ex.splice(to, 0, day.ex.splice(from, 1)[0]);
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  /* removeExercise(plan, exId) -> {ok, plan, removed, problems}
+
+     Removes the slot from the PLAN. It does not and cannot delete a logged
+     set: history lives in `session.entries[exId]` and is untouched, so putting
+     the exercise back with the same id restores the whole trend. The removed
+     object is RETURNED so an undo can put it back byte-for-byte. */
+  function removeExercise(plan, exId) {
+    var id = str(exId).trim();
+    if (!isObj(plan)) return { ok: false, plan: plan, removed: null, problems: [{ scope: "plan", id: null, field: null, reason: "missing" }] };
+    if (plan.readOnly === true) return { ok: false, plan: plan, removed: null, problems: [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }] };
+    if (!exById(plan, id)) return { ok: false, plan: plan, removed: null, problems: [{ scope: "ex", id: id, field: "id", reason: "unknown" }] };
+    var removed = clonePlan(exById(plan, id));
+    var next = clonePlan(plan);
+    if (!next) return { ok: false, plan: plan, removed: null, problems: [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }] };
+    var days = planDays(next);
+    for (var i = 0; i < days.length; i++) {
+      var ex = Array.isArray(days[i].ex) ? days[i].ex : [];
+      for (var j = 0; j < ex.length; j++) {
+        if (isObj(ex[j]) && str(ex[j].id).trim() === id) { ex.splice(j, 1); j--; }
+      }
+    }
+    return { ok: true, plan: next, removed: removed, problems: [] };
+  }
+
+  /* copyPlan(plan, name, todayStr) -> {ok, plan, problems}
+
+     IDS ARE PRESERVED. A copy is "my version of PHAT", not a new programme:
+     re-minting the ids would orphan every logged set in exactly the way this
+     whole section exists to prevent. Only `planId`, `name`, `from`, `readOnly`
+     and `createdAt` change.
+
+     `todayStr` is passed in, never read from a clock - and if it is not a
+     usable local date, `createdAt` is null. A date nobody chose is a silent
+     wrong number (decisions.md, buildSession refuses rather than guessing). */
+  function copyPlan(plan, name, todayStr) {
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var srcName = (typeof plan.name === "string" && plan.name.trim() !== "") ? plan.name.trim() : str(plan.planId);
+    next.planId = mintId(takenIds(next), "plan");
+    next.name = (typeof name === "string" && name.trim() !== "") ? name.trim() : srcName + " — my version";
+    next.from = "Copied from " + srcName;
+    next.readOnly = false;
+    next.createdAt = dateOrNull(todayStr);
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  /* ------------------------------------------------- the shipped PHAT plan
+
+     The 42 coach-verified slots, byte-for-byte the ids, names, s/lo/hi/k/cut
+     and implement tags that shipped in index.html's PROGRAM, plus `lift` and
+     `cue`.
+
+     `days` is the same shape index.html calls PROGRAM, so PHAT.PHAT_PLAN.days
+     is a drop-in for it and findDay/exName keep working unchanged.
+
+     `wd` is the weekday label (B-31). It is display data and the correct
+     expression of the rest day the design tried to encode by renumbering the
+     days; nothing renders it yet.
+
+     CUES ARE TRANSCRIBED FROM THE DESIGN PROTOTYPE AND ARE NOT YET SIGNED OFF
+     (WO-004 C-8 is escalated to Chady). Nothing renders `cue` today. Two slots
+     deliberately carry NO cue - d2e "Glute-ham raise or lying leg curl" and
+     d3d "DB row or shrug" - because the design dropped the alternate and its
+     cue is wrong for the other half of the pair (B-28 / WO-004 W1).
+
+     LIFT GROUPS. Two slots share a lift if and only if they name the same
+     movement, plus each speed slot sharing its source lift's group (which is
+     what SPEED_SRC already asserts). Where the naming is ambiguous the slots
+     get SEPARATE lifts: a wrong grouping merges two lifts into one wrong
+     trend line, a missing grouping only costs a second line. */
+  var PHAT_PLAN = deepFreeze({
+    planId: PHAT_PLAN_ID,
+    name: "PHAT",
+    from: "Layne Norton, Power Hypertrophy Adaptive Training",
+    readOnly: true,
+    createdAt: null,
+    days: [
+      { id: "d1", name: "Upper power", wd: "Mon", ex: [
+        { id: "d1a", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_row",
+          cue: "Torso near-parallel, pull to the navel, no hitching." },
+        { id: "d1b", n: "Weighted pull-up", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_pullup",
+          cue: "Chest to the bar, control the descent." },
+        { id: "d1c", n: "Rack chin", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_rackchin", cut: 1,
+          cue: "Feet on the rack, squeeze at the top." },
+        { id: "d1d", n: "Flat DB press", s: 3, lo: 3, hi: 5, k: "power", implement: "db", lift: "l_dbbench",
+          cue: "Elbows at 45°, dumbbells stacked over the wrists." },
+        { id: "d1e", n: "Weighted dip", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_dip",
+          cue: "Slight forward lean for chest, upright for triceps." },
+        { id: "d1f", n: "Seated DB shoulder press", s: 3, lo: 6, hi: 10, k: "power", implement: "db", lift: "l_dbshoulder",
+          cue: "Ribs down, don't arch the lower back." },
+        { id: "d1g", n: "Cambered bar curl", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_barcurl",
+          cue: "Elbows pinned at the sides." },
+        { id: "d1h", n: "Skull crusher", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_skull",
+          cue: "Elbows still, lower to the forehead." }
+      ] },
+      { id: "d2", name: "Lower power", wd: "Tue", ex: [
+        { id: "d2a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_squat",
+          cue: "Brace hard, knees track over the toes, break at the hip and knee together." },
+        { id: "d2b", n: "Hack squat", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_hack",
+          cue: "Full depth before the knees drift forward." },
+        { id: "d2c", n: "Leg extension", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_legext", cut: 1,
+          cue: "Pause a beat at lockout." },
+        { id: "d2d", n: "Stiff-leg deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l_sldl",
+          cue: "Push the hips back, bar close, neutral spine." },
+        { id: "d2e", n: "Glute-ham raise or lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_ghr" },
+        { id: "d2f", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfstand",
+          cue: "Full stretch at the bottom, pause at the top." },
+        { id: "d2g", n: "Seated calf raise", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfseat",
+          cue: "Slow, no bouncing off the stretch." }
+      ] },
+      { id: "d3", name: "Back & shoulders", wd: "Thu", ex: [
+        { id: "d3a", n: "Row — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_row",
+          cue: "65–70% of your power-day top set. Moved fast, never ground." },
+        { id: "d3b", n: "Rack chin", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bodyweight", lift: "l_rackchin",
+          cue: "Feet on the rack, squeeze at the top." },
+        { id: "d3c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l_cablerow",
+          cue: "Chest up, drive the elbows back." },
+        { id: "d3d", n: "DB row or shrug", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_dbrow", cut: 1 },
+        { id: "d3e", n: "Close-grip pulldown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pulldown",
+          cue: "Lean back slightly, pull to the collarbone." },
+        { id: "d3f", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_dbpress",
+          cue: "Ribs down, press in a shallow arc." },
+        { id: "d3g", n: "Upright row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_uprightrow", cut: 1,
+          cue: "Lead with the elbows, stop at chest height." },
+        { id: "d3h", n: "Lateral raise", s: 3, lo: 12, hi: 20, k: "hyp", implement: "db", lift: "l_lateral",
+          cue: "Little fingers high, no swinging." }
+      ] },
+      { id: "d4", name: "Lower hypertrophy", wd: "Fri", ex: [
+        { id: "d4a", n: "Squat — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_squat",
+          cue: "65–70%. Explosive out of the hole, short rest." },
+        { id: "d4b", n: "Hack squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine", lift: "l_hack",
+          cue: "Depth before load." },
+        { id: "d4c", n: "Leg press", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legpress", cut: 1,
+          cue: "Don't let the lower back round off the pad." },
+        { id: "d4d", n: "Leg extension", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legext",
+          cue: "These should burn." },
+        { id: "d4e", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_rdl",
+          cue: "Hips back, hamstrings loaded, spine neutral." },
+        { id: "d4f", n: "Lying leg curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legcurl",
+          cue: "Hips down, curl to the glutes." },
+        { id: "d4g", n: "Seated leg curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legcurlseat", cut: 1,
+          cue: "Full range, slow return." },
+        { id: "d4h", n: "Donkey calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l_calfdonkey",
+          cue: "Deep stretch each rep." },
+        { id: "d4i", n: "Seated calf raise", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_calfseat",
+          cue: "No bouncing." }
+      ] },
+      { id: "d5", name: "Chest & arms", wd: "Sat", ex: [
+        { id: "d5a", n: "Flat DB press — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "db", lift: "l_dbbench",
+          cue: "65–70%. Fast off the chest, short rest." },
+        { id: "d5b", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_inclinedb",
+          cue: "30–35° bench, elbows tucked." },
+        { id: "d5c", n: "Machine chest press", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_machinepress",
+          cue: "Squeeze at the end of the press." },
+        { id: "d5d", n: "Incline cable fly", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_fly", cut: 1,
+          cue: "Slight elbow bend held throughout." },
+        { id: "d5e", n: "Cambered bar preacher curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_preacher",
+          cue: "No swinging off the pad." },
+        { id: "d5f", n: "DB concentration curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_concurl",
+          cue: "Elbow into the thigh, supinate hard." },
+        { id: "d5g", n: "Spider curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "bb", lift: "l_spider", cut: 1,
+          cue: "Arms hanging vertical." },
+        { id: "d5h", n: "Close-grip bench", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_cgbench",
+          cue: "Shoulder-width grip, elbows in." },
+        { id: "d5i", n: "Skull crusher", s: 3, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_skull",
+          cue: "Elbows still." },
+        { id: "d5j", n: "Rope pressdown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pressdown", cut: 1,
+          cue: "Spread the rope at the bottom." }
+      ] }
+    ]
+  });
+
+  /* ------------------------------------------------------ the plan store
+
+     Stored separately from the log (`phat:v1:plans`), on purpose: the log
+     store's shape is frozen by this change, so schema 4 adds not one key to
+     it and a v3 log store migrates by having its version stamped and nothing
+     else. The shipped PHAT plan is CODE, not data - it is never written to
+     storage, so it cannot go stale against logic.js.
+
+       { schemaVersion, plans:[<plan document>], activePlanId }
+
+     normalisePlanStore repairs additively and never drops: it stamps the
+     version, mints a `lift` for any exercise missing one, and mints an `id`
+     for any exercise or day missing one (an exercise with no id has no history
+     to lose, so minting is the only way it can ever have any). It rewrites no
+     existing value. */
+  function normalisePlanStore(store) {
+    var out = { store: store, changed: false, added: [] };
+    if (!isObj(store)) return out;
+    var next = copyObj(store), changed = false, added = [];
+
+    if (!Array.isArray(next.plans)) {
+      if (next.plans === undefined) { next.plans = []; changed = true; added.push("plans"); }
+      else return out;                       /* present but wrong type: refuse */
+    } else {
+      next.plans = next.plans.map(function (p) {
+        if (!isObj(p)) return p;
+        var np = clonePlan(p);
+        if (!np) return p;
+        var taken = takenIds(np), touched = false;
+        if (typeof np.planId !== "string" || np.planId.trim() === "") {
+          np.planId = mintId(taken, "plan"); taken[np.planId] = true; touched = true;
+        }
+        var days = Array.isArray(np.days) ? np.days : [];
+        days.forEach(function (d) {
+          if (!isObj(d)) return;
+          if (typeof d.id !== "string" || d.id.trim() === "") {
+            d.id = mintId(taken, "day"); taken[d.id] = true; touched = true;
+          }
+          (Array.isArray(d.ex) ? d.ex : []).forEach(function (e) {
+            if (!isObj(e)) return;
+            if (typeof e.id !== "string" || e.id.trim() === "") {
+              e.id = mintId(taken, "ex"); taken[e.id] = true; touched = true;
+            }
+            if (typeof e.lift !== "string" || e.lift.trim() === "") {
+              e.lift = mintId(taken, "lift"); taken[e.lift] = true; touched = true;
+            }
+          });
+        });
+        if (touched) { changed = true; added.push(str(np.planId)); }
+        return touched ? np : p;
+      });
+    }
+    if (next.activePlanId === undefined) { next.activePlanId = PHAT_PLAN_ID; changed = true; added.push("activePlanId"); }
+    if (next.schemaVersion !== SCHEMA_VERSION) { next.schemaVersion = SCHEMA_VERSION; changed = true; }
+    if (!changed) return out;
+    out.store = next; out.changed = true; out.added = added;
+    return out;
+  }
+
   /* --------------------------------------------------------- migration */
 
-  /* migrateStore(log, bw)
-       → { log, bw, changed, logChanged, bwChanged, notes }
+  /* migrateStore(log, bw, plans)
+       → { log, bw, plans, changed, logChanged, bwChanged, plansChanged, notes }
+
+     `plans` is optional and is the phat:v1:plans store. Omit it and `plans`
+     comes back undefined and `plansChanged` false — which is every caller
+     today, and every existing test.
 
      Non-destructive and idempotent. It NEVER rewrites a date string: a
      YYYY-MM-DD carries no offset, so the original local day of a UTC-stamped
@@ -628,11 +1333,11 @@
      - already migrated     → no change, no notes
      - anything unparseable → inputs returned untouched with an error note.
        This function must never throw; boot proceeds with whatever loaded. */
-  function migrateStore(log, bw) {
+  function migrateStore(log, bw, plans) {
     var notes = [];
     var out = {
-      log: log, bw: bw,
-      changed: false, logChanged: false, bwChanged: false,
+      log: log, bw: bw, plans: plans,
+      changed: false, logChanged: false, bwChanged: false, plansChanged: false,
       notes: notes
     };
     try {
@@ -742,7 +1447,7 @@
          Nothing is invented from nothing: an absent log store stays absent, so
          an empty install still boots with zero writes. */
       var v3Added = [], v3Bumped = false;
-      if (logVer < SCHEMA_VERSION && (nlog || logIsObj)) {
+      if (logVer < V_STATEKEYS && (nlog || logIsObj)) {
         if (!nlog) {
           nlog = {};
           Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
@@ -765,20 +1470,76 @@
         }
       }
 
+      /* ---- schema 4: the plan document (WO-004 W2) ----
+         The whole pass, and it is deliberately this small.
+
+         A session gains an OPTIONAL `planId`. Existing sessions are NOT
+         stamped with one: absence means the shipped PHAT plan, resolved at
+         read time by planIdOf. So every stored session, every entry key, every
+         date and every {w, r} comes out of this migration byte-identical, and
+         the rename that motivated the whole work order cannot reach a stored
+         value because a stored value never carried a name.
+
+         Not one key is added to the log store either — plans live in their own
+         store. All this pass writes is the version, so the store stops
+         understating its own shape to WO-002's importer and to any sync layer
+         (the same trade QA accepted for v2 -> v3: one idempotent boot write
+         beats a store that misreports itself for the rest of its life).
+
+         Gated on V_PLAN, never on SCHEMA_VERSION. */
+      var v4Bumped = false;
+      if (logVer < V_PLAN && (nlog || logIsObj)) {
+        if (!nlog) {
+          nlog = {};
+          Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
+        }
+        v4Bumped = nlog.schemaVersion !== SCHEMA_VERSION;
+        nlog.schemaVersion = SCHEMA_VERSION;
+        if (v4Bumped) {
+          notes.push({
+            level: "info", key: "log",
+            msg: "Schema " + V_PLAN + ": sessions may now carry planId. " +
+                 "No session was touched and no key was added."
+          });
+        }
+      }
+
+      /* ---- the plan store, if the caller has one ----
+         Absent (undefined) is the normal case today and does nothing: an empty
+         install still boots with zero writes. Repairs are additive only. */
+      var pres = { store: plans, changed: false, added: [] };
+      if (plans !== undefined && plans !== null) {
+        if (!isObj(plans)) {
+          notes.push({ level: "error", key: "plans", msg: "Plan store is not an object. Left untouched." });
+        } else {
+          pres = normalisePlanStore(plans);
+          if (pres.changed) {
+            notes.push({
+              level: "info", key: "plans",
+              msg: "Schema " + SCHEMA_VERSION + ": plan store normalised" +
+                   (pres.added.length ? " (" + pres.added.join(", ") + ")" : "") +
+                   ". No existing value was changed."
+            });
+          }
+        }
+      }
+
       if (nlog) out.log = nlog;
       if (nbw) out.bw = nbw;
+      out.plans = pres.store;
       /* changed drives the boot write. An empty store must not trigger one.
          The bodyweight store carries no schema-3 key, so a v2 bw store is not
          rewritten just to restamp its version — bwPayload() stamps it on the
          next real bodyweight entry. One less boot write, no content at stake. */
-      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped;
+      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped;
       out.bwChanged = markedBw > 0 || dropped.length > 0;
-      out.changed = out.logChanged || out.bwChanged;
+      out.plansChanged = pres.changed === true;
+      out.changed = out.logChanged || out.bwChanged || out.plansChanged;
       return out;
     } catch (err) {
       return {
-        log: log, bw: bw,
-        changed: false, logChanged: false, bwChanged: false,
+        log: log, bw: bw, plans: plans,
+        changed: false, logChanged: false, bwChanged: false, plansChanged: false,
         notes: [{ level: "error", key: null, msg: "Migration failed, data left untouched: " + (err && err.message) }]
       };
     }
@@ -3241,6 +4002,37 @@
     trainingWeeks: trainingWeeks,
     liftDays: liftDays,
     lastFor: lastFor,
+    /* ---- the plan document — WO-004 W2. Identity, editing, grouping.
+       Every editor is pure: it returns a NEW plan and mutates nothing. An id
+       is opaque, minted once, and never derived from or rewritten by a name.
+       `lift` groups two ids into one movement for the Trend tab ONLY; every
+       per-exercise engine still reads history by `id`. */
+    PHAT_PLAN_ID: PHAT_PLAN_ID,
+    PHAT_PLAN: PHAT_PLAN,
+    PLAN_KINDS: PLAN_KINDS,
+    PLAN_IMPLEMENTS: PLAN_IMPLEMENTS,
+    mintId: mintId,
+    takenIds: takenIds,
+    newExId: newExId,
+    newDayId: newDayId,
+    newLiftId: newLiftId,
+    planIdOf: planIdOf,
+    exById: exById,
+    dayIdOfEx: dayIdOfEx,
+    liftOf: liftOf,
+    exIdsForLift: exIdsForLift,
+    liftName: liftName,
+    planLifts: planLifts,
+    validatePlan: validatePlan,
+    renameExercise: renameExercise,
+    renameDay: renameDay,
+    addExercise: addExercise,
+    addDay: addDay,
+    moveExercise: moveExercise,
+    removeExercise: removeExercise,
+    copyPlan: copyPlan,
+    clonePlan: clonePlan,
+    normalisePlanStore: normalisePlanStore,
     /* advice — W5/W6. Pure, DOM-free, storage-free, callable from tests.html
        over file://. The rule each one implements is named at its definition. */
     completedSets: completedSets,

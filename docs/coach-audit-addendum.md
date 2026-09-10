@@ -1431,3 +1431,909 @@ repeated unexplained strength loss is not something this app assesses, and any c
 at a person rather than guess, per audit §10. Raise it as a backlog item for after there is real
 history to calibrate against. `[Opinion]`, and the conservative side of it: the card's `Drop to 115 kg`
 is already the correct action, so what is missing is acknowledgement, not instruction.
+
+---
+
+# 8. WO-004 W1 — adjudicating the redesign's programme
+
+**Added 2026-09-10. Answers `docs/work-orders/WO-004-redesign.md` §W1 (a)–(f).**
+
+Sources read: `docs/design/PHAT App.dc.html` L456–506 (`BASE_PLAN`) and L601–619 (`verdict`);
+`index.html:226-276` (`PROGRAM`, `KEY_LIFTS`); `docs/context/handoff-brief.md` §3–§4;
+`docs/coach-audit.md` §1, §5–§7, §9; this file §I1–§I2, §S2, §6, §7.
+
+**The frame, stated rather than assumed.** `docs/context/handoff-brief.md` is the programme
+(CLAUDE.md §7). `docs/design/PHAT App.dc.html` is a mock-up: its job is to show what the app looks
+like, and its `BASE_PLAN` is prop data written to make screens render, not a coaching document.
+Wherever the two disagree the brief wins by default, and the design has to earn an exception with a
+reason. **It earns none below.** That is not a criticism of the design — nobody asked a prototype's
+seed array to be a verified programme, and it should never have become the tiebreak candidate it did.
+
+---
+
+## 8.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| a | The 9 `power` → `hyp` reclassifications | **Reject all of them.** And there are **8**, not 9 — the work order's list is wrong about `d2b`. Rule **K1**. |
+| a | Day heading vs exercise character | **The day heading governs.** `k` is a progression-protocol tag, not a claim about adaptation. Rule **K1**. |
+| b | `d2e` "Glute-ham raise or lying leg curl" | **Two exercises. Data problem.** Resolve to one, record the choice, and change `implement`. Rule **A1**. |
+| b | `d3d` "DB row or shrug" | **Two exercises. Data problem.** Not even alternates — different movement patterns. Rule **A1**. |
+| b | `d1a` "Bent-over or Pendlay row" (B-28) | **One exercise, two names. Display problem** — conditional on him committing to one style. Rule **A1**. |
+| c | Extra sets vs P1 | **Excluded.** `C` = the first `ex.s` **completed** sets. Confirms audit §3. Rule **X1**. |
+| c | Extra sets vs H1 | **Excluded from the comparison, both sides.** They belong in the session volume total, which is a different number for a different purpose. Rule **X1**. |
+| c | The `EXTRA` badge | The prototype computes it from **row index**; it must be computed from **completed-set ordinal** or the badge lies. Rule **X1**. |
+| d | SP1 / V1 / D1 on a foreign plan | Named absent states, copy below. T3 survives; T1 and T2 do not. Rule **C7a**. |
+| d | **May ST1's week-6 test run on a non-PHAT plan?** | **The measurement may. The brief's diagnosis may not.** Different copy, gated on provenance. Rule **C7b**. |
+| e | R1 per exercise or per day | **Per exercise. Confirmed.** The design's day rest is wrong on 24 of 42 slots and is actively harmful on the three speed slots. Rule **R1** unchanged. |
+| f | The Diet numbers | **Approved verbatim** — all eight match the brief exactly. |
+| f | The Diet *copy* | **Corrected.** Three additions the design omits, one contradiction, one wrong-day bug. §8.6. |
+
+**Data criterion (W1 acceptance, last bullet), answered up front.** Nothing I rule here changes any
+exercise `id`, `s`, `lo`, `hi` or `cut`. I re-checked all 42 slots against the design's `BASE_PLAN`
+this pass: **every `s`, `lo` and `hi` is identical**, and the design's nine `cut` flags sit on exactly
+the nine `PROGRAM` slots that carry `cut:1`. The design's programme differs from the verified one in
+**precisely two dimensions**: `k` on 8 slots, and 3 exercise names. That is a much smaller delta than
+B-55 assumed and it is worth recording, because it means the transcription was careful and the `k`
+column is the one place it went wrong.
+
+**One change I do rule that touches data**, named as required: resolving `d2e` to "Lying leg curl"
+requires `implement` to move `bodyweight` → `machine`. That is not cosmetic — `implement` drives Z2's
+load word and I2's increment line, so the same logged history would render different copy before and
+after. **Cost today: zero, because the log is empty.** Cost in six weeks: every historic `d2e` entry
+re-renders with a different load word. Do it now or accept that it can never be done cleanly. `[Certain]`
+
+---
+
+## 8.1 (a) Rule K1 — the `k` reclassification
+
+### First: the work order's list is wrong, and transcribing it would cause a change nobody asked for
+
+WO-004 §W1 names nine slots including **`d2b` hack squat**. The design does **not** reclassify it:
+
+```
+PHAT App.dc.html:471   ex("Hack squat", 2, 6, 10, "power", "Full depth before the knees drift forward.")
+```
+
+`d2b` is `power` in `PROGRAM` and `power` in the design. There are **8** reclassifications, not 9. An
+engineer working from the work order's prose rather than from the file would flip hack squat to `hyp`
+— a programme change originating in a typo in a bug report. Flag raised, `[Certain]`.
+
+### The reclassification is not a coaching position, because it is not internally consistent
+
+If the design were arguing "6–10 rep assistance work is hypertrophy work", it would have flipped every
+6–10 slot on days 1 and 2. It flips seven of ten and keeps three:
+
+| Kept `power` at 6–10 reps | Flipped to `hyp` at 6–10 reps |
+|---|---|
+| `d1b` Weighted pull-up · `d1e` Weighted dip · `d2b` Hack squat | `d1c` Rack chin · `d1f` Seated DB shoulder press · `d1g` Cambered bar curl · `d1h` Skull crusher · `d2c` Leg extension · `d2e` Leg curl · `d2f` Standing calf raise · `d2g` Seated calf raise |
+
+No rule separates those two columns. Not compound vs isolation — rack chin and seated DB press are
+multi-joint and were flipped; hack squat is a machine and was kept. Not implement — flat DB press is
+`db` and stayed `power`, seated DB press is `db` and did not. Not the `cut` flag — two of the flipped
+are `cut`, six are not. `[Likely]` this is prop data written by eye to make a screen look plausible,
+which is exactly what prop data is for. **There is no coaching argument here to rebut**, so I am
+ruling on the underlying question instead, which is real and which the work order asks correctly.
+
+### The actual question: does the day heading govern, or the exercise's own character?
+
+**Ruling: the day heading governs, and `k` is not a claim about the exercise's character at all.**
+
+The confusion is caused by the tag's name. `k: "power" | "hyp" | "speed"` reads like a statement about
+training adaptation, and as such it would be indefensible: `[Certain]` a 3 × 6–10 skull crusher does
+not train power in any mechanistic sense, and neither does a 2 × 6–10 seated calf raise. If `k` meant
+what its name implies, the design would be right and I would be wrong.
+
+It does not mean that. In this codebase `k` selects **which progression protocol runs** (P1 vs H1 vs
+the speed branch) and **which rest row applies** (R1). It is a routing tag. And the brief assigns the
+progression protocol **per day**, explicitly, in its own words:
+
+> **Power days:** pick a weight you could get one more rep with, not two. Add 2.5 kg when all sets hit
+> the top of the range. — `handoff-brief.md:185`
+
+That sentence is Rule P1. It is written under *Execution rules*, it says "power days", and it is not
+qualified to the 3–5 rep slots. Every exercise printed under *Day 1 — Upper power* and *Day 2 — Lower
+power* is governed by it. `[Certain]` — this is a reading of the brief, not an opinion about
+physiology.
+
+I already recorded this in `coach-audit.md:62-64` when I verified the 42 slots, and I am confirming it
+rather than revisiting it:
+
+> every Day 1 and Day 2 exercise is tagged `k:"power"`, including the 6–10 rep assistance work. That
+> is faithful to the brief, which states its execution rule per *day*, not per exercise.
+
+### What flipping would actually change, which is the part that settles it
+
+**1. It would break the brief's rest instruction.** The brief writes *Day 1 — Upper power (rest 2–3
+min)* and *Day 2 — Lower power (rest 2–3 min)* — a day-level band, all exercises. R1 honours it at the
+bottom of the band for the 6–10 work: `power, hi > 8` → ready 120 s, cap 180 s. Flip to `hyp` and
+`hi <= 12` gives ready 90 s, cap **120 s** — *below the brief's stated minimum*, and the copy at 2:30
+would read `2:30. You are past the rest window. Go.` on a power day where the brief says rest two to
+three minutes. That is the app contradicting the programme in a sentence. `[Certain]`
+
+**2. It would swap a conservative rule for a permissive one.** P1 adds load only when every set in the
+prescription reaches `hi` at a matched weight. H1's case 2 adds load when every rep exceeds `hi`, and
+its case 4 rewards raw tonnage. On a 2 × 6–10 seated calf raise, tonnage is trivially inflated by reps
+— which is the exact defect B-25 exists to fix on the days where tonnage comparison genuinely belongs.
+Moving eight more slots under a tonnage rule enlarges the surface of the bug I just closed. `[Likely]`
+
+**3. It would make the app's advice depend on a distinction the brief does not draw.** He would get
+`Top of range on all 3 sets. Go to 32.5 kg next session.` on a cambered bar curl today and
+`Volume up 4% — 1,040 kg against 1,000 kg.` tomorrow, for the same behaviour. The first is an
+instruction. The second is a scoreboard. Power days should give instructions.
+
+### The table, transcribable without interpretation
+
+```
+Rule: K1 — role tags on Day 1 and Day 2
+Applies to:   the `k` field on every PROGRAM slot in d1 and d2. Selects P1 vs H1 and R1's rest row.
+Inputs:       handoff-brief.md §4 day headings and §4 Execution rules. No user data.
+Logic:        An exercise's `k` is the progression protocol its DAY prescribes, not the adaptation
+              its rep range targets. Every exercise under a Power day heading is k:"power".
+              Every exercise under a hypertrophy day heading is k:"hyp", except the explicitly
+              labelled speed slot, which is k:"speed".
+Output copy:  none. K1 emits nothing; it decides which other rule speaks.
+Not enough data: n/a — this is a fixed reading of a fixed document.
+```
+
+| id | Name | Brief's role | Design's role | **Ruling** | Why, one line |
+|---|---|---|---|---|---|
+| `d1c` | Rack chin | power (Day 1 heading) | hyp | **`power` — keep** | Day 1 is a power day; `cut:1` marks it reduced-volume, not reduced-intensity. |
+| `d1f` | Seated DB shoulder press | power | hyp | **`power` — keep** | The brief's 2–3 min rest and add-2.5-kg-at-top-of-range apply to the whole day. |
+| `d1g` | Cambered bar curl | power | hyp | **`power` — keep** | Load-progressed assistance; P1's matched-sets test is the safer rule for a barbell curl. |
+| `d1h` | Skull crusher | power | hyp | **`power` — keep** | Distinct from `d5i` skull crusher (3 × 12–15, `hyp`); the *day* is what differs, and that is the point. |
+| `d2b` | Hack squat | power | **power (unchanged)** | **`power` — keep** | **Not reclassified by the design.** WO-004 §W1's list is wrong; no ruling was needed. |
+| `d2c` | Leg extension | power | hyp | **`power` — keep** | Machine isolation, but on a power day under the brief's day-level rule. |
+| `d2e` | Glute-ham raise or lying leg curl | power | hyp | **`power` — keep** | See A1 separately for the name; the role does not move. |
+| `d2f` | Standing calf raise | power | hyp | **`power` — keep** | Under H1 a calf raise's tonnage is inflatable by reps; P1 is the honest rule here. |
+| `d2g` | Seated calf raise | power | hyp | **`power` — keep** | As above. |
+
+**Nine rows, eight rulings, one correction.** `PROGRAM` is unchanged. Zero migration, zero data cost.
+
+**Worked examples**
+
+1. `d1g` cambered bar curl `{s:3, lo:6, hi:10}`, logged 30×10, 30×10, 30×10. Under K1 → P1 case 4 →
+   `Top of range on all 3 sets. Go to 32.5 kg next session.` plus I2's increment line (`implement:"bb"`
+   — **no** increment line, per §I2). Rest: `power, hi>8` → ready 120 s.
+2. **Boundary.** `d1h` skull crusher `{s:3, lo:6, hi:10}` vs `d5i` skull crusher `{s:3, lo:12, hi:15}`.
+   Same movement, two ids, two `k` values, two rest rows (120 s vs 60 s). Both correct. This is the case
+   that proves `k` is per-slot-in-a-day and not per-movement, and it is the case the prototype's
+   name-derived key scheme collapses (C-6).
+3. **Failing case, under the design's tags.** `d2f` standing calf raise as `hyp`, logged 100×10/10/10,
+   last session 100×10/10/10. H1 case 4 → tonnage 3,000 vs 3,000 → the matched branch. He did the
+   prescription perfectly at the top of the range and the app does not tell him to add weight. Under K1
+   → P1 case 4 → `Top of range on all 3 sets. Go to 102.5 kg next session.` The design's tag costs him
+   a progression step for doing exactly what the programme asked. `[Certain]`
+
+**Rationale.** The brief states its progression and rest rules per day, and the app's `k` field is
+where a day-level rule is stored per exercise. Flipping the tag changes both the instruction he gets
+and how long he rests, and the rest change puts the app below the brief's own stated minimum on a
+power day. The design's split is not internally consistent, so there is no competing coaching position
+to weigh against the brief.
+
+**Documentation recommendation, no code and no data change.** Add one line wherever the exercise shape
+is documented: *`k` is the progression protocol the exercise's day prescribes, not the adaptation its
+rep range targets.* This ambiguity has now produced one escalation (B-55) and one wrong list in a work
+order. It will produce more. `[Opinion]`
+
+---
+
+## 8.2 (b) Rule A1 — the three dropped alternates
+
+The brief writes three slots with an "or" in the name. The design silently resolves all three. **The
+resolutions are probably the right ones; the silence is the defect.** Two of them are two exercises
+wearing one id, and that is a data problem the plan editor makes worse rather than better.
+
+```
+Rule: A1 — a slot with a declared alternate
+Applies to:   PROGRAM slots whose brief name contains "or": d1a, d2e, d3d. Plan setup and the
+              plan document. No screen renders a slash-name.
+Inputs:       one choice per slot, made once, stored in the plan document. No user history needed.
+Logic:        Classify each slot first:
+              (A) TWO EXERCISES  — the alternates differ in movement pattern OR in implement OR in
+                  typical working load by more than ~25%. -> two ids, one active, the choice is
+                  recorded and changeable only as a plan edit.
+              (B) ONE EXERCISE   — the alternates are the same pattern on the same implement at a
+                  comparable load; the difference is style or regional name. -> one id, one displayed
+                  name, chosen once. Alternating styles is a plan edit, not a set-to-set option.
+              The app never displays "X or Y" as an exercise name, because a name is also a label on
+              a history and a history cannot be about two things.
+Output copy:  the chosen name, plain. Plus the setup prompt below.
+Not enough data: the choice is an input, not an inference. The app must ASK. It must not default
+              silently, and it must not pick the first name in the string.
+```
+
+| id | Brief's name | Design's name | Class | **Ruling** |
+|---|---|---|---|---|
+| `d2e` | Glute-ham raise or lying leg curl | Lying leg curl | **(A) two exercises** | Two ids. Ask once. **`implement` changes with the answer** — this is the one data-touching change in this document. |
+| `d3d` | DB row or shrug | DB row | **(A) two exercises** | Two ids. Ask once. Not alternates in any real sense — see below. |
+| `d1a` | Bent-over or Pendlay row | Bent-over row | **(B) one exercise** | One id. Display one name. Conditional on him committing to a style — stated in the setup copy. |
+
+### `d2e` — glute-ham raise vs lying leg curl. Two exercises. `[Certain]`
+
+Different implement (bodyweight/loaded vs plate stack), different load scale (a GHR is often
+unloadable and unprogressible in 2.5 kg steps; a leg curl is a 5 kg-per-plate machine), and different
+joint action (GHR is knee flexion *plus* hip extension against a lengthened hamstring; the lying curl
+is knee flexion only). They train the same muscle. They are not the same exercise, and logging both
+under `d2e` produces a history in which 0 kg × 8 and 45 kg × 8 sit in one column. Everything
+downstream reads that column: `lastFor`'s ghost text, P1's `workingLoad`, Z1/Z2's load word, the
+trend.
+
+`PROGRAM` currently has `implement:"bodyweight"` on `d2e` — the GHR reading. If the answer is lying
+leg curl, `implement` must become `machine`. That flips Z2's zero-load word from `bodyweight` to
+`zero load` and turns I2's increment line on. Same logged numbers, different sentences. **Free today,
+not free later.**
+
+`[Opinion]`, and he should be told it is an opinion: **default the prompt to lying leg curl.** It is
+progressible in small steps, it does not require equipment most commercial gyms lack, and a lifter
+whose stated problem is *"training but not with intensity"* is better served by a movement where the
+next session's target is unambiguous. The GHR is the better exercise for someone who can already do
+sets of ten with control. **This needs his real training history, which does not exist yet** — one
+logged Day 2 answers it and no amount of reasoning does.
+
+### `d3d` — DB row vs shrug. Two exercises, and they are not alternates. `[Certain]`
+
+A dumbbell row is horizontal pulling — lats, mid-back, rear delt. A shrug is scapular elevation —
+upper trap, and nothing else. They are not substitutes for each other; PHAT lists them in one
+accessory slot because either fills the same *slot*, not because either fills the same *role*. Working
+loads differ by roughly 2–3× for the same rep range, so a shared history makes the ghost text and H1's
+tonnage comparison actively misleading rather than merely imprecise. Two ids.
+
+Extra consequence, worth stating because it is easy to miss: `d3d` carries `cut:1` and appears in V1's
+`REINTRO_ORDER` for `d3` **by id**. Whichever is chosen inherits that position. If both ids exist in
+the plan, only the active one is in `REINTRO_ORDER`, or week 5's ramp offers him an exercise he does
+not do.
+
+### `d1a` — bent-over vs Pendlay row (B-28). One exercise. Display. `[Likely]`
+
+Same pattern, same implement, same slot, same 3 × 3–5, and it is an ST1 key lift. The honest caveat:
+they are not identical — a Pendlay row is a dead-stop from the floor and typically runs 5–15% lighter
+than a touch-and-go bent-over row for the same reps. That difference is small enough for P1 to absorb
+**only if he does not alternate between them**. If he alternates week to week, P1 prints
+`Sets not matched` at style changes and ST1's e1RM blocks swing by more than the 2.5% progress
+threshold — a false stall on the app's most important lift.
+
+So: **one id, one displayed name, one choice, and the choice is a plan edit.** My §D-1 asked for
+`Bent-over / Pendlay row` as the display name; **I am superseding that.** A slash-name on screen
+invites exactly the alternating that breaks the rule. Pick one, show one.
+
+`[Opinion]` default the prompt to **bent-over row** — it matches `PROGRAM` today, it matches the
+design, and it is the more common of the two in a commercial gym.
+
+### Output copy
+
+Setup prompt, shown once per slot when a plan carrying an alternate is first started:
+
+- `d2e`: `Which do you do? Glute-ham raise / Lying leg curl` with the note
+  `Pick one and stay with it. They load differently, so one history cannot describe both.`
+- `d3d`: `Which do you do? DB row / Shrug` with the same note.
+- `d1a`: `Which row? Bent-over / Pendlay` with the note
+  `Pick one and stay with it. A Pendlay row is lighter for the same reps, and this lift is one of the four the six-week check reads.`
+- Changing it later, in the plan editor: `Changing this changes what the history means. The old sets stay under the old name.`
+
+**Worked examples**
+
+1. He picks lying leg curl. `d2e` gets `n:"Lying leg curl"`, `implement:"machine"`, `k:"power"` (K1),
+   `s:2, lo:6, hi:10` unchanged. Logs 45×10/10 → P1 case 4 → `Top of range on all 2 sets. Go to 47.5 kg
+   next session.` plus I2's line, because `machine` gets one: `If 2.5 kg is not available, add reps up
+   to 12 first, then jump.`
+2. **Boundary.** He picks glute-ham raise. `implement:"bodyweight"` stands, logs 0×8/0×8 → Z1 says
+   completed, Z2 says `Stay at bodyweight until all 2 sets reach 10 reps.` No `0 kg` string anywhere.
+   Both answers are correct programmes; only one can be a history.
+3. **Failing case, under the design's silent resolution.** The design renames `d2e` to "Lying leg curl"
+   and leaves `implement:"bodyweight"`. He logs 45 kg × 10. The app has a machine load under a
+   bodyweight tag: I2's increment line is suppressed (bodyweight does get one — see §I2 — but for the
+   wrong reason and with the wrong text), and Z2's word for a zero entry would be `bodyweight` on a
+   plate-stack machine. Two wrong sentences from one unasked question.
+
+---
+
+## 8.3 (c) Rule X1 — extra sets, ruled separately for P1 and H1
+
+The design (L430, L780-782) lets him append sets past the prescription, badges them `EXTRA`, counts
+them in volume, and leaves the prescription unchanged. **That behaviour is right and I approve it.** A
+lifter who has an extra set in him should log it, not hide it. The question is what the *verdict* does
+with it, and the answer must be the same in both rules: **nothing.**
+
+```
+Rule: X1 — extra sets and the verdict
+Applies to:   every role. Session screen verdict and the session summary.
+Inputs:       ex {s}; this session's sets in row order; Z1's completed test.
+Logic:        C = the first `ex.s` COMPLETED sets, in row order.
+              1. P1 reads C and only C: `equal`, `load`, and "all sets at the top of the range"
+                 are all computed over C. Sets beyond C cannot create, remove or change a verdict.
+              2. H1 reads C and only C, on BOTH sides of the comparison: this session's C against
+                 the previous entry's C. Range compliance (cases 1-2) and tonnage (case 4) alike.
+              3. The SESSION VOLUME TOTAL counts every completed set, extras included. Two numbers,
+                 two purposes: the verdict is about the prescription, the total is about the work.
+              4. The EXTRA badge on row i is true when the number of completed sets in rows 1..i-1
+                 is >= ex.s. It is NOT `i >= ex.s`. The badge means "this row cannot affect the
+                 verdict", so it must be computed the same way C is.
+Output copy:  extras present, k:"hyp":   `<n> set<s> past the prescription. Counted in today's volume, not in the verdict.`
+              extras present, k:"power": `<n> set<s> past the prescription. The verdict reads the first <ex.s>.`
+              extras present, k:"speed": `<n> set<s> past the prescription. Speed work is <ex.s> sets. Extra sets are extra fatigue.`
+              no extras:                 nothing on power and speed; on hyp, nothing.
+Not enough data: unchanged. Fewer than `ex.s` completed sets -> no verdict at all (C-11), regardless
+              of how many rows exist.
+```
+
+**Two corrections to the prototype, both small and both load-bearing.**
+
+*(i) The badge is computed from the row index.* `PHAT App.dc.html:762` — `flag: i >= e.s ? "EXTRA" : ""`.
+Leave row 2 blank on a 3-set exercise and fill rows 1, 3 and 4: C is rows {1, 3, 4}, so row 4 **is**
+part of the verdict, and the screen badges it `EXTRA`. The badge tells him the set does not count when
+it does. Compute it from completed-set ordinal. `[Certain]`
+
+*(ii) The idle invitation.* The design prints `Add sets freely. Extras are logged and counted in
+volume; the prescription stays as written.` on every exercise, including a 3 × 3–5 squat. `[Opinion]`
+— on a power slot the app should not suggest extra sets. The prescription is three hard matched sets
+at a weight he could get one more rep with; a fourth is fatigue that lands on tomorrow's lower power
+day. **Render the idle invitation on `k:"hyp"` only.** On power and speed the note is absent until an
+extra actually exists, and then it is factual, not encouraging.
+
+### P1 — worked examples on a 3 × 3–5 slot
+
+Squat `{id:"d2a", s:3, lo:3, hi:5, k:"power"}`.
+
+1. **(i) Fourth set at the same load, top of range.** `100×5, 100×5, 100×5, 100×5 [EXTRA]`.
+   C = the first 3 → weights {100,100,100}, `equal` true, every `r >= 5` → **P1 case 4**.
+   → `Top of range on all 3 sets. Go to 102.5 kg next session.`
+   Session volume total: 2,000 kg (all four sets). Verdict tonnage: not used by P1 at all.
+   **The fourth set does not make the verdict "more" true and does not change the recommended load.**
+   The prescription was satisfied at set 3; sets after that are work, not evidence about the
+   prescription.
+2. **(ii) Fourth set as a back-off.** `100×5, 100×5, 100×5, 80×8 [EXTRA]`.
+   C = the first 3 → identical to case 1 → `Top of range on all 3 sets. Go to 102.5 kg next session.`
+   Session volume total: 2,140 kg. `workingLoad` is 100, **not** 80.
+3. **The failing case — what happens if extras are included.** Same log as (ii). C would be
+   {100,100,100,80} → `equal` is false → **P1 case 2** →
+   `Sets not matched: 100 / 100 / 100 / 80 kg. Repeat 100 kg until all 3 sets reach 5 reps.`
+   He completed the prescription perfectly and then did an extra back-off set, and the app took his
+   progression away for it. `[Certain]` this is the same class of error as B-08, arriving from the
+   other direction — B-08 used `max` and over-prescribed; including extras uses too wide a set and
+   under-prescribes. Both are fixed by the same sentence: **`C` is the first `ex.s` completed sets.**
+4. **Boundary.** `100×5, (blank), 100×5, 100×5`. Three completed sets, four rows. C = rows {1,3,4}.
+   Verdict fires (three completed >= `ex.s`), row 4 carries **no** badge, and `100×5` on row 4 is part
+   of the working load. Under the prototype's index rule, row 4 is badged `EXTRA` while driving the
+   verdict.
+
+This **confirms `coach-audit.md` §3** — *"C = the first `ex.s` completed sets. Extra sets beyond
+`ex.s` are ignored."* — which already said this. Nothing in P1 changes. `[Certain]`
+
+### H1 — worked examples on a 3 × 3–5 slot
+
+A 3 × 3–5 slot with `k:"hyp"` does not exist in PHAT, by K1. It can only arise on a **user-created
+plan** (the plan editor lets him set any `s/lo/hi` with any `k`), so the examples below are written on
+a user exercise `{s:3, lo:3, hi:5, k:"hyp", implement:"machine"}` — which is the case the work order
+is really asking about.
+
+**Ruling: H1 compares `C` against the previous entry's `C`. Extras are excluded from both sides.**
+`[Certain]`
+
+Previous session: `100×5, 100×5, 100×4` → C tonnage **1,400 kg**.
+
+1. **(i) Fourth set at the same load, top of range.** `100×5, 100×5, 100×5, 100×5 [EXTRA]`.
+   C = first 3 → 1,500 kg. Case 1 no (5 >= lo 3), case 2 no (5 is not `> hi` 5), case 3 no →
+   **case 4**: 1,500 vs 1,400 → `Volume up 7% — 1,500 kg against 1,400 kg.`
+   Session volume total: 2,000 kg.
+   **If extras were counted: 2,000 vs 1,400 → `Volume up 43%`.** That number describes a set count
+   change, not a training improvement, and next week when he does three sets again it becomes
+   `Volume down 25%` — the app manufacturing a regression out of a good session. `[Certain]`
+2. **(ii) Fourth set as a back-off.** `100×5, 100×5, 100×5, 80×8 [EXTRA]`.
+   C = first 3 → 1,500 kg → `Volume up 7% — 1,500 kg against 1,400 kg.` Identical to (i), correctly:
+   the verdict is about the prescription, and the prescription was the same in both.
+   Session volume total: 2,140 kg.
+   **If extras were counted: 2,140 vs 1,400 → `Volume up 53%`.**
+3. **The failing case in the other direction — extras can SUPPRESS a correct increase.**
+   `100×6, 100×6, 100×6, 80×4 [EXTRA]` on the same `hi:5` exercise.
+   C = first 3 → every `r > hi` → **H1 case 2** → too light → add weight, per G1's step.
+   If extras were included, `every r > 5` is false (the back-off set's 4 is not > 5), case 2 does not
+   fire, and it falls through to a tonnage comparison. He exceeded the range on every prescribed set
+   and the app declines to tell him the weight is too light, because he did a back-off set.
+   **Exclusion matters in both directions**, which is why the rule is stated once and applied to every
+   H1 case rather than only to the tonnage branch.
+4. **Boundary — an unequal comparison.** Previous entry has 4 completed sets (three prescribed + one
+   extra), this session has 3. Both sides truncate to C = 3 → 1,500 vs 1,400. Without truncation on
+   the *previous* side, doing an extra set once permanently raises the bar he is measured against and
+   he can only ever go "down" afterwards. This is why the rule says **both sides**.
+
+**Rationale.** The verdict answers one question — *did you complete what was prescribed, and what
+should the load be next time* — and a set that was not prescribed cannot help answer it. The design's
+own sentence, *"volume counts it, the prescription doesn't change"*, is correct but ambiguous between
+the session volume total and the verdict's internal tonnage; the correction makes it two explicit
+numbers. `[Convention]` truncating both sides of a like-for-like comparison to the prescribed set
+count is standard practice in every logger that compares sessions at all, for the reason in example 4.
+
+---
+
+## 8.4 (d) Rules C7a and C7b — silence copy on a user-created plan
+
+The plan editor means the app can no longer assume it is running PHAT. Four features are keyed to
+programme data a user plan does not have. **Every one of them must be able to say "this plan does not
+tell me that" and stop.** A guess here is worse than in any other part of the app, because the user
+built the plan and will read a confident sentence as the app having understood it.
+
+```
+Rule: C7a — named absent states for plan-specific features
+Applies to:   SP1 (speed load), V1 (volume tier), ST1 (stall), D1 (deload). Every screen.
+Inputs:       the plan document's declarations: `speedSource` (map exId -> exId),
+              any exercise carrying `cut`, `keyLifts` (list of exIds, max 4).
+              No user history is required to reach an absent state — absence is a property of the
+              PLAN, and must be detectable on day zero with an empty log.
+Logic:        A feature has three states, not two:
+              ABSENT       — the plan declares nothing. Show the named absent line ONCE, in the
+                             place the feature would have appeared. Never on the session card.
+              PRESENT-THIN — the plan declares it, the log is too thin. Existing not-enough-data
+                             copy from coach-audit.md §4-§8, unchanged.
+              PRESENT      — run the rule.
+              ABSENT is checked FIRST. A plan that declares nothing never reaches a
+              "not enough data yet" message, because more data will never help.
+Not enough data: distinct from ABSENT and must not share copy. "Log more" is a lie when the
+              feature is switched off by the plan.
+```
+
+The distinction in that last line is the whole ruling. `Not enough sessions on SLDL to judge. Log it
+weekly.` tells him to do something that will work. Showing that same line on a plan with no key lifts
+tells him to do something that will never work, and he will log for six weeks waiting for a message
+that cannot arrive. `[Certain]`
+
+### SP1 — a `k:"speed"` exercise with no mapped power lift
+
+```
+Output copy (ABSENT):
+  No source lift set for this speed work. Set one in the plan to get a number.
+  Until then: 65–70% of a weight you could triple.
+```
+
+Second line is character-identical to SP1's existing thin-data fallback (`coach-audit.md` §7), on
+purpose: the *advice* is the same, only the reason differs. The too-heavy live check (`> R × 0.75`)
+cannot run without `R` and is silent. `[Certain]`
+
+### V1 — a plan where no exercise carries `cut`
+
+There is no reduced-volume tier, so there is no weeks-1–4 block, no reintroduction offer, no rollback,
+and no "N of 9 accessories" clause anywhere. All exercises render from week 1.
+
+```
+Output copy (ABSENT), in the plan screen only, never on Train or Session:
+  This plan has no reduced-volume tier. Every exercise runs from week 1.
+  Mark accessories as cut in the plan to phase them in.
+
+Cycle line (C-10 / PHAT.cycleLine) on such a plan: the volume-phase clause is OMITTED.
+  Week 7 · 31 sessions
+NOT: `Week 7 · full volume phase · 0 of 0 accessories back`
+```
+
+`0 of 0 accessories back` is the shape of sentence that makes an app look broken, and the phase name
+`full volume` is a claim about a programme structure this plan does not have. `[Certain]`
+
+### D1 — a plan with no key lifts
+
+D1's triggers split cleanly by what they read:
+
+| Trigger | Reads | On a plan with no key lifts |
+|---|---|---|
+| T1 performance drop | key lifts, per-lift history | **Silent.** No lift is nominated, so "went backwards" has no subject. |
+| T2 broad stall | ST1 output on key lifts | **Silent.** ST1 itself is absent (below). |
+| T3 calendar backstop | dates only, via `trainingWeeks` | **Runs.** `[Opinion]`, reasoned below. |
+
+`[Opinion]` **T3 survives and T1/T2 do not**, because T3 needs nothing the plan must declare — nine
+consecutive training weeks with no lighter week is a fact about the calendar, and "take a lighter week
+after two months of unbroken training" is defensible advice to any lifter on any plan. T1 and T2 are
+diagnoses about specific lifts, and on a plan the app did not verify it has no lifts to diagnose. The
+risk in my position is a deload recommended to someone who does not need one, which costs a week of
+reduced stimulus and nothing else; the alternative risk is never mentioning fatigue to someone
+training nine weeks straight. I take the first.
+
+The deload *content* must be restated in role terms, dropping PHAT's structure:
+
+```
+Output copy (ABSENT — T1/T2 off), on the plan screen only:
+  This plan names no key lifts, so the app cannot spot a stall or recommend a deload from your
+  numbers. It will still flag nine straight weeks without a lighter one.
+
+Output copy (T3 fires on a foreign plan):
+  Nine weeks straight with no lighter week. Take one: same weights, two sets per exercise, stop two
+  reps short of the top of the range.
+  Buttons: Start deload week / Not now
+
+Output copy (T3 fires on PHAT): unchanged from coach-audit.md §8, including the cut-accessory clause.
+```
+
+The foreign-plan version deliberately drops *"Power days: … Hypertrophy days: … all cut accessories
+out"*, because a plan with no `cut` tier has no accessories to pull and may have no day the app can
+call a power day. Reducing sets and backing off proximity to failure translates to any plan; PHAT's
+day structure does not. `[Likely]`
+
+### ST1 — the headline question, ruled separately as C7b
+
+**May the week-6 test run on a non-PHAT plan at all?**
+
+```
+Rule: C7b — provenance gating on ST1
+Applies to:   ST1's OUTPUT COPY only. The measurement is unchanged.
+Inputs:       plan.planId; plan.derivedFrom; plan.keyLifts; and for the strict test, the
+              s/lo/hi of the four key-lift exercises.
+Logic:        1. plan.keyLifts is empty or absent            -> ST1 ABSENT. Nothing renders.
+              2. plan.keyLifts is declared -> the MEASUREMENT runs unchanged: Epley e1RM,
+                 r <= 8, two 21-day blocks, trainingWeeks >= 6, >= 2 sessions per lift per block,
+                 1.025 threshold. That arithmetic is plan-agnostic.
+              3. The DIAGNOSIS copy is gated on provenance:
+                 PHAT-provenance = plan.planId === "phat"
+                                   OR (plan.derivedFrom === "phat"
+                                       AND all four key-lift exercises still present
+                                       AND their s, lo and hi are unchanged from the shipped plan)
+                 PHAT-provenance TRUE  -> the brief's copy, unchanged.
+                 PHAT-provenance FALSE -> the generic copy below.
+```
+
+**The split is between a measurement and a claim, and only one of them travels.** `[Certain]`
+
+The measurement — has the estimated 1RM on these four lifts risen over six weeks — is arithmetic. It
+is true or false on any plan and the app may state it.
+
+The diagnosis is not. The brief's sentence is:
+
+> If no: `[Certain]` the split is not the problem and neither is the diet. Either the sets are not
+> close enough to failure, or he is not eating enough. — `handoff-brief.md:191-192`
+
+That `[Certain]` was earned by a coach who had assessed **that split** and **that diet**. On a plan the
+user wrote and nobody reviewed, *"the split isn't the problem"* is a claim the app cannot support —
+and it is the single most likely thing to actually be wrong on a self-built plan. The app would be
+using the brief's authority to vouch for a programme the brief never saw. **That specific sentence is
+PHAT-only and does not travel.** `[Certain]`
+
+```
+Output copy, PHAT-provenance TRUE (unchanged from coach-audit.md §4):
+  Week 7 and no progress on Row, Squat.
+  This is the check we agreed on. The split isn't the problem and neither is the diet.
+  Either the sets aren't close enough to failure, or you aren't eating enough.
+  Fix one, not both, and give it three weeks.
+
+Output copy, PHAT-provenance FALSE (new):
+  Week 7 and no progress on Squat, Row.
+  Six weeks of data and the numbers have not moved. Change one thing — how hard the sets are, how
+  much you are eating, or the plan — and give it three weeks.
+
+Output copy, ABSENT (no key lifts declared):
+  This plan names no key lifts, so the six-week check cannot run.
+  Name up to four in the plan to switch it on.
+
+Output copy, PRESENT-THIN: unchanged from coach-audit.md §4.
+  Not enough sessions on SLDL to judge. Log it weekly.
+  Six weeks in but the log is too thin to test. Log all four lifts weekly.
+
+Output copy, all tested lifts progressing: nothing. Unchanged.
+```
+
+The generic version keeps the brief's structure — one finding, three candidate causes, change one,
+three weeks — and adds the third option the PHAT version correctly excludes. It is shorter and it
+claims less. `[Certain]` that is the right trade.
+
+**Why the provenance test is `derivedFrom` plus four unchanged lifts, and not just `planId === "phat"`.**
+He will train a *copy* — the design's own plans list shows `PHAT — my version` as the active plan and
+`PHAT — original` as a read-only template. A strict `planId === "phat"` test means he never sees the
+copy he agreed to, which is a real loss for no safety gain if he changed only a cue or an exercise
+name. The three-part test is cheap, testable, and fails closed: any edit to a key lift's prescription
+drops the app to the generic sentence. `[Opinion]`, and the failure mode is one sentence of lost
+specificity, never a wrong claim.
+
+**Worked examples**
+
+1. `planId:"phat"`, week 7, Row and Squat below 1.025 → brief's copy, unchanged. Identical to today.
+2. `derivedFrom:"phat"`, he renamed `d1a` to "Pendlay row" and changed a cue. Four key lifts present,
+   `s/lo/hi` unchanged → **PHAT-provenance TRUE** → brief's copy, naming "Pendlay row".
+3. **Boundary.** `derivedFrom:"phat"`, he changed squat from `3 × 3–5` to `5 × 5`. → provenance FALSE
+   → generic copy. Correct: a 5 × 5 squat is not the programme the brief's `[Certain]` was about.
+4. **Failing case.** `+ Build from empty`, three days, no key lifts named, week 9, plenty of history.
+   → **ABSENT.** `This plan names no key lifts, so the six-week check cannot run. Name up to four in
+   the plan to switch it on.` The app does not print `Not enough sessions to judge` — he has plenty of
+   sessions, and telling him to log more would be false.
+5. A four-day upper/lower plan with `keyLifts: [bench, squat, row, deadlift]` declared, week 8, bench
+   stalled → measurement runs → generic copy. The app reports the fact and does not vouch for the
+   split.
+
+**Rationale.** The measurement is arithmetic and travels; the diagnosis is a coach's judgement about a
+specific programme and does not. Separating them lets the app keep its most valuable feature on any
+plan without ever claiming knowledge it does not have — and the ABSENT state exists so that "this is
+switched off" never masquerades as "keep logging and it will start working".
+
+---
+
+## 8.5 (e) Rule R1 — confirmed per exercise, and the user-created case
+
+**Confirmed. R1 is computed from the exercise (`k` and `hi`), never from the day.** No change to the
+table in `coach-audit.md` §6. `[Certain]`
+
+The design sets rest on the day: `d1: 150`, `d2: 180`, `d4/d5/d6: 90` (L460, L469, L477, L486, L496).
+Measured against R1, that is wrong on **24 of the 42 slots**, and the errors are not uniform:
+
+| Day | Design | R1 | Slots wrong | Consequence |
+|---|---|---|---|---|
+| d1 | 150 s | 150 s on `d1a`,`d1d` (`hi<=8`); **120 s** on the other six | 6 | +30 s per set on the 6–10 work. Survivable. |
+| d2 | 180 s | 150 s on `d2a`,`d2d`; **120 s** on the other five | 7 | 180 s is R1's **cap**, not its ready. Every set of every exercise waits to the cap. Two calf exercises alone add ~5 min. |
+| d3 | 90 s | **60 s hard cap 90 s** on `d3a` speed; 90 s on the 8–12 work; **60 s** on the 12–15 and 12–20 work | 4 | **The speed slot is the serious one.** |
+| d4 | 90 s | as above across speed / 8–12 / 12–15 / 15–20 | 4 | as above |
+| d5 | 90 s | as above | 3 | as above |
+
+**The speed slots are the ruling.** R1 gives `k:"speed"` a ready at **60 s** and a **hard cap at 90
+s**, with the copy `1:38. Too long for speed work. Go now or drop the weight.` The design's day rest
+of 90 s would start the timer and call him *ready* at exactly the number past which R1 tells him he
+has ruined the set. On the one exercise in the programme where the short rest **is** the stimulus, a
+day-level number does the opposite of the prescription. `[Certain]` — 6 × 3 at 67.5 kg on three
+minutes' rest is not speed work, it is six easy triples, and this is the second time I have had to
+write that sentence.
+
+```
+Rule: R1 (restated, unchanged) — the input is the exercise
+Applies to:   every exercise, every plan, including user-created ones.
+Inputs:       ex.k and ex.hi. NOTHING ELSE. No day field, no plan field, no user history.
+Logic:        power, hi <= 8   -> ready 150 s, cap 180 s
+              power, hi >  8   -> ready 120 s, cap 180 s
+              hyp,   hi <= 12  -> ready  90 s, cap 120 s
+              hyp,   hi >  12  -> ready  60 s, cap 120 s
+              speed            -> ready  60 s, HARD cap 90 s
+Data ruling:  `rest` is NOT a field on the day. If the design's day summary wants a number, it is
+              DERIVED for display (e.g. the modal ready time across that day's exercises) and is
+              never the timer's input. A stored per-day rest value is a second source of truth for
+              a rule that already has one.
+```
+
+### The user-created exercise
+
+**R1 needs nothing a user plan lacks.** C-7 makes `k` required at creation and the editor already
+collects `lo`/`hi`, so R1 has both inputs on day one and runs unchanged. It is in the **plan-agnostic**
+class, correctly. `[Certain]`
+
+Three edge cases, ruled:
+
+1. **`hi` missing or non-numeric.** Fall to the **conservative** row within the given `k`, and
+   conservative differs by role: power → 150 s, hyp → 90 s (the longer rest, because under-resting
+   heavy or moderate work is the harmful direction), speed → 60 s with the 90 s hard cap (the
+   *shorter*, because for speed work the harmful direction is resting too long). State it explicitly
+   in the engine; it is the one place where "conservative" flips sign.
+2. **He picks `k:"speed"` with a rep range above 5.** R1 would hand a 3 × 15–20 lateral raise a 60 s
+   ready and a 90 s hard cap, and the too-long copy would tell him he has ruined a set he cannot ruin.
+   **Warn once at creation; do not block.** It is his plan, there is no injury risk, and a hard refusal
+   in a plan editor is the kind of paternalism that gets an app abandoned. Copy:
+   `Speed work is 3–5 reps moved fast. At 15–20 reps this is hypertrophy work. Change the reps or the role.`
+   Self-limiting downstream: SP1 needs a declared source lift and will be ABSENT anyway.
+3. **He picks `k:"power"` with a 15–20 range.** No warning. `power, hi > 8` → 120 s, and P1's
+   matched-sets progression on a 15–20 set is unusual but not wrong. Not worth a sentence. `[Opinion]`
+
+**Worked examples**
+
+1. `d1g` cambered bar curl, `power`, `hi:10` → **ready 120 s, cap 180 s**. The design's day value: 150 s.
+2. **Boundary.** `d3a` row speed work, `speed`, `hi:3` → **ready 60 s, HARD cap 90 s**. The design's
+   day value: 90 s — i.e. the cap, presented as the target. At 1:38 R1 says
+   `1:38. Too long for speed work. Go now or drop the weight.`; the design would still have been
+   counting up to *ready*.
+3. **Failing case.** `d2g` seated calf raise under the design's `d2: 180`. Two sets, 180 s each,
+   against R1's 120 s. Add `d2f` at three sets and the design adds three minutes of standing still to
+   the end of every lower power day, on calf raises. Not dangerous — just the app quietly making the
+   session longer than the programme asks, on the exercises that least need it.
+4. User-created "Cable crunch" `{s:3, lo:12, hi:15, k:"hyp"}` → `hyp, hi > 12` → **ready 60 s, cap
+   120 s**. No plan data consulted. R1 works on plans that do not exist yet.
+
+---
+
+## 8.6 (f) The Diet tab
+
+### The numbers: approved verbatim, all eight
+
+| | Design | Brief | |
+|---|---|---|---|
+| Training kcal | `3,200` | ~3,200 | ✓ |
+| Training protein | `170 g` | 170 g | ✓ |
+| Training carb | `300 g` | 300 g | ✓ |
+| Training fat | `145 g` | 145 g | ✓ |
+| Rest kcal | `2,500` | ~2,500 | ✓ |
+| Rest protein | `175 g` | 175 g | ✓ |
+| Rest carb | `60 g` | 60 g | ✓ |
+| Rest fat | `175 g` | 175 g | ✓ |
+
+`(5 × 3,200 + 2 × 2,500) / 7 = 3,000` — consistent with the brief's stated weekly average and its
++300 surplus over an estimated 2,700 maintenance. The arithmetic is sound. `[Certain]`
+
+### Should the app state numbers the brief tags `[Guessing]`?
+
+**Yes, with the caveat attached to them.** `[Certain]`, and this is not the same question as B-06.
+
+B-06 was about the app **computing** a confident number from data that could not support it — a
+7-entry "weekly average" spanning a month. There the right answer was silence, because the number was
+manufactured. These eight numbers are not manufactured: they are the targets he was given, they are
+already his plan, and B-29 is open precisely because the app currently says *"add 200 kcal to your
+training days"* without ever showing what the training-day target is — advice about a number it
+refuses to display. **Withholding a target he already has is not caution, it is uselessness.**
+
+The condition is that the estimate stays visible with the numbers. The design does this
+(`These are estimates — the bodyweight trend overrides them`) and it must not be lost in
+implementation: **the caveat renders on the same screen as the macro grid, without scrolling, at
+400 px.** If the tab grows past one screen, the caveat moves directly under the grid.
+
+### Approved verbatim, no change
+
+- Header kickers `Diet` / `Targets only`. `Targets only` is a good, honest signal that the app does not
+  track intake. Keep.
+- The protein control: `PROTEIN HIT TODAY` / `PROTEIN NOT YET HIT`, with
+  `The one non-negotiable. Rest days included.` Faithful to `handoff-brief.md:87`. Keep.
+- Carb placement, training day:
+  `80–100 g in the meal two hours before lifting, 80–100 g in the meal after, the rest spread across the day. Rice, potatoes, oats, fruit.`
+  Faithful to `handoff-brief.md:73-74`. Keep.
+- The heading `Carb placement` / `Rest-day watch item`. Keep.
+
+**One coach ruling on the protein tick, so nobody wires it up later:** it is a habit tick. It may be
+stored per date. **No rule may ever read it.** It is self-reported, unverifiable, and one tap; if it
+ever fed W1's calorie decision the app would be adjusting his food off a checkbox. State this in the
+data model. `[Certain]`
+
+### Corrected verbatim
+
+**1. The calibration block contradicts Rule W1.** This is the one real defect on the tab.
+
+```
+Design, PHAT App.dc.html:314:
+  Run these for 14 days. +0.2–0.3 kg a week is correct. Flat means add 200 kcal to training days;
+  over +0.5 kg means cut 200. These are estimates — the bodyweight trend overrides them.
+```
+
+It restates the brief's protocol correctly but states a **decision procedure the app does not run**.
+W1's add trigger is `rate < +0.10`, not "flat"; W1 requires ≥ 5 dated weigh-ins in each of two 7-day
+windows before it will say anything; W1 has a 7-day cooldown after a change. So the Diet tab describes
+one procedure and the Weight tab executes another. **Two screens, two rules, is the shape of B-06** —
+and B-51 shows it can reappear through a redesign. The Diet tab must stop owning the decision and
+point at the screen that does.
+
+```
+CORRECTED, verbatim:
+
+  Calibration
+  These targets are estimates from your height, weight and training load, not measurements. The
+  bodyweight trend overrides them.
+  Weigh daily, same conditions. The Weight tab compares your last 7 days against the 7 before and
+  tells you when to change something. It needs at least 5 weigh-ins in each of those weeks before it
+  will say anything.
+```
+
+**2. Creatine is missing.** `handoff-brief.md:89` lists it under *Non-negotiables* with a `[Certain]`
+tag, and B-29 explicitly names it. The design drops it. Add, as its own block:
+
+```
+NEW, verbatim:
+
+  Non-negotiables
+  Protein every day, rest days included.
+  Creatine monohydrate 5 g daily.
+  If the bar numbers do not move month over month, the surplus is being wasted.
+```
+
+The third line is `handoff-brief.md:88` and it is the sentence that ties this tab to the rest of the
+app. It belongs here.
+
+**3. The medical caveat is missing, and this one is not optional.** The tab displays **175 g of fat**
+as a daily target. The brief carries a caveat and the design does not reproduce it:
+
+> Not a dietitian. Sustained high-fat intake is worth running past a doctor if there is any
+> cardiovascular or metabolic history. — `handoff-brief.md:102-103`
+
+Per `coach-audit.md` §10 and my standing position: this app does not assess and does not work around
+medical territory, and it points at a person rather than guessing. A screen that prescribes 175 g of
+fat with no such line is the app taking a position it is not qualified to take. **Add it.**
+
+```
+NEW, verbatim, below the macro grid on the REST DAY segment and in the calibration block on both:
+
+  Not a dietitian. Rest-day fat is 175 g by design. If you have any cardiovascular or metabolic
+  history, run this past a doctor before you run it for months.
+```
+
+**4. `fortnight` → `two weeks`.** One-word change, for consistency with every other duration in the
+app (`14 days`, `two weeks`, `7 days`).
+
+```
+CORRECTED, verbatim:
+  60 g, not zero — vegetables, berries, a little dairy. Fat at 175 g is easy to overshoot because
+  it's calorically dense; weigh it for the first two weeks.
+```
+
+**5. The day is hardcoded — a 700 kcal error labelled "Today".** `PHAT App.dc.html:564` defaults
+`dietDay: "train"` unconditionally, and L729 hardcodes the home-screen strip:
+
+```js
+v.macroLabel = "Today — high-carb training day";
+v.mKcal = "3,200"; v.mP = "170g"; v.mC = "300g"; v.mF = "145g";
+```
+
+On a Wednesday or a Sunday — the brief's two rest days — the app tells him **3,200 kcal and 300 g of
+carbs is today's target** when the programme says 2,500 and 60. That is a 700 kcal and 240 g error,
+delivered under the word "Today", on the two days of the week the low-carb floor exists to protect.
+`[Certain]` this is the worst single line on the Diet tab and it is not a visual issue.
+
+```
+CORRECTED:
+  The segment and the home strip default from the LOCAL weekday against the plan's rest days.
+  On PHAT: Wed and Sun -> rest. All others -> training.
+  He may still switch the segment manually; that changes the display, never the default.
+
+  Labels, verbatim:
+    training day, PHAT or any plan declaring rest days:  Today — high-carb training day
+    rest day,     same:                                  Today — low-carb rest day
+    a plan that declares no rest days:                   Training day   /   Rest day
+                                                         (no "Today —" prefix, no claim about today)
+```
+
+The last case matters: on a user plan the app does not know which days are rest days, so it must show
+the targets without asserting that either applies today. Same principle as C7a. `[Certain]`
+
+**6. Recommended addition, not a correction.** One line under the macro grid giving him the *why*,
+both numbers from the brief:
+
+```
+  Weekly average ~3,000 kcal against an estimated 2,700 maintenance. The 300 is the surplus.
+```
+
+`[Opinion]` — it is the one number that makes the other eight checkable, and it is what he will want
+when the bodyweight trend disagrees with them.
+
+### Worked examples
+
+1. Sunday 2026-09-13, PHAT plan. Home strip: `Today — low-carb rest day`, `2,500 · 175 g · 60 g ·
+   175 g`. Diet tab opens on the REST DAY segment. Under the design: `Today — high-carb training day`
+   and 3,200/300.
+2. **Boundary.** He taps TRAINING DAY on a Sunday. The grid shows 3,200/170/300/145, the label above
+   the grid still reads `Training day` — no `Today —`, because he is looking at a day that is not
+   today. A manual switch must not be able to produce the sentence `Today — high-carb training day` on
+   a Sunday.
+3. **Failing case.** A user plan with four training days and no declared rest days, opened on any day.
+   Labels read `Training day` / `Rest day` with no `Today —`. The app shows the targets and makes no
+   claim about which one applies, because it does not know. Same ruling shape as C7a.
+
+---
+
+## 8.7 What this needs that does not exist yet
+
+Flagged as required. Every item below is a place where the honest answer is *this needs his real
+training history, and there is none.*
+
+1. **The `d2e` and `d3d` alternates.** Glute-ham raise or lying leg curl; DB row or shrug. Unknowable
+   by reasoning. One logged Day 2 and one logged Day 4 settle both. Until then the plan carries a
+   recorded default and the setup prompt exists to correct it.
+2. **Bent-over or Pendlay.** Same. And it matters more than the other two, because `d1a` is an ST1 key
+   lift and a style switch mid-block reads as a stall.
+3. **R1's 120 s for power-day 6–10 work.** That number is my `[Opinion]` — the bottom of the brief's
+   2–3 min band. It is calibrated on nothing. Two weeks of real Day 1 sessions would say whether the
+   curls and skull crushers actually need two minutes.
+4. **Every D1 trigger threshold.** Two consecutive failures, ≥ 2 of 4 lifts stalled, 9 weeks. Chosen to
+   be hard to trip. Whether they fire at a sensible rate is unknown and unknowable until there is
+   history, and I would rather they fired late than early.
+5. **The eight diet numbers.** `[Guessing]` in the brief, by the brief's own tag, which is why the
+   calibration protocol exists. **There are zero bodyweight entries in the app.** Fourteen daily
+   weigh-ins turn all eight from estimates into a tested prescription, and nothing else will.
+6. **B-45** (`fail → deload → fail`) remains deliberately unfilled, per §7.12. Unchanged by anything
+   here.
+
+---
+
+## 8.8 Verdict
+
+**Sign off on the redesign's programme with changes.** The design is a mock-up and its `BASE_PLAN` is
+prop data; measured against the brief it is more accurate than B-55 feared — all 42 set counts, rep
+ranges and `cut` flags are exact — and wrong in two places that matter.
+
+| | |
+|---|---|
+| **(a)** | **Reject** all 8 reclassifications. Keep the coach-verified `k` values. And correct WO-004 §W1's list: `d2b` was never reclassified. |
+| **(b)** | **Sign off with changes.** The design's three choices are probably right; the silence is the defect. Two are data problems (two ids each), one is display. `d2e`'s `implement` must change with the answer. |
+| **(c)** | **Sign off with changes.** The extra-set feature is approved. Extras are excluded from P1 and from both sides of H1. The `EXTRA` badge must be computed from completed-set ordinal, not row index. |
+| **(d)** | Copy delivered. **ST1's measurement may run on any plan that names key lifts; the brief's diagnosis may not run on any plan but PHAT or a faithful copy of it.** |
+| **(e)** | **R1 confirmed per exercise.** Per-day rest is rejected as a stored field — wrong on 24 of 42 slots and actively wrong on the three speed slots. |
+| **(f)** | **Numbers approved verbatim. Copy corrected in five places**, of which two are required: the medical caveat on 175 g of fat, and the hardcoded training-day label that shows 3,200 kcal on a rest day. |
+
+Nothing here changes an `id`, `s`, `lo`, `hi` or `cut`. The single data-touching change is `d2e`'s
+`implement`, and it is free only while the log is empty.
+
+**And the standing point, since this is the fourth document I have written about a programme with zero
+logged sessions.** Every ruling above is calibrated against a brief and my own judgement, not against
+anything he has done. Rulings (b) items 1–3 and flag 3 in §8.7 would each be settled by a single
+logged session. The advice layer is now more thoroughly specified than the training is performed, and
+that gap is not something another work order closes.

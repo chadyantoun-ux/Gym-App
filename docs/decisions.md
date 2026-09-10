@@ -518,3 +518,79 @@ sits in `state.deload.past` with no current record. Belt to `since`'s braces, at
 **Gap named and deliberately left open — B-45.** `fail → deload → fail` is a distinct state with no
 honest sentence yet. Not written now: it is a new user-facing claim at the edge of what this app may
 say, and it wants real history behind it first.
+
+### 2026-09-10 — Chady's four calls on WO-004
+1. **The handoff brief is the programme; the design's plan is a mock-up.** The prototype reclassifies
+   9 slots from `power` to `hyp` (d1c, d1f, d1g, d1h, d2b, d2c, d2e, d2f, d2g) — changing both which
+   rule fires and which rest applies — and drops two exercise alternates. Not adopted.
+   `strength-coach` still adjudicates the table in W1, but the default is the brief.
+2. **The movement diagrams are being replaced, not kept and not placeheld.** Chady: *"diagrams are
+   very bad, we need better ones."* So the 15 hand-built SVG stick figures are out on quality grounds,
+   and shipping the design's empty placeholder slots is not the answer either. **New work: source or
+   generate real movement illustrations.** Constraints that bind whatever we produce: no build step,
+   no CDN (offline-first), 42 exercise slots mapping to ~15 movement patterns, must read at ~64 px on
+   a dark ground, and the per-exercise form cue text stays regardless of the artwork.
+3. **The Plan Editor is IN this batch**, against the PM's recommendation to defer it. W14 and W15 stay.
+4. **WO-002 (the backup round trip) lands after M1** — once the session screen works end to end and
+   before the Trend/Weight/Diet screens. The importer owes schema 2, 3 and 4.
+
+### 2026-09-10 — The design restates three bugs we had already fixed
+Not a criticism of the design — a visual prototype restating behaviour from an older build is exactly
+what happens, and it is why the engines are the source of truth and the design supplies the slot, not
+the sentence. Recorded because the same thing will happen on the next design pass:
+- The calorie decision is **B-06 verbatim** — last 7 *entries*, bands `0.2–0.35 correct / >0.5 cut /
+  <0.15 add`, firing from two entries.
+- The verdict gate is `min(ex.s, sets.length)`, so removing two sets fires a verdict on one — **B-24
+  through a new door**.
+- `− REMOVE` pops the last row unconditionally, including a completed `120 × 5`, with no confirmation
+  and no undo.
+Plus two new P0-class ones: `SWITCH TO AN EMPTY LOG` is one-tap history deletion, and demo sessions are
+byte-identical to real ones, so sample data would drive a real stall report.
+**Rules out:** taking behaviour from a design prototype. Take the flow and the pixels; the rules come
+from `logic.js`.
+
+### 2026-09-10 — CORRECTION: 8 reclassified slots, not 9. Our own work order was wrong
+WO-004 §W1 and B-55 both listed `d2b` hack squat among the design's `power` → `hyp` reclassifications.
+`PHAT App.dc.html:471` has it as `power`. The work order conflated it with `d4b`, the Lower-hypertrophy
+hack squat, which is `hyp` in both files.
+**Why this one matters more than the count:** an engineer transcribing the work order rather than
+reading the source would have flipped a slot — **a programme change originating in a bug report.**
+Found by `strength-coach` because it read the design file instead of trusting the brief it was given.
+**Rules out:** transcribing a list of source facts from a work order. The work order says where to look.
+
+### 2026-09-10 — `k` is a routing tag, not a claim about adaptation
+The design's reclassification is **rejected**; the **day heading governs**. A 6–10 rep skull crusher is
+certainly not power training, but `handoff-brief.md:185` assigns the progression protocol per *day*,
+unqualified — `k` selects which rule runs, it does not assert a physiological category.
+Two things settle it beyond the definition: flipping would drop power-day rest to 90 s ready / 120 s
+cap, **below the 2–3 min minimum the brief itself states**; and the design's split is not internally
+consistent (it keeps weighted pull-up, weighted dip and hack squat as `power` at the same 6–10 reps),
+so there was no coaching position to rebut.
+**To apply:** one documentation line defining what `k` means. The ambiguity has now produced one
+escalation and one wrong list.
+
+### 2026-09-10 — Rule X1: extra sets count for volume, not for advice
+A set beyond the prescription is excluded from P1 and from **both sides** of H1's comparison; the
+session volume total counts it. Worked both directions — extras can also *suppress* a correct load
+increase, which is the direction nobody looks for.
+**Two prototype corrections:** the `EXTRA` badge is computed from row index (`flag: i >= e.s`), so it
+badges rows that are *driving* the verdict — it must be computed from completed-set ordinal. And the
+"add sets freely" invitation should not render on power slots at all.
+
+### 2026-09-10 — ST1: the measurement travels, the diagnosis does not
+On a user-created plan, the stall *measurement* still runs, but the brief's diagnosis —
+`the split isn't the problem and neither is the diet` — must not. That sentence was earned by a coach
+who assessed *that* split; on a plan Chady built himself, the split is the most likely thing to
+actually be wrong. Generic copy replaces it, gated on `derivedFrom:"phat"` plus the four key lifts
+unchanged. D1's T3 backstop survives on a foreign plan; T1 and T2 do not.
+**Also ruled:** ABSENT is held distinct from not-enough-data. Telling him to log more sessions when the
+plan has switched a feature off is a lie.
+
+### 2026-09-10 — The Diet tab would have misfed him on rest days
+`PHAT App.dc.html:564/729` hardcodes `dietDay: "train"` and the label `Today — high-carb training day`.
+**On Wednesday and Sunday it would show 3,200 kcal and 300 g of carbs where the programme says 2,500
+and 60** — the rest days the whole carb-cycling protocol is built around. Its calibration block also
+restates a decision procedure that contradicts Rule W1's thresholds: the same two-screens-two-rules
+shape as B-06.
+All eight macro numbers approved verbatim, with **the brief's medical caveat required** — the tab
+displays 175 g of fat and currently carries none.
