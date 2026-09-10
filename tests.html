@@ -1,0 +1,1956 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phat Gym Track - test harness</title>
+<style>
+  :root{
+    --bg:#0e0f10; --surface:#171819; --line:#2a2c2e; --bone:#e8e6e1; --dim:#9b9a96;
+    --faint:#6a6966; --amber:#d9a441; --green:#5fa860; --red:#c9524a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--bone);
+       font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:12px}
+  h1{font-size:17px;margin:0 0 2px}
+  h2{font-size:13px;margin:24px 0 8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .sub{color:var(--dim);font-size:12px;margin:0 0 12px}
+  .summary{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:14px;margin:0 0 12px}
+  .summary.pass{border-color:var(--green)}
+  .summary.fail{border-color:var(--red)}
+  .verdict{font-size:22px;font-weight:700;letter-spacing:.02em}
+  .verdict.pass{color:var(--green)} .verdict.fail{color:var(--red)}
+  .counts{display:flex;gap:20px;margin-top:10px;flex-wrap:wrap}
+  .counts b{display:block;font-size:20px}
+  .counts span{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  .banner{border:1px solid var(--red);background:#241614;border-radius:10px;padding:12px;margin:0 0 12px;font-size:13px}
+  .banner b{color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+  td,th{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line);
+        word-break:break-word;overflow-wrap:anywhere}
+  th{color:var(--faint);font-weight:400;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  td.st{width:46px}
+  .r-pass td.st{color:var(--green)}
+  .r-fail td.st{color:var(--red)}
+  .r-skip td.st{color:var(--amber)}
+  .r-fail{background:#1d1514}
+  .r-skip{background:#1e1a12}
+  .skipmsg{color:var(--amber)}
+  .exp{color:var(--green);white-space:pre-wrap}
+  .act{color:var(--red);white-space:pre-wrap}
+  .msg{color:var(--dim)}
+  .grp{color:var(--faint);font-size:11px;display:block}
+  code,kbd{background:#000;padding:1px 4px;border-radius:3px;color:var(--amber)}
+  ol,ul{padding-left:20px;margin:6px 0} li{margin:6px 0}
+  .note{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px;margin:8px 0;font-size:13px}
+  label.tog{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:var(--dim);cursor:pointer}
+  input[type=checkbox]{width:20px;height:20px}
+  .hidepass tr.r-pass{display:none}
+</style>
+</head>
+<body>
+
+<h1>Phat Gym Track - test harness</h1>
+<p class="sub">Pure-function regression suite for WO-001 (B-01 / B-02 / B-03 / B-21).
+Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
+Every test is named after the backlog ID and the work-order acceptance criterion it covers.</p>
+
+<div id="summary" class="summary"><div class="verdict">running...</div></div>
+<div id="banner"></div>
+
+<label class="tog"><input type="checkbox" id="onlyfail"> Show failures only</label>
+
+<h2>Results</h2>
+<div id="results"></div>
+
+<h2>Open contract questions</h2>
+<div id="contract" class="note"></div>
+
+<h2>Not testable in this harness (needs B-20 extraction)</h2>
+<div id="untestable" class="note"></div>
+
+<h2>Manual checklist - two minutes, on the phone</h2>
+<div id="manual" class="note"></div>
+
+<!-- Classic script on purpose. ES modules, fetch and iframes all fail on a file:// opaque origin. -->
+<script src="logic.js"></script>
+<script>
+"use strict";
+/* ============================================================ harness */
+var RESULTS = [], GROUP = "-", CONTRACT = [], T0 = Date.now();
+var P = (typeof window.PHAT === "object" && window.PHAT) ? window.PHAT : {};
+
+function AssertFail(msg, expected, actual){
+  this.name = "AssertFail"; this.message = msg;
+  this.expected = expected; this.actual = actual; this.isAssert = true;
+}
+function show(v){
+  if (typeof v === "string") return JSON.stringify(v);
+  if (v === undefined) return "undefined";
+  if (v === null) return "null";
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (typeof v === "function") return "[function " + (v.name || "anonymous") + "]";
+  try { return JSON.stringify(v); } catch (e) { return String(v); }
+}
+function deepEq(a, b){
+  if (a === b) return true;
+  if (typeof a !== typeof b) return false;
+  if (a === null || b === null) return false;
+  if (typeof a !== "object") return (a !== a && b !== b);
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  var ka = Object.keys(a).sort(), kb = Object.keys(b).sort(), i;
+  if (ka.length !== kb.length) return false;
+  for (i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return false;
+  for (i = 0; i < ka.length; i++) if (!deepEq(a[ka[i]], b[ka[i]])) return false;
+  return true;
+}
+var A = {
+  eq: function(actual, expected, msg){
+    if (actual !== expected) throw new AssertFail(msg || "not strictly equal", show(expected), show(actual));
+  },
+  ne: function(actual, forbidden, msg){
+    if (actual === forbidden) throw new AssertFail(msg || "forbidden value", "anything but " + show(forbidden), show(actual));
+  },
+  deep: function(actual, expected, msg){
+    if (!deepEq(actual, expected)) throw new AssertFail(msg || "not deep equal", show(expected), show(actual));
+  },
+  ok: function(cond, msg){
+    if (!cond) throw new AssertFail(msg || "expected truthy", "truthy", show(cond));
+  },
+  oneOf: function(actual, list, msg){
+    for (var i = 0; i < list.length; i++) if (actual === list[i]) return;
+    throw new AssertFail(msg || "not an allowed value", "one of " + show(list), show(actual));
+  },
+  match: function(actual, re, msg){
+    if (typeof actual !== "string" || !re.test(actual))
+      throw new AssertFail(msg || "does not match", String(re), show(actual));
+  },
+  noThrow: function(fn, msg){
+    try { return fn(); }
+    catch (e) { throw new AssertFail((msg || "threw") + ": " + (e && e.message ? e.message : String(e)), "no throw", String(e)); }
+  },
+  isFn: function(v, name){
+    if (typeof v !== "function") throw new AssertFail("PHAT." + name + " is missing", "function", show(v));
+  },
+  /* A criterion this machine cannot exercise is NOT a pass. It is reported
+     separately, with the reason and what would make it runnable. */
+  skipUnless: function(cond, reason){
+    if (!cond) throw { isSkip: true, reason: reason };
+  }
+};
+function group(g){ GROUP = g; }
+function T(name, fn){
+  var rec = { name: name, group: GROUP, pass: true, skip: false, msg: "", expected: "", actual: "" };
+  try { fn(A); }
+  catch (e) {
+    if (e && e.isSkip) { rec.skip = true; rec.msg = e.reason; }
+    else {
+      rec.pass = false;
+      if (e && e.isAssert) { rec.msg = e.message; rec.expected = e.expected; rec.actual = e.actual; }
+      else {
+        rec.msg = (e && e.name ? e.name + ": " : "") + (e && e.message ? e.message : String(e));
+        rec.expected = "test runs without throwing"; rec.actual = "threw";
+      }
+    }
+  }
+  RESULTS.push(rec);
+}
+function contract(q){ CONTRACT.push(q); }
+
+/* ---------- fixtures and helpers ---------- */
+
+/* INJECTED CLOCK. A real Date - so `instanceof Date` and `getTime()` behave -
+   whose *local* component getters are shadowed to report the wall clock at a
+   chosen UTC offset. That makes the timezone tests deterministic on any
+   machine: they do not depend on the host's zone, and Chrome on Windows
+   ignores the TZ environment variable so there is no other way.
+   `toISOString()` is left alone and still returns the true UTC instant, so the
+   pre-fix implementation fails with a readable "expected 2026-01-15, got
+   2026-01-14" rather than throwing.
+   Caveat, stated plainly: this proves PHAT.localDate. It does not prove the
+   whole app under a real device timezone - that is manual checklist item 8. */
+function tzDate(utcISO, offsetHours){
+  var t = Date.parse(utcISO);
+  if (t !== t) throw new Error("bad fixture instant: " + utcISO);
+  var w = new Date(t + offsetHours * 3600000); /* wall clock, read via UTC getters */
+  var d = new Date(t);
+  d.getFullYear = function(){ return w.getUTCFullYear(); };
+  d.getMonth    = function(){ return w.getUTCMonth(); };
+  d.getDate     = function(){ return w.getUTCDate(); };
+  d.getDay      = function(){ return w.getUTCDay(); };
+  d.getHours    = function(){ return w.getUTCHours(); };
+  d.getMinutes  = function(){ return w.getUTCMinutes(); };
+  d.getSeconds  = function(){ return w.getUTCSeconds(); };
+  d.getMilliseconds = function(){ return w.getUTCMilliseconds(); };
+  d.getTimezoneOffset = function(){ return -offsetHours * 60; };
+  return d;
+}
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
+function localDateOf(d){ return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+/* Minutes east of UTC for a specific date (Beirut in January = +120). */
+function offsetOf(d){ return -d.getTimezoneOffset(); }
+var TZ_NAME = (function(){
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown"; }
+  catch (e) { return "unknown"; }
+})();
+function offsetLabel(mins){
+  var s = mins < 0 ? "-" : "+", m = Math.abs(mins);
+  return "UTC" + s + pad2(Math.floor(m / 60)) + ":" + pad2(m % 60);
+}
+/* Is the injected clock actually reaching localDate? If a future refactor
+   normalises the argument (e.g. new Date(+d)) the injection silently collapses
+   to the host zone, and the offset tests would start asserting the host's
+   timezone instead of the one they name. This probe catches that and turns
+   them into loud skips rather than lies. */
+/* Does localDate read the getters of the Date it is handed? Shadowed with a
+   date no interpretation of the instant could produce. */
+var TZ_INJECT_OK = (function(){
+  try {
+    var d = new Date();
+    d.getFullYear = function(){ return 1998; };
+    d.getMonth = function(){ return 6; };
+    d.getDate = function(){ return 4; };
+    return P.localDate(d) === "1998-07-04";
+  } catch (e) { return false; }
+})();
+/* If injection is unavailable BECAUSE the implementation is UTC-based, that is
+   B-03 itself, not a testability gap: the offset tests must then run and fail
+   loudly rather than skip. Only a "normalising" implementation earns a skip. */
+var LOOKS_UTC = (function(){
+  try {
+    var off = -(new Date(2026, 0, 15, 12, 0, 0)).getTimezoneOffset();
+    if (off === 0) return false;
+    var d = off > 0 ? new Date(2026, 0, 15, 0, 30, 0) : new Date(2026, 0, 15, 23, 30, 0);
+    return P.localDate(d) === d.toISOString().slice(0, 10) &&
+           P.localDate(d) !== localDateOf(d);
+  } catch (e) { return false; }
+})();
+var TZ_SIM = TZ_INJECT_OK || LOOKS_UTC;
+var TZ_SIM_WHY = "The injected clock is not reaching PHAT.localDate, so this offset cannot be tested " +
+  "here. Cause: localDate is re-deriving its components instead of calling the getters on the Date it " +
+  "was handed (something like new Date(+d) or Date.UTC round-tripping). Keep localDate reading " +
+  "d.getFullYear()/getMonth()/getDate() directly. Until then only the host timezone (" + TZ_NAME +
+  ") is covered, plus manual checklist item 8.";
+var AR5 = "٥"; /* Arabic-Indic digit five */
+
+/* Pre-fix store fixtures: sets are raw strings, dates are bare YYYY-MM-DD, no
+   schemaVersion, no dateBasis - exactly what finish() writes today. */
+function seedLog(){
+  return {
+    includeCut: false,
+    sessions: [
+      { id: 1736500000000, date: "2026-01-10", dayId: "d1",
+        entries: { d1a: { sets: [{ w: "100", r: "5" }, { w: "100", r: "5" }, { w: "95", r: "4" }], note: "belt on" },
+                   d1d: { sets: [{ w: "80", r: "5" }], note: "" } } },
+      { id: 1736700000000, date: "2026-01-12", dayId: "d2",
+        entries: { d2a: { sets: [{ w: "120", r: "3" }], note: "" } } },
+      { id: 1737000000000, date: "2026-01-15", dayId: "d3",
+        entries: { d3a: { sets: [{ w: "60", r: "12" }, { w: "60", r: "11" }], note: "" } } }
+    ]
+  };
+}
+function seedBw(){
+  var rows = [], i;
+  var days = ["2026-01-01","2026-01-03","2026-01-05","2026-01-07","2026-01-09",
+              "2026-01-11","2026-01-13","2026-01-15","2026-01-17","2026-01-19"];
+  for (i = 0; i < days.length; i++) rows.push({ date: days[i], kg: Math.round((85 + i * 0.2) * 10) / 10 });
+  return { entries: rows };
+}
+/* Tolerant unwrap. The work order fixes the signature but not the exact return
+   shape; assumed contract is {log, bw, notes}. A mismatch fails ONE named
+   contract test rather than silently failing twenty. */
+function mig(log, bw){
+  var res = P.migrateStore(log, bw);
+  if (!res || typeof res !== "object")
+    throw new Error("migrateStore returned " + show(res) + "; expected an object {log, bw, notes}");
+  if (Array.isArray(res)) return { log: res[0], bw: res[1], notes: res[2] || [], raw: res };
+  return { log: res.log, bw: res.bw, notes: res.notes || [], raw: res };
+}
+function bwRows(bw){
+  if (!bw) return [];
+  if (Array.isArray(bw)) return bw;
+  return bw.entries || [];
+}
+function datesOfLog(log){
+  var out = [], i, ss = (log && log.sessions) || [];
+  for (i = 0; i < ss.length; i++) out.push(ss[i] && ss[i].date);
+  return out;
+}
+function datesOfBw(bw){
+  var out = [], i, rs = bwRows(bw);
+  for (i = 0; i < rs.length; i++) out.push(rs[i] && rs[i].date);
+  return out;
+}
+function hasKeyDeep(o, key){
+  if (!o || typeof o !== "object") return false;
+  if (!Array.isArray(o) && Object.prototype.hasOwnProperty.call(o, key)) return true;
+  for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) { if (hasKeyDeep(o[k], key)) return true; }
+  return false;
+}
+/* sets("100:5", ":", "7.5.0:5") -> [{w:"100",r:"5"},{w:"",r:""},{w:"7.5.0",r:"5"}] */
+function sets(){
+  var out = [], i, p;
+  for (i = 0; i < arguments.length; i++) { p = String(arguments[i]).split(":"); out.push({ w: p[0] || "", r: p[1] || "" }); }
+  return out;
+}
+function draft(entries, date){
+  return { schemaVersion: 2, dayId: "d1", date: date || "2026-01-15", entries: entries, savedAt: 1768000000000 };
+}
+function entry(exId, setList, note){
+  var e = {}; e[exId] = { sets: setList, note: note || "" }; return e;
+}
+function countSets(entries){
+  var n = 0, k;
+  for (k in entries) if (Object.prototype.hasOwnProperty.call(entries, k)) {
+    n += (entries[k] && entries[k].sets ? entries[k].sets.length : 0);
+  }
+  return n;
+}
+function allSets(entries){
+  var out = [], k, i, s;
+  for (k in entries) if (Object.prototype.hasOwnProperty.call(entries, k)) {
+    s = (entries[k] && entries[k].sets) || [];
+    for (i = 0; i < s.length; i++) out.push(s[i]);
+  }
+  return out;
+}
+
+/* ============================================================ S0 - harness self-check + API surface */
+group("S0 harness");
+
+T("harness - deepEq detects a difference (a green suite means something)", function(a){
+  a.ok(deepEq({x:1,y:[1,2]}, {y:[1,2],x:1}), "identical objects must compare equal");
+  a.ok(!deepEq({x:1}, {x:2}), "different values must not compare equal");
+  a.ok(!deepEq({x:1}, {x:1,y:2}), "extra key must not compare equal");
+  a.ok(!deepEq([1,2], [2,1]), "array order matters");
+  a.ok(!deepEq("5", 5), "string 5 must not equal number 5");
+});
+
+T("harness - a failing assertion is recorded as a failure", function(a){
+  var caught = null;
+  try { a.eq(1, 2); } catch (e) { caught = e; }
+  a.ok(caught && caught.isAssert, "A.eq must throw an AssertFail on mismatch");
+});
+
+T("W1/W2/W3 - window.PHAT exposes all nine pure functions", function(a){
+  var need = ["localDate","parseWeight","parseReps","classifySet","sanitizeNumericInput",
+              "validateEntry","validateDraft","migrateStore","draftAge"], missing = [], i;
+  a.ok(typeof window.PHAT === "object" && window.PHAT, "window.PHAT is not defined - is logic.js next to tests.html?");
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none", "missing PHAT functions");
+});
+
+T("W1 - PHAT.SCHEMA_VERSION is 2 and PHAT.LIMITS matches Decision 4", function(a){
+  a.eq(P.SCHEMA_VERSION, 2, "index.html writes this into every payload");
+  a.ok(P.LIMITS && typeof P.LIMITS === "object", "LIMITS must be exported so the UI cannot drift from the parser");
+  a.eq(P.LIMITS.wMin, 0, "0 kg is a legal weight (B-21)");
+  a.eq(P.LIMITS.wMax, 500);
+  a.eq(P.LIMITS.rMin, 1);
+  a.eq(P.LIMITS.rMax, 100);
+});
+
+T("B-20 - PHAT does not yet export the advice functions, so nothing here pins them", function(a){
+  /* verdictFor, the stall detector and the calorie thresholds are being
+     rewritten (docs/coach-audit.md). If they appear in PHAT, this suite must
+     still not assert on them - it would lock in the bugs the coach is fixing. */
+  var forbidden = ["verdictFor","vol","topSet","weeksIn","lastFor"], found = [], i;
+  for (i = 0; i < forbidden.length; i++) if (P[forbidden[i]] !== undefined) found.push(forbidden[i]);
+  a.eq(found.join(",") || "none", "none",
+    "these are now exported: if they are being extracted, the coach batch owns their tests, not this file");
+});
+
+T("W1 - logic.js clobbers no browser global (the 'top' black-screen incident)", function(a){
+  a.eq(typeof window.top, "object", "window.top was overwritten by a top-level identifier");
+  a.eq(window.self, window, "window.self was overwritten");
+  a.eq(typeof window.name, "string", "window.name was overwritten");
+  a.eq(typeof window.location, "object", "window.location was overwritten");
+  a.eq(typeof window.history, "object", "window.history was overwritten");
+  a.eq(typeof window.parent, "object", "window.parent was overwritten");
+  a.eq(typeof window.screen, "object", "window.screen was overwritten");
+});
+
+T("W1/W2/W3 - the pure functions touch no storage (CLAUDE.md section 7: two stores)", function(a){
+  var ls;
+  try { ls = window.localStorage; } catch (e) { ls = null; }
+  a.skipUnless(!!ls, "localStorage is unavailable in this context (private window or blocked site data), " +
+    "so the spy cannot be installed. Re-run in a normal window.");
+  var calls = 0, realSet = ls.setItem, realGet = ls.getItem, realDel = ls.removeItem;
+  ls.setItem = function(){ calls++; return realSet.apply(ls, arguments); };
+  ls.getItem = function(){ calls++; return realGet.apply(ls, arguments); };
+  ls.removeItem = function(){ calls++; return realDel.apply(ls, arguments); };
+  var stashed = window.storage, storageHits = 0;
+  window.storage = { get: function(){ storageHits++; }, set: function(){ storageHits++; } };
+  try {
+    P.localDate();
+    P.parseWeight("100"); P.parseReps("5");
+    P.classifySet({ w: "100", r: "5" });
+    P.sanitizeNumericInput("1", "10", "w");
+    P.validateEntry(sets("100:5"));
+    P.validateDraft(draft(entry("d1a", sets("100:5"))));
+    P.migrateStore(seedLog(), seedBw());
+    P.draftAge({ date: "2026-01-14" }, "2026-01-15");
+  } finally {
+    ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel;
+    if (stashed === undefined) { try { delete window.storage; } catch (e) { window.storage = undefined; } }
+    else window.storage = stashed;
+  }
+  a.eq(calls, 0, "a pure function read or wrote localStorage");
+  a.eq(storageHits, 0, "a pure function reached the window.storage bridge");
+});
+
+/* ============================================================ S1 - localDate (B-03, W1) */
+group("S1 localDate / B-03 / W1");
+
+/* --- the two headline criteria ---------------------------------------------
+   W1-AC1 and W1-AC2 name specific offsets. The device timezone cannot be
+   changed from a page, so the offset is INJECTED (see tzDate) and the tests
+   are deterministic everywhere. Each is also stated as a wall-clock
+   equivalent that holds in any zone, which is what proves the app-level
+   behaviour on the host. */
+
+T("B-03 / W1-AC1 - clock at 2026-01-15 00:30 in UTC+3 gives 2026-01-15 (pre-fix gave 2026-01-14)", function(a){
+  a.isFn(P.localDate, "localDate");
+  a.skipUnless(TZ_SIM, TZ_SIM_WHY);
+  var d = tzDate("2026-01-14T21:30:00Z", 3);
+  a.eq(d.toISOString().slice(0, 10), "2026-01-14", "fixture sanity: the UTC instant is still the 14th");
+  a.eq(P.localDate(d), "2026-01-15", "this is the exact B-03 bug: UTC said the 14th, Beirut said the 15th");
+});
+
+T("B-03 / W1-AC1 - the same wall clock, no injection: 2026-01-15 00:30 local gives 2026-01-15", function(a){
+  a.eq(P.localDate(new Date(2026, 0, 15, 0, 30, 0)), "2026-01-15");
+});
+
+T("B-03 / W1-AC2 - clock at 2026-01-15 23:30 in UTC-5 gives 2026-01-15, not tomorrow", function(a){
+  a.skipUnless(TZ_SIM, TZ_SIM_WHY);
+  var d = tzDate("2026-01-16T04:30:00Z", -5);
+  a.eq(d.toISOString().slice(0, 10), "2026-01-16", "fixture sanity: the UTC instant is already the 16th");
+  a.eq(P.localDate(d), "2026-01-15", "pre-fix code returned 2026-01-16 here");
+});
+
+T("B-03 / W1-AC2 - the same wall clock, no injection: 2026-01-15 23:30 local gives 2026-01-15", function(a){
+  a.eq(P.localDate(new Date(2026, 0, 15, 23, 30, 0)), "2026-01-15");
+});
+
+T("B-03 / W1 - host reality check: the real device zone never yields the UTC day", function(a){
+  var off = offsetOf(new Date(2026, 0, 15, 12, 0, 0)), d;
+  a.skipUnless(off !== 0, "this device is on UTC, where the local day and the UTC day are the same " +
+    "by definition, so B-03 cannot be observed here. Change the device timezone and reload.");
+  d = off > 0 ? new Date(2026, 0, 15, 0, 30, 0) : new Date(2026, 0, 15, 23, 30, 0);
+  a.ne(P.localDate(d), d.toISOString().slice(0, 10), "localDate is still returning the UTC calendar day");
+  a.eq(P.localDate(d), "2026-01-15");
+});
+
+T("B-03 / W1 - four offsets in one run: UTC+3, UTC+0, UTC-5, UTC-8", function(a){
+  a.skipUnless(TZ_SIM, TZ_SIM_WHY);
+  a.eq(P.localDate(tzDate("2026-01-14T21:30:00Z", 3)),  "2026-01-15", "UTC+3 00:30");
+  a.eq(P.localDate(tzDate("2026-01-16T04:30:00Z", -5)), "2026-01-15", "UTC-5 23:30");
+  a.eq(P.localDate(tzDate("2026-03-02T05:00:00Z", -8)), "2026-03-01", "UTC-8 21:00");
+  a.eq(P.localDate(tzDate("2026-01-15T00:30:00Z", 0)),  "2026-01-15", "UTC+0 00:30");
+  a.eq(P.localDate(tzDate("2026-01-14T18:15:00Z", 5.5)), "2026-01-14", "UTC+5:30 23:45, half-hour zone");
+  a.eq(P.localDate(tzDate("2026-01-14T18:45:00Z", 5.5)), "2026-01-15", "UTC+5:30 00:15, half-hour zone");
+});
+
+T("B-03 / W1 - one instant, three offsets, three different local days", function(a){
+  a.skipUnless(TZ_SIM, TZ_SIM_WHY);
+  var inst = "2026-01-14T22:30:00Z";
+  a.eq(P.localDate(tzDate(inst, 3)),  "2026-01-15", "UTC+3");
+  a.eq(P.localDate(tzDate(inst, 0)),  "2026-01-14", "UTC+0");
+  a.eq(P.localDate(tzDate(inst, -8)), "2026-01-14", "UTC-8");
+});
+
+T("B-03 / W1 - month and year rollover in a simulated UTC+3 and UTC-5", function(a){
+  a.skipUnless(TZ_SIM, TZ_SIM_WHY);
+  a.eq(P.localDate(tzDate("2026-01-31T22:00:00Z", 3)),  "2026-02-01", "UTC+3 month rollover");
+  a.eq(P.localDate(tzDate("2026-02-01T02:00:00Z", -5)), "2026-01-31", "UTC-5 month rollover");
+  a.eq(P.localDate(tzDate("2025-12-31T22:00:00Z", 3)),  "2026-01-01", "UTC+3 year rollover");
+  a.eq(P.localDate(tzDate("2026-01-01T02:00:00Z", -5)), "2025-12-31", "UTC-5 year rollover");
+  a.eq(P.localDate(tzDate("2028-02-28T21:30:00Z", 3)),  "2028-02-29", "UTC+3 into the leap day");
+});
+
+T("B-03 / W1-AC3 - zero-pads single-digit month and day", function(a){
+  a.eq(P.localDate(new Date(2026, 0, 5, 0, 0, 0)), "2026-01-05");
+  a.eq(P.localDate(new Date(2026, 8, 9, 13, 45, 0)), "2026-09-09");
+  a.eq(P.localDate(new Date(2026, 11, 31, 23, 59, 59)), "2026-12-31");
+  a.eq(P.localDate(new Date(2026, 9, 1, 0, 0, 1)), "2026-10-01");
+});
+
+T("B-03 / W1 - month rollover: 31 Jan 23:30 stays January, 1 Feb 00:30 is February", function(a){
+  a.eq(P.localDate(new Date(2026, 0, 31, 23, 30, 0)), "2026-01-31");
+  a.eq(P.localDate(new Date(2026, 1, 1, 0, 30, 0)), "2026-02-01");
+  a.eq(P.localDate(new Date(2026, 1, 28, 23, 30, 0)), "2026-02-28", "short month, no leap day in 2026");
+  a.eq(P.localDate(new Date(2026, 2, 1, 0, 30, 0)), "2026-03-01");
+  a.eq(P.localDate(new Date(2026, 3, 30, 23, 59, 0)), "2026-04-30", "30-day month end");
+});
+
+T("B-03 / W1 - year rollover: 31 Dec 23:30 stays 2025, 1 Jan 00:30 is 2026", function(a){
+  a.eq(P.localDate(new Date(2025, 11, 31, 23, 30, 0)), "2025-12-31");
+  a.eq(P.localDate(new Date(2026, 0, 1, 0, 30, 0)), "2026-01-01");
+  a.eq(P.localDate(new Date(2025, 11, 31, 0, 0, 0)), "2025-12-31");
+});
+
+T("B-03 / W1 - leap day 2028-02-29 is not shifted, at either end of the day", function(a){
+  a.eq(P.localDate(new Date(2028, 1, 29, 0, 30, 0)), "2028-02-29");
+  a.eq(P.localDate(new Date(2028, 1, 29, 23, 30, 0)), "2028-02-29");
+  a.eq(P.localDate(new Date(2028, 1, 28, 23, 30, 0)), "2028-02-28");
+  a.eq(P.localDate(new Date(2028, 2, 1, 0, 30, 0)), "2028-03-01");
+});
+
+T("B-03 / W1 - DST spring-forward day keeps its own date at 00:30 and 23:30 local", function(a){
+  /* Constructed from local components, so this holds in every timezone: US 8 Mar,
+     EU 29 Mar, and Beirut's last-Sunday-in-March are all covered. */
+  a.eq(P.localDate(new Date(2026, 2, 8, 0, 30, 0)), "2026-03-08", "US spring forward 00:30");
+  a.eq(P.localDate(new Date(2026, 2, 8, 23, 30, 0)), "2026-03-08", "US spring forward 23:30");
+  a.eq(P.localDate(new Date(2026, 2, 29, 0, 30, 0)), "2026-03-29", "EU/Beirut spring forward 00:30");
+  a.eq(P.localDate(new Date(2026, 2, 29, 23, 30, 0)), "2026-03-29", "EU/Beirut spring forward 23:30");
+});
+
+T("B-03 / W1 - DST fall-back day keeps its own date at both 01:30 occurrences", function(a){
+  a.eq(P.localDate(new Date(2026, 9, 25, 1, 30, 0)), "2026-10-25", "EU/Beirut fall back");
+  a.eq(P.localDate(new Date(2026, 10, 1, 1, 30, 0)), "2026-11-01", "US fall back");
+  a.eq(P.localDate(new Date(2026, 9, 25, 23, 59, 0)), "2026-10-25");
+});
+
+T("B-03 / W1 - a whole DST week advances exactly one calendar day per day", function(a){
+  var i, d, expect = ["2026-03-26","2026-03-27","2026-03-28","2026-03-29","2026-03-30","2026-03-31","2026-04-01"];
+  for (i = 0; i < expect.length; i++) {
+    d = new Date(2026, 2, 26 + i, 12, 0, 0);
+    a.eq(P.localDate(d), expect[i], "day " + i);
+  }
+});
+
+T("B-03 / W1 - no argument returns today's local date in YYYY-MM-DD", function(a){
+  var now = new Date(), v = P.localDate();
+  a.match(v, /^\d{4}-\d{2}-\d{2}$/, "shape");
+  a.oneOf(v, [localDateOf(now), localDateOf(new Date(Date.now() + 2000))], "must equal the local calendar date now");
+});
+
+T("B-03 / W1 - sweep: every hour of a DST-crossing month reports its own local day", function(a){
+  /* 800+ instants. Catches any offset skew, any rollover, any DST slip, in
+     whatever timezone this device is in - including the half-hour zones. */
+  var day, hour, d, bad = 0, first = "";
+  for (day = 1; day <= 35; day++) {
+    for (hour = 0; hour < 24; hour++) {
+      d = new Date(2026, 2, day, hour, 30, 0);
+      if (P.localDate(d) !== localDateOf(d)) {
+        bad++;
+        if (!first) first = "at local " + localDateOf(d) + " " + pad2(d.getHours()) + ":30 got " + P.localDate(d);
+      }
+    }
+  }
+  a.eq(bad, 0, "instants reporting the wrong local day" + (first ? " - first: " + first : ""));
+});
+
+T("B-03 / W1 - sweep: midnight and 23:30 on the first and last day of all 12 months", function(a){
+  var m, d, bad = 0, first = "";
+  for (m = 0; m < 12; m++) {
+    [new Date(2026, m, 1, 0, 0, 0), new Date(2026, m + 1, 0, 23, 30, 0)].forEach(function(x){
+      if (P.localDate(x) !== localDateOf(x)) { bad++; if (!first) first = String(x); }
+    });
+  }
+  a.eq(bad, 0, "month edges reporting the wrong local day" + (first ? " - first: " + first : ""));
+});
+
+/* ============================================================ S2 - migrateStore (B-03, W1) */
+group("S2 migrateStore / B-03 / W1");
+
+T("W1 - migrateStore returns {log, bw, notes} (assumed contract)", function(a){
+  a.isFn(P.migrateStore, "migrateStore");
+  var res = P.migrateStore(seedLog(), seedBw());
+  a.ok(res && typeof res === "object", "must return an object");
+  a.ok(res.log !== undefined || Array.isArray(res), "no .log on the result");
+  a.ok(res.bw !== undefined || Array.isArray(res), "no .bw on the result");
+  a.ok(Object.prototype.hasOwnProperty.call(res, "notes") || Array.isArray(res), "no .notes array on the result");
+});
+
+T("B-03 / W1-AC4 - empty store: no throw, nothing invented, no dateBasis anywhere", function(a){
+  var r = a.noThrow(function(){ return mig(null, null); }, "migrateStore(null, null) threw");
+  a.ok(!hasKeyDeep(r.log, "dateBasis"), "dateBasis must not appear in an empty log");
+  a.ok(!hasKeyDeep(r.bw, "dateBasis"), "dateBasis must not appear in an empty bw store");
+  a.eq(datesOfLog(r.log).length, 0, "no sessions invented");
+  a.eq(bwRows(r.bw).length, 0, "no bodyweight rows invented");
+  a.deep(r.notes, [], "an empty store produces no notes");
+});
+
+T("B-03 / W1-AC4 - empty-but-present store objects are left empty", function(a){
+  var r = mig({ sessions: [], includeCut: false }, { entries: [] });
+  a.eq(datesOfLog(r.log).length, 0);
+  a.eq(bwRows(r.bw).length, 0);
+  a.ok(!hasKeyDeep(r.log, "dateBasis"), "no dateBasis on an empty log");
+});
+
+T("B-03 / W1-AC5 - DATA LOSS: 3 sessions and 10 bodyweight rows survive, dates byte-identical", function(a){
+  var log = seedLog(), bw = seedBw();
+  var logDatesBefore = datesOfLog(clone(log)), bwDatesBefore = datesOfBw(clone(bw));
+  var r = mig(log, bw), i, after;
+  a.eq(datesOfLog(r.log).length, 3, "all 3 sessions must survive");
+  a.eq(bwRows(r.bw).length, 10, "all 10 bodyweight rows must survive");
+  after = datesOfLog(r.log);
+  for (i = 0; i < 3; i++) {
+    a.eq(typeof after[i], "string", "session " + i + " date must stay a string");
+    a.eq(after[i], logDatesBefore[i], "session " + i + " date was rewritten");
+  }
+  after = datesOfBw(r.bw);
+  for (i = 0; i < 10; i++) a.eq(after[i], bwDatesBefore[i], "bodyweight row " + i + " date was rewritten");
+});
+
+T("B-03 / W1-AC5 - DATA LOSS: logged set values and notes are untouched by the migration", function(a){
+  var before = clone(seedLog());
+  var r = mig(seedLog(), seedBw());
+  var s0 = r.log.sessions[0], b0 = before.sessions[0];
+  a.deep(s0.entries.d1a.sets, b0.entries.d1a.sets, "sets must be byte-identical (still raw strings)");
+  a.eq(s0.entries.d1a.note, "belt on", "note must survive");
+  a.eq(s0.entries.d1a.sets[0].w, "100", "weight must stay the string it was, not be coerced");
+  a.eq(s0.id, b0.id, "session id must survive");
+  a.eq(s0.dayId, b0.dayId, "dayId must survive");
+  a.eq(r.log.includeCut, false, "includeCut must survive");
+  a.eq(bwRows(r.bw)[3].kg, 85.6, "bodyweight value must survive");
+});
+
+T("B-03 / W1 - populated store gets schemaVersion 2 and a utcDatedBefore marker", function(a){
+  var r = mig(seedLog(), seedBw());
+  a.eq(r.log.schemaVersion, 2, "schemaVersion must be 2");
+  a.match(r.log.utcDatedBefore, /^\d{4}-\d{2}-\d{2}$/, "utcDatedBefore must be a local YYYY-MM-DD");
+  a.eq(r.log.utcDatedBefore, P.localDate(), "utcDatedBefore must be the migration's LOCAL date");
+});
+
+T("B-03 / W1 - every pre-existing session and bodyweight row is marked dateBasis utc", function(a){
+  var r = mig(seedLog(), seedBw()), i, ss = r.log.sessions, rows = bwRows(r.bw);
+  for (i = 0; i < ss.length; i++) a.eq(ss[i].dateBasis, "utc", "session " + i + " must be marked");
+  for (i = 0; i < rows.length; i++) a.eq(rows[i].dateBasis, "utc", "bw row " + i + " must be marked");
+});
+
+T("B-03 / W1-AC6 - migration is idempotent: run twice equals run once", function(a){
+  var once = mig(seedLog(), seedBw());
+  var snapshot = JSON.stringify({ log: once.log, bw: once.bw });
+  var twice = mig(once.log, once.bw);
+  a.eq(JSON.stringify({ log: twice.log, bw: twice.bw }), snapshot, "second run changed the store");
+  a.deep(twice.notes, [], "second run must report no changes");
+});
+
+T("B-03 / W1-AC6 - three runs still equal one run (no key duplication, no drift)", function(a){
+  var r = mig(seedLog(), seedBw());
+  var one = JSON.stringify({ log: r.log, bw: r.bw });
+  r = mig(r.log, r.bw); r = mig(r.log, r.bw);
+  a.eq(JSON.stringify({ log: r.log, bw: r.bw }), one);
+});
+
+T("B-03 / W1 - an already-migrated store is not re-marked and dates stay identical", function(a){
+  var log = seedLog(), bw = seedBw(), i;
+  log.schemaVersion = 2; log.utcDatedBefore = "2026-02-01";
+  for (i = 0; i < log.sessions.length; i++) log.sessions[i].dateBasis = "utc";
+  for (i = 0; i < bw.entries.length; i++) bw.entries[i].dateBasis = "utc";
+  var datesBefore = datesOfLog(clone(log)).concat(datesOfBw(clone(bw)));
+  var r = mig(log, bw);
+  a.eq(r.log.utcDatedBefore, "2026-02-01", "the original marker date must not be overwritten");
+  a.eq(r.log.schemaVersion, 2);
+  a.deep(datesOfLog(r.log).concat(datesOfBw(r.bw)), datesBefore, "no date may be rewritten on a re-run");
+  a.eq(datesOfLog(r.log).length, 3, "no session dropped");
+  a.eq(bwRows(r.bw).length, 10, "no bodyweight row dropped");
+  a.deep(r.notes, [], "an already-migrated store must report no changes");
+});
+
+T("B-03 / W1 - rows written after the migration (dateBasis local) are never re-marked utc", function(a){
+  var log = seedLog();
+  log.schemaVersion = 2;
+  log.sessions[0].dateBasis = "utc";
+  log.sessions[1].dateBasis = "local";
+  delete log.sessions[2].dateBasis;
+  var r = mig(log, seedBw());
+  a.eq(r.log.sessions[1].dateBasis, "local", "a local-dated row must not be relabelled utc");
+});
+
+T("B-03 / W1 - two bodyweight rows on one date: keeps the LAST, notes the drop", function(a){
+  var bw = { entries: [
+    { date: "2026-01-01", kg: 85.0 },
+    { date: "2026-01-02", kg: 85.2 },
+    { date: "2026-01-02", kg: 85.4 },
+    { date: "2026-01-03", kg: 85.6 }
+  ] };
+  var r = mig(seedLog(), bw), rows = bwRows(r.bw);
+  a.eq(rows.length, 3, "the duplicate date must collapse to one row");
+  a.deep(datesOfBw(r.bw), ["2026-01-01","2026-01-02","2026-01-03"], "dates must keep their order and values");
+  a.eq(rows[1].kg, 85.4, "the LAST row in array order wins");
+  a.ok(r.notes.length >= 1, "the drop must be recorded in notes");
+});
+
+T("B-03 / W1 - distinct dates are never deduped and never reordered", function(a){
+  var r = mig(seedLog(), seedBw()), i, txt;
+  a.deep(datesOfBw(r.bw), datesOfBw(seedBw()), "10 distinct dates must come back in the same order");
+  a.eq(bwRows(r.bw).length, 10);
+  for (i = 0; i < r.notes.length; i++) {
+    txt = JSON.stringify(r.notes[i]);
+    a.ok(!/drop|remov|delet|discard/i.test(txt), "nothing may be dropped here, but a note says: " + txt);
+  }
+});
+
+T("B-03 / W1 - a dropped duplicate row is handed back in the note, not discarded", function(a){
+  /* The dedupe is the only place this batch deletes anything. The dropped row
+     must come back with the note so a later session can still recover it. */
+  var bw = { entries: [
+    { date: "2026-01-02", kg: 85.2 },
+    { date: "2026-01-02", kg: 85.4 }
+  ] };
+  var r = mig(seedLog(), bw), i, note = null;
+  for (i = 0; i < r.notes.length; i++) if (r.notes[i] && r.notes[i].dropped) note = r.notes[i];
+  a.ok(note, "the note for a dropped row must carry the row itself");
+  a.eq(note.dropped.length, 1);
+  a.eq(note.dropped[0].kg, 85.2, "the discarded value must still be readable");
+  a.eq(note.dropped[0].date, "2026-01-02", "and its date must be byte-identical");
+  a.eq(note.level, "warn", "dropping data is at least a warning");
+});
+
+T("B-03 / W1 - changed:false on an empty store, so boot writes nothing", function(a){
+  var r = P.migrateStore(null, null);
+  a.eq(r.changed, false, "an empty store must not trigger a boot write");
+  a.eq(r.logChanged, false);
+  a.eq(r.bwChanged, false);
+  r = P.migrateStore({ sessions: [], includeCut: false }, { entries: [] });
+  a.eq(r.changed, false, "an empty-but-present store must not trigger a boot write either");
+});
+
+T("B-03 / W1 - changed:true only when there was legacy data to mark", function(a){
+  var r = P.migrateStore(seedLog(), seedBw());
+  a.eq(r.changed, true, "legacy rows were marked, so the boot write is needed");
+  var again = P.migrateStore(r.log, r.bw);
+  a.eq(again.changed, false, "a second boot must not write again");
+});
+
+T("B-03 / W1 - unknown keys in a stored object survive the migration", function(a){
+  /* A future build's keys must not be deleted by today's build (forward
+     compatibility, and the same guarantee an import/restore will need). */
+  var log = seedLog(), bw = seedBw();
+  log.futureThing = { deload: true };
+  log.programVersion = "phat-2027";
+  bw.units = "kg";
+  var r = mig(log, bw);
+  a.deep(r.log.futureThing, { deload: true }, "an unknown log key was dropped");
+  a.eq(r.log.programVersion, "phat-2027");
+  a.eq(bwRows(r.bw).length, 10, "and the rows are still there");
+  a.eq((r.bw.units !== undefined ? r.bw.units : (r.bw.entries ? "MISSING" : "MISSING")), "kg",
+    "an unknown bodyweight-store key was dropped");
+});
+
+T("B-03 / W1 - migration never throws on a corrupt or truncated store", function(a){
+  var junk = [
+    '{"sessions":[{"date":"2026-0',
+    "not json at all",
+    42,
+    [],
+    { sessions: "not-an-array" },
+    { sessions: [null, undefined, {}, { date: 123 }] },
+    { sessions: [{ date: "2026-01-10", entries: null }] },
+    { entries: null }
+  ], i, j, r;
+  for (i = 0; i < junk.length; i++) {
+    for (j = 0; j < junk.length; j++) {
+      /* eslint-disable no-loop-func */
+      (function(x, y, label){
+        var out = a.noThrow(function(){ return P.migrateStore(x, y); }, "threw on corrupt input " + label);
+        a.ok(out && typeof out === "object", "must still return a store object for " + label);
+      })(junk[i], junk[j], i + "/" + j);
+    }
+  }
+});
+
+T("B-03 / W1 - corrupt input is returned unchanged with an error note, not silently emptied", function(a){
+  var bad = { sessions: "not-an-array" };
+  var r = mig(bad, seedBw());
+  a.ok(r.log !== null && r.log !== undefined, "must not drop the corrupt log on the floor");
+  a.ok(r.notes.length >= 1, "a parse failure must produce a note so boot can surface it");
+});
+
+T("B-03 / W1 - migration does not invent, drop or reorder sessions", function(a){
+  var r = mig(seedLog(), seedBw());
+  a.deep(datesOfLog(r.log), ["2026-01-10","2026-01-12","2026-01-15"]);
+  a.eq(Object.keys(r.log.sessions[0].entries).sort().join(","), "d1a,d1d");
+});
+
+/* ============================================================ S3 - parsers (B-02, W2) */
+group("S3 parseWeight / parseReps / B-02 / W2");
+
+function pw(a, str, expectOk, expectValueOrReason){
+  var r = P.parseWeight(str);
+  a.ok(r && typeof r === "object", "parseWeight(" + show(str) + ") must return an object");
+  a.eq(r.ok, expectOk, "parseWeight(" + show(str) + ").ok");
+  if (expectOk) a.eq(r.value, expectValueOrReason, "parseWeight(" + show(str) + ").value");
+  else if (expectValueOrReason) a.eq(r.reason, expectValueOrReason, "parseWeight(" + show(str) + ").reason");
+  return r;
+}
+function pr(a, str, expectOk, expectValueOrReason){
+  var r = P.parseReps(str);
+  a.ok(r && typeof r === "object", "parseReps(" + show(str) + ") must return an object");
+  a.eq(r.ok, expectOk, "parseReps(" + show(str) + ").ok");
+  if (expectOk) a.eq(r.value, expectValueOrReason, "parseReps(" + show(str) + ").value");
+  else if (expectValueOrReason) a.eq(r.reason, expectValueOrReason, "parseReps(" + show(str) + ").reason");
+  return r;
+}
+
+T("B-02 / W2 - parseWeight accepts plain, decimal and half-plate weights", function(a){
+  a.isFn(P.parseWeight, "parseWeight");
+  pw(a, "100", true, 100);
+  pw(a, "7.5", true, 7.5);
+  pw(a, "102.5", true, 102.5);
+  pw(a, "0.5", true, 0.5);
+  pw(a, "500", true, 500);
+});
+
+T("B-21 / W2 - parseWeight accepts 0 (bodyweight rack chin)", function(a){
+  var r = pw(a, "0", true, 0);
+  a.eq(typeof r.value, "number", "0 must come back as the number 0");
+  a.ne(r.value, undefined);
+});
+
+T("B-02 / W2 - parseWeight('') is empty, not malformed", function(a){
+  pw(a, "", false, "empty");
+});
+
+T("B-02 / W2 - parseWeight rejects '7.5.0' as malformed and returns no value", function(a){
+  var r = pw(a, "7.5.0", false, "malformed");
+  a.oneOf(r.value, [undefined, null], "a rejected parse must not hand back a value");
+  a.ne(r.value, 7.5, "must never quietly become 7.5");
+  a.ne(r.value, 750, "must never become 750");
+});
+
+T("B-02 / W2 - parseWeight rejects '.' and '..'", function(a){
+  pw(a, ".", false, "malformed");
+  pw(a, "..", false, "malformed");
+});
+
+T("B-02 / W2 - parseWeight rejects a pasted '100 kg'", function(a){
+  var r = pw(a, "100 kg", false);
+  a.ne(r.value, 100, "unit text must not be silently stripped into a number");
+});
+
+T("B-02 / W2 - parseWeight rejects 'Infinity' and the Arabic-Indic digit five", function(a){
+  var r = pw(a, "Infinity", false, "malformed");
+  a.ne(r.value, Infinity);
+  r = pw(a, AR5, false, "malformed");
+  a.ne(r.value, 5, "a non-ASCII digit must not be read as 5");
+});
+
+T("B-02 / W2 - parseWeight rejects '-5' (negative weight is not loggable)", function(a){
+  var r = P.parseWeight("-5");
+  a.eq(r.ok, false, "-5 must be rejected");
+  a.eq(r.reason, "malformed", "RULED: NUM_W rejects the sign before Number() is called, so -5 never reaches the range check");
+  a.ok(!Object.prototype.hasOwnProperty.call(r, "value"), "a rejected parse must not carry a value key at all");
+  a.ne(r.value, -5, "a negative weight must never reach the store");
+  a.ne(r.value, 5, "-5 must never become 5");
+});
+
+T("B-02 / W2 - parseWeight rejects '1e3' and never yields 1000", function(a){
+  var r = P.parseWeight("1e3");
+  a.eq(r.ok, false, "1e3 must be rejected");
+  a.eq(r.reason, "malformed", "RULED: exponent notation is rejected by NUM_W, before Number() could produce 1000");
+  a.ne(r.value, 1000, "exponent notation must never become 1000 kg");
+  a.ok(!Object.prototype.hasOwnProperty.call(r, "value"), "1000 must never be computed, not even into a discarded field");
+  a.eq(P.parseReps("1e3").reason, "malformed");
+  a.ok(!Object.prototype.hasOwnProperty.call(P.parseReps("1e3"), "value"), "reps 1e3 must not compute 1000 either");
+});
+
+T("B-02 / W2-AC5 - parseWeight('501') is out of range", function(a){
+  pw(a, "501", false, "range");
+});
+
+T("B-02 / W2 - parseWeight rejects a very large number", function(a){
+  var r = pw(a, "999999", false, "range");
+  a.ne(r.value, 999999);
+  r = P.parseWeight("99999999999999999999");
+  a.eq(r.ok, false, "a 20-digit weight must be rejected");
+});
+
+T("B-02 / W2 - parseWeight keeps a leading zero's value ('05' is 5, not 0 and not 50)", function(a){
+  var r = P.parseWeight("05");
+  a.eq(r.ok, true, "a leading zero must not make the entry unloggable");
+  a.eq(r.value, 5);
+  r = P.parseWeight("007.5");
+  a.eq(r.ok, true);
+  a.eq(r.value, 7.5);
+});
+
+T("B-02 / W2 - parseWeight never reinterprets ' 5 ' into anything but 5", function(a){
+  var r = P.parseWeight(" 5 ");
+  a.ok(r.ok === false || r.value === 5, "either reject it or read it as 5 - never anything else");
+});
+
+T("B-02 / W2 - parseWeight rejects non-string junk without throwing", function(a){
+  var junk = [null, undefined, {}, [], NaN, true], i, r;
+  for (i = 0; i < junk.length; i++) {
+    r = a.noThrow(function(){ return P.parseWeight(junk[i]); }, "threw on " + show(junk[i]));
+    a.eq(r.ok, false, "must reject " + show(junk[i]));
+  }
+});
+
+T("B-02 / W2 - parseReps accepts integers 1..100", function(a){
+  a.isFn(P.parseReps, "parseReps");
+  pr(a, "1", true, 1);
+  pr(a, "5", true, 5);
+  pr(a, "12", true, 12);
+  pr(a, "100", true, 100);
+  pr(a, "05", true, 5);
+});
+
+T("B-02 / W2-AC5 - parseReps('5.5') is malformed (reps are integers)", function(a){
+  var r = pr(a, "5.5", false, "malformed");
+  a.ne(r.value, 5, "5.5 reps must not silently round to 5");
+  a.ne(r.value, 55, "5.5 reps must never become 55");
+});
+
+T("B-02 / W2-AC5 - parseReps('0') is out of range", function(a){
+  pr(a, "0", false, "range");
+});
+
+T("B-02 / W2 - parseReps('') is empty; '101' is out of range", function(a){
+  pr(a, "", false, "empty");
+  pr(a, "101", false, "range");
+  pr(a, "999999", false, "range");
+});
+
+T("B-02 / W2 - parseReps rejects '.', '-3', '1e3', 'Infinity' and a non-ASCII digit", function(a){
+  pr(a, ".", false, "malformed");
+  a.eq(P.parseReps("-3").ok, false, "-3 reps must be rejected");
+  a.ne(P.parseReps("-3").value, 3);
+  a.eq(P.parseReps("1e3").ok, false, "1e3 reps must be rejected");
+  a.ne(P.parseReps("1e3").value, 1000);
+  pr(a, "Infinity", false, "malformed");
+  pr(a, AR5, false, "malformed");
+});
+
+T("B-02 / W2 - parseReps rejects a pasted '10 reps' and non-string junk", function(a){
+  a.eq(P.parseReps("10 reps").ok, false);
+  var junk = [null, undefined, {}, [], NaN], i, r;
+  for (i = 0; i < junk.length; i++) {
+    r = a.noThrow(function(){ return P.parseReps(junk[i]); }, "threw on " + show(junk[i]));
+    a.eq(r.ok, false, "must reject " + show(junk[i]));
+  }
+});
+
+/* ============================================================ S4 - classifySet (B-02, B-21, W2) */
+group("S4 classifySet / B-02 / B-21 / W2");
+
+function cls(a, w, r, expect, why){
+  a.eq(P.classifySet({ w: w, r: r }), expect, (why || "") + " {w:" + show(w) + ", r:" + show(r) + "}");
+}
+
+T("B-02 / W2-AC3 - both fields empty is blank", function(a){
+  a.isFn(P.classifySet, "classifySet");
+  cls(a, "", "", "blank");
+});
+
+T("B-02 / W2 - a complete set is complete", function(a){
+  cls(a, "100", "5", "complete");
+  cls(a, "7.5", "12", "complete");
+  cls(a, "102.5", "3", "complete");
+  cls(a, "500", "100", "complete", "the exact upper bounds are still valid:");
+  cls(a, "05", "05", "complete", "leading zeros are still a real set:");
+});
+
+T("B-21 / W2-AC2 - w '0' with 10 reps is COMPLETE (bodyweight rack chin, real data)", function(a){
+  cls(a, "0", "10", "complete", "a rack chin is not garbage:");
+  cls(a, "0", "1", "complete");
+  cls(a, "0.0", "8", "complete");
+});
+
+T("B-02 / W2-AC4 - exactly one field filled is incomplete", function(a){
+  cls(a, "100", "", "incomplete");
+  cls(a, "", "5", "incomplete");
+  cls(a, "0", "", "incomplete", "0 kg with no reps is still an unfinished row:");
+});
+
+T("B-02 / W2-AC1 - '7.5.0' x 5 is malformed", function(a){
+  cls(a, "7.5.0", "5", "malformed");
+});
+
+T("B-02 / W2 - every malformed weight string classifies as malformed", function(a){
+  var bad = [".", "..", "-5", "1e3", "Infinity", AR5, "100 kg", "abc", "5,5", "1.2.3", "+5"], i;
+  for (i = 0; i < bad.length; i++) cls(a, bad[i], "5", "malformed");
+});
+
+T("B-02 / W2 - out-of-range weight or reps is malformed, not saved", function(a){
+  cls(a, "501", "5", "malformed");
+  cls(a, "999999", "5", "malformed");
+  cls(a, "100", "0", "malformed", "0 reps is not a set:");
+  cls(a, "100", "101", "malformed");
+});
+
+T("B-02 / W2 - non-integer reps is malformed", function(a){
+  cls(a, "100", "5.5", "malformed");
+  cls(a, "100", "5.0", "malformed", "reps must be typed as an integer:");
+});
+
+T("B-02 / W2 - a typo next to an empty field still blocks the save (never blank, never complete)", function(a){
+  /* RULED 2026-09-09: malformed BEATS incomplete. Every non-empty field is
+     parsed before completeness is considered, so the message names the bad
+     value instead of telling him to finish a row whose weight is garbage.
+     Was an oneOf() while the precedence was open; it is a hard assertion now. */
+  a.eq(P.classifySet({ w: "7.5.0", r: "" }), "malformed",
+    "a typo with empty reps is malformed, not incomplete and never blank");
+  a.eq(P.classifySet({ w: "", r: "5.5" }), "malformed");
+  a.eq(P.classifySet({ w: "abc", r: "" }), "malformed");
+  a.eq(P.classifySet({ w: "100", r: "" }), "incomplete",
+    "but a GOOD value next to an empty field is still incomplete");
+  a.eq(P.classifySet({ w: "", r: "5" }), "incomplete");
+});
+
+T("B-02 / W2 - classifySet never throws and never returns an unknown class", function(a){
+  var inputs = [{}, { w: null, r: null }, { w: undefined, r: undefined }, { w: 100, r: 5 },
+                { w: "5", r: 5 }, { w: [], r: {} }], i, v;
+  for (i = 0; i < inputs.length; i++) {
+    v = a.noThrow(function(){ return P.classifySet(inputs[i]); }, "threw on " + show(inputs[i]));
+    a.oneOf(v, ["blank", "complete", "incomplete", "malformed"], "class for " + show(inputs[i]));
+  }
+  a.noThrow(function(){ return P.classifySet(null); }, "threw on null");
+  a.noThrow(function(){ return P.classifySet(undefined); }, "threw on undefined");
+});
+
+/* ============================================================ S5 - sanitizeNumericInput (B-02, W2/W6) */
+group("S5 sanitizeNumericInput / B-02 / W2");
+
+function sn(a, cur, next, kind, expect, why){
+  a.eq(P.sanitizeNumericInput(cur, next, kind), expect,
+       (why || "") + " sanitize(" + show(cur) + ", " + show(next) + ", " + show(kind) + ")");
+}
+
+T("B-02 / W2-AC6 - a second dot in a weight is rejected and the value is preserved", function(a){
+  a.isFn(P.sanitizeNumericInput, "sanitizeNumericInput");
+  sn(a, "7.5", "7.5.", "w", "7.5");
+});
+
+T("B-02 / W2-AC6 - a dot in reps is rejected and the value is preserved", function(a){
+  sn(a, "7", "7.", "r", "7");
+});
+
+T("B-02 / W2 - ordinary digits pass through unchanged", function(a){
+  sn(a, "", "1", "w", "1");
+  sn(a, "1", "10", "w", "10");
+  sn(a, "10", "10.", "w", "10.", "one trailing dot is a legal mid-typing state:");
+  sn(a, "10.", "10.5", "w", "10.5");
+  sn(a, "", "5", "r", "5");
+  sn(a, "1", "12", "r", "12");
+});
+
+T("B-02 / W2 - a field can always be cleared (deleting must never be blocked)", function(a){
+  sn(a, "100", "", "w", "");
+  sn(a, "5", "", "r", "");
+  sn(a, "7.5", "7.", "w", "7.", "backspacing through a decimal must work:");
+  sn(a, "12", "1", "r", "1");
+});
+
+T("B-02 / W2 - letters and units are stripped, the number is not changed", function(a){
+  sn(a, "10", "10k", "w", "10");
+  sn(a, "100", "100 kg", "w", "100");
+  sn(a, "7.5", "7.5a", "w", "7.5");
+  sn(a, "5", "5x", "r", "5");
+});
+
+T("B-02 / W2 - a minus sign is never accepted into either field", function(a){
+  sn(a, "100", "-100", "w", "100");
+  sn(a, "", "-", "w", "");
+  sn(a, "5", "-5", "r", "5");
+});
+
+T("B-02 / W2 - leading zeros are preserved verbatim, never reformatted", function(a){
+  sn(a, "0", "05", "w", "05");
+  sn(a, "0", "0", "w", "0", "a lone 0 is a legal weight (B-21):");
+  sn(a, "0", "0.", "w", "0.");
+  sn(a, "0.", "0.5", "w", "0.5");
+});
+
+T("B-02 / W2 - sanitize never range-clamps; validation owns that", function(a){
+  sn(a, "99999", "999999", "w", "999999");
+  sn(a, "50", "501", "w", "501");
+});
+
+T("B-02 / W2 - NO-LARGER-NUMBER: '7.5.0' can never produce 750 by any route", function(a){
+  var outs = [
+    P.sanitizeNumericInput("7.5", "7.5.0", "w"),
+    P.sanitizeNumericInput("", "7.5.0", "w"),
+    P.sanitizeNumericInput("7.5.", "7.5.0", "w"),
+    P.sanitizeNumericInput("7", "7.5.0", "w"),
+    P.sanitizeNumericInput("75", "7.5.0", "w")
+  ], i;
+  for (i = 0; i < outs.length; i++) {
+    a.ne(outs[i], "750", "route " + i + " produced 750 from 7.5.0");
+    a.ne(outs[i], "7500", "route " + i + " inflated the number");
+  }
+  a.eq(outs[0], "7.5", "a two-dot proposal must leave the current value alone");
+  a.eq(outs[1], "", "a two-dot proposal against an empty field must stay empty");
+});
+
+T("B-02 / W6 - the 750 claim, stated exactly: the APP never makes it, and it can never be SAVED", function(a){
+  /* W8 finding, 2026-09-09. The frontend claim was "750 is unreachable from
+     7.5.0 by ANY route - typing, pasting, stepping, deleting". Typing,
+     pasting and stepping hold. DELETING does not: two deliberate backspaces
+     on a pasted 7.5.0 leave 750 on screen, because a deletion is passed
+     through verbatim on purpose (otherwise he could not backspace out of a
+     value the sanitiser refuses to re-accept). Observed in the app.
+     What actually protects the number is this: 750 kg is out of range, so the
+     save is refused and the message says "over 500". Assert THAT, because it
+     is the property that holds. */
+  a.eq(P.sanitizeNumericInput("7.5", "7.5.0", "w"), "7.5", "typing cannot make it");
+  a.eq(P.sanitizeNumericInput("", "7.5.0", "w"), "", "nor can a keystroke into an empty field");
+  var p = P.parseWeight("750");
+  a.eq(p.ok, false, "and if it does end up on screen, it cannot be saved");
+  a.eq(p.reason, "range", "the message can say 'over 500' rather than 'not a number'");
+  a.eq(P.classifySet({ w: "750", r: "5" }), "malformed", "the save is blocked");
+  a.eq(P.validateEntry(sets("750:5")).sets.length, 0, "750 never reaches the set list");
+});
+
+T("B-02 / W2 - NO-LARGER-NUMBER: '5.5' in reps can never produce 55", function(a){
+  var v = P.sanitizeNumericInput("5", "5.5", "r");
+  a.ne(v, "55", "stripping the dot would multiply the reps by ten");
+  a.eq(v, "5", "the keystroke is rejected and the field is left as it was");
+});
+
+T("B-02 / W2 - exponent characters never inflate a value", function(a){
+  var v = P.sanitizeNumericInput("1", "1e3", "w");
+  a.ne(v, "1000", "1e3 must never become 1000");
+  a.eq(v, "1", "RULED: the keystroke is rejected whole; nothing is stripped, because stripping inflates");
+  a.eq(P.sanitizeNumericInput("1", "1e", "w"), "1", "a lone e keystroke is rejected");
+});
+
+T("B-02 / W2 - a non-ASCII digit never reaches the field", function(a){
+  var v = P.sanitizeNumericInput("5", "5" + AR5, "r");
+  a.match(v, /^[0-9.]*$/, "only ASCII digits and dots may survive");
+  a.eq(v, "5", "the non-ASCII keystroke is rejected, the typed 5 stays");
+  v = P.sanitizeNumericInput("", AR5, "w");
+  a.match(v, /^[0-9.]*$/, "only ASCII digits and dots may survive");
+});
+
+T("B-02 / W2 - a double dot proposal is rejected in both kinds", function(a){
+  sn(a, ".", "..", "w", ".");
+  sn(a, "1", "1..", "w", "1");
+  sn(a, "5", "5..", "r", "5");
+});
+
+T("B-02 / W2 - sanitize returns a string and never throws on odd input", function(a){
+  var v = a.noThrow(function(){ return P.sanitizeNumericInput(undefined, undefined, "w"); });
+  a.eq(typeof v, "string", "must always return a string");
+  v = a.noThrow(function(){ return P.sanitizeNumericInput(null, "12", "r"); });
+  a.eq(typeof v, "string");
+  v = a.noThrow(function(){ return P.sanitizeNumericInput("5", null, "r"); });
+  a.eq(typeof v, "string");
+});
+
+/* ============================================================ S6 - validateEntry / validateDraft (B-02, B-21, W2) */
+group("S6 validateEntry / validateDraft / B-02 / W2");
+
+T("B-02 / W2 - validateEntry returns {sets, problems}", function(a){
+  a.isFn(P.validateEntry, "validateEntry");
+  var v = P.validateEntry(sets("100:5"));
+  a.ok(v && typeof v === "object", "must return an object");
+  a.ok(Object.prototype.hasOwnProperty.call(v, "sets"), "no .sets");
+  a.ok(Object.prototype.hasOwnProperty.call(v, "problems"), "no .problems");
+});
+
+T("B-02 / W2 - validateEntry coerces valid sets to numbers and reports no problem", function(a){
+  var v = P.validateEntry(sets("100:5", "100:5", "95:4"));
+  a.deep(v.problems, [], "no problems expected");
+  a.deep(v.sets, [{ w: 100, r: 5 }, { w: 100, r: 5 }, { w: 95, r: 4 }]);
+  a.eq(typeof v.sets[0].w, "number", "w must be a number, not a string");
+  a.eq(typeof v.sets[0].r, "number", "r must be a number, not a string");
+});
+
+T("B-02 / W2-AC3 - blank rows are skipped silently: 6 blank + 3 complete saves 3 sets", function(a){
+  var v = P.validateEntry(sets(":", "100:5", ":", ":", "100:5", ":", "95:4", ":", ":"));
+  a.deep(v.problems, [], "blank rows must not be reported as problems");
+  a.eq(v.sets.length, 3, "exactly the 3 complete sets survive");
+  a.deep(v.sets, [{ w: 100, r: 5 }, { w: 100, r: 5 }, { w: 95, r: 4 }]);
+});
+
+T("B-21 / W2-AC2 - a 0 kg set survives validateEntry as the number 0", function(a){
+  var v = P.validateEntry(sets("0:10"));
+  a.deep(v.problems, [], "0 x 10 is real data, not a problem");
+  a.eq(v.sets.length, 1, "the rack chin must not be deleted");
+  a.eq(v.sets[0].w, 0);
+  a.eq(v.sets[0].r, 10);
+  a.eq(JSON.stringify(v.sets), '[{"w":0,"r":10}]', "must serialize as 0, not drop out");
+});
+
+T("B-02 / W2-AC1 - a malformed row is reported with its index and field", function(a){
+  var v = P.validateEntry(sets("100:5", "100:5", "95:4", "7.5.0:5"));
+  a.eq(v.problems.length, 1, "exactly one problem");
+  a.eq(v.problems[0].i, 3, "problem must name row index 3 (set 4)");
+  a.eq(v.problems[0].field, "w", "problem must name the weight field");
+  a.eq(v.problems[0].reason, "malformed");
+});
+
+T("B-02 / W2-AC4 - an incomplete row is reported and names the missing field", function(a){
+  var v = P.validateEntry(sets("100:"));
+  a.eq(v.problems.length, 1);
+  a.eq(v.problems[0].i, 0);
+  a.eq(v.problems[0].field, "r", "the missing reps field must be named");
+  var v2 = P.validateEntry(sets(":5"));
+  a.eq(v2.problems.length, 1);
+  a.eq(v2.problems[0].field, "w");
+});
+
+T("B-02 / W2 - several bad rows are all reported, in row order", function(a){
+  var v = P.validateEntry(sets("100:5", "7.5.0:5", "100:", "0:10", "100:5.5"));
+  a.eq(v.problems.length, 3, "three bad rows must all be named");
+  a.deep([v.problems[0].i, v.problems[1].i, v.problems[2].i], [1, 2, 4], "problems in row order");
+});
+
+T("B-02 / W2-AC7 - a validated set never serializes as NaN, null, a string or a negative", function(a){
+  var v = P.validateEntry(sets("100:5", "0:10", "7.5:12", "05:05"));
+  var json = JSON.stringify(v.sets), i, s;
+  a.eq(json.indexOf("null"), -1, "null leaked into the saved sets: " + json);
+  a.eq(json.indexOf('"w":"'), -1, "a string weight leaked into the saved sets: " + json);
+  a.eq(json.indexOf('"r":"'), -1, "a string rep count leaked into the saved sets: " + json);
+  a.eq(json.indexOf("-"), -1, "a negative number leaked into the saved sets: " + json);
+  for (i = 0; i < v.sets.length; i++) {
+    s = v.sets[i];
+    a.ok(typeof s.w === "number" && isFinite(s.w) && s.w >= 0, "bad w at " + i + ": " + show(s.w));
+    a.ok(typeof s.r === "number" && isFinite(s.r) && s.r >= 1 && s.r === Math.round(s.r), "bad r at " + i + ": " + show(s.r));
+  }
+});
+
+T("B-02 / W2 - validateEntry on an empty array and on junk does not throw", function(a){
+  var v = a.noThrow(function(){ return P.validateEntry([]); });
+  a.deep(v.sets, []); a.deep(v.problems, []);
+  a.noThrow(function(){ return P.validateEntry(null); }, "threw on null");
+  a.noThrow(function(){ return P.validateEntry(undefined); }, "threw on undefined");
+  a.noThrow(function(){ return P.validateEntry([null, {}, { w: 1 }]); }, "threw on ragged rows");
+});
+
+T("B-02 / W2 - validateDraft returns {ok, entries, problems, setCount}", function(a){
+  a.isFn(P.validateDraft, "validateDraft");
+  var v = P.validateDraft(draft(entry("d1a", sets("100:5"))));
+  a.ok(v && typeof v === "object", "must return an object");
+  a.eq(typeof v.ok, "boolean", ".ok must be a boolean");
+  a.ok(Object.prototype.hasOwnProperty.call(v, "entries"), "no .entries");
+  a.ok(Object.prototype.hasOwnProperty.call(v, "problems"), "no .problems");
+  a.eq(typeof v.setCount, "number", ".setCount must be a number");
+});
+
+T("B-02 / W2 - a clean draft validates ok with the right set count", function(a){
+  var e = entry("d1a", sets("100:5", "100:5", "95:4"));
+  e.d1d = { sets: sets("80:5", "80:5"), note: "" };
+  var v = P.validateDraft(draft(e));
+  a.eq(v.ok, true, "a clean draft must save");
+  a.deep(v.problems, []);
+  a.eq(v.setCount, 5);
+  a.eq(countSets(v.entries), 5, "entries must carry all 5 sets");
+});
+
+T("B-02 / W2-AC3 - 6 blank rows and 3 complete rows: saves 3, reports nothing", function(a){
+  var v = P.validateDraft(draft(entry("d1a", sets(":", "100:5", ":", "100:5", ":", "95:4", ":", ":", ":"))));
+  a.eq(v.ok, true, "blank rows must not block the save");
+  a.deep(v.problems, []);
+  a.eq(v.setCount, 3);
+  a.eq(countSets(v.entries), 3);
+});
+
+T("B-02 / W2-AC1 - a draft holding '7.5.0 x 5' is not ok and names exercise and set 1", function(a){
+  var v = P.validateDraft(draft(entry("d1a", sets("7.5.0:5", "100:5"))));
+  a.eq(v.ok, false, "the save must be blocked");
+  a.eq(v.problems.length, 1);
+  a.eq(v.problems[0].exId, "d1a", "the problem must name the exercise");
+  a.eq(v.problems[0].setIndex, 0, "the problem must name set 1 (index 0)");
+  a.eq(v.problems[0].field, "w");
+  a.eq(v.problems[0].reason, "malformed");
+});
+
+T("B-02 / W2 - a draft where every set is blank: nothing to save, nothing to complain about", function(a){
+  var e = entry("d1a", sets(":", ":", ":"));
+  e.d1d = { sets: sets(":", ":"), note: "" };
+  var v = P.validateDraft(draft(e));
+  a.eq(v.setCount, 0, "an untouched day has no sets");
+  a.deep(v.problems, [], "an empty day is not an error");
+  a.eq(countSets(v.entries), 0, "no empty entry rows may be written to the log");
+});
+
+T("B-02 / W2 - a draft mixing all four classes reports each bad row once, across exercises", function(a){
+  var e = entry("d1a", sets("100:5", ":", "7.5.0:5"));
+  e.d1d = { sets: sets("80:", ":", "0:10"), note: "solid" };
+  e.d1g = { sets: sets("20:15.5"), note: "" };
+  var v = P.validateDraft(draft(e)), ids = [], i;
+  a.eq(v.ok, false, "the save must be blocked");
+  a.eq(v.problems.length, 3, "one problem per bad row, blanks excluded");
+  for (i = 0; i < v.problems.length; i++) ids.push(v.problems[i].exId + ":" + v.problems[i].setIndex);
+  ids.sort();
+  a.deep(ids, ["d1a:2", "d1d:0", "d1g:0"], "each problem must name its exercise and set index");
+});
+
+T("B-02 / W2-AC1 - a blocked draft yields nothing saveable (finish must have nothing to write)", function(a){
+  var v = P.validateDraft(draft(entry("d1a", sets("100:5", "7.5.0:5"))));
+  a.eq(v.ok, false);
+  /* Whatever entries holds, ok:false means finish() must not push a session.
+     The valid sibling set must still be recoverable once the typo is fixed. */
+  var fixed = P.validateDraft(draft(entry("d1a", sets("100:5", "7.5:5"))));
+  a.eq(fixed.ok, true, "correcting the typo must unblock the save");
+  a.eq(fixed.setCount, 2, "BOTH sets must be saved after the correction - the good one was never dropped");
+});
+
+T("B-21 / W2-AC2 - a draft with 0 x 10 saves, and the 0 survives serialization", function(a){
+  var v = P.validateDraft(draft(entry("d1e", sets("0:10", "0:8"))));
+  a.eq(v.ok, true, "a rack chin day must be saveable");
+  a.eq(v.setCount, 2, "neither 0 kg set may be deleted");
+  var json = JSON.stringify(v.entries);
+  a.ok(json.indexOf('"w":0') !== -1, "0 must serialize as a number 0, got: " + json);
+});
+
+T("B-02 / W2 - validateDraft does not mutate the draft's raw typed strings", function(a){
+  var d = draft(entry("d1a", sets("7.5.0:5", "100:5")));
+  var before = JSON.stringify(d);
+  P.validateDraft(d);
+  a.eq(JSON.stringify(d), before, "the draft must survive validation byte-identical so the user can fix it");
+});
+
+T("B-02 / W2 - validateDraft never throws on a malformed or missing draft", function(a){
+  var junk = [null, undefined, {}, { entries: null }, { entries: { d1a: null } },
+              { entries: { d1a: { sets: null } } }, { entries: { d1a: { sets: [null] } } }], i, v;
+  for (i = 0; i < junk.length; i++) {
+    v = a.noThrow(function(){ return P.validateDraft(junk[i]); }, "threw on " + show(junk[i]));
+    a.ok(v && typeof v === "object", "must return a result for " + show(junk[i]));
+  }
+});
+
+/* ============================================================ S7 - draftAge + persisted draft shape (B-01, W3) */
+group("S7 draftAge / draft shape / B-01 / W3");
+
+T("B-01 / W3-AC5 - a draft dated yesterday reports {ageDays:1, sameDay:false}", function(a){
+  a.isFn(P.draftAge, "draftAge");
+  var v = P.draftAge({ date: "2026-01-14" }, "2026-01-15");
+  a.eq(v.ageDays, 1);
+  a.eq(v.sameDay, false);
+});
+
+T("B-01 / W3 - a draft from today reports {ageDays:0, sameDay:true}", function(a){
+  var v = P.draftAge({ date: "2026-01-15" }, "2026-01-15");
+  a.eq(v.ageDays, 0);
+  a.eq(v.sameDay, true);
+});
+
+T("B-01 / W3 - draftAge across a month boundary is 1 day, not 30", function(a){
+  a.eq(P.draftAge({ date: "2026-01-31" }, "2026-02-01").ageDays, 1);
+  a.eq(P.draftAge({ date: "2026-02-28" }, "2026-03-01").ageDays, 1, "2026 is not a leap year");
+  a.eq(P.draftAge({ date: "2028-02-28" }, "2028-02-29").ageDays, 1, "leap day");
+});
+
+T("B-01 / W3 - draftAge across a year boundary is 1 day, not 365", function(a){
+  var v = P.draftAge({ date: "2025-12-31" }, "2026-01-01");
+  a.eq(v.ageDays, 1);
+  a.eq(v.sameDay, false);
+});
+
+T("B-01 / W3 - draftAge across a DST transition is still whole days", function(a){
+  a.eq(P.draftAge({ date: "2026-03-07" }, "2026-03-08").ageDays, 1, "US spring forward");
+  a.eq(P.draftAge({ date: "2026-03-28" }, "2026-03-29").ageDays, 1, "EU/Beirut spring forward");
+  a.eq(P.draftAge({ date: "2026-10-24" }, "2026-10-25").ageDays, 1, "fall back");
+  a.eq(P.draftAge({ date: "2026-03-25" }, "2026-04-01").ageDays, 7, "a week spanning DST");
+});
+
+T("B-01 / W3 - draftAge on an old draft reports the real gap", function(a){
+  a.eq(P.draftAge({ date: "2026-01-05" }, "2026-01-15").ageDays, 10);
+  a.eq(P.draftAge({ date: "2026-01-05" }, "2026-01-15").sameDay, false);
+});
+
+T("B-01 / W3 - draftAge never throws on a missing or malformed draft", function(a){
+  var junk = [null, undefined, {}, { date: null }, { date: "" }, { date: "not-a-date" }], i;
+  for (i = 0; i < junk.length; i++) a.noThrow(function(){ return P.draftAge(junk[i], "2026-01-15"); }, "threw on " + show(junk[i]));
+  a.noThrow(function(){ return P.draftAge({ date: "2026-01-15" }, undefined); }, "threw on a missing today");
+});
+
+T("B-01 / W3-AC1 - the persisted draft shape survives a JSON round trip with raw strings intact", function(a){
+  /* saveDraft/loadDraft live in index.html and touch storage, so they cannot be
+     tested here (see 'Not testable'). What IS testable is that the shape the work
+     order specifies loses nothing when serialized - including the malformed and
+     empty strings the user must get back to fix. */
+  var d = draft(entry("d1a", sets("7.5.0:5", "100:", ":", "0:10"), "left knee"));
+  var back = JSON.parse(JSON.stringify(d));
+  a.deep(back, d, "round trip must be lossless");
+  a.eq(back.entries.d1a.sets[0].w, "7.5.0", "the malformed string must survive so it can be corrected");
+  a.eq(back.entries.d1a.sets[1].r, "", "an empty string must not become null or undefined");
+  a.eq(back.entries.d1a.sets[3].w, "0", "the 0 kg set must survive as the string it was typed as");
+  a.eq(back.entries.d1a.note, "left knee");
+  a.eq(back.schemaVersion, 2);
+  a.eq(typeof back.savedAt, "number", "savedAt must be epoch ms");
+  a.eq(back.dayId, "d1");
+  a.match(back.date, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+T("B-01 / W3 - a restored draft still validates to the same problems it had before the reload", function(a){
+  var d = draft(entry("d1a", sets("100:5", "7.5.0:5")));
+  var before = P.validateDraft(d);
+  var after = P.validateDraft(JSON.parse(JSON.stringify(d)));
+  a.eq(after.ok, before.ok, "a reload must not change the verdict");
+  a.deep(after.problems, before.problems, "the same row must still be flagged after a reload");
+  a.eq(after.ok, false, "and it must still be blocked");
+});
+
+/* ============================================================ S8 - pinned judgement calls
+   Each test below pins the CURRENT behaviour of a call the backend engineer
+   flagged as unsettled. They are not rulings. Changing one of these is a
+   deliberate edit to this file, which is the point: it stops a judgement call
+   from being reversed silently. */
+group("S8 pinned judgement calls / NOT rulings");
+
+T("PINNED (judgement call, not a ruling) - ' 5 ' and '5.' parse as 5, '.5' as 0.5", function(a){
+  /* Rationale on record: rejecting "5." would block a save mid-typing, and the
+     stepper would then be unusable between keystrokes. The risk being accepted
+     is that a pasted " 5 " is read rather than questioned. */
+  a.eq(P.parseWeight(" 5 ").ok, true, "surrounding whitespace is trimmed");
+  a.eq(P.parseWeight(" 5 ").value, 5);
+  a.eq(P.parseWeight("5.").ok, true, "a trailing dot is accepted mid-typing");
+  a.eq(P.parseWeight("5.").value, 5);
+  a.eq(P.parseWeight(".5").value, 0.5, "a leading dot is 0.5, never 5");
+  a.eq(P.parseReps(" 5 ").value, 5);
+  a.eq(P.parseReps("5.").ok, false, "reps still take no dot at all");
+});
+
+T("PINNED (judgement call, not a ruling) - localDate falls back to NOW on an unusable argument", function(a){
+  /* Rationale on record: a session stamped a few hours off is recoverable, a
+     session stamped null is not. The risk being accepted is that a genuinely
+     broken date is silently stamped today instead of surfacing an error. */
+  var todayStr = localDateOf(new Date());
+  a.eq(P.localDate(new Date("nonsense")), todayStr, "an Invalid Date becomes today");
+  a.eq(P.localDate("not-a-date"), todayStr, "an unparseable string becomes today");
+  a.eq(P.localDate({}), todayStr);
+  a.eq(P.localDate(NaN), todayStr);
+  a.match(P.localDate(null), /^\d{4}-\d{2}-\d{2}$/, "null is treated as 'now', not as an error");
+});
+
+T("PINNED (judgement call, not a ruling) - a notes-only entry is kept, with zero sets", function(a){
+  /* Rationale on record: a typed note is data and is not thrown away because
+     the sets were left blank. Known consequence, flagged by the backend
+     engineer: vTrend counts entries, so a notes-only entry inflates its
+     "N exercises" by one. That count is a display bug to be fixed in the
+     view, NOT by deleting the note. */
+  var e = entry("d1a", sets(":", ":"), "shoulder felt off");
+  var v = P.validateDraft(draft(e));
+  a.eq(v.ok, true, "a note alone does not block the save");
+  a.eq(v.setCount, 0, "and it contributes no sets");
+  a.ok(v.entries.d1a, "the entry survives so the note is not lost");
+  a.deep(v.entries.d1a.sets, [], "with an empty set list");
+  a.eq(v.entries.d1a.note, "shoulder felt off");
+  a.eq(Object.keys(v.entries).length, 1,
+    "NOTE: vTrend renders this as one more exercise than were actually trained");
+});
+
+T("PINNED (judgement call, not a ruling) - a whitespace-only note does not resurrect a blank entry", function(a){
+  var v = P.validateDraft(draft(entry("d1a", sets(":", ":"), "   ")));
+  a.eq(v.setCount, 0);
+  a.eq(Object.keys(v.entries).length, 0, "an all-blank day with a blank note writes nothing");
+});
+
+T("KNOWN BAD (documented, awaiting strength-coach) - a 0 kg set saves but reads back as '0 kg'", function(a){
+  /* B-21 is fixed in the data layer: 0 x 10 is stored. But topSet() in
+     index.html still filters +s.w>0, so a rack-chin-only exercise has a top
+     set of 0 and the verdict reads "Stay at 0 kg until all 3 sets reach 10
+     reps". This test documents the wrong output; it does NOT assert that the
+     wrong output is correct, and it must not be deleted until the coach rules.
+     It fails only if the data-layer fix regresses. */
+  var v = P.validateEntry(sets("0:10", "0:9", "0:8"));
+  a.deep(v.problems, [], "the data layer is right: nothing is dropped");
+  a.eq(v.sets.length, 3);
+  a.eq(v.sets[0].w, 0);
+  /* What the display layer then does with it, reproduced here for the record: */
+  var topSetToday = (function(ss){ var d = ss.filter(function(s){ return s.w > 0 && s.r > 0; });
+                                   return d.length ? Math.max.apply(null, d.map(function(s){ return s.w; })) : 0; })(v.sets);
+  a.eq(topSetToday, 0, "topSet's +s.w>0 filter yields 0, which the verdict prints as 'Stay at 0 kg'");
+  a.ok(true, "WRONG ADVICE, not wrong storage. Owner: strength-coach. Do not 'fix' it by dropping the set.");
+});
+
+
+/* ============================================================ S4b - out-of-range is a blocking status with a per-field reason
+   Ruled 2026-09-09 by backend: a value that PARSES but is outside the limits
+   classifies as "malformed" at the status level, because the consequence is
+   identical - it cannot be saved. The finer distinction survives one level
+   down as the per-field reason, which is "range" and not "malformed", so W6
+   can say "above 500 kg" instead of "not a number". */
+group("S4b out-of-range / B-02 / W2");
+
+T("B-02 / W2 - 600 kg: status malformed, weight reason 'range', no value", function(a){
+  a.eq(P.classifySet({ w: "600", r: "5" }), "malformed", "600 kg blocks the save");
+  var d = P.describeSet({ w: "600", r: "5" });
+  a.eq(d.w.reason, "range", "the per-field reason distinguishes it from a typo");
+  a.eq(d.w.value, "600", "and carries the offending text verbatim");
+  a.eq(d.r.ok, true, "the reps beside it are fine and must not be blamed");
+  var p = P.parseWeight("600");
+  a.eq(p.ok, false);
+  a.ok(!Object.prototype.hasOwnProperty.call(p, "value"), "an out-of-range weight yields no number");
+});
+
+T("B-02 / W2 - 101 reps and 0 reps: status malformed, reps reason 'range', no value", function(a){
+  a.eq(P.classifySet({ w: "100", r: "101" }), "malformed");
+  a.eq(P.classifySet({ w: "100", r: "0" }), "malformed", "0 reps is not a set");
+  a.eq(P.describeSet({ w: "100", r: "101" }).r.reason, "range");
+  a.eq(P.describeSet({ w: "100", r: "0" }).r.reason, "range");
+  a.ok(!Object.prototype.hasOwnProperty.call(P.parseReps("0"), "value"), "0 reps yields no number");
+  a.ok(!Object.prototype.hasOwnProperty.call(P.parseReps("101"), "value"));
+  a.eq(P.describeSet({ w: "100", r: "0" }).w.ok, true, "100 kg beside 0 reps is still a good weight");
+});
+
+T("B-02 / W2 - 1e3 and -5 are rejected and NEVER produce 1000 or 5 anywhere", function(a){
+  var probes = ["1e3", "-5", "+5", "1E3", "-0"], i, pw, pr, d;
+  for (i = 0; i < probes.length; i++) {
+    pw = P.parseWeight(probes[i]);
+    pr = P.parseReps(probes[i]);
+    a.eq(pw.ok, false, "parseWeight must reject " + show(probes[i]));
+    a.eq(pr.ok, false, "parseReps must reject " + show(probes[i]));
+    a.eq(pw.reason, "malformed", "rejected before Number(), so no range check and no coercion: " + probes[i]);
+    a.ok(!Object.prototype.hasOwnProperty.call(pw, "value"), "no value for " + probes[i]);
+    a.ok(!Object.prototype.hasOwnProperty.call(pr, "value"), "no reps value for " + probes[i]);
+    a.eq(P.classifySet({ w: probes[i], r: "5" }), "malformed");
+    d = P.describeSet({ w: probes[i], r: "5" });
+    a.eq(d.w.value, probes[i], "the raw token is carried verbatim, never a coerced number");
+  }
+  a.eq(P.validateEntry(sets("1e3:5", "-5:5")).sets.length, 0, "neither reaches the saved set list");
+  a.eq(JSON.stringify(P.validateEntry(sets("1e3:5", "-5:5")).sets).indexOf("1000"), -1,
+    "1000 must never be computed");
+});
+
+/* ============================================================ S10 - describeSet (B-02, W2/W6) */
+group("S10 describeSet / B-02 / W2 / W6");
+
+T("B-02 / W6 - describeSet carries which field is bad, why, and the text verbatim", function(a){
+  a.isFn(P.describeSet, "describeSet");
+  var d = P.describeSet({ w: "7.5.0", r: "5" });
+  a.eq(d.status, "malformed");
+  a.eq(d.w.ok, false); a.eq(d.w.reason, "malformed"); a.eq(d.w.value, "7.5.0");
+  a.eq(d.r.ok, true); a.eq(d.r.value, "5");
+  a.eq(d.problems.length, 1, "one problem, on the weight");
+  a.deep(d.problems[0], { field: "w", reason: "malformed", value: "7.5.0" });
+  a.ne(d.w.value, 7.5, "the value carried back is the string, never a silently-fixed number");
+  a.ne(d.w.value, "750");
+});
+
+T("B-02 / W6 - describeSet reports BOTH fields when both are wrong", function(a){
+  var d = P.describeSet({ w: "7.5.0", r: "5.5" });
+  a.eq(d.status, "malformed");
+  a.eq(d.problems.length, 2, "he is not sent back twice for one row");
+  a.eq(d.problems[0].field, "w");
+  a.eq(d.problems[1].field, "r");
+});
+
+T("B-02 / W6 - describeSet on an incomplete row names the empty field as 'empty'", function(a){
+  var d = P.describeSet({ w: "100", r: "" });
+  a.eq(d.status, "incomplete");
+  a.eq(d.r.reason, "empty", "absence is not a parse failure");
+  a.eq(d.problems.length, 1);
+  a.eq(d.problems[0].field, "r");
+});
+
+T("B-02 / W6 - describeSet on a malformed row still lists the empty field beside it", function(a){
+  var d = P.describeSet({ w: "7.5.0", r: "" });
+  a.eq(d.status, "malformed", "the status names the WORST thing wrong with the row");
+  a.eq(d.problems.length, 2, "problems name EVERYTHING wrong with it");
+  a.eq(d.problems[0].reason, "malformed");
+  a.eq(d.problems[1].reason, "empty");
+});
+
+T("B-21 / W6 - describeSet says 0 x 10 is complete and 0 is a legal weight", function(a){
+  var d = P.describeSet({ w: "0", r: "10" });
+  a.eq(d.status, "complete");
+  a.eq(d.w.ok, true); a.eq(d.w.value, "0");
+  a.deep(d.problems, []);
+});
+
+T("B-02 / W6 - describeSet on a blank row and on junk never throws", function(a){
+  a.eq(P.describeSet({ w: "", r: "" }).status, "blank");
+  a.deep(P.describeSet({ w: "", r: "" }).problems, []);
+  var junk = [null, undefined, 5, "x", [], {}], i, d;
+  for (i = 0; i < junk.length; i++) {
+    d = a.noThrow(function(){ return P.describeSet(junk[i]); }, "threw on " + show(junk[i]));
+    a.oneOf(d.status, ["blank", "complete", "incomplete", "malformed"]);
+  }
+  a.eq(P.describeSet(null).status, "malformed", "a non-object set is malformed, never silently blank");
+});
+
+/* ============================================================ S11 - classifyDraftPayload (B-01, W3)
+   The pure half of loadDraft(). "Nothing stored" and "stored but unreadable"
+   must never collapse into each other: an unreadable draft that looks absent
+   is exactly how a real session gets overwritten by the next startDay(). */
+group("S11 classifyDraftPayload / B-01 / W3");
+
+T("B-01 / W3 - nothing stored reads as 'none', with no reason", function(a){
+  a.isFn(P.classifyDraftPayload, "classifyDraftPayload");
+  var probes = [null, undefined, "", "   ", " \t "], i, r;
+  for (i = 0; i < probes.length; i++) {
+    r = P.classifyDraftPayload(probes[i]);
+    a.eq(r.status, "none", "for " + show(probes[i]));
+    a.eq(r.draft, null);
+    a.ok(r.reason === undefined, "reason must be absent on 'none'");
+  }
+});
+
+T("B-01 / W3 - ADVERSARIAL: a stored literal null reads as 'none', not as a broken draft", function(a){
+  /* This is what del() writes through a native bridge that has no remove():
+     window.storage.set(k, "null"). If that read as an error the app would
+     refuse to start a day forever after one successful save. */
+  var r = P.classifyDraftPayload("null");
+  a.eq(r.status, "none");
+  a.eq(r.draft, null);
+  a.ok(r.reason === undefined);
+  a.eq(P.classifyDraftPayload(" null ").status, "none", "with whitespace around it too");
+});
+
+T("B-01 / W3 - ADVERSARIAL: a non-string payload reads as 'parse', never as 'none'", function(a){
+  /* Payloads are text. If a bridge hands back an object, a number or an array
+     we do not know what it is, and guessing is how data gets overwritten. */
+  var probes = [{ entries: {} }, 42, [], true], i, r;
+  for (i = 0; i < probes.length; i++) {
+    r = P.classifyDraftPayload(probes[i]);
+    a.eq(r.status, "error", "non-string " + show(probes[i]) + " must be an error");
+    a.eq(r.reason, "parse");
+    a.eq(r.draft, null);
+  }
+});
+
+T("B-01 / W3 - unparseable text is 'error' with reason 'parse'", function(a){
+  var probes = ["{", "not json", "<html>", "{'entries':{}}"], i, r;
+  for (i = 0; i < probes.length; i++) {
+    r = P.classifyDraftPayload(probes[i]);
+    a.eq(r.status, "error", "for " + show(probes[i]));
+    a.eq(r.reason, "parse");
+    a.eq(r.draft, null);
+  }
+});
+
+T("B-01 / W3 - valid JSON that is not a draft is 'error' with reason 'shape'", function(a){
+  var probes = ["[]", "42", "true", "{}", "{\"dayId\":\"d1\"}", "{\"entries\":[]}",
+                "{\"entries\":null}", "{\"entries\":\"x\"}"], i, r;
+  for (i = 0; i < probes.length; i++) {
+    r = P.classifyDraftPayload(probes[i]);
+    a.eq(r.status, "error", "for " + show(probes[i]));
+    a.eq(r.reason, "shape", "for " + show(probes[i]));
+    a.eq(r.draft, null);
+  }
+});
+
+T("B-01 / W3 - a draft-shaped object is 'ok' and comes back untouched, with no reason", function(a){
+  var d = draft(entry("d1a", sets("100:5", "7.5.0:", ":")), "2026-01-15");
+  var r = P.classifyDraftPayload(JSON.stringify(d));
+  a.eq(r.status, "ok");
+  a.ok(r.reason === undefined, "reason must be absent on 'ok'");
+  a.deep(r.draft, d, "the parsed draft is handed back byte-for-byte, malformed strings included");
+  a.eq(r.draft.entries.d1a.sets[1].w, "7.5.0", "a malformed value survives so it can be fixed, not lost");
+});
+
+T("B-01 / W3 - an empty-but-shaped draft is 'ok', not 'none'", function(a){
+  a.eq(P.classifyDraftPayload("{\"entries\":{}}").status, "ok",
+    "an empty draft object is a draft; whether to offer it is the view's call");
+});
+
+/* ============================================================ S12 - buildSession (B-02, B-21, W2)
+   The exact object finish() hands to save(). Assertions here are on the
+   SERIALIZED JSON, which is what W2's last acceptance criterion asks for. */
+group("S12 buildSession / B-02 / B-21 / W2");
+
+T("B-02 / W2-AC7 - buildSession serializes only numbers: no NaN, no null, no strings", function(a){
+  a.isFn(P.buildSession, "buildSession");
+  var d = draft(entry("d1a", sets("100:5", "100:5", "95:4")), "2026-01-15");
+  var s = P.buildSession(d, "d1", "2026-01-15", 1768000000000);
+  var json = JSON.stringify(s);
+  a.eq(json,
+    '{"id":1768000000000,"date":"2026-01-15","dayId":"d1",' +
+    '"entries":{"d1a":{"sets":[{"w":100,"r":5},{"w":100,"r":5},{"w":95,"r":4}],"note":""}}}',
+    "the serialized session, asserted as a string");
+  a.eq(json.indexOf("null"), -1, "no null anywhere in the payload");
+  a.eq(json.indexOf("NaN"), -1);
+  a.eq(json.indexOf('"w":"'), -1, "no weight is serialized as a string");
+  a.eq(json.indexOf('"r":"'), -1, "no rep count is serialized as a string");
+  a.ok(!/"[wr]":-/.test(json), "no negative number reaches the store");
+});
+
+T("B-21 / W2 - 0 x 10 end to end: describeSet -> validateEntry -> buildSession -> JSON", function(a){
+  var row = { w: "0", r: "10" };
+  a.eq(P.describeSet(row).status, "complete", "step 1: the rack chin is a complete set");
+  var ve = P.validateEntry([row]);
+  a.deep(ve.problems, [], "step 2: nothing to report");
+  a.deep(ve.sets, [{ w: 0, r: 10 }], "step 2: coerced to numbers, the 0 kept");
+  var d = draft(entry("d1c", [row]), "2026-01-15");
+  var vd = P.validateDraft(d);
+  a.eq(vd.ok, true, "step 3: the draft is saveable");
+  a.eq(vd.setCount, 1, "step 3: the set counts");
+  var s = P.buildSession(d, "d1", "2026-01-15", 7);
+  a.ok(s !== null, "step 4: a session is built");
+  a.eq(JSON.stringify(s),
+    '{"id":7,"date":"2026-01-15","dayId":"d1",' +
+    '"entries":{"d1c":{"sets":[{"w":0,"r":10}],"note":""}}}',
+    "step 5: the 0 kg set is in the serialized JSON, as the number 0");
+  a.eq(typeof s.entries.d1c.sets[0].w, "number", "0 is a number, not an empty string and not null");
+});
+
+T("B-02 / W2 - buildSession REFUSES an invalid draft rather than dropping the bad set", function(a){
+  var d = draft(entry("d1a", sets("100:5", "7.5.0:5", "95:4")), "2026-01-15");
+  a.eq(P.buildSession(d, "d1", "2026-01-15", 1), null,
+    "a caller that forgets to gate on validateDraft still cannot write a short session");
+  a.eq(P.buildSession(draft(entry("d1a", sets("100:")), "2026-01-15"), "d1", "2026-01-15", 1), null,
+    "an incomplete row refuses too");
+  a.eq(P.buildSession(null, "d1", "2026-01-15", 1), null);
+  a.eq(P.buildSession({}, "d1", "2026-01-15", 1), null);
+  a.eq(P.buildSession({ entries: null }, "d1", "2026-01-15", 1), null);
+});
+
+T("B-02 / W2 - buildSession refuses a bad dayId and a bad id", function(a){
+  var d = draft(entry("d1a", sets("100:5")), "2026-01-15");
+  var badDay = [null, undefined, "", "   ", []], i;
+  for (i = 0; i < badDay.length; i++) {
+    a.eq(P.buildSession(d, badDay[i], "2026-01-15", 1), null, "dayId " + show(badDay[i]));
+  }
+  var badId = [null, undefined, "", "   ", NaN, Infinity, -Infinity, {}, []];
+  for (i = 0; i < badId.length; i++) {
+    a.eq(P.buildSession(d, "d1", "2026-01-15", badId[i]), null, "id " + show(badId[i]));
+  }
+  a.ok(P.buildSession(d, "d1", "2026-01-15", "abc") !== null, "a non-empty string id is accepted");
+  a.eq(P.buildSession(d, "d1", "2026-01-15", 0).id, 0, "id 0 is a finite number and is accepted");
+});
+
+T("B-38 (NEW, currently failing) - buildSession accepts a NON-STRING dayId and coerces it", function(a){
+  /* logic.js documents: "Returns null when dayId is not a non-empty string."
+     It does not. str(dayId).trim() coerces, so the number 0 becomes the dayId
+     "0" and a session is built for a day that is not in PROGRAM. Unreachable
+     from the UI today (startDay always passes a data-day string), so this is
+     a defence-in-depth hole rather than a live loss path - but the defence is
+     the whole point of buildSession returning null instead of guessing.
+     Delete this test only when buildSession type-checks dayId. */
+  var d = draft(entry("d1a", sets("100:5")), "2026-01-15");
+  a.eq(P.buildSession(d, 0, "2026-01-15", 1), null, "the number 0 is not a day id");
+  a.eq(P.buildSession(d, 12, "2026-01-15", 1), null, "nor is the number 12");
+  a.eq(P.buildSession(d, true, "2026-01-15", 1), null, "nor is true");
+  a.eq(P.buildSession(d, {}, "2026-01-15", 1), null, "nor is an object, which becomes the dayId [object Object]");
+});
+
+T("B-03 / W2 - buildSession NEVER falls back to today when there is no usable date", function(a){
+  var todayStr = localDateOf(new Date());
+  var d = { schemaVersion: 2, dayId: "d1", entries: entry("d1a", sets("100:5")) };
+  var badDate = [null, undefined, "", "today", "2026-1-5", "15/01/2026", "2026-01-15T00:00:00Z", 20260115], i;
+  for (i = 0; i < badDate.length; i++) {
+    a.eq(P.buildSession(d, "d1", badDate[i], 1), null, "no usable date means refuse, for " + show(badDate[i]));
+  }
+  a.ok(P.buildSession(d, "d1", todayStr, 1) !== null, "a real local date is of course accepted");
+  var d2 = draft(entry("d1a", sets("100:5")), "2026-01-15");
+  a.eq(P.buildSession(d2, "d1", "rubbish", 1).date, "2026-01-15",
+    "falls back to the DRAFT's date - the day he started - never to now");
+  a.ne(P.buildSession(d2, "d1", "rubbish", 1).date, todayStr,
+    "a draft started on another day is not silently restamped today");
+});
+
+T("B-02 / W2 - a notes-only draft builds a session with the note and zero sets", function(a){
+  var d = draft(entry("d1a", sets(":", ":"), "shoulder felt off"), "2026-01-15");
+  var s = P.buildSession(d, "d1", "2026-01-15", 1);
+  a.ok(s !== null, "zero complete sets is not a refusal - whether to save it is UI policy");
+  a.eq(s.entries.d1a.note, "shoulder felt off");
+  a.deep(s.entries.d1a.sets, []);
+});
+
+T("B-02 / W2 - blank rows are skipped and every other row survives buildSession", function(a){
+  var d = draft(entry("d1a", sets(":", "100:5", ":", "100:5", ":", "95:4", ":", ":", ":")), "2026-01-15");
+  var s = P.buildSession(d, "d1", "2026-01-15", 1);
+  a.eq(s.entries.d1a.sets.length, 3, "6 blank rows dropped, 3 real sets kept");
+  a.deep(s.entries.d1a.sets, [{ w: 100, r: 5 }, { w: 100, r: 5 }, { w: 95, r: 4 }]);
+});
+/* ============================================================ S9 - suite budget (W7) */
+group("S9 harness budget / W7");
+
+T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
+  var ms = Date.now() - T0;
+  a.ok(ms < 2000, "suite took " + ms + " ms; the work order's budget is 2000 ms");
+});
+
+/* ============================================================ contract questions */
+contract("<b>migrateStore return shape - now settled.</b> The work order fixed the signature but not the " +
+  "return value. <code>logic.js</code> returns " +
+  "<code>{log, bw, changed, logChanged, bwChanged, notes}</code>. The suite unwraps tolerantly and asserts " +
+  "the shape once, in <em>W1 - migrateStore returns {log, bw, notes}</em>, so a future change fails one " +
+  "named test instead of twenty.");
+contract("<b>\" 5 \", \"5.\", \".5\", the NOW fallback, notes-only entries</b> are pinned in section S8 as " +
+  "<em>judgement calls, not rulings</em>. Each pins current behaviour with the rationale on record. " +
+  "Reversing one should be a deliberate edit to that test, never a silent change.");
+contract("<b>KNOWN BAD, awaiting strength-coach.</b> <code>0 x 10</code> now saves (B-21 fixed in the data " +
+  "layer) but <code>topSet</code> still filters <code>+s.w&gt;0</code>, so the verdict reads " +
+  "\"Stay at 0 kg until all 3 sets reach 10 reps\". The S8 test documents the wrong output rather than " +
+  "blessing it. This is wrong advice, not wrong storage - do not close it by dropping the set again.");
+contract("<b>bw argument.</b> Assumed to be the whole <code>phat:v1:bw</code> store object " +
+  "<code>{entries:[...]}</code>, matching <code>load(BWK)</code>. A bare array is also accepted by the helper.");
+contract("<b>Reason for <code>-5</code> and <code>1e3</code>.</b> Decision 4 does not say whether a parseable " +
+  "but illegal value is <code>malformed</code> or <code>range</code>. Tests assert only that it is rejected and " +
+  "that the number is never silently accepted or inflated.");
+contract("<b><code>validateDraft().ok</code> on an all-blank draft.</b> Not specified. The test asserts " +
+  "<code>setCount === 0</code> and no problems, and deliberately does not pin <code>ok</code>. " +
+  "The app must still show \"Nothing logged yet.\" rather than write an empty session.");
+contract("<b><code>validateEntry().sets</code> when problems exist.</b> Not specified whether the valid rows are " +
+  "still returned. Not asserted; <code>finish()</code> must refuse to save regardless.");
+contract("<b><code>sanitizeNumericInput</code> with a lone <code>\".\"</code>.</b> Treated as a legal mid-typing " +
+  "state here (so <code>.5</code> can be typed); <code>parseWeight(\".\")</code> then blocks the save.");
+contract("<b><code>classifySet({w:\"7.5.0\", r:\"\"})</code>.</b> Decision 4's <code>incomplete</code> " +
+  "(exactly one field non-empty) and <code>malformed</code> (a non-empty field that fails to parse) both " +
+  "match this row, and the table does not say which wins. <code>logic.js</code> returns " +
+  "<code>incomplete</code>. Both block the save, so no data is at risk; the test accepts either and " +
+  "rejects <code>blank</code>/<code>complete</code>. <b>W4/W6 need a ruling</b> - the message the user " +
+  "sees differs (\"finish this row\" vs \"this number is wrong\").");
+contract("<b>Timezone tests are deterministic, and here is the one thing that would break them.</b> " +
+  "The device zone cannot be changed from a page and Chrome on Windows ignores <code>TZ</code>, so the " +
+  "offset tests inject a real <code>Date</code> with its <em>local</em> getters shadowed. That works " +
+  "because <code>localDate</code> calls <code>d.getFullYear()/getMonth()/getDate()</code> on what it is " +
+  "given. If it is ever changed to re-derive the components (<code>new Date(+d)</code>, a " +
+  "<code>Date.UTC</code> round trip), the injection silently collapses to the host zone - so a probe " +
+  "detects that and turns those tests into loud skips instead of lies. Injecting the clock proves " +
+  "<code>PHAT.localDate</code>; it does not prove the app end to end under a real device timezone, " +
+  "which stays manual item 8.");
+
+/* ============================================================ render */
+(function render(){
+  var i, r, pass = 0, fail = 0, skip = 0, ms = Date.now() - T0, rows = "";
+  for (i = 0; i < RESULTS.length; i++) {
+    if (RESULTS[i].skip) skip++; else if (RESULTS[i].pass) pass++; else fail++;
+  }
+
+  function esc(s){
+    return String(s).replace(/[&<>"]/g, function(c){
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  var janOff = offsetOf(new Date(2026, 0, 15)), julOff = offsetOf(new Date(2026, 6, 15));
+  var sum = document.getElementById("summary");
+  sum.className = "summary " + (fail ? "fail" : "pass");
+  sum.innerHTML =
+    '<div class="verdict ' + (fail ? "fail" : "pass") + '">' +
+      (fail ? fail + " FAILING" : "ALL PASSING") +
+      (skip ? '<span style="color:var(--amber);font-size:14px"> &middot; ' + skip + " skipped, not passed</span>" : "") +
+    "</div>" +
+    '<div class="counts">' +
+      "<div><b>" + RESULTS.length + "</b><span>total</span></div>" +
+      '<div><b style="color:var(--green)">' + pass + "</b><span>passed</span></div>" +
+      '<div><b style="color:var(--red)">' + fail + "</b><span>failed</span></div>" +
+      '<div><b style="color:var(--amber)">' + skip + "</b><span>skipped</span></div>" +
+      "<div><b>" + ms + " ms</b><span>run time</span></div>" +
+    "</div>" +
+    '<div style="margin-top:10px;color:var(--dim);font-size:12px">Device timezone under test: <b>' +
+      esc(TZ_NAME) + "</b> (" + offsetLabel(janOff) +
+      (janOff === julOff ? ", no DST" : " in January, " + offsetLabel(julOff) + " in July") + "). " +
+      "The date tests adapt to it. B-03 is a timezone bug, so <b>run this page again on the phone, in " +
+      "the timezone the app is actually used in</b> - some criteria only bite east of UTC.</div>";
+
+  if (typeof window.PHAT !== "object" || !window.PHAT) {
+    document.getElementById("banner").innerHTML =
+      '<div class="banner"><b>logic.js did not define window.PHAT.</b> Either the file is missing next to ' +
+      "tests.html, or it threw before it finished. Every test below is failing for that one reason. " +
+      "Open the console: a top-level identifier that collides with a browser global (the <code>top</code> " +
+      "failure in CLAUDE.md section 7) throws before any code runs.</div>";
+  }
+
+  for (i = 0; i < RESULTS.length; i++) {
+    r = RESULTS[i];
+    rows += '<tr class="' + (r.skip ? "r-skip" : (r.pass ? "r-pass" : "r-fail")) + '">' +
+      '<td class="st">' + (r.skip ? "SKIP" : (r.pass ? "PASS" : "FAIL")) + "</td>" +
+      "<td>" + esc(r.name) + '<span class="grp">' + esc(r.group) + "</span></td>" +
+      "<td>" + (r.skip ? '<div class="skipmsg">not run: ' + esc(r.msg) + "</div>" :
+        (r.pass ? "" :
+          '<div class="msg">' + esc(r.msg) + "</div>" +
+          '<div class="exp">expected: ' + esc(r.expected) + "</div>" +
+          '<div class="act">actual:   ' + esc(r.actual) + "</div>")) + "</td></tr>";
+  }
+  document.getElementById("results").innerHTML =
+    '<table id="tbl"><colgroup><col style="width:52px"><col style="width:44%"><col></colgroup>' +
+    "<tr><th>state</th><th>test</th><th>failure detail</th></tr>" + rows + "</table>";
+
+  document.getElementById("onlyfail").onchange = function(){
+    document.getElementById("tbl").className = this.checked ? "hidepass" : "";
+  };
+
+  var c = "<ol>";
+  for (i = 0; i < CONTRACT.length; i++) c += "<li>" + CONTRACT[i] + "</li>";
+  document.getElementById("contract").innerHTML = c + "</ol>";
+
+  document.getElementById("untestable").innerHTML =
+    "<p>Two of the three gaps this section used to list are <b>closed</b>. " +
+    "<code>PHAT.classifyDraftPayload(raw)</code> and <code>PHAT.buildSession(draft, dayId, dateStr, id)</code> " +
+    "were extracted (B-20, partial), so <code>none</code>/<code>ok</code>/<code>parse</code>/<code>shape</code> " +
+    "and the serialized session JSON are now asserted here, in sections S11 and S12. " +
+    "<code>loadDraft()</code> is a thin wrapper over the first of them, so the path that ships is the path this " +
+    "page exercises; only <code>reason:\"read\"</code> - the storage call itself throwing - is left in " +
+    "<code>index.html</code>.</p>" +
+    "<p><b>What this page still cannot assert, and how it was covered in the W8 verification pass.</b> " +
+    "Everything below needs the DOM, the async storage adapter or the browser lifecycle. It was verified on " +
+    "2026-09-09 by driving <code>index.html</code> in a same-origin iframe from a throwaway probe harness served " +
+    "over <code>http://localhost</code> in headless Chrome - deliberately <b>not</b> checked into this repo, " +
+    "because a suite that needs a server stops being a file you can double-click. Re-run it, or the manual items, " +
+    "whenever the storage layer changes.</p><ul>" +
+    "<li><b>W3</b> - <code>saveDraft</code>/<code>loadDraft</code>/<code>clearDraft</code> round trip through the " +
+    "async adapter; raw strings preserved. <span class=\"skipmsg\">W8: verified.</span></li>" +
+    "<li><b>W3/W5</b> - zero <code>localStorage</code> writes with <code>window.storage</code> stubbed present, " +
+    "including through a full save and a <code>clearDraft()</code>. <span class=\"skipmsg\">W8: verified, 0 " +
+    "writes.</span></li>" +
+    "<li><b>W3</b> - a failed <code>save(LOG, ...)</code> leaves the draft on disk with every set intact. " +
+    "<span class=\"skipmsg\">W8: verified by exhausting the real storage quota.</span></li>" +
+    "<li><b>W3</b> - <code>reason:\"read\"</code>, and <code>startDay()</code> refusing rather than overwriting. " +
+    "<span class=\"skipmsg\">W8: verified with a bridge whose get() rejects; zero writes to the draft key over " +
+    "two attempts.</span> Manual items 12 and 13.</li>" +
+    "<li><b>W3</b> - the verbatim <code>phat:v1:recover:log:&lt;epoch&gt;</code> copy, and the write-block when " +
+    "that copy itself fails. <span class=\"skipmsg\">W8: verified both branches.</span> Manual item 14.</li>" +
+    "<li><b>W1</b> - boot performing ZERO writes on an empty store, twice. <span class=\"skipmsg\">W8: " +
+    "verified.</span> Manual item 15.</li>" +
+    "<li><b>W1</b> - the bodyweight same-day dedupe in the click handler, and the trend chart rendering after a " +
+    "migration. <span class=\"skipmsg\">W8: verified.</span> <b>Still worth extracting (B-20):</b> " +
+    "<code>PHAT.upsertBwRow(rows, date, kg)</code> would make the dedupe a two-line test in here.</li>" +
+    "<li><b>W5</b> - the 400 ms debounce, the immediate write on blur / stepper / <code>visibilitychange</code> / " +
+    "<code>pagehide</code>, and caret and DOM-identity preservation over 10 s of typing. " +
+    "<span class=\"skipmsg\">W8: verified; 80 keystrokes, zero mutations under #view.</span></li>" +
+    "<li><b>W6</b> - paste versus keystroke, the stepper normalising a malformed field, and the blocked-save " +
+    "message. <span class=\"skipmsg\">W8: verified.</span></li>" +
+    "<li><b>Nothing automated reaches these at all:</b> a real phone lock, a real browser kill and relaunch, a " +
+    "real device timezone change, the software keyboard covering a focused field (B-36), pinch-zoom (B-13), " +
+    "OS text scaling, and screen reader announcement of the <code>aria-live</code> message. They are the " +
+    "manual checklist, and they are the reason it exists.</li></ul>";
+
+  document.getElementById("manual").innerHTML =
+    "<p>Run in order. Stop at the first failure and report it. Two minutes.</p><ol>" +
+    "<li><b>Draft survives a lock.</b> Start Day 1. Type <code>100</code> / <code>5</code> in set 1. " +
+    "Lock the phone, count to ten, unlock. The set is still on screen.</li>" +
+    "<li><b>Draft survives a kill.</b> Add <code>100</code>/<code>5</code> and <code>95</code>/<code>4</code> and a " +
+    "note. Do not save. Swipe the browser away, reopen the app. It offers the session back, naming Day 1 and " +
+    "today's date. Resume: all three sets and the note are exactly as typed.</li>" +
+    "<li><b>A bad number cannot be typed.</b> In a weight field type <code>7</code> <code>.</code> <code>5</code> " +
+    "<code>.</code> - the field reads <code>7.5</code> and the caret has not jumped. Nothing you type makes the " +
+    "number bigger than what you typed.</li>" +
+    "<li><b>A bad number cannot be lost.</b> Paste <code>7.5.0</code> into a weight field. It stays <code>7.5.0</code>. " +
+    "Tap Save: it refuses and names the exercise and the set. One tap on the message lands on that row.</li>" +
+    "<li><b>Fixing it keeps everything.</b> Correct that row to <code>7.5</code> and Save. All four sets are in the " +
+    "saved session. None vanished.</li>" +
+    "<li><b>Rack chin (B-21).</b> Log a set as <code>0</code> x <code>10</code>. Save. Reopen the session: it is " +
+    "still there as 0 x 10.</li>" +
+    "<li><b>Offline.</b> Airplane mode on. Log a full day and save. Reload. Everything is there.</li>" +
+    "<li><b>Midnight (B-03).</b> Set the phone clock to 23:50, start a day - the date shown is today. Set it to " +
+    "00:10 the next day and log bodyweight - it lands on the new day, and yesterday's row is untouched. " +
+    "Put the clock back. While you are in there: open this test page on the phone once, in Beirut time - " +
+    "the UTC+3 date tests only run east of UTC and are skipped on the dev machine.</li>" +
+    "<li><b>One weight a day.</b> Log bodyweight twice within a minute. Exactly one row for today, holding the " +
+    "second value.</li>" +
+    "<li><b>Thumb pass.</b> At 400 px, one hand, text size at 200% in OS settings: every button is reachable and " +
+    "nothing clips. Rotate to landscape and back.</li>" +
+    "<li><b>Discard is last on purpose.</b> Discard a draft: it must ask first and say how many sets it will " +
+    "destroy. Confirm, reload - no restore offer, and the saved history is untouched.</li></ol>" +
+    "<p>Three more, only when a build changes the storage layer. Needs the browser console " +
+    "(desktop, or a phone with remote debugging):</p><ol start=\"12\">" +
+    "<li><b>Corrupt draft must refuse, not overwrite.</b> With a real draft saved, run " +
+    "<code>localStorage.setItem('phat:v1:draft','{oops')</code> and reload. Expected: the app says the draft " +
+    "could not be read and <b>Start Day 1 refuses</b>. It must not silently show an empty Train tab and then " +
+    "overwrite the draft on the next tap.</li>" +
+    "<li><b>Wrong-shape draft.</b> Same again with " +
+    "<code>localStorage.setItem('phat:v1:draft','[1,2,3]')</code>: valid JSON, not a draft. Same refusal, " +
+    "different reason.</li>" +
+    "<li><b>Unreadable log is copied before anything writes.</b> " +
+    "<code>localStorage.setItem('phat:v1:log','{trunc')</code>, reload, then check " +
+    "<code>Object.keys(localStorage)</code> for a <code>phat:v1:recover:log:&lt;number&gt;</code> holding the " +
+    "original text byte for byte. Only then may the app write to <code>phat:v1:log</code>.</li>" +
+    "<li><b>Empty store writes nothing.</b> <code>localStorage.clear()</code>, reload, and without touching " +
+    "anything check <code>Object.keys(localStorage)</code> - it must still be empty. The version lands on the " +
+    "first real save, not on boot.</li>" +
+    "<li><b>A full disk must not fail quietly.</b> Fill storage from the console (write 64 KB strings under " +
+    "<code>filler:N</code> until it throws), then keep typing sets. <b>Known open defect (B-39):</b> the draft " +
+    "stops being written and nothing on screen says so - <code>S.err</code> is set but never painted, because " +
+    "autosave is forbidden from calling <code>render()</code>. Tapping Save does fail loudly and keeps every " +
+    "number on screen. Delete the filler keys and Save again: all sets save. Re-run this item when B-39 is " +
+    "fixed; it should then say so while you are still typing.</li>" +
+    "<li><b>Private window / site data blocked.</b> Open the app with storage denied. It boots and shows the " +
+    "day list, and tapping a day <b>refuses</b> with a message rather than opening a session it cannot save. " +
+    "<b>Known open defect (B-40):</b> the message it shows is the draft one, which hides the more serious " +
+    "\"nothing will be written to your log\" notice, and its advice - reopen the app - does not help.</li></ol>";
+})();
+</script>
+</body>
+</html>

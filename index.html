@@ -9,6 +9,10 @@
     --bg:#14100E; --surface:#211B18; --hi:#2C2521; --line:#3A312B;
     --bone:#E8E2DA; --dim:#8A7F76; --faint:#5C534C;
     --amber:#E5B217; --green:#5F9E4A; --red:#9E4A3F;
+    /* --red is 2.84:1 on --surface — it fails even the 3:1 non-text bar, so it
+       may not carry an error on a card. --red-hi is 4.64:1 on --surface and
+       8.0:1 on --bg: all new error text and error borders use it. (W4 §0.7) */
+    --red-hi:#C96A5C; --scrim:rgba(20,16,14,.78);
     --mono: ui-monospace, SFMono-Regular, "DejaVu Sans Mono", Menlo, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
@@ -43,6 +47,23 @@
   .idx{color:var(--faint); font-family:var(--mono); font-size:13px; width:14px; flex:none}
   .x{color:var(--faint); font-size:13px}
   .ghost{color:var(--faint); font-family:var(--mono); font-size:12.5px; flex:1; text-align:right}
+
+  /* ---- W6: a set row marked by a blocked save (W4 §2.4) ----
+     The rule is --red-hi, never --red: 2.84:1 on --surface fails even the
+     non-text bar. Nothing here depends on hue — the rule is a rule, the "!" is
+     an "!", the token is words, and the stepper border is thicker. Greyscale
+     the screen and every one of them still reads.
+     MEASURED at 400px: the row's fixed parts (14 idx + 159 + 8 + 130 + gaps)
+     are already ~3px wider than the 334px of card content, so the ghost slot
+     is ~0 and the row cannot take one more inline element. The token gets its
+     own full-width line under the row instead, and the marked stepper's extra
+     border is cancelled by a -1px margin so the row's geometry does not change
+     at all — a wrapped stepper is a worse bug than the one being reported. */
+  .setrow.bad{border-left:3px solid var(--red-hi); padding-left:8px; margin-left:-11px}
+  .badtok{color:var(--bone); font-family:var(--mono); font-size:12.5px;
+    text-align:right; line-height:1.4; margin:-4px 0 7px}
+  .stepper.binv{border-color:var(--red-hi); border-width:2px; margin:-1px}
+  .clearstrip{min-height:44px; margin:-1px 0 11px; font-size:13.5px}
 
   .stepper{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; flex:none}
   .stepper button{background:var(--hi); color:var(--dim); font-size:21px; line-height:1; min-height:46px; padding:0 13px}
@@ -83,14 +104,77 @@
   .sess{display:flex; align-items:center; justify-content:space-between; background:var(--surface);
     border:1px solid var(--line); border-radius:8px; padding:12px 16px; margin-bottom:8px}
 
-  nav{position:absolute; bottom:0; left:0; right:0; display:flex; background:var(--surface); border-top:1px solid var(--line)}
+  /* nav no longer positions itself: #dock is the bottom-anchored stack, so the
+     offer sheet sits above nav with no magic offset to keep in sync.
+     fixed, not absolute: absolute pinned it to the bottom of the DOCUMENT, and
+     the Train tab is taller than a phone screen, so the offer sheet would have
+     booted below the fold. It has to be on screen at first paint. #app's
+     padding-bottom is set from this element's measured height, so nothing is
+     ever hidden underneath it. */
+  #dock{position:fixed; bottom:0; left:0; right:0; z-index:40}
+  nav{display:flex; background:var(--surface); border-top:1px solid var(--line)}
   nav button{flex:1; padding:16px 0; font-size:14px; color:var(--dim); border-top:2px solid transparent}
   nav button.on{color:var(--amber); font-weight:700; border-top-color:var(--amber)}
 
-  #toast{position:absolute; bottom:92px; left:0; right:0; display:flex; justify-content:center;
+  /* ---- W5: draft-restore sheets (W4 §0.5–§0.7) ----
+     Variant A (offer) is non-modal and lives in #dock. Variant B (confirm) is
+     modal and lives in #modal. Both share .sheet. */
+  .sheet{background:var(--surface); border-top:1px solid var(--line);
+    border-radius:14px 14px 0 0; padding:18px 16px 16px}
+  /* --bone, not --dim: 11px --dim on --surface is 4.36:1 and fails AA. The
+     spec's px values stand; its colour does not (B-35 sibling, W6). */
+  .sheet .eyebrow{color:var(--bone); font-size:11px; font-weight:600; letter-spacing:.08em}
+  .sheet h2{color:var(--bone); font-size:17px; font-weight:600; line-height:1.3; margin:6px 0 0}
+  .sheet h2:focus{outline:none}
+  /* --dim on --surface is 4.36:1 — under AA at 13px. New body copy on a sheet
+     is therefore 14px/600, per W4 §0.7. */
+  .sheet .det{color:var(--dim); font-size:14px; font-weight:600; line-height:1.45; margin-top:6px}
+  .sheet .rule{color:var(--bone); font-size:13px; line-height:1.45; margin-top:12px;
+    border-left:2px solid var(--red-hi); padding-left:8px}
+  .sheet .btns{margin-top:16px}
+  .sheet .btns>button{display:block; width:100%}
+  .sheet .btns>button+button{margin-top:12px}
+  .sheet .primary{min-height:52px}
+  .sheet .ghostbtn{min-height:48px}
+  /* Destructive: never colour alone — the label always names the count too. */
+  .danger{border-color:var(--red-hi); color:var(--red-hi)}
+  #modal{position:fixed; left:0; right:0; top:0; bottom:0; z-index:60;
+    display:flex; flex-direction:column; justify-content:flex-end}
+  #modal:empty{display:none}
+  #modal .scrim{position:absolute; left:0; right:0; top:0; bottom:0; background:var(--scrim)}
+  #modal .sheet{position:relative}
+  .loading{color:var(--dim); font-size:14px; text-align:center; padding:44px 16px}
+  .warn.hi{border-left-color:var(--red-hi)}
+  /* 13px link in a corner was a 15px target. Padding grows it to 44px without
+     moving it; relocating it out of the corner is a separate backlog item. */
+  #discard{min-height:44px; padding:14px 10px; margin:-14px -10px}
+
+  /* fixed for the same reason as #dock: "Discarded." must be on screen. */
+  #toast{position:fixed; bottom:92px; left:0; right:0; z-index:70; display:flex; justify-content:center;
     pointer-events:none; opacity:0; transition:opacity .18s}
   #toast.on{opacity:1}
   #toast span{background:var(--amber); color:var(--bg); padding:9px 17px; border-radius:999px; font-size:13px; font-weight:600}
+
+  /* ---- W6: the blocked-save message (W4 §2.2–§2.3) ----
+     Sits on --bg directly above Save session, which is where his thumb already
+     is. Headline --bone 16.4:1, reassurance --dim 4.87:1, rule --red-hi. */
+  #bs-msg{border-left:3px solid var(--red-hi); padding-left:12px; margin-bottom:14px}
+  #bs-msg h2{color:var(--bone); font-size:15px; font-weight:600; line-height:1.35; margin:0}
+  #bs-msg h2:focus{outline:none}
+  .bsre{color:var(--dim); font-size:13px; line-height:1.45; margin-top:4px}
+  .bslist{margin-top:10px; border:1px solid var(--line); border-radius:8px; overflow:hidden}
+  .bsrow{display:flex; align-items:center; gap:10px; width:100%; min-height:48px;
+    padding:9px 12px; background:var(--surface); text-align:left}
+  .bsrow+.bsrow{border-top:1px solid var(--line)}
+  .bsrow:active{background:var(--hi)}
+  .bsex{color:var(--bone); font-size:13.5px; line-height:1.3; flex:1}
+  .bstok{color:var(--bone); font-family:var(--mono); font-size:12.5px; white-space:nowrap}
+  .bschev{color:var(--amber); font-size:20px; line-height:1}
+  .bsmore{color:var(--dim); font-size:13px; margin-top:8px}
+  /* Announcements that must not be seen: the running count and the stepper
+     normalisations (W4 §2.11). */
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
 
   .legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:10px}
   .legend span{display:flex; align-items:center; gap:7px; color:var(--dim); font-size:13px}
@@ -104,17 +188,40 @@
 
 <div id="app">
   <div id="view"></div>
-  <div id="toast"><span></span></div>
-  <nav>
-    <button data-tab="train" class="on">Train</button>
-    <button data-tab="trend">Trend</button>
-    <button data-tab="weight">Weight</button>
-  </nav>
+  <div id="toast" role="status" aria-live="polite"><span></span></div>
+  <!-- W6: the polite region for the blocked-save running count and for stepper
+       normalisations. Lives outside #view so a re-render never destroys it —
+       a live region that is recreated is a live region that is not announced. -->
+  <p id="bs-live" role="status" aria-live="polite" class="sr-only"></p>
+  <div id="dock">
+    <!-- Draft-restore offer sheet (non-modal). Above nav, never covering it. -->
+    <div id="dr-offer"></div>
+    <nav>
+      <button data-tab="train" class="on">Train</button>
+      <button data-tab="trend">Trend</button>
+      <button data-tab="weight">Weight</button>
+    </nav>
+  </div>
+  <!-- Modal confirmations. Empty = display:none, so it never eats a tap. -->
+  <div id="modal"></div>
 </div>
 
+<!-- Pure logic: dates, validation, migration. Classic script, no module, so it
+     works from file://. index.html cannot run without it. -->
+<script src="logic.js"></script>
 <script>
 (function(){
 "use strict";
+/* logic.js missing (a partial deploy) used to mean a black screen. Say so. */
+if(!window.PHAT){
+  document.getElementById("view").innerHTML =
+    '<div style="padding:26px 16px;color:#E8E2DA;font-family:sans-serif">'+
+    '<h1 style="font-size:20px;margin:0 0 8px">logic.js did not load</h1>'+
+    '<p style="color:#8A7F76;font-size:14px;line-height:1.5">The app will not run without it, '+
+    'and nothing has been read or written. Your saved log is untouched. Reload, or re-upload both '+
+    'index.html and logic.js.</p></div>';
+  return;
+}
 /* ============================================================ program */
 const PROGRAM = [
  {id:"d1",name:"Upper power",ex:[
@@ -169,36 +276,101 @@ const KEY_LIFTS=[{id:"d1a",n:"Row",c:"var(--amber)"},{id:"d1d",n:"Bench",c:"var(
                  {id:"d2a",n:"Squat",c:"var(--bone)"},{id:"d2d",n:"Deadlift",c:"var(--red)"}];
 
 /* ============================================================ storage */
-const LOG="phat:v1:log", BWK="phat:v1:bw";
+/* One seam. window.storage and localStorage are two separate stores — the
+   adapter picks one at boot and NOTHING may write around it (CLAUDE.md §7). */
+const LOG="phat:v1:log", BWK="phat:v1:bw", DRAFT="phat:v1:draft";
 const hasNative = typeof window.storage!=="undefined" && window.storage && window.storage.get;
-async function load(k){
+/* readRaw distinguishes the three outcomes load() used to collapse into null:
+   absent (nothing stored), ok (parsed), error (the read threw, or the stored
+   text is not JSON). "Absent" and "unreadable" must never look the same —
+   that is how a real draft gets silently overwritten. */
+async function readRaw(k){
+  let raw=null;
   try{
-    if(hasNative){ const r=await window.storage.get(k); return r&&r.value?JSON.parse(r.value):null; }
-    const v=localStorage.getItem(k); return v?JSON.parse(v):null;
-  }catch(e){ return null; }
+    if(hasNative){ const r=await window.storage.get(k); raw=(r&&r.value!=null)?r.value:null; }
+    else raw=localStorage.getItem(k);
+  }catch(e){ return {status:"error",value:null,reason:"read",raw:null}; }
+  if(raw==null||raw==="") return {status:"absent",value:null,raw:null};
+  try{
+    const v=JSON.parse(raw);
+    if(v===null) return {status:"absent",value:null,raw:raw};
+    return {status:"ok",value:v,raw:raw};
+  }catch(e){ return {status:"error",value:null,reason:"parse",raw:raw}; }
 }
+async function load(k){ const r=await readRaw(k); return r.status==="ok"?r.value:null; }
 async function save(k,obj){
+  if(S.blockWrites[k]){
+    S.err="Not saved. The stored copy of this data could not be read and must not be overwritten. Export, then reload.";
+    return false;
+  }
   try{
     if(hasNative) await window.storage.set(k,JSON.stringify(obj));
     else localStorage.setItem(k,JSON.stringify(obj));
     S.err=null; return true;
   }catch(e){ S.err="Could not save. Your entries are still on screen — try again."; return false; }
 }
+async function del(k){
+  try{
+    if(hasNative){
+      const rm=window.storage.remove||window.storage.delete||window.storage.del;
+      if(typeof rm==="function") await rm.call(window.storage,k);
+      else await window.storage.set(k,"null");   // no delete on the bridge: blank it
+    }
+    else localStorage.removeItem(k);
+    return true;
+  }catch(e){ return false; }
+}
 
 /* ============================================================ state */
-const S={tab:"train",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null};
+/* logMeta/bwMeta carry every key of the stored objects we don't own (schema
+   version, utcDatedBefore, anything a future build adds) so a write never
+   drops a key it didn't understand. */
+/* S.offer is the draft as it sits ON DISK, offered back on the Train tab. It is
+   never the same object as S.draft: S.draft is what is on screen. */
+const S={tab:"train",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
+         problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null};
+const logPayload=()=>Object.assign({},S.logMeta,
+  {schemaVersion:PHAT.SCHEMA_VERSION,sessions:S.sessions,includeCut:S.includeCut});
+const bwPayload=()=>Object.assign({},S.bwMeta,
+  {schemaVersion:PHAT.SCHEMA_VERSION,entries:S.bw});
 
 /* ============================================================ utils */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const today=()=>new Date().toISOString().slice(0,10);
-const fmt=d=>new Date(d+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short"});
+/* Dates read the same everywhere, on every device (B-35). `undefined` locale
+   means a US phone renders "Monday, Sep 7" while the spec, the handoff brief
+   and every other string in the app say "Tuesday, 7 Sep" — two orderings on
+   one screen. Pinned to en-GB, and assembled from parts because CLDR 42 made
+   en-GB's short September "Sept": slicing to three keeps one column width in
+   the chart axis and one shape in the copy. */
+function dstr(dt,withWeekday){
+  const o=withWeekday?{weekday:"long",day:"numeric",month:"short"}:{day:"numeric",month:"short"};
+  let wd="",dy="",mo="";
+  try{
+    new Intl.DateTimeFormat("en-GB",o).formatToParts(dt).forEach(p=>{
+      if(p.type==="weekday") wd=p.value;
+      else if(p.type==="day") dy=p.value;
+      else if(p.type==="month") mo=p.value;
+    });
+  }catch(e){ /* no Intl.formatToParts: fall through to toLocaleDateString */ }
+  if(!dy||!mo) return dt.toLocaleDateString("en-GB",o);
+  return (withWeekday&&wd?wd+", ":"")+dy+" "+mo.slice(0,3);
+}
+const fmt=d=>{const t=new Date(d+"T12:00:00"); return isNaN(t.getTime())?String(d):dstr(t,false);};
 const ago=d=>Math.round((Date.now()-new Date(d+"T12:00:00"))/86400000);
 const r1=x=>Math.round(x*10)/10;
 const vol=sets=>sets.reduce((a,s)=>a+(+s.w||0)*(+s.r||0),0);
 const topSet=sets=>{const d=sets.filter(s=>+s.w>0&&+s.r>0);return d.length?Math.max(...d.map(s=>+s.w)):0;};
-const done=sets=>sets.filter(s=>+s.w>0&&+s.r>0);
-function toast(m){const t=document.getElementById("toast");t.querySelector("span").textContent=m;
-  t.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("on"),2100);}
+/* Complete sets only, coerced to numbers. 0 kg is a real set (B-21); a
+   malformed one is reported by validateEntry, never silently binned (B-02). */
+const done=sets=>PHAT.validateEntry(sets).sets;
+/* {quiet} — hide this toast from assistive tech, for the one case where the
+   same sentence is already going out through #bs-live and would otherwise be
+   read twice (B-39). {ms} — a failure gets longer on screen than a receipt. */
+function toast(m,quiet,ms){const t=document.getElementById("toast");
+  t.setAttribute("aria-hidden",quiet?"true":"false");
+  t.querySelector("span").textContent=m;
+  t.classList.add("on");clearTimeout(toast._t);
+  toast._t=setTimeout(()=>t.classList.remove("on"),ms||2100);}
 function lastFor(exId){
   for(let i=S.sessions.length-1;i>=0;i--){const e=S.sessions[i].entries[exId];
     if(e&&e.sets.some(x=>+x.w>0))return e;} return null;}
@@ -380,12 +552,23 @@ function vTrain(){
     <button class="ghostbtn mt12" id="export">Export everything as JSON</button>
     <p class="tiny mt12">Your log is saved on this device. Export once a month so nothing costs you the history.</p>
     </div>`;
+  /* Storage-level failure notice, State 1I included: bottom of the Train tab,
+     above the nav, --bone text with a --red-hi rule (--red fails on --surface). */
+  if(S.err) h+=`<div class="pad mt12"><div class="warn hi" role="alert">
+    <p style="color:var(--bone);font-size:13px;line-height:1.5">${esc(S.err)}</p></div></div>`;
   return h;
 }
 
 function vSession(){
   const d=PROGRAM.find(x=>x.id===S.dayId);
-  const ex=d.ex.filter(e=>S.includeCut||!e.cut);
+  /* startDay() drafts every exercise in the day; this filter renders only the
+     ones in today's volume. So a malformed set can sit on a card that is not on
+     screen and block the save from a row he cannot reach (W4 §2.9). A blocked
+     save therefore reveals the offending card — and only that card, and only
+     while it is offending. includeCut is his programme setting; the app does
+     not get to flip it. */
+  const shown={}; S.problems.forEach(p=>{ if(p.exId) shown[p.exId]=1; });
+  const ex=d.ex.filter(e=>S.includeCut||!e.cut||shown[e.id]);
   let h=`<div class="pad" style="padding-top:22px;padding-bottom:14px;border-bottom:1px solid var(--line)">
     <div class="row"><div>
       <p style="color:var(--dim);font-size:12.5px">${fmt(S.draft.date)} · high-carb day</p>
@@ -397,27 +580,39 @@ function vSession(){
     const tgt=e.lo===e.hi?`${e.s} × ${e.lo}`:`${e.s} × ${e.lo}–${e.hi}`;
     h+=`<div class="card" data-ex="${e.id}">
       <div class="cardhead"><h3>${esc(e.n)}</h3><span class="target">${tgt}</span></div>
+      ${(e.cut&&!S.includeCut)?`<p class="hint">Not in today's volume. It has numbers in it.</p>`:""}
       ${e.k==="speed"?`<p class="hint">65–70% of your power-day top set. Rest 60–90 seconds.</p>`:""}
       <button class="showfig" data-fig="${e.id}">&rsaquo; movement &amp; cue</button>
       <div class="fig" data-figbox="${e.id}"></div>
       <div class="sets">`;
     for(let i=0;i<e.s;i++){
       const p=prev&&prev.sets[i];
+      /* data-ghost holds last session's numbers verbatim so a marked row can
+         hand the slot back the moment it stops being broken (W4 §2.4). */
+      const gh=p&&+p.w>0?p.w+"×"+p.r:"—";
       h+=`<div class="setrow" data-i="${i}">
         <span class="idx">${i+1}</span>
         <span class="stepper"><button data-act="-" data-f="w">&minus;</button>
-          <input class="w" data-f="w" inputmode="decimal" placeholder="0" value="${st.sets[i].w}">
+          <input class="w" data-f="w" inputmode="decimal" placeholder="0" value="${esc(st.sets[i].w)}">
           <button data-act="+" data-f="w">+</button></span>
         <span class="x">×</span>
         <span class="stepper"><button data-act="-" data-f="r">&minus;</button>
-          <input class="r" data-f="r" inputmode="numeric" placeholder="–" value="${st.sets[i].r}">
+          <input class="r" data-f="r" inputmode="numeric" placeholder="–" value="${esc(st.sets[i].r)}">
           <button data-act="+" data-f="r">+</button></span>
-        <span class="ghost">${p&&+p.w>0?p.w+"×"+p.r:"—"}</span></div>`;
+        <span class="ghost" data-ghost="${esc(gh)}">${esc(gh)}</span></div>`;
     }
     h+=`<input class="note" placeholder="Note — RIR, form, pain, anything" value="${esc(st.note)}"></div>
       <div class="verdict"></div></div>`;
   });
-  h+=`${S.err?`<p style="color:var(--red);font-size:13px" class="mb12">${esc(S.err)}</p>`:""}
+  /* Two slots, deliberately different shapes so they are never confused
+     (W4 §2.10). S.err is a storage failure: a flat bar, no "!", no rows, and
+     --bone on a --red-hi rule because 13px --red was 3.17:1. #bs-slot is the
+     blocked-save block, filled by paintProblems() so that clearing or fixing a
+     row can update it without a render(). Both sit above Save session, where
+     his thumb already is. */
+  h+=`${S.err?`<div class="warn hi mb12" role="alert">
+      <p style="color:var(--bone);font-size:13px;line-height:1.5">${esc(S.err)}</p></div>`:""}
+    <div id="bs-slot"></div>
     <button class="primary mb12" id="finish">Save session</button></div>`;
   return h;
 }
@@ -454,7 +649,7 @@ function vTrend(){
     const n=Object.keys(s.entries).length;
     const v=Object.values(s.entries).reduce((a,e)=>a+vol(e.sets),0);
     h+=`<div class="sess"><div><div style="font-size:14.5px">${esc(d?d.name:"Session")}</div>
-      <div style="color:var(--faint);font-size:12.5px;margin-top:2px">${fmt(s.date)} · ${n} exercises</div></div>
+      <div style="color:var(--faint);font-size:12.5px;margin-top:2px">${fmt(s.date)} · ${plural(n,"exercise")}</div></div>
       <div style="color:var(--dim);font-family:var(--mono);font-size:13px">${Math.round(v).toLocaleString()} kg</div></div>`;});
   h+=`</div>`;
   return h;
@@ -462,7 +657,7 @@ function vTrend(){
 
 function vWeight(){
   const b=S.bw.slice().sort((x,y)=>x.date.localeCompare(y.date));
-  const mine=b.find(e=>e.date===today());
+  const mine=b.find(e=>e.date===PHAT.localDate());
   let stats=null;
   if(b.length>=2){
     const avg=a=>a.reduce((s,x)=>s+x.kg,0)/a.length;
@@ -505,13 +700,17 @@ function vWeight(){
 }
 
 /* ============================================================ render */
-function render(){
+/* keepScroll: the blocked-save path must not throw him to the top of a
+   ten-exercise page — he tapped Save at the bottom and the answer is there
+   (W4 §2.5). Every other caller passes nothing and scrolls as before. */
+function render(keepScroll){
   const v=document.getElementById("view");
   v.innerHTML = S.tab==="train" ? (S.draft?vSession():vTrain())
               : S.tab==="trend" ? vTrend() : vWeight();
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===S.tab));
-  if(S.draft) document.querySelectorAll(".card").forEach(c=>paintVerdict(c));
-  window.scrollTo(0,0);
+  if(S.draft){ document.querySelectorAll(".card").forEach(c=>paintVerdict(c)); paintProblems(); }
+  renderOffer();
+  if(!keepScroll) window.scrollTo(0,0);
 }
 function paintVerdict(card){
   const id=card.dataset.ex;
@@ -530,9 +729,11 @@ document.querySelector("nav").addEventListener("click",e=>{
 
 document.getElementById("view").addEventListener("click",async e=>{
   const day=e.target.closest("[data-day]");
-  if(day){ startDay(day.dataset.day); return; }
+  if(day){ await startDay(day.dataset.day); return; }
 
-  if(e.target.id==="discard"){ S.draft=null; S.dayId=null; render(); return; }
+  /* Explicit discard. Never one tap: it opens the same confirmation as the
+     offer sheet, with the same count, taken from what is on screen right now. */
+  if(e.target.id==="discard"){ askDiscard(filledSets(S.draft),"discard"); return; }
   if(e.target.id==="finish"){ await finish(); return; }
   if(e.target.id==="export"){ exportAll(); return; }
 
@@ -545,13 +746,31 @@ document.getElementById("view").addEventListener("click",async e=>{
     return;
   }
 
+  /* W6: the one-tap route from the message to the row, and the way out of a
+     row he does not want. Both live in the same delegated listener as
+     everything else — no per-node handlers to leak across a re-render. */
+  const go=e.target.closest("[data-goto]");
+  if(go){ gotoProblem(go.dataset.goto); return; }
+  const cl=e.target.closest("[data-clear]");
+  if(cl){ clearSet(cl.dataset.clear); return; }
+
   const st=e.target.closest("[data-act]");
   if(st){
     const inp=st.parentElement.querySelector("input");
-    const f=st.dataset.f, step=f==="w"?2.5:1;
-    const base=parseFloat(inp.value)||0;
-    inp.value=String(Math.max(0,r1(base+(st.dataset.act==="+"?step:-step))));
-    syncSet(inp); return;
+    const f=st.dataset.f;
+    /* First tap on a malformed value normalises it and stops. A field that
+       jumps 7.5.0 → 10 on one tap has silently changed a number, which is the
+       whole class of bug this batch exists to kill (W4 §2.8). */
+    const norm=normaliseNum(inp.value,f);
+    let out;
+    if(norm!==null){
+      out=norm;
+      if(out!=="") announce((f==="w"?"Weight":"Reps")+" now "+out+".");
+    } else out=stepValue(inp.value,f,st.dataset.act==="+"?1:-1);
+    inp.value=out;
+    commitField(inp,out);
+    flushDraft();          // a stepper tap is a committed number: write it now
+    return;
   }
   const bw=e.target.closest("[data-bwact]");
   if(bw){
@@ -562,62 +781,820 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.id==="logbw"){
     const v=parseFloat(document.getElementById("bwin").value);
     if(!(v>30&&v<300)){ toast("Enter a weight between 30 and 300 kg."); return; }
-    S.bw=[...S.bw.filter(x=>x.date!==today()),{date:today(),kg:r1(v)}];
-    await save(BWK,{entries:S.bw}); render(); toast("Weight logged."); return;
+    const dt=PHAT.localDate();
+    S.bw=[...S.bw.filter(x=>x.date!==dt),{date:dt,kg:r1(v)}];
+    /* On a failed write the number stays on screen and S.err says it failed —
+       it must never both fail and look fine. */
+    const ok=await save(BWK,bwPayload());
+    render(); if(ok) toast("Weight logged."); return;
   }
 });
 
 document.getElementById("view").addEventListener("input",e=>{
   if(e.target.classList.contains("note")){
     const id=e.target.closest(".card").dataset.ex;
-    S.draft.entries[id].note=e.target.value; return;
+    S.draft.entries[id].note=e.target.value; scheduleDraftSave(); return;
   }
-  if(e.target.dataset.f) syncSet(e.target);
+  /* inputType is what tells a keystroke from a paste. A keystroke that would
+     make the value unreadable is rejected outright; a paste is kept exactly as
+     pasted and blocks the save instead. Stripping a paste is what turns 7,5
+     into 75 and 7.5.0 into 750 (W4 §2.1, WO-001 §W6). */
+  if(e.target.dataset.f){ syncSet(e.target,e.inputType); scheduleDraftSave(); }
+});
+/* blur does not bubble; focusout does. Leaving a field commits it immediately,
+   so the only thing a hard kill can cost is the keystroke still in the buffer. */
+document.getElementById("view").addEventListener("focusout",e=>{
+  if(e.target.classList.contains("note")||e.target.dataset.f) flushDraft();
 });
 
 document.getElementById("view").addEventListener("change",async e=>{
   if(e.target.id==="cut"){ S.includeCut=e.target.checked;
-    await save(LOG,{sessions:S.sessions,includeCut:S.includeCut}); }
+    await save(LOG,logPayload()); }
 });
 
-function syncSet(inp){
+/* Two more delegated roots, same pattern as #view and nav: one listener on a
+   container that outlives every node inside it. No per-node listeners. */
+document.getElementById("dr-offer").addEventListener("click",e=>{
+  if(e.target.closest("#dr-resume")){ resumeDraft(false); return; }
+  if(e.target.closest("#dr-discard")){
+    const o=offerInfo(); if(o) askDiscard(o.n,"dr-discard");
+  }
+});
+document.getElementById("modal").addEventListener("click",e=>{
+  const b=e.target.closest("[data-sheet]"); if(!b||!sheetState) return;
+  const a=b.dataset.sheet;
+  if(a==="cancel"||a==="safe"){
+    const safe=sheetState.onSafe;
+    closeSheet(); if(a==="safe"&&safe) safe();
+    return;
+  }
+  /* The 300 ms guard, enforced twice: CSS stops a real finger from hitting the
+     button at all, and this stops anything that reaches the handler by another
+     route. It does not disable the button and does not change its appearance. */
+  if(a==="danger"){
+    if(Date.now()<sheetState.armAt) return;
+    if(sheetState.onDanger) sheetState.onDanger();
+  }
+});
+/* Escape cancels; Tab is trapped inside the dialog. */
+document.addEventListener("keydown",e=>{
+  if(!sheetState) return;
+  if(e.key==="Escape"){ e.preventDefault(); closeSheet(); return; }
+  if(e.key!=="Tab") return;
+  const m=document.getElementById("modal");
+  const f=Array.prototype.slice.call(m.querySelectorAll("button"));
+  if(!f.length) return;
+  const first=f[0], last=f[f.length-1], cur=document.activeElement;
+  if(e.shiftKey&&(cur===first||!m.contains(cur))){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey&&(cur===last||!m.contains(cur))){ e.preventDefault(); first.focus(); }
+});
+
+/* ============================================================ input (W6)
+   syncSet used to do inp.value.replace(/[^\d.]/g,""), which is exactly the
+   silent-rewrite bug: it turned a pasted "7,5" into "75" — a 10x error, with
+   no way for him to know. Nothing strips a value any more. A keystroke that
+   would make the field unreadable is refused before it lands; anything else,
+   paste included, is stored verbatim and answered at Save time. */
+function commitField(inp,val){
   const card=inp.closest(".card"), row=inp.closest(".setrow");
+  if(!card||!row) return;
   const id=card.dataset.ex, i=+row.dataset.i, f=inp.dataset.f;
-  S.draft.entries[id].sets[i][f]=inp.value.replace(/[^\d.]/g,"");
+  const st=S.draft&&S.draft.entries[id]&&S.draft.entries[id].sets[i];
+  if(!st) return;
+  st[f]=val;
   paintVerdict(card);
+  reviewRow(id,i);
+}
+function syncSet(inp,inputType){
+  const card=inp.closest(".card"), row=inp.closest(".setrow");
+  if(!card||!row) return;
+  const id=card.dataset.ex, i=+row.dataset.i, f=inp.dataset.f;
+  const st=S.draft&&S.draft.entries[id]&&S.draft.entries[id].sets[i];
+  if(!st) return;
+  const t=String(inputType||"");
+  /* Kept verbatim: a paste, a drop, an autocomplete replacement, and any
+     deletion. A deletion has to pass through untouched or he cannot backspace
+     his way out of a value the sanitiser would refuse to re-accept. */
+  const verbatim = t==="insertFromPaste"||t==="insertFromDrop"||
+                   t==="insertReplacementText"||t.indexOf("delete")===0;
+  let val=inp.value;
+  if(!verbatim){
+    const kept=PHAT.sanitizeNumericInput(st[f],val,f);
+    if(kept!==val){
+      /* Rejected. Put the field back and leave the caret where he left it —
+         at the point the refused character would have gone. */
+      const pos=inp.selectionStart, delta=val.length-kept.length;
+      inp.value=kept;
+      if(typeof pos==="number"){
+        const at=Math.max(0,Math.min(kept.length,pos-delta));
+        try{ inp.setSelectionRange(at,at); }catch(err){}
+      }
+      val=kept;
+    }
+  }
+  st[f]=val;
+  paintVerdict(card);
+  reviewRow(id,i);
+}
+
+/* Stepper arithmetic, W4 §2.6 Route B. `−` at the floor EMPTIES the field
+   rather than resting on a value that blocks the save: stepping down to zero
+   is how he undoes an entry, and after W2 a resting 0 in the reps field is a
+   refusal. Weight 2.5 → 0 → "" keeps the 0 kg rack chin reachable (B-21) and
+   makes it reversible. `+` from empty is 2.5 kg / 1 rep, as today. */
+function stepValue(cur,f,dir){
+  const s=String(cur==null?"":cur).trim();
+  const step=f==="w"?2.5:1, floor=f==="w"?0:1;
+  if(s==="") return dir<0?"":String(step);
+  const n=Number(s);
+  if(!isFinite(n)) return s;                 // unreachable: normaliseNum ran first
+  if(dir>0) return String(r1(n+step));
+  if(n<=floor) return "";                    // at or under the floor: empty it
+  return String(Math.max(floor,r1(n-step)));
+}
+/* → the visibly normalised value for a field the parsers cannot read, or null
+   when there is nothing to normalise. Prefix truncation only, so the result is
+   never larger than what he typed: "7.5.0" → "7.5", "5.5" reps → "5". */
+function normaliseNum(v,f){
+  const s=String(v==null?"":v).trim();
+  if(s==="") return null;
+  const p=f==="w"?PHAT.parseWeight(s):PHAT.parseReps(s);
+  if(p.ok||p.reason!=="malformed") return null;   // in range or out of it, but readable
+  const m=(f==="w")?s.match(/^\d*(?:\.\d*)?/):s.match(/^\d*/);
+  let out=m?m[0]:"";
+  if(out===".") out="";
+  return out;
+}
+/* {assertive} — a write that stopped landing interrupts; a running count waits
+   its turn. The attribute is set BEFORE the text so the politeness in force is
+   the one the mutation is announced under. */
+function announce(msg,assertive){
+  const el=document.getElementById("bs-live");
+  if(!el) return;
+  el.setAttribute("aria-live",assertive?"assertive":"polite");
+  el.textContent=msg;
+}
+
+/* ============================================================ blocked save (W4 §2)
+   Everything below paints from S.problems — the list validateDraft() handed
+   back — and NEVER calls render(). Fixing or clearing a row while a keyboard
+   is open must not rebuild the view under his thumb (B-19). The only nodes
+   touched are the marks on a set row and the contents of #bs-slot.
+
+   The copy reads p.value and p.status straight off the problem list rather
+   than looking the value back up in S.draft. That is what makes "7.5.0"
+   nameable: by the time the message renders, the draft may already have been
+   edited, and a token that disagrees with the row is worse than no token. */
+function tokenFor(p){
+  if(!p) return "";
+  if(p.reason==="empty") return p.field==="r"?"no reps":"no weight";
+  if(p.reason==="range"){
+    if(p.field==="w") return "over 500";
+    return (+p.value>100)?"over 100":"0 reps";
+  }
+  const v=String(p.value==null?"":p.value);
+  return v.length>12?v.slice(0,12)+"…":v;     // {raw}, truncated per W4 §0.3
+}
+/* One row per offending SET, in the order he will walk them — top to bottom
+   through the session, not grouped by error type. A set can be wrong in both
+   fields; the row carries one token, the worst thing wrong with it, because
+   `malformed` beats `incomplete`: {w:"7.5.0", r:""} reads 7.5.0, not "no
+   reps". Telling him to add reps to a broken number sends him the wrong way. */
+function badRows(){
+  const d=PROGRAM.find(x=>x.id===S.dayId);
+  const order={}; if(d) d.ex.forEach((e,ix)=>{ order[e.id]=ix; });
+  const map={}, out=[];
+  S.problems.forEach(p=>{
+    if(!p.exId||p.field==null||p.setIndex==null||p.setIndex<0) return;
+    const k=p.exId+"|"+p.setIndex;
+    if(!map[k]){
+      const e=d&&d.ex.find(x=>x.id===p.exId);
+      map[k]={exId:p.exId,i:p.setIndex,name:e?e.n:p.exId,ps:[],
+              ord:order[p.exId]==null?999:order[p.exId]};
+      out.push(map[k]);
+    }
+    map[k].ps.push(p);
+  });
+  out.sort((a,b)=>a.ord-b.ord||a.i-b.i);
+  out.forEach(r=>{
+    r.primary=r.ps.find(p=>p.reason!=="empty")||r.ps[0];
+    r.token=tokenFor(r.primary);
+  });
+  return out;
+}
+/* A tappable list, not prose: he does not read a sentence, he sees `7.5.0` and
+   knows it was the paste, or `no reps` and knows it was the set he abandoned.
+   The token is also the non-colour carrier of the error. */
+function bsMsgHtml(rows){
+  if(!rows.length) return "";
+  const p=rows.length;
+  const head=p===1?"Not saved. 1 set needs a fix.":"Not saved. "+p+" sets need a fix.";
+  let h=`<div id="bs-msg" role="group" aria-labelledby="bs-head">
+    <h2 id="bs-head" tabindex="-1"><span aria-hidden="true">! </span>${esc(head)}</h2>
+    <p class="bsre">Everything you typed is still here.</p>
+    <div class="bslist">`;
+  rows.slice(0,5).forEach(r=>{
+    const label=r.name+", set "+(r.i+1)+", "+r.token+". Go to set.";
+    h+=`<button class="bsrow" data-goto="${esc(r.exId+"|"+r.i)}" aria-label="${esc(label)}">
+      <span class="bsex">${esc(r.name)} · set ${r.i+1}</span>
+      <span class="bstok">${esc(r.token)}</span>
+      <span class="bschev" aria-hidden="true">&rsaquo;</span></button>`;
+  });
+  /* Five 48px rows, a headline and Save already fill the thumb zone at
+     400×800. A sixth would push Save off screen — the worst possible outcome
+     of an error message. The rest are still marked in the cards. */
+  h+=`</div>${rows.length>5?`<p class="bsmore">and ${rows.length-5} more.</p>`:""}</div>`;
+  return h;
+}
+function findRow(exId,i){
+  const cards=document.querySelectorAll("#view .card");
+  for(let c=0;c<cards.length;c++){
+    if(cards[c].dataset.ex!==exId) continue;
+    const rows=cards[c].querySelectorAll(".setrow");
+    for(let k=0;k<rows.length;k++) if(+rows[k].dataset.i===i) return rows[k];
+  }
+  return null;
+}
+function paintProblems(){
+  const slot=document.getElementById("bs-slot");
+  const view=document.getElementById("view");
+  if(!view) return;
+  /* Strip every mark first, then re-apply. Cheaper to reason about than
+     diffing, and it never touches an input's value or the focused node. */
+  view.querySelectorAll(".setrow.bad").forEach(row=>{
+    row.classList.remove("bad");
+    const g=row.querySelector(".ghost");
+    if(g) g.textContent=g.dataset.ghost||"—";   // last session's numbers come back
+    row.querySelectorAll(".stepper").forEach(s=>s.classList.remove("binv"));
+    row.querySelectorAll("input[data-f]").forEach(inp=>{
+      inp.removeAttribute("aria-invalid"); inp.removeAttribute("aria-describedby");
+    });
+  });
+  view.querySelectorAll(".badtok,.clearstrip").forEach(b=>b.remove());
+
+  const rows=badRows();
+  rows.forEach(r=>{
+    const row=findRow(r.exId,r.i);
+    if(!row) return;                       // card not on screen: message still names it
+    row.classList.add("bad");
+    const tid="bs-t-"+r.exId+"-"+r.i;
+    /* The ghost is displaced for exactly as long as the row is broken: when a
+       row is wrong, "what is wrong right now" beats "what you did last time".
+       Real text in a span, never CSS content — a pseudo-element is uncopyable
+       and unreliable to assistive tech. */
+    const g=row.querySelector(".ghost");
+    if(g) g.textContent="";
+    const tl=document.createElement("p");
+    tl.className="badtok";
+    tl.innerHTML=`<span aria-hidden="true">!</span> <span id="${esc(tid)}">${esc(r.token)}</span>`;
+    row.parentNode.insertBefore(tl,row.nextSibling);
+    /* Border the fields that are actually wrong, so he can see WHICH of the
+       two without reading the token. */
+    r.ps.forEach(p=>{
+      const inp=row.querySelector('input[data-f="'+(p.field==="r"?"r":"w")+'"]');
+      if(!inp) return;
+      inp.setAttribute("aria-invalid","true");
+      inp.setAttribute("aria-describedby",tid);
+      if(inp.parentElement) inp.parentElement.classList.add("binv");
+    });
+    const strip=document.createElement("button");
+    strip.className="ghostbtn clearstrip";
+    strip.dataset.clear=r.exId+"|"+r.i;
+    strip.setAttribute("aria-label","Clear "+r.name+" set "+(r.i+1)+".");
+    strip.textContent="Clear this set";
+    row.parentNode.insertBefore(strip,tl.nextSibling);   // row, token, clear
+  });
+
+  if(slot){
+    /* The fallback is for a problem no row can own — a draft whose shape is
+       wrong. There is nothing to point at, so it says only what is true. */
+    slot.innerHTML = rows.length ? bsMsgHtml(rows)
+      : (S.problems.length ? `<div id="bs-msg" role="group" aria-labelledby="bs-head">
+          <h2 id="bs-head" tabindex="-1"><span aria-hidden="true">! </span>Not saved. Everything you typed is still here.</h2>
+          </div>` : "");
+  }
+}
+/* One tap from the message to the row: put the row about a third down the
+   viewport — clear of the software keyboard, still inside thumb reach — then
+   focus the offending field and select it, so one keystroke replaces 7.5.0
+   whole. Marks stay put; they clear when the row is valid, not when it is
+   visited. */
+function gotoProblem(key){
+  const r=badRows().find(x=>x.exId+"|"+x.i===key);
+  if(!r) return;
+  const row=findRow(r.exId,r.i);
+  if(!row) return;
+  const f=(r.primary&&r.primary.field==="r")?"r":"w";
+  const inp=row.querySelector('input[data-f="'+f+'"]');
+  const y=window.pageYOffset+row.getBoundingClientRect().top-window.innerHeight/3;
+  try{ window.scrollTo({top:Math.max(0,y),behavior:"smooth"}); }
+  catch(e){ window.scrollTo(0,Math.max(0,y)); }
+  if(!inp) return;
+  try{ inp.focus({preventScroll:true}); }catch(e){ inp.focus(); }
+  try{ inp.select(); }catch(e){}
+}
+/* Clearing empties both fields, so the set becomes blank and is skipped on
+   save. No confirmation: it is one abandoned set and retyping undoes it. */
+function clearSet(key){
+  const parts=String(key).split("|"), exId=parts[0], i=+parts[1];
+  const st=S.draft&&S.draft.entries[exId]&&S.draft.entries[exId].sets[i];
+  if(!st) return;
+  st.w=""; st.r="";
+  const row=findRow(exId,i);
+  if(row){
+    row.querySelectorAll("input[data-f]").forEach(inp=>{ inp.value=""; });
+    const card=row.closest(".card"); if(card) paintVerdict(card);
+  }
+  const before=problemSig();
+  const a=document.activeElement;
+  const hadFocus=!!(a&&a.dataset&&a.dataset.clear===key);   // the strip is about to be removed
+  S.problems=S.problems.filter(p=>!(p.exId===exId&&p.setIndex===i));
+  flushDraft();
+  if(problemSig()===before) return;
+  paintProblems(); announceLeft();
+  /* Focus cannot be left on a node that no longer exists, or the next Tab
+     restarts at the top of the page. Land on whatever replaced it. */
+  if(hadFocus){
+    const nx=document.getElementById("bs-head")||document.getElementById("finish");
+    if(nx){ try{ nx.focus({preventScroll:true}); }catch(e){ nx.focus(); } }
+  }
+}
+const problemSig=()=>S.problems.map(p=>[p.exId,p.setIndex,p.field,p.reason,p.value].join(":")).join(",");
+/* Re-read one marked row after he changes it. Only rows that are already
+   marked are re-read: marks appear on a blocked save and never mid-typing. */
+function reviewRow(exId,i){
+  if(!S.problems.length) return;
+  if(!S.problems.some(p=>p.exId===exId&&p.setIndex===i)) return;
+  const st=S.draft&&S.draft.entries[exId]&&S.draft.entries[exId].sets[i];
+  if(!st) return;
+  const before=problemSig();
+  const d=PHAT.describeSet(st);
+  const kept=S.problems.filter(p=>!(p.exId===exId&&p.setIndex===i));
+  const add=(d.status==="blank"||d.status==="complete")?[]
+    : d.problems.map(p=>({exId:exId,setIndex:i,field:p.field,reason:p.reason,
+                          value:p.value,status:d.status}));
+  S.problems=kept.concat(add);
+  if(problemSig()===before) return;
+  paintProblems(); announceLeft();
+}
+function announceLeft(){
+  const n=badRows().length;
+  announce(n?(n===1?"1 set left to fix.":n+" sets left to fix.")
+            :"Nothing left to fix. Tap Save session.");
+}
+/* Move focus to the headline rather than firing an assertive live region: it
+   announces the message once, and the next Tab lands on the first problem row,
+   which is what makes the one-tap route work for keyboard and switch users.
+   Focusing a heading does not raise the software keyboard. */
+function focusBlocked(){
+  const h=document.getElementById("bs-head");
+  if(!h) return;
+  try{ h.scrollIntoView({block:"center"}); }catch(e){ h.scrollIntoView(); }
+  try{ h.focus({preventScroll:true}); }catch(e){ h.focus(); }
+}
+
+/* ============================================================ draft store */
+/* B-39. A failed autosave has nowhere to paint: this path must never call
+   render() (B-19), so S.err sat there unread until he tapped Save, and
+   everything typed after the disk filled was one phone-death from gone.
+   #bs-live and #toast both live OUTSIDE #view, so both carry the message
+   without touching a single node inside the view — no re-render, no lost
+   caret. This is NOT the autosave indicator W4 ruled out: nothing is said
+   while writes land, only when they stop and when they resume.
+   Keyed on the draft OBJECT so a failure state belongs to one session — a new
+   or resumed draft announces again instead of inheriting an old silence. */
+const DRAFT_STOPPED="Your session is not being saved. Tap Save to keep it.";
+const DRAFT_RESUMED="Saving again.";
+let draftFailFor=null;
+function noteDraftWrite(ok,draft){
+  if(!draft) return ok;
+  if(!ok&&draftFailFor!==draft){
+    draftFailFor=draft;
+    announce(DRAFT_STOPPED,true); toast(DRAFT_STOPPED,true,4200);
+  }else if(ok&&draftFailFor===draft){
+    draftFailFor=null;         // released, so a discarded draft is not held
+    announce(DRAFT_RESUMED); toast(DRAFT_RESUMED,true);
+  }
+  return ok;
+}
+/* phat:v1:draft, through save()/load() only — never localStorage directly and
+   never both stores. Sets are kept as the RAW TYPED STRINGS, so a malformed
+   "7.5.0" survives a reload and can be corrected instead of lost. */
+async function saveDraft(draft,dayId){
+  try{
+    if(!draft) return false;
+    const entries={};
+    Object.keys(draft.entries||{}).forEach(k=>{
+      const e=draft.entries[k]||{};
+      entries[k]={
+        sets:(e.sets||[]).map(s=>({w:s&&s.w!=null?String(s.w):"",r:s&&s.r!=null?String(s.r):""})),
+        note:e.note==null?"":String(e.note)
+      };
+    });
+    return noteDraftWrite(await save(DRAFT,{schemaVersion:PHAT.SCHEMA_VERSION,
+      dayId:dayId!=null?dayId:S.dayId, date:draft.date, entries, savedAt:Date.now()}),draft);
+  }catch(e){
+    S.err="Could not save your draft. Your entries are still on screen.";
+    return noteDraftWrite(false,draft);   // never throws into the caller; the next write retries
+  }
+}
+/* loadDraft() → {status:"none"|"ok"|"error", draft, reason}
+   NOT a bare object-or-null. "The read failed" must be distinguishable from
+   "there is no draft", otherwise a failed read shows no restore offer and the
+   next startDay() overwrites a draft that was really there (W4 §1.1 State 1I).
+
+   A thin wrapper on purpose (W6): every decision that can be made from the
+   stored TEXT is made by PHAT.classifyDraftPayload, so the path that ships is
+   byte-for-byte the path tests.html exercises. The only outcome left here is
+   reason:"read" — the storage call itself threw — because that is the one
+   thing a pure function cannot see.
+   Deliberate delta from the old wrapper: a whitespace-only stored value now
+   reads as "none" rather than "error"/"parse". Whitespace holds no data, and
+   an "error" there would block startDay() for a draft that does not exist. */
+async function loadDraft(){
+  const r=await readRaw(DRAFT);
+  if(r.status==="error"&&r.reason==="read") return {status:"error",draft:null,reason:"read"};
+  return PHAT.classifyDraftPayload(r.raw);
+}
+/* Called on a successful finish() and on explicit Discard. On nothing else —
+   a failed save must leave the draft on disk. */
+async function clearDraft(){ return await del(DRAFT); }
+
+/* ============================================================ autosave (W5)
+   THE RULE: nothing on this path may call render(). The app re-renders a whole
+   view with innerHTML, so a render between two keystrokes destroys the caret
+   and the focused node (B-19). Autosave writes to storage and touches no DOM.
+
+   Debounced 400 ms on input; immediate on stepper tap, blur, tab-hide and
+   pagehide. Worst case on a hard kill is one in-flight keystroke, never a set. */
+let draftTimer=null;
+function cancelDraftSave(){ if(draftTimer){clearTimeout(draftTimer); draftTimer=null;} }
+function flushDraft(){
+  cancelDraftSave();
+  if(!S.draft) return;
+  saveDraft(S.draft,S.dayId);   // async, deliberately not awaited: no UI waits on it
+}
+function scheduleDraftSave(){
+  if(!S.draft) return;
+  cancelDraftSave();
+  draftTimer=setTimeout(()=>{draftTimer=null; if(S.draft) saveDraft(S.draft,S.dayId);},400);
+}
+/* Hiding the tab is the last reliable moment before the OS may kill the page.
+   pagehide is the belt to that braces; the bridge may not flush either, which
+   is exactly why blur and stepper taps write immediately. */
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flushDraft(); });
+window.addEventListener("pagehide",()=>flushDraft());
+
+/* ============================================================ restore offer (W4 §1)
+   {n} — filled sets: w OR r non-empty. Counts complete, incomplete and
+   malformed; skips blank. Counts exercises the Full volume toggle hides, since
+   they are still in the draft. One function, every caller, per W4 §0.3. */
+function filledSets(d){
+  let n=0;
+  if(!d||typeof d!=="object") return 0;
+  const es=d.entries||{};
+  Object.keys(es).forEach(k=>{
+    const ss=(es[k]&&es[k].sets)||[];
+    ss.forEach(s=>{ if(!s) return;
+      const w=s.w==null?"":String(s.w).trim(), r=s.r==null?"":String(s.r).trim();
+      if(w!==""||r!=="") n++; });
+  });
+  return n;
+}
+const isDate=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v);
+/* {date} — weekday + day + month while the draft is a week old or less, day +
+   month after that. Anchored at local noon, like fmt(), so it is DST-safe. */
+function fmtDay(ds,ageDays){
+  const d=new Date(ds+"T12:00:00");
+  if(isNaN(d.getTime())) return ds;
+  return dstr(d,ageDays>=0&&ageDays<=6);   // en-GB, same builder as fmt() (B-35)
+}
+const plural=(n,w)=>n+" "+w+(n===1?"":"s");
+/* {age} — W4 §0.4, exactly. Calendar day always beats elapsed minutes: a draft
+   written at 23:50 and reopened at 00:10 says "saved yesterday", because the
+   day is what decides which session those numbers belong to. */
+function ageText(o){
+  const a=o.ageDays;
+  if(a===null||a===undefined||a<0) return "saved "+o.dateStr;
+  if(a===1) return "saved yesterday";
+  if(a>=2) return "saved "+a+" days ago";
+  const ms=Date.now()-o.savedAt;
+  if(!(o.savedAt>0)||ms<0) return "saved earlier today";
+  const mins=Math.floor(ms/60000);
+  if(mins<1) return "saved just now";
+  if(mins<60) return "saved "+plural(mins,"minute")+" ago";
+  const hrs=Math.floor(ms/3600000);
+  if(hrs<24) return "saved "+plural(hrs,"hour")+" ago";
+  return "saved earlier today";
+}
+/* Recomputed whenever the offer is painted, so {age} is right when he comes
+   back from the Trend tab (W4 §1.1 State 1H). It never ticks on its own. */
+function offerInfo(){
+  const d=S.offer; if(!d) return null;
+  const date=isDate(d.date)?d.date:PHAT.localDate();
+  const ag=PHAT.draftAge(date,PHAT.localDate());
+  const o={dayId:d.dayId, day:PROGRAM.find(x=>x.id===d.dayId)||null, date:date,
+    ageDays:ag.ageDays, sameDay:ag.sameDay,
+    savedAt:typeof d.savedAt==="number"?d.savedAt:0, n:filledSets(d)};
+  o.dateStr=fmtDay(date,o.ageDays);
+  o.age=ageText(o);
+  return o;
+}
+/* Variant A. Present at first paint, so no aria-live — announcing a region
+   that was never absent is noise. Focus order is Resume then Discard: safe
+   first in DOM even though Discard is lowest on screen. */
+function offerHtml(o){
+  const known=!!o.day;
+  let det;
+  if(!known) det=plural(o.n,"set")+" logged. This app version cannot open it.";
+  else if(!o.n) det="Nothing entered yet · "+o.age;
+  else det=plural(o.n,"set")+" logged · "+o.age;
+  return `<section class="sheet" aria-labelledby="dr-title">
+    <p class="eyebrow">UNFINISHED SESSION</p>
+    <h2 id="dr-title">${known?esc(o.day.name)+" · "+esc(o.dateStr):"Saved "+esc(o.dateStr)}</h2>
+    <p class="det">${esc(det)}</p>
+    ${(known&&!o.sameDay)?`<p class="rule"><span aria-hidden="true">! </span>It saves under ${esc(o.dateStr)}, not today.</p>`:""}
+    <div class="btns">
+      ${known?`<button class="primary" id="dr-resume">Resume</button>`:""}
+      <button class="ghostbtn" id="dr-discard">Discard</button>
+    </div></section>`;
+}
+function renderOffer(){
+  const box=document.getElementById("dr-offer");
+  const o=(S.tab==="train"&&!S.draft)?offerInfo():null;
+  box.innerHTML=o?offerHtml(o):"";
+  /* Keep the last day button clear of the sheet. Measured, not guessed, so a
+     wrapped warning line cannot hide a tap target. */
+  document.getElementById("app").style.paddingBottom=
+    (document.getElementById("dock").offsetHeight+27)+"px";
+}
+
+/* ---- Variant B: modal confirm sheet. Safe action lowest, in the slot the
+   trigger occupied, so a stray second tap lands on it and not on the
+   destructive one. Plus a 300 ms pointer-events guard on the destructive
+   button — not disabled, no greyed-out state, it simply does not fire. ---- */
+let sheetState=null;
+function askSheet(cfg){
+  sheetState=cfg;
+  cfg.armAt=Date.now()+300;   // enforced in the handler as well as by CSS
+  const m=document.getElementById("modal");
+  m.innerHTML=`<div class="scrim" data-sheet="cancel"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title">
+      <h2 id="dr-confirm-title" tabindex="-1">${esc(cfg.headline)}</h2>
+      <p class="det">${esc(cfg.body)}</p>
+      <div id="dr-sheet-err"></div>
+      <div class="btns">
+        <button class="ghostbtn danger" data-sheet="danger" style="pointer-events:none">${esc(cfg.danger)}</button>
+        <button class="primary" data-sheet="safe">${esc(cfg.safe)}</button>
+      </div></section>`;
+  const head=m.querySelector("#dr-confirm-title"); if(head) head.focus();
+  const dz=m.querySelector('[data-sheet="danger"]');
+  setTimeout(()=>{ if(dz&&dz.isConnected) dz.style.pointerEvents=""; },300);
+}
+function closeSheet(){
+  const back=sheetState&&sheetState.back;
+  sheetState=null;
+  document.getElementById("modal").innerHTML="";
+  if(back){ const el=document.getElementById(back); if(el) el.focus(); }
+}
+function sheetErr(msg){
+  const el=document.getElementById("dr-sheet-err");
+  if(el) el.innerHTML=`<p class="rule">${esc(msg)}</p>`;
+}
+/* {n} phrasing for the destructive button and its headline, W4 §1.1 State 1F. */
+const discardLabel=n=>n===0?"Discard this session":"Discard "+plural(n,"logged set");
+const discardHead=n=>n===0?"Discard this session?":"Discard "+plural(n,"logged set")+"?";
+
+/* Resume puts the stored strings on screen exactly as typed, malformed ones
+   included, and leaves the draft on disk untouched.
+   Rebuilt against the current PROGRAM, so a draft written by another build
+   cannot throw inside vSession. Entries for an exercise this build does not
+   know are dropped: they could never be rendered, reached or corrected, and an
+   unreachable set that blocks a save is worse than no set. Cannot happen while
+   PROGRAM and the draft writer ship in the same file. */
+function hydrateDraft(stored){
+  const d=PROGRAM.find(x=>x.id===stored.dayId);
+  if(!d) return null;
+  const src=stored.entries||{};
+  const entries={};
+  d.ex.forEach(e=>{
+    const se=src[e.id]||{};
+    const ss=Array.isArray(se.sets)?se.sets:[];
+    /* max(): if a stored entry somehow holds more sets than the programme
+       defines, keep them rather than truncate. Never drop a typed number. */
+    const len=Math.max(e.s,ss.length);
+    entries[e.id]={
+      sets:Array.from({length:len},(_,i)=>({
+        w:ss[i]&&ss[i].w!=null?String(ss[i].w):"",
+        r:ss[i]&&ss[i].r!=null?String(ss[i].r):""})),
+      note:se.note==null?"":String(se.note)};
+  });
+  return {date:isDate(stored.date)?stored.date:PHAT.localDate(),entries};
+}
+function resumeDraft(withToast){
+  const stored=S.offer;
+  const hy=stored&&hydrateDraft(stored);
+  if(!hy) return false;                       // unknown dayId: Resume is not offered
+  S.dayId=stored.dayId; S.draft=hy; S.err=null; S.problems=[];
+  S.offer=null;
+  closeSheet(); render();
+  if(withToast) toast("Resumed your unfinished session.");
+  return true;
+}
+/* The only two places allowed to delete the draft are here and finish(). */
+async function doDiscard(then){
+  cancelDraftSave();
+  const ok=await clearDraft();
+  if(!ok){ sheetErr("Could not discard. Nothing changed. Try again."); return false; }
+  S.offer=null; S.draftRead={status:"none"};
+  S.draft=null; S.dayId=null; S.err=null; S.problems=[];
+  closeSheet(); toast("Discarded.");
+  if(then) then(); else render();
+  return true;
 }
 
 /* ============================================================ actions */
-function startDay(id){
+/* State 1F. Context comes from the offer when the draft is still on the Train
+   tab, and from what is on screen once he has resumed it — so the count in the
+   confirmation is always the count he can see. */
+function draftLabel(){
+  if(S.offer){ const o=offerInfo(); return {day:o.day?o.day.name:null,date:o.dateStr}; }
+  if(S.draft){
+    const d=PROGRAM.find(x=>x.id===S.dayId);
+    const ag=PHAT.draftAge(S.draft.date,PHAT.localDate());
+    return {day:d?d.name:null,date:fmtDay(S.draft.date,ag.ageDays)};
+  }
+  return {day:null,date:""};
+}
+function askDiscard(n,back,then){
+  const c=draftLabel();
+  const body=c.day
+    ? c.day+", "+c.date+(n===0?". Nothing is logged in it yet.":". This cannot be undone.")
+    : "Saved "+c.date+". This cannot be undone.";
+  askSheet({headline:discardHead(n), body:body, danger:discardLabel(n), safe:"Keep it",
+    back:back, onDanger:()=>doDiscard(then)});
+}
+/* State 1G Case 2 — he ignored the offer and tapped a different day. The safe
+   button is "Open {day} instead", not "Cancel": after a mis-tap the useful
+   place to land is the session he has work in, not the list he must re-read. */
+function askConflict(newId){
+  const nd=PROGRAM.find(x=>x.id===newId);
+  const o=offerInfo();
+  if(!o||!nd) return;
+  /* Unknown dayId: there is no "{day} instead" to offer, so this falls back to
+     the plain discard confirmation and starts the tapped day on confirm. */
+  if(!o.day){ askDiscard(o.n,null,()=>startDay(newId)); return; }
+  const body=o.n
+    ? o.day.name+" from "+o.dateStr+" is unfinished — "+o.n+" logged sets. Starting a new day discards it."
+    : o.day.name+" from "+o.dateStr+" is unfinished, with nothing logged in it. Starting a new day discards it.";
+  askSheet({
+    headline:"Start "+nd.name+"?", body:body,
+    danger:"Discard "+plural(o.n,"set")+", start "+nd.name,
+    safe:"Open "+o.day.name+" instead",
+    onSafe:()=>resumeDraft(false),
+    onDanger:()=>doDiscard(()=>startDay(newId))
+  });
+}
+/* Fails closed. If the draft on disk could not be read, we do not know whether
+   a session with real sets is sitting there, so we refuse to start a new day
+   rather than overwrite it. Tapping again retries the read. */
+async function startDay(id){
+  if(S.draftRead.status==="error"){
+    S.draftRead=await loadDraft();            // retry
+    if(S.draftRead.status==="error"){
+      S.err="Could not read your saved session. Close the app and reopen it before starting a new day.";
+      render(); return;
+    }
+    S.err=null;
+    if(S.draftRead.status==="ok"){ S.offer=S.draftRead.draft; render(); }
+  }
+  /* A readable draft is never silently overwritten. Tapping its own day is a
+     Resume, not a conflict — he sees his numbers on the very next screen, so
+     nothing is hidden and nothing is destroyed. Any other day asks first. */
+  if(S.offer){
+    if(S.offer.dayId===id&&PROGRAM.find(x=>x.id===id)){ resumeDraft(true); return; }
+    askConflict(id); return;
+  }
   const d=PROGRAM.find(x=>x.id===id);
-  S.dayId=id; S.draft={date:today(),entries:{}};
+  S.dayId=id; S.err=null; S.problems=[];
+  S.draft={date:PHAT.localDate(),entries:{}};
   d.ex.forEach(e=>{S.draft.entries[e.id]={sets:Array.from({length:e.s},()=>({w:"",r:""})),note:""};});
   render();
 }
 async function finish(){
-  const entries={}; let any=false;
-  Object.keys(S.draft.entries).forEach(k=>{
-    const e=S.draft.entries[k], sets=done(e.sets);
-    if(sets.length){ entries[k]={sets,note:e.note}; any=true; }
-  });
-  if(!any){ toast("Nothing logged yet."); return; }
-  S.sessions.push({id:Date.now(),date:S.draft.date,dayId:S.dayId,entries});
-  const ok=await save(LOG,{sessions:S.sessions,includeCut:S.includeCut});
-  if(!ok){ render(); return; }
-  S.draft=null; S.dayId=null; render(); toast("Session saved.");
+  if(!S.draft) return;
+  const v=PHAT.validateDraft(S.draft);
+  if(!v.ok){
+    /* Refuse. Nothing is written, S.draft is untouched, every typed value
+       stays on screen exactly as typed (B-02, B-21). The render is needed
+       here — a hidden card with a problem on it has to become reachable — but
+       it keeps the scroll position and hands focus to the message, so he never
+       loses his place (W4 §2.5, §2.9). */
+    S.problems=v.problems;
+    S.err=null;              // the two message shapes must never stack
+    render(true); focusBlocked(); return;
+  }
+  S.problems=[];
+  if(!v.setCount){ toast("Nothing logged yet."); return; }
+  /* One builder, shared with the test harness, so the object that reaches
+     save() is the object QA asserts on. It returns null rather than guessing:
+     no dayId, no usable date, or a draft that does not validate. */
+  const sess=PHAT.buildSession(S.draft,S.dayId,S.draft.date,Date.now());
+  if(!sess){
+    /* Loud, and never save(LOG,null): a null session would overwrite the log
+       with garbage, which is the failure this whole batch exists to prevent. */
+    console.error("[phat] buildSession refused",{dayId:S.dayId,date:S.draft&&S.draft.date});
+    S.err="Could not save. Your entries are still on screen — try again.";
+    render(true); return;
+  }
+  /* Build the next log without mutating S.sessions: a failed save used to
+     leave a phantom session in memory that a retry would duplicate. */
+  const next=S.sessions.concat([sess]);
+  const ok=await save(LOG,Object.assign(logPayload(),{sessions:next}));
+  /* Keep the scroll: the failure line renders where Save is, and throwing him
+     to the top of a ten-exercise page to hide it would be its own bug. */
+  if(!ok){ render(true); return; }   // draft still on disk, nothing committed
+  S.sessions=next;
+  cancelDraftSave();             // a queued autosave must not resurrect the draft
+  await clearDraft();
+  S.draft=null; S.dayId=null; S.err=null;
+  S.offer=null; S.draftRead={status:"none"};
+  render(); toast("Session saved.");
 }
 function exportAll(){
-  const blob=new Blob([JSON.stringify({sessions:S.sessions,bodyweight:S.bw,includeCut:S.includeCut},null,2)],
-    {type:"application/json"});
+  const payload=Object.assign({},S.logMeta,{schemaVersion:PHAT.SCHEMA_VERSION,dateBasis:"local",
+    exportedAt:PHAT.localDate(),sessions:S.sessions,bodyweight:S.bw,includeCut:S.includeCut});
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download="phat-log-"+today()+".json"; a.click();
+  a.href=URL.createObjectURL(blob); a.download="phat-log-"+PHAT.localDate()+".json"; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 /* ============================================================ boot */
+/* An unreadable store is not an empty store. If we treated it as empty the
+   first save would overwrite whatever is really there, so keep a verbatim
+   copy aside first; if even that fails, refuse to write to that key. */
+async function preserveUnreadable(k,r){   // → the notice to show, if any
+  const label=k===LOG?"log":"bodyweight";
+  const bk=k.replace("phat:v1:","phat:v1:recover:")+":"+Date.now();
+  const kept=r.raw!=null&&await save(bk,{key:k,savedAt:Date.now(),raw:r.raw});
+  console.warn("[phat] unreadable store",k,"reason:",r.reason,kept?("copy kept at "+bk):"copy FAILED");
+  if(kept) return "Your saved "+label+" could not be read. A copy has been kept aside and new entries will save normally.";
+  S.blockWrites[k]=true;
+  return "Your saved "+label+" could not be read and could not be copied aside. Nothing will be written to it. Reload before logging.";
+}
 (async()=>{
-  const l=await load(LOG); if(l){ S.sessions=l.sessions||[]; S.includeCut=!!l.includeCut; }
-  const b=await load(BWK); if(b) S.bw=b.entries||[];
+  /* The Train tab must not paint before the draft check resolves — a tab that
+     appears and is then covered by a sheet is a layout jump under a thumb that
+     is already moving. Under 600 ms show nothing; past that, say so. */
+  const slow=setTimeout(()=>{
+    document.getElementById("view").innerHTML='<p class="loading">Loading.</p>';
+  },600);
+  /* B-40: the worst fact wins. One slot, several possible truths, so rank them
+     by what each one STOPS him doing and let the highest hold it:
+       2  a store that could not be read and could not be copied aside — every
+          write to it is blocked, and "close the app and reopen it" cannot help
+          when storage is blocked at the browser level;
+       1  the draft could not be read — startDay() fails closed, so this one
+          blocks the next thing he will try to do;
+       0  a store could not be read but a copy was kept — nothing is stopped.
+     Ties go to the first setter, which is why the log is read before
+     bodyweight: the log is the training history. */
+  let notice=null, rank=-1;
+  const setNotice=(msg,r)=>{ if(msg&&r>rank){ notice=msg; rank=r; } };
+  const rl=await readRaw(LOG), rb=await readRaw(BWK);
+  if(rl.status==="error") setNotice(await preserveUnreadable(LOG,rl),S.blockWrites[LOG]?2:0);
+  if(rb.status==="error") setNotice(await preserveUnreadable(BWK,rb),S.blockWrites[BWK]?2:0);
+  const rawLog=rl.value, rawBw=rb.value;
+  /* Non-destructive, idempotent, never throws. No date value is rewritten. */
+  const m=PHAT.migrateStore(rawLog,rawBw);
+  if(m.log&&typeof m.log==="object"){
+    S.logMeta={}; Object.keys(m.log).forEach(k=>{ if(k!=="sessions"&&k!=="includeCut") S.logMeta[k]=m.log[k]; });
+    S.sessions=Array.isArray(m.log.sessions)?m.log.sessions:[];
+    S.includeCut=!!m.log.includeCut;
+  }
+  if(m.bw&&typeof m.bw==="object"){
+    S.bwMeta={}; Object.keys(m.bw).forEach(k=>{ if(k!=="entries") S.bwMeta[k]=m.bw[k]; });
+    S.bw=Array.isArray(m.bw.entries)?m.bw.entries:[];
+  }
+  /* Only writes when the migration actually marked something. An empty store
+     boots with zero writes; the version lands on the first real save. */
+  if(m.logChanged) await save(LOG,logPayload());
+  if(m.bwChanged) await save(BWK,bwPayload());
+  if(m.notes&&m.notes.length) console.info("[phat] migration:",m.notes);
+  /* Read the draft here, before the first render and before any day can be
+     tapped, so startDay() knows whether one exists. W5 turns "ok" into the
+     restore offer; "error" already makes startDay() fail closed. */
+  S.draftRead=await loadDraft();
+  if(S.draftRead.status==="error"){
+    setNotice("Could not read your saved session. Close the app and reopen it before starting a new day.",1);
+    console.warn("[phat] draft unreadable:",S.draftRead.reason);
+  }
+  /* "ok" becomes the restore offer. "error" keeps State 1I's notice and
+     startDay()'s fail-closed retry — the offer must not paper over it. */
+  if(S.draftRead.status==="ok") S.offer=S.draftRead.draft;
+  if(notice) S.err=notice;   // set last: a successful save() clears S.err
+  clearTimeout(slow);
   render();
 })();
 })();
