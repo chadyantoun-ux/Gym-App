@@ -1106,3 +1106,51 @@ prevent the helper from lying.**
 Also now an assertion rather than a comment: `"three"` is **spelled, not interpolated** from
 `TRAINING_WEEK_MIN` — checked on the clause that states the minimum, not the whole sentence, since
 `3 sessions` and `Week 1` are digits that belong there.
+
+### 2026-09-10 — W6: the shell restyles the existing screens; it does not replace them with placeholders
+W6's brief says a screen no milestone has built renders a named placeholder. Read literally that
+covers Train, Trend, Weight and Session too, since W7–W11 will rebuild all four. It was not done that
+way: **only Diet and Plan are placeholders**, and the four existing screens were re-authored onto the
+2a tokens with their behaviour untouched. Replacing them would have deleted a working logger and, with
+it, the WO-001 draft-autosave and blocked-save machinery that W6 is explicitly required to preserve —
+"a screen that is not built yet" has to mean *not built*, not *scheduled for rebuild*.
+**Rules out:** treating a W7-onward rebuild as licence to delete working behaviour in the interim.
+
+### 2026-09-10 — Archivo is named, never fetched
+The design system's `styles.css` opens with `@import url(fonts.googleapis.com/...Archivo)`. That import
+does not ship. The app opens from `file://` with the network off, so the family is declared first in
+`--sans` and falls back to the platform grotesque. A device that has Archivo gets Archivo; one that
+does not gets a system face immediately, and nothing waits on a request either way.
+**Rules out:** any web font in this app, and any argument that the DS's import is part of the DS.
+
+### 2026-09-10 — Every text alpha is `.55` or above, and the old `--dim`/`--faint` split was re-derived
+Spec §0.5's rule is that `.50` is a `--bg`-only value. Rather than police it per selector, the two text
+tokens were re-pointed: **`--dim` = bone `.70` (7.8:1 / 7.0:1), `--faint` = bone `.55` (5.3:1 / 4.9:1)**,
+so both pass on both grounds by construction and the two-step hierarchy survives. `--line` = `.45`
+(3.8:1, control boundaries), `--rule` = `.40` (3.3:1, section rules). Nothing in the app can now name a
+failing text colour without inventing a new token.
+`--green` and `--red` moved too: the old `--red` was **2.9:1 on `--bg`, 2.5:1 on `--surface`** against
+the new grounds. The 2a-ground pair is `#7CC05E` and `#E3705C`, both over 4.5:1 on both. `--red-hi`
+(minted in WO-001 W4 *because* `--red` failed) is now an alias, kept only so no refusal code is touched.
+**Rules out:** re-deriving contrast per component, and the pattern of measuring a translucent colour
+against `--bg` when it is used on `--surface`.
+
+### 2026-09-10 — The set row reflows by flex-wrap on an `em` minimum, not by a breakpoint
+Spec §0.6 requires weight-above-reps when two 44 px-keyed steppers cannot share a line. Implemented as
+`.grp{flex:1 1 8.5rem; min-width:8.5rem}` inside a `flex-wrap` row, so the trigger is *the steppers not
+fitting* — from a narrow viewport, from large text, or from both — rather than a width breakpoint that
+would only answer one of them. Every `font-size` in the file was converted from `px` to `rem` in the
+same pass so a doubled root size actually moves the layout; that is what makes the 200 % criterion
+measurable rather than asserted. MEASURED: 400 px / 100 % → both groups 145 px on one line;
+400 px / 200 % → 297 px and 319 px on two lines, keys still 44 px, no horizontal scroll.
+Two unit captions (`KG`, `REPS`) were added because two identical steppers stacked vertically are
+otherwise indistinguishable. **NEW copy — flagged to `ux-designer`.**
+**Rules out:** a media-query breakpoint for this, and any future control sized in `px` inside the row.
+
+### 2026-09-10 — One live region, and the toast gives up its own
+`#toast` had `role="status" aria-live="polite"`; `#bs-live` had another. Two regions over one sentence
+is a double announcement, and §2.6 asks for exactly one. The toast node is now permanently
+`aria-hidden` and `toast()` routes its text through `announce()`. The same channel answers B-13's
+"verdicts need `aria-live`": `paintVerdict(card, speak)` announces through `#bs-live` on the commit
+paths only — a full render paints ten cards and must not read ten verdicts out.
+**Rules out:** giving any new component its own live region.

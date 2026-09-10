@@ -3,203 +3,322 @@
 <head>
 <meta charset="utf-8">
 <title>PHAT Log</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>  /* == TOKENS ===============================================================
+     Direction 2a - graphite & signal amber, from docs/design/PHAT App.dc.html.
+     EVERY colour literal in this file is in this block. Nothing below may name
+     a hex.
+
+     Ratios are WCAG 2.x with translucent foregrounds composited over their own
+     ground before measuring, and they are quoted PER GROUND, because the same
+     alpha passes on --bg and fails on --surface. That is exactly how the
+     prototype's .lbl at .50 (4.6:1 on --bg, 4.3:1 on --surface) passed an
+     audit that only measured it against --bg (spec wo-004-screens 0.5).      */
   :root{
-    --bg:#14100E; --surface:#211B18; --hi:#2C2521; --line:#3A312B;
-    --bone:#E8E2DA; --dim:#8A7F76; --faint:#5C534C;
-    --amber:#E5B217; --green:#5F9E4A; --red:#9E4A3F;
-    /* --red is 2.84:1 on --surface — it fails even the 3:1 non-text bar, so it
-       may not carry an error on a card. --red-hi is 4.64:1 on --surface and
-       8.0:1 on --bg: all new error text and error borders use it. (W4 §0.7) */
-    --red-hi:#C96A5C; --scrim:rgba(20,16,14,.78);
-    --mono: ui-monospace, SFMono-Regular, "DejaVu Sans Mono", Menlo, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --bg:#1c1b1a;                                /* relative luminance 0.0111 */
+    --surface:#2a2827;                           /* relative luminance 0.0216 */
+    --hi:#353231;      /* stepper key face. Its edge is the --line border, not
+                          this fill, which is 1.35:1 and carries no meaning.  */
+    --bone-rgb:240,238,234;
+    --bone:rgb(var(--bone-rgb));                 /* 14.8:1 bg . 12.7:1 surface */
+    /* The alpha steps, named. TEXT MAY NOT GO BELOW --t55 ON EITHER GROUND. */
+    --t70:rgba(var(--bone-rgb),.70);             /*  7.8:1 bg .  7.0:1 surface */
+    --t55:rgba(var(--bone-rgb),.55);             /*  5.3:1 bg .  4.9:1 surface */
+    --t45:rgba(var(--bone-rgb),.45);             /*  4.0:1 bg .  3.8:1 surface */
+    --t40:rgba(var(--bone-rgb),.40);             /*  3.5:1 bg .  3.3:1 surface */
+    --dim:var(--t70);        /* secondary text  */
+    --faint:var(--t55);      /* tertiary text - the floor, not below it       */
+    --line:var(--t45);       /* control boundaries: 3.8:1, over the 3:1 floor */
+    --rule:var(--t40);       /* section and row rules: 3.3:1                  */
+    --amber:#f5b32b;         /*  9.3:1 bg . 7.9:1 surface . --bg on amber 9.3 */
+    --green:#7CC05E;         /*  7.8:1 bg . 6.7:1 surface  (was 5.3 / 4.5)    */
+    --red:#E3705C;           /*  5.5:1 bg . 4.7:1 surface  (was 2.9 / 2.5)    */
+    --red-hi:var(--red);     /* W4 minted --red-hi because --red was 2.9:1 on
+                                --surface. The 2a red clears 4.5:1 on both, so
+                                the two names are one colour now; the alias
+                                stays so no refusal code has to be touched.   */
+    --scrim:rgba(28,27,26,.82);
+    /* Archivo is the design's face. The DS pulls it from Google Fonts with an
+       @import; that import does not ship - this app opens from file:// with
+       the network off, so the family is NAMED and falls back to the platform
+       grotesque. The device renders Archivo if it has it, the system face if
+       it does not, and nothing waits on a request either way.                */
+    --sans:"Archivo","Archivo Expanded",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"DejaVu Sans Mono",Menlo,monospace;
+    --r:0;             /* the DS radius scale is 0px at every step            */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px;
+    --tap:44px;        /* the floor. WIDTH as well as height - B-43 exists
+                          because only the height was ever checked.           */
+    --key:48px;        /* stepper key height: 44 is the floor, 48 is the size */
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-  #app{background:var(--bg); font-family:var(--sans); color:var(--bone); min-height:660px; position:relative; padding-bottom:78px}
+  html,body{background:var(--bg); margin:0; font-family:var(--sans)}
+  /* Focus has to be visible: the old sheet set input{outline:none} and put
+     nothing back, which left a keyboard user with no feedback at all. */
+  :focus{outline:none}
+  :focus-visible{outline:2px solid var(--amber); outline-offset:-2px}
+  /* overflow-wrap inherits, so this is the whole app's answer to the one way
+     a fluid layout still scrolls sideways: a single word longer than the
+     column. MEASURED — at 200% text "Bodyweight" as a 76px h1 is 432px of
+     min-content in a 353px column, and that alone put 63px of horizontal
+     scroll on the Weight tab. break-word, not anywhere: it breaks only when
+     the word cannot fit, and it leaves flex min-content sizing alone. */
+  #app{background:var(--bg); font-family:var(--sans); color:var(--bone);
+    min-height:100vh; position:relative; padding-bottom:78px; overflow-wrap:break-word}
   #view{max-width:520px; margin:0 auto}
-  h1{font-size:27px; font-weight:700; letter-spacing:-.02em; margin:0}
-  h2{font-size:17px; font-weight:600; margin:0 0 8px}
-  h3{font-size:16px; font-weight:600; margin:0; line-height:1.25}
+  h1{font-size:2.375rem; font-weight:800; letter-spacing:-.025em; line-height:1.02; margin:0}
+  h2{font-size:1.0625rem; font-weight:800; margin:0 0 var(--s2)}
+  h3{font-size:1.5625rem; font-weight:800; letter-spacing:-.02em; margin:0; line-height:1.12}
   p{margin:0}
-  button{font-family:var(--sans); border:none; background:transparent; cursor:pointer}
-  input{font-family:var(--sans); outline:none}
-  .pad{padding:0 16px}
-  .sub{color:var(--dim); font-size:14px; margin-top:5px; line-height:1.45}
-  .tiny{color:var(--faint); font-size:12px; line-height:1.5}
+  button{font-family:var(--sans); border:none; background:transparent; cursor:pointer; color:inherit}
+  input{font-family:var(--sans); color:inherit}
+  .pad{padding:0 var(--s4)}
+  .sub{color:var(--dim); font-size:.875rem; margin-top:5px; line-height:1.45}
+  .tiny{color:var(--faint); font-size:.75rem; line-height:1.5}
+
+  /* -- the design's flush-left label pair. .kick sits on --bg, .lbl inside a
+     surface card - and on --surface the alpha floor is .55, not .50.       */
+  .kick,.lbl{font-size:.6875rem; font-weight:800; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--faint); display:block}
+  .hd{display:flex; justify-content:space-between; align-items:center; gap:var(--s3);
+    padding:var(--s3) var(--s4); border-bottom:2px solid var(--rule)}
+  .secrule{padding-bottom:var(--s2); border-bottom:2px solid var(--rule); margin-bottom:var(--s3)}
 
   .daybtn{width:100%; display:flex; align-items:center; justify-content:space-between;
-    background:var(--surface); border:1px solid var(--line); border-radius:10px;
-    padding:15px 16px; margin-bottom:8px; text-align:left}
-  .daybtn.stale{border-color:var(--red)}
-  .daybtn .nm{color:var(--bone); font-size:16px; font-weight:600}
-  .daybtn .ago{font-size:12.5px; margin-top:3px; color:var(--dim)}
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+    padding:15px var(--s4); margin-bottom:var(--s2); text-align:left; min-height:56px}
+  .daybtn.stale{border-color:var(--red); border-left-width:3px}
+  .daybtn .nm{color:var(--bone); font-size:1rem; font-weight:800}
+  .daybtn .ago{font-size:.78125rem; margin-top:3px; color:var(--dim)}
   .daybtn.stale .ago{color:var(--red)}
-  .chev{color:var(--amber); font-size:22px}
+  .chev{color:var(--amber); font-size:1.375rem}
 
-  .card{background:var(--surface); border:1px solid var(--line); border-radius:10px; margin-bottom:12px}
-  .cardhead{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:15px 16px 4px}
-  .target{color:var(--amber); font-family:var(--mono); font-size:13px; white-space:nowrap}
-  .hint{color:var(--dim); font-size:12.5px; padding:0 16px 2px}
-  .sets{padding:8px 16px 14px}
-  .setrow{display:flex; align-items:center; gap:8px; margin-bottom:9px}
-  .idx{color:var(--faint); font-family:var(--mono); font-size:13px; width:14px; flex:none}
-  .x{color:var(--faint); font-size:13px}
-  .ghost{color:var(--faint); font-family:var(--mono); font-size:12.5px; flex:1; text-align:right}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); margin-bottom:var(--s3)}
+  .cardhead{display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3); padding:15px var(--s4) var(--s1)}
+  /* MEASURED at 200% text: the target ("3 x 6-10") ran 6px past the viewport
+     because a flex item's min-width defaults to min-content and the exercise
+     name would not yield. session 0.1 #9 says the TARGET never wraps,
+     truncates or shrinks - so the name is the one that gives way. */
+  .cardhead h3{min-width:0; overflow-wrap:anywhere}
+  .target{color:var(--amber); font-weight:800; font-size:.8125rem; white-space:nowrap; flex:none}
+  .hint{color:var(--dim); font-size:.78125rem; padding:0 var(--s4) 2px}
+  .sets{padding:var(--s2) var(--s4) 14px}
 
-  /* ---- W6: a set row marked by a blocked save (W4 §2.4) ----
-     The rule is --red-hi, never --red: 2.84:1 on --surface fails even the
-     non-text bar. Nothing here depends on hue — the rule is a rule, the "!" is
-     an "!", the token is words, and the stepper border is thicker. Greyscale
-     the screen and every one of them still reads.
-     MEASURED at 400px: the row's fixed parts (14 idx + 159 + 8 + 130 + gaps)
-     are already ~3px wider than the 334px of card content, so the ghost slot
-     is ~0 and the row cannot take one more inline element. The token gets its
-     own full-width line under the row instead, and the marked stepper's extra
-     border is cancelled by a -1px margin so the row's geometry does not change
-     at all — a wrapped stepper is a worse bug than the one being reported. */
-  .setrow.bad{border-left:3px solid var(--red-hi); padding-left:8px; margin-left:-11px}
-  .badtok{color:var(--bone); font-family:var(--mono); font-size:12.5px;
-    text-align:right; line-height:1.4; margin:-4px 0 7px}
-  .stepper.binv{border-color:var(--red-hi); border-width:2px; margin:-1px}
-  .clearstrip{min-height:44px; margin:-1px 0 11px; font-size:13.5px}
+  /* -- THE SET ROW AND ITS REFLOW (spec 0.6) --------------------------------
+     Arithmetic at 400px: a stepper that holds two 44px keys and a 3-character
+     input is 136px minimum, so the row is index 14 + gap 8 + 136 + gap 8 +
+     136 = 302px. That fits at 400px, and it does NOT fit at 200% text.
+     So the row is flex-wrap with a min-width on each group expressed in rem:
+     when the pair cannot both hold their keys on one line, reps drops to a
+     full-width line UNDER weight and both keep their 44px keys. Nothing
+     shrinks. The row grows downward, which is allowed - everything below a
+     set row is a control, not an input (session 0.1 #1).
+     The unit captions are load-bearing once the pair is stacked: two equal
+     steppers one above the other are otherwise indistinguishable.          */
+  .setrow{display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2); margin-bottom:9px}
+  .idx{color:var(--faint); font-weight:800; font-size:.8125rem; width:14px; flex:none; align-self:center}
+  .grp{flex:1 1 8.5rem; min-width:8.5rem; display:flex; flex-direction:column; gap:3px}
+  .unit{font-size:.625rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+  .ghost{color:var(--faint); font-size:.78125rem; flex:1 1 100%;
+    min-height:1.15rem; padding-left:22px}
 
-  .stepper{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; flex:none}
-  .stepper button{background:var(--hi); color:var(--dim); font-size:21px; line-height:1; min-height:46px; padding:0 13px}
-  .stepper button:active{background:var(--line); color:var(--bone)}
-  .stepper input{background:var(--bg); color:var(--bone); font-family:var(--mono); font-size:21px;
-    letter-spacing:-.02em; border:none; text-align:center; padding:0}
-  .stepper input.w{width:76px} .stepper input.r{width:50px} .stepper input.bw{width:98px}
+  /* ---- WO-001 W6: a set row marked by a blocked save (W4 2.4) ----
+     Nothing here depends on hue: the rule is a rule, the "!" is an "!", the
+     token is words, and the marked stepper's border is thicker. Greyscale the
+     screen and every one of them still reads. The extra border is cancelled
+     by a -1px margin so the row's geometry does not move - a stepper that
+     rewraps when you report an error is a worse bug than the error.        */
+  .setrow.bad{border-left:3px solid var(--red-hi); padding-left:var(--s2); margin-left:-11px}
+  .badtok{color:var(--bone); font-size:.78125rem; line-height:1.4; margin:-4px 0 7px; padding-left:22px}
+  .stepper.binv{border-color:var(--red-hi); border-width:3px; margin:-1px}
+  .clearstrip{min-height:var(--tap); margin:-1px 0 11px; font-size:.84375rem}
+
+  .stepper{display:flex; border:2px solid var(--line); border-radius:var(--r); overflow:hidden}
+  .stepper button{background:var(--hi); color:var(--bone); font-size:1.125rem; font-weight:800;
+    line-height:1; min-height:var(--key); min-width:var(--tap); flex:none; padding:0}
+  .stepper button:active{background:var(--amber); color:var(--bg)}
+  .stepper input{background:var(--bg); color:var(--bone); font-weight:800; font-size:1.0625rem;
+    letter-spacing:-.01em; border:none; text-align:center; padding:0;
+    flex:1 1 auto; min-width:48px; width:100%; min-height:var(--key)}
   .stepper input::placeholder{color:var(--faint)}
 
-  .note{width:100%; background:var(--bg); color:var(--bone); border:1px solid var(--line);
-    border-radius:6px; padding:10px 12px; font-size:13px; margin-top:4px}
+  .note{width:100%; background:var(--bg); color:var(--bone); border:2px solid var(--line);
+    border-radius:var(--r); padding:var(--s3); font-size:.8125rem; margin-top:var(--s1); min-height:var(--key)}
   .note::placeholder{color:var(--faint)}
 
-  .showfig{color:var(--dim); font-size:12.5px; padding:2px 16px 8px; display:block; text-align:left}
-  .showfig:active{color:var(--amber)}
-  .fig{display:none; padding:0 16px 12px}
+  .showfig{color:var(--amber); font-size:.75rem; font-weight:800; letter-spacing:.08em;
+    text-transform:uppercase; padding:0 var(--s4); display:flex; align-items:center;
+    text-align:left; width:100%; min-height:var(--tap)}
+  .fig{display:none; padding:0 var(--s4) var(--s3)}
   .fig.on{display:block}
-  svg.mv{display:block; width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px}
-  .figcue{color:var(--dim); font-size:12.5px; line-height:1.45; margin-top:8px}
-  .figcue b{color:var(--bone); font-weight:600}
-  .verdict{margin:0 16px 15px; white-space:pre-line; padding:9px 12px; background:var(--bg); border-left:3px solid var(--dim);
-    border-radius:4px; font-size:13px; color:var(--dim); line-height:1.45; display:none}
+  svg.mv{display:block; width:100%; background:var(--bg); border:1px solid var(--line); border-radius:var(--r)}
+  .figcue{color:var(--dim); font-size:.78125rem; line-height:1.45; margin-top:var(--s2)}
+  .figcue b{color:var(--bone); font-weight:800}
+  .verdict{margin:0 var(--s4) 15px; white-space:pre-line; padding:9px var(--s3); background:var(--bg);
+    border-left:3px solid var(--dim); border-radius:var(--r); font-size:.8125rem;
+    color:var(--dim); line-height:1.45; display:none}
   .verdict.show{display:block}
   .verdict.up{border-left-color:var(--green); color:var(--green)}
   .verdict.down{border-left-color:var(--red); color:var(--red)}
 
-  .primary{width:100%; background:var(--amber); color:var(--bg); border-radius:10px;
-    padding:16px; font-size:16px; font-weight:700}
-  .ghostbtn{width:100%; background:transparent; color:var(--dim); border:1px solid var(--line);
-    border-radius:10px; padding:13px; font-size:14px}
-  .link{color:var(--dim); font-size:13px}
+  /* -- PROGRESS PIPS (spec 0.5, B-59) ---------------------------------------
+     The prototype painted three states in one form at three alphas, the
+     lowest 1.7:1. Raising it to a passing 4.0:1 would make an upcoming pip
+     look like a completed one and erase the only thing the strip is for. So
+     the meaning moved: the accessible carrier is the TEXT `Exercise 3 of 7`,
+     the strip is aria-hidden redundant graphics, and every painted pip
+     distinguishes by FORM as well as value - filled bar (done), amber and
+     double height (current), outline only (upcoming). Nothing meaningful is
+     under 3:1 and "not done yet" still reads as empty. Greyscale-safe.     */
+  .pips{display:flex; gap:3px; align-items:flex-end; padding:var(--s2) var(--s4) 0}
+  .pip{flex:1; height:4px}
+  .pip.done{background:var(--t45)}
+  .pip.now{background:var(--amber); height:8px}
+  .pip.next{background:none; border:1px solid var(--t45); height:4px}
 
-  .panel{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px}
-  .row{display:flex; align-items:baseline; justify-content:space-between}
-  .big{font-family:var(--mono); font-size:24px; letter-spacing:-.02em; color:var(--bone)}
-  .warn{background:var(--surface); border-left:3px solid var(--red); border-radius:6px; padding:14px 16px}
+  .primary{width:100%; background:var(--amber); color:var(--bg); border-radius:var(--r);
+    padding:var(--s4); font-size:.9375rem; font-weight:800; letter-spacing:.04em;
+    text-transform:uppercase; min-height:56px}
+  .ghostbtn{width:100%; background:transparent; color:var(--bone); border:2px solid var(--line);
+    border-radius:var(--r); padding:var(--s3); font-size:.8125rem; font-weight:800;
+    letter-spacing:.05em; min-height:var(--key)}
+  .link{color:var(--bone); font-size:.8125rem; font-weight:800}
 
-  .sess{display:flex; align-items:center; justify-content:space-between; background:var(--surface);
-    border:1px solid var(--line); border-radius:8px; padding:12px 16px; margin-bottom:8px}
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:var(--s4)}
+  .row{display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3)}
+  .big{font-size:1.5rem; font-weight:800; letter-spacing:-.02em; color:var(--bone)}
+  .warn{background:var(--surface); border-left:3px solid var(--red); border-radius:var(--r); padding:14px var(--s4)}
 
-  /* nav no longer positions itself: #dock is the bottom-anchored stack, so the
-     offer sheet sits above nav with no magic offset to keep in sync.
-     fixed, not absolute: absolute pinned it to the bottom of the DOCUMENT, and
-     the Train tab is taller than a phone screen, so the offer sheet would have
-     booted below the fold. It has to be on screen at first paint. #app's
-     padding-bottom is set from this element's measured height, so nothing is
-     ever hidden underneath it. */
+  .sess{display:flex; align-items:center; justify-content:space-between; gap:var(--s3);
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+    padding:var(--s3) var(--s4); margin-bottom:var(--s2)}
+
+  /* -- THE DOCK -------------------------------------------------------------
+     #dock is the bottom-anchored stack so the offer sheet sits above nav with
+     no magic offset to keep in sync. fixed, not absolute: absolute pinned it
+     to the bottom of the DOCUMENT and the Train tab is taller than a phone,
+     so the sheet booted below the fold. #app's padding-bottom is set from
+     this element's MEASURED height, so no input can hide under it (B-36).
+     Five tabs at a 400px viewport are 80px each - over the 78px the control
+     inventory asks for (spec 0.4 row 1) - and 52px tall, over the 44 floor. */
   #dock{position:fixed; bottom:0; left:0; right:0; z-index:40}
-  nav{display:flex; background:var(--surface); border-top:1px solid var(--line)}
-  nav button{flex:1; padding:16px 0; font-size:14px; color:var(--dim); border-top:2px solid transparent}
-  nav button.on{color:var(--amber); font-weight:700; border-top-color:var(--amber)}
+  nav{display:flex; background:var(--bg); border-top:2px solid var(--bone);
+    padding-bottom:max(10px, env(safe-area-inset-bottom))}
+  nav button{flex:1 1 0; min-width:0; min-height:52px; padding:var(--s3) 2px;
+    font-size:.6875rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--faint); overflow-wrap:anywhere; hyphens:auto}
+  /* Selection is never colour alone: amber label + a 3px inset bar + 800 and
+     aria-current="page". Greyscale it and the bar still says which. */
+  nav button.on{color:var(--amber); box-shadow:inset 0 3px 0 var(--amber)}
 
-  /* ---- W5: draft-restore sheets (W4 §0.5–§0.7) ----
+  /* ---- W5: draft-restore sheets (W4 0.5-0.7) ----
      Variant A (offer) is non-modal and lives in #dock. Variant B (confirm) is
      modal and lives in #modal. Both share .sheet. */
-  .sheet{background:var(--surface); border-top:1px solid var(--line);
-    border-radius:14px 14px 0 0; padding:18px 16px 16px}
-  /* --bone, not --dim: 11px --dim on --surface is 4.36:1 and fails AA. The
-     spec's px values stand; its colour does not (B-35 sibling, W6). */
-  .sheet .eyebrow{color:var(--bone); font-size:11px; font-weight:600; letter-spacing:.08em}
-  .sheet h2{color:var(--bone); font-size:17px; font-weight:600; line-height:1.3; margin:6px 0 0}
+  .sheet{background:var(--surface); border-top:2px solid var(--bone);
+    border-radius:var(--r); padding:18px var(--s4) var(--s4)}
+  .sheet .eyebrow{color:var(--bone); font-size:.6875rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase}
+  .sheet h2{color:var(--bone); font-size:1.0625rem; font-weight:800; line-height:1.3; margin:6px 0 0}
   .sheet h2:focus{outline:none}
-  /* --dim on --surface is 4.36:1 — under AA at 13px. New body copy on a sheet
-     is therefore 14px/600, per W4 §0.7. */
-  .sheet .det{color:var(--dim); font-size:14px; font-weight:600; line-height:1.45; margin-top:6px}
-  .sheet .rule{color:var(--bone); font-size:13px; line-height:1.45; margin-top:12px;
-    border-left:2px solid var(--red-hi); padding-left:8px}
-  .sheet .btns{margin-top:16px}
+  .sheet .det{color:var(--dim); font-size:.875rem; font-weight:400; line-height:1.45; margin-top:6px}
+  .sheet .rule{color:var(--bone); font-size:.8125rem; line-height:1.45; margin-top:var(--s3);
+    border-left:3px solid var(--red-hi); padding-left:var(--s2)}
+  .sheet .btns{margin-top:var(--s4)}
   .sheet .btns>button{display:block; width:100%}
-  .sheet .btns>button+button{margin-top:12px}
+  .sheet .btns>button+button{margin-top:var(--s3)}
   .sheet .primary{min-height:52px}
-  .sheet .ghostbtn{min-height:48px}
-  /* Destructive: never colour alone — the label always names the count too. */
+  .sheet .ghostbtn{min-height:var(--key)}
+  /* Destructive: never colour alone - the label always names the count too. */
   .danger{border-color:var(--red-hi); color:var(--red-hi)}
   #modal{position:fixed; left:0; right:0; top:0; bottom:0; z-index:60;
     display:flex; flex-direction:column; justify-content:flex-end}
   #modal:empty{display:none}
   #modal .scrim{position:absolute; left:0; right:0; top:0; bottom:0; background:var(--scrim)}
   #modal .sheet{position:relative}
-  .loading{color:var(--dim); font-size:14px; text-align:center; padding:44px 16px}
+  .loading{color:var(--dim); font-size:.875rem; text-align:center; padding:44px var(--s4)}
   .warn.hi{border-left-color:var(--red-hi)}
-  /* 13px link in a corner was a 15px target. Padding grows it to 44px without
-     moving it; relocating it out of the corner is a separate backlog item. */
-  #discard{min-height:44px; padding:14px 10px; margin:-14px -10px}
+  /* DISCARD SESSION is destructive and no longer lives in the header. A top
+     corner may hold a control that is neither destructive nor frequent, and
+     this is destructive and one tap from a whole session (0.4, 4.12,
+     B-34 / C-13). It is now the last element in the session scroll. */
+  #discard{min-height:var(--key); width:100%; padding:var(--s3);
+    border:2px solid var(--line); color:var(--bone); border-radius:var(--r);
+    font-size:.8125rem; font-weight:800; letter-spacing:.05em}
 
-  /* fixed for the same reason as #dock: "Discarded." must be on screen. */
+  /* fixed for the same reason as #dock: "Discarded." must be on screen.
+     NOT a live region - #bs-live is the only one. See announce(). */
   #toast{position:fixed; bottom:92px; left:0; right:0; z-index:70; display:flex; justify-content:center;
     pointer-events:none; opacity:0; transition:opacity .18s}
   #toast.on{opacity:1}
-  #toast span{background:var(--amber); color:var(--bg); padding:9px 17px; border-radius:999px; font-size:13px; font-weight:600}
+  #toast span{background:var(--amber); color:var(--bg); padding:9px 17px; border-radius:var(--r);
+    font-size:.8125rem; font-weight:800}
 
-  /* ---- W6: the blocked-save message (W4 §2.2–§2.3) ----
-     Sits on --bg directly above Save session, which is where his thumb already
-     is. Headline --bone 16.4:1, reassurance --dim 4.87:1, rule --red-hi. */
-  #bs-msg{border-left:3px solid var(--red-hi); padding-left:12px; margin-bottom:14px}
-  #bs-msg h2{color:var(--bone); font-size:15px; font-weight:600; line-height:1.35; margin:0}
+  /* ---- WO-001 W6: the blocked-save message (W4 2.2-2.3) ----
+     Sits on --bg directly above Save session, where his thumb already is. */
+  #bs-msg{border-left:3px solid var(--red-hi); padding-left:var(--s3); margin-bottom:14px}
+  #bs-msg h2{color:var(--bone); font-size:.9375rem; font-weight:800; line-height:1.35; margin:0}
   #bs-msg h2:focus{outline:none}
-  .bsre{color:var(--dim); font-size:13px; line-height:1.45; margin-top:4px}
-  .bslist{margin-top:10px; border:1px solid var(--line); border-radius:8px; overflow:hidden}
-  .bsrow{display:flex; align-items:center; gap:10px; width:100%; min-height:48px;
-    padding:9px 12px; background:var(--surface); text-align:left}
+  .bsre{color:var(--dim); font-size:.8125rem; line-height:1.45; margin-top:var(--s1)}
+  .bslist{margin-top:10px; border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+  .bsrow{display:flex; align-items:center; gap:10px; width:100%; min-height:var(--key);
+    padding:9px var(--s3); background:var(--surface); text-align:left}
   .bsrow+.bsrow{border-top:1px solid var(--line)}
   .bsrow:active{background:var(--hi)}
-  .bsex{color:var(--bone); font-size:13.5px; line-height:1.3; flex:1}
-  .bstok{color:var(--bone); font-family:var(--mono); font-size:12.5px; white-space:nowrap}
-  .bschev{color:var(--amber); font-size:20px; line-height:1}
-  .bsmore{color:var(--dim); font-size:13px; margin-top:8px}
-  /* Announcements that must not be seen: the running count and the stepper
-     normalisations (W4 §2.11). */
+  .bsex{color:var(--bone); font-size:.84375rem; line-height:1.3; flex:1}
+  .bstok{color:var(--bone); font-size:.78125rem; font-weight:800; white-space:nowrap}
+  .bschev{color:var(--amber); font-size:1.25rem; line-height:1}
+  .bsmore{color:var(--dim); font-size:.8125rem; margin-top:var(--s2)}
+  /* Announcements that must not be seen: the running count, the stepper
+     normalisations, the verdict on commit, and a blocked draft write. */
   .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px;
     overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
 
   .legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:10px}
-  .legend span{display:flex; align-items:center; gap:7px; color:var(--dim); font-size:13px}
-  .swatch{width:13px; height:3px; border-radius:2px}
-  label.check{display:flex; gap:12px; align-items:flex-start; cursor:pointer}
-  label.check input{width:19px; height:19px; margin-top:2px; accent-color:var(--amber); flex:none}
-  .mb12{margin-bottom:12px} .mt12{margin-top:12px} .mt16{margin-top:16px} .mt24{margin-top:24px}
+  .legend span{display:flex; align-items:center; gap:7px; color:var(--dim); font-size:.8125rem}
+  .swatch{width:13px; height:3px; border-radius:var(--r)}
+  label.check{display:flex; gap:var(--s3); align-items:flex-start; cursor:pointer; min-height:var(--tap)}
+  /* 44x44, not 24x24. The wrapping label is already a 334x62 target, but a
+     checkbox is independently focusable and tappable, so it carries the floor
+     itself rather than borrowing its parent's (B-43). A native box at 44px
+     paints as a bare white square on this ground, so it is drawn from the
+     tokens instead: empty outline vs amber fill AND a tick — two signals, so
+     it survives greyscale. */
+  label.check input{-webkit-appearance:none; appearance:none; margin:0; flex:none;
+    width:var(--tap); height:var(--tap); background:var(--bg); cursor:pointer;
+    border:2px solid var(--line); border-radius:var(--r); display:grid; place-content:center}
+  label.check input:checked{background:var(--amber); border-color:var(--amber)}
+  label.check input:checked::after{content:""; width:17px; height:9px; display:block;
+    border:3px solid var(--bg); border-top:0; border-right:0; transform:rotate(-45deg) translateY(-3px)}
+  /* A screen W7 onward has not built yet. It says so; it does not pretend. */
+  .todo{padding:var(--s6) var(--s4)}
+  .todo p{color:var(--dim); font-size:.875rem; line-height:1.55; margin-top:var(--s3); max-width:32em}
+  .mb12{margin-bottom:var(--s3)} .mt12{margin-top:var(--s3)}
+  .mt16{margin-top:var(--s4)} .mt24{margin-top:var(--s6)}
 </style>
 </head>
 <body>
 
 <div id="app">
   <div id="view"></div>
-  <div id="toast" role="status" aria-live="polite"><span></span></div>
-  <!-- W6: the polite region for the blocked-save running count and for stepper
-       normalisations. Lives outside #view so a re-render never destroys it —
-       a live region that is recreated is a live region that is not announced. -->
+  <!-- The visible toast is decoration over the live region below: it carries
+       no aria-live of its own, because two regions over one sentence are read
+       twice. toast() routes its text through announce() instead. -->
+  <div id="toast" aria-hidden="true"><span></span></div>
+  <!-- WO-004 W6: THE ONE LIVE REGION. Blocked-save running count, stepper
+       normalisations, the verdict on commit, a blocked draft write. Created
+       once at boot and outside #view, so no re-render can destroy it — a live
+       region that is recreated is a live region that is never announced. -->
   <p id="bs-live" role="status" aria-live="polite" class="sr-only"></p>
   <div id="dock">
     <!-- Draft-restore offer sheet (non-modal). Above nav, never covering it. -->
     <div id="dr-offer"></div>
-    <nav>
-      <button data-tab="train" class="on">Train</button>
+    <!-- Five tabs. 400px / 5 = 80px each, over the 78px the control inventory
+         asks for, and 52px tall. aria-current, not colour, says which. -->
+    <nav aria-label="Screens">
+      <button data-tab="train" class="on" aria-current="page">Train</button>
       <button data-tab="trend">Trend</button>
       <button data-tab="weight">Weight</button>
+      <button data-tab="diet">Diet</button>
+      <button data-tab="plan">Plan</button>
     </nav>
   </div>
   <!-- Modal confirmations. Empty = display:none, so it never eats a tap. -->
@@ -215,9 +334,9 @@
 /* logic.js missing (a partial deploy) used to mean a black screen. Say so. */
 if(!window.PHAT){
   document.getElementById("view").innerHTML =
-    '<div style="padding:26px 16px;color:#E8E2DA;font-family:sans-serif">'+
-    '<h1 style="font-size:20px;margin:0 0 8px">logic.js did not load</h1>'+
-    '<p style="color:#8A7F76;font-size:14px;line-height:1.5">The app will not run without it, '+
+    '<div style="padding:26px 16px;color:var(--bone);font-family:var(--sans)">'+
+    '<h1 style="font-size:1.25rem;margin:0 0 8px">logic.js did not load</h1>'+
+    '<p style="color:var(--dim);font-size:.875rem;line-height:1.5">The app will not run without it, '+
     'and nothing has been read or written. Your saved log is untouched. Reload, or re-upload both '+
     'index.html and logic.js.</p></div>';
   return;
@@ -336,34 +455,43 @@ const bwPayload=()=>Object.assign({},S.bwMeta,
 
 /* ============================================================ utils */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-/* Dates read the same everywhere, on every device (B-35). `undefined` locale
-   means a US phone renders "Monday, Sep 7" while the spec, the handoff brief
-   and every other string in the app say "Tuesday, 7 Sep" — two orderings on
-   one screen. Pinned to en-GB, and assembled from parts because CLDR 42 made
-   en-GB's short September "Sept": slicing to three keeps one column width in
-   the chart axis and one shape in the copy. */
-function dstr(dt,withWeekday){
-  const o=withWeekday?{weekday:"long",day:"numeric",month:"short"}:{day:"numeric",month:"short"};
-  let wd="",dy="",mo="";
-  try{
-    new Intl.DateTimeFormat("en-GB",o).formatToParts(dt).forEach(p=>{
-      if(p.type==="weekday") wd=p.value;
-      else if(p.type==="day") dy=p.value;
-      else if(p.type==="month") mo=p.value;
-    });
-  }catch(e){ /* no Intl.formatToParts: fall through to toLocaleDateString */ }
-  if(!dy||!mo) return dt.toLocaleDateString("en-GB",o);
-  return (withWeekday&&wd?wd+", ":"")+dy+" "+mo.slice(0,3);
-}
-const fmt=d=>{const t=new Date(d+"T12:00:00"); return isNaN(t.getTime())?String(d):dstr(t,false);};
+/* ---- ONE MONTH-NAME SOURCE (B-44, and the rest of B-35) -------------------
+   There is exactly one table of month names in this product and it is
+   PHAT.dayMon's, in logic.js. Intl is not used here at all — not with a
+   pinned locale, not with formatToParts. en-GB short September is "Sept" on
+   current ICU, the coach-signed copy says "Sep", and a string a test pins and
+   a coach approved may not change when a browser ships new locale data.
+   Everything with a date in it goes through fmt() or fmtDay(), both below,
+   both built on PHAT.dayMon. If you find yourself typing "Intl" in this file,
+   that is the bug.
+
+   WEEKDAYS are the same problem one table down, so they get the same
+   treatment: a fixed array, indexed by a Date built at local noon.
+   B-14: the year is appended once the date is not in the current calendar
+   year, so "7 Sep" cannot mean two different sessions twelve months apart. */
+const WDAY=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const noon=ds=>{const t=new Date(String(ds)+"T12:00:00"); return isNaN(t.getTime())?null:t;};
+const fmt=d=>{
+  const s=PHAT.dayMon(d);
+  if(!s) return String(d);
+  const y=String(d).slice(0,4);
+  return y===String(new Date().getFullYear())?s:s+" "+y;   /* B-14 */
+};
 const ago=d=>Math.round((Date.now()-new Date(d+"T12:00:00"))/86400000);
 const r1=x=>Math.round(x*10)/10;
-/* {quiet} — hide this toast from assistive tech, for the one case where the
-   same sentence is already going out through #bs-live and would otherwise be
-   read twice (B-39). {ms} — a failure gets longer on screen than a receipt. */
+/* Thousands separator, fixed. Number#toLocaleString is the same class of bug
+   as Intl month names: on a de-DE phone it renders 1.234 kg for one thousand
+   two hundred and thirty-four. One app, one shape for a number. */
+const sep=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,",");
+/* The toast is the VISIBLE half only. There is one live region in this app
+   (#bs-live) and the toast node is permanently aria-hidden, so a sentence is
+   never read twice by two regions over one piece of content (spec §2.6).
+   {quiet} — the caller has already announced this sentence itself (B-39), so
+   do not announce it again. {ms} — a failure stays on screen longer than a
+   receipt. */
 function toast(m,quiet,ms){const t=document.getElementById("toast");
-  t.setAttribute("aria-hidden",quiet?"true":"false");
   t.querySelector("span").textContent=m;
+  if(!quiet) announce(m);
   t.classList.add("on");clearTimeout(toast._t);
   toast._t=setTimeout(()=>t.classList.remove("on"),ms||2100);}
 function lastDay(id){for(let i=S.sessions.length-1;i>=0;i--)if(S.sessions[i].dayId===id)return S.sessions[i].date;return null;}
@@ -451,9 +579,15 @@ function limb(p,col,op,sw){
   return g;
 }
 
+/* B-15: `ah_${pattern}` repeated the moment two diagrams of the same pattern
+   were open at once — two elements with one id, and an arrowhead that points
+   at whichever the browser resolved first. The counter makes every marker id
+   unique per rendered instance, which is what SVG requires. */
+let figSeq=0;
 function diagram(id){
   const pat=PAT[id], P=POSES[pat];
   if(!P) return "";
+  const mk="ah_"+pat+"_"+(++figSeq);
   const B={floor:`<line x1="18" y1="140" x2="182" y2="140" stroke="var(--line)" stroke-width="2"/>`,
     bench:`<rect x="52" y="90" width="98" height="5" rx="2" fill="var(--line)"/><line x1="148" y1="95" x2="148" y2="140" stroke="var(--line)" stroke-width="2"/>`,
     seat:`<rect x="80" y="100" width="60" height="5" rx="2" fill="var(--line)"/><rect x="134" y="52" width="5" height="50" rx="2" fill="var(--line)"/>`,
@@ -462,14 +596,16 @@ function diagram(id){
     block:`<rect x="76" y="128" width="50" height="10" rx="2" fill="var(--line)"/>`,
     prone:`<rect x="48" y="94" width="104" height="5" rx="2" fill="var(--line)"/>`}[P.base]||"";
   const [x1,y1,x2,y2]=P.arrow;
-  return `<svg class="mv" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
-    <defs><marker id="ah_${pat}" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+  /* aria-hidden: the .figcue sentence under it is the accessible description,
+     and a stick figure announced as a pile of polylines is noise. */
+  return `<svg class="mv" viewBox="0 0 200 150" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="${mk}" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
       <path d="M0,0 L7,3.5 L0,7 z" fill="var(--amber)"/></marker></defs>
     ${B}
     ${limb(P.a,"var(--dim)",.55,2.5)}
     ${limb(P.b,"var(--bone)",1,3)}
     <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--amber)" stroke-width="2.5"
-      stroke-linecap="round" marker-end="url(#ah_${pat})"/>
+      stroke-linecap="round" marker-end="url(#${mk})"/>
     <text x="10" y="16" fill="var(--faint)" font-size="10">start</text>
     <text x="10" y="30" fill="var(--bone)" font-size="10" opacity=".8">finish</text>
   </svg>
@@ -522,8 +658,8 @@ function vTrain(){
   h+=`</div><div class="pad mt24">
     <div class="panel"><label class="check">
       <input type="checkbox" id="cut" ${S.includeCut?"checked":""}>
-      <span><span style="font-size:14.5px;font-weight:600">Full volume</span>
-      <span style="color:var(--dim);font-size:13px;display:block;margin-top:3px;line-height:1.45">
+      <span><span style="font-size:.90625rem;font-weight:600">Full volume</span>
+      <span style="color:var(--dim);font-size:.8125rem;display:block;margin-top:3px;line-height:1.45">
       Adds the extra accessory work back in. Leave this off for the first four weeks.</span></span>
     </label></div>
     <button class="ghostbtn mt12" id="export">Export everything as JSON</button>
@@ -532,7 +668,7 @@ function vTrain(){
   /* Storage-level failure notice, State 1I included: bottom of the Train tab,
      above the nav, --bone text with a --red-hi rule (--red fails on --surface). */
   if(S.err) h+=`<div class="pad mt12"><div class="warn hi" role="alert">
-    <p style="color:var(--bone);font-size:13px;line-height:1.5">${esc(S.err)}</p></div></div>`;
+    <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div></div>`;
   return h;
 }
 
@@ -546,11 +682,13 @@ function vSession(){
      not get to flip it. */
   const shown={}; S.problems.forEach(p=>{ if(p.exId) shown[p.exId]=1; });
   const ex=d.ex.filter(e=>S.includeCut||!e.cut||shown[e.id]);
-  let h=`<div class="pad" style="padding-top:22px;padding-bottom:14px;border-bottom:1px solid var(--line)">
-    <div class="row"><div>
-      <p style="color:var(--dim);font-size:12.5px">${fmt(S.draft.date)} · high-carb day</p>
-      <h1 style="margin-top:2px">${esc(d.name)}</h1></div>
-      <button class="link" id="discard">Discard</button></div></div>
+  /* The header no longer holds Discard. A top corner may hold a control that
+     is neither destructive nor frequent; Discard is destructive and one tap
+     from a whole session, so it moved to the bottom of the scroll (§0.4's
+     top-corner rule, §4.12, B-34 / C-13). */
+  let h=`<div class="pad" style="padding-top:22px;padding-bottom:14px;border-bottom:2px solid var(--rule)">
+      <p class="kick">${esc(fmt(S.draft.date))} · high-carb day</p>
+      <h1 style="margin-top:6px">${esc(d.name)}</h1></div>
     <div class="pad mt16">`;
   ex.forEach(e=>{
     const prev=PHAT.lastFor(S.sessions,e.id), st=S.draft.entries[e.id];
@@ -559,26 +697,36 @@ function vSession(){
       <div class="cardhead"><h3>${esc(e.n)}</h3><span class="target">${tgt}</span></div>
       ${(e.cut&&!S.includeCut)?`<p class="hint">Not in today's volume. It has numbers in it.</p>`:""}
       ${e.k==="speed"?`<p class="hint">65–70% of your power-day top set. Rest 60–90 seconds.</p>`:""}
-      <button class="showfig" data-fig="${e.id}">&rsaquo; movement &amp; cue</button>
-      <div class="fig" data-figbox="${e.id}"></div>
+      <button class="showfig" data-fig="${e.id}" aria-expanded="false"
+        aria-controls="fig-${esc(e.id)}">&rsaquo; movement &amp; cue</button>
+      <div class="fig" id="fig-${esc(e.id)}" data-figbox="${e.id}"></div>
       <div class="sets">`;
     for(let i=0;i<e.s;i++){
       const p=prev&&prev.sets[i];
       /* data-ghost holds last session's numbers verbatim so a marked row can
          hand the slot back the moment it stops being broken (W4 §2.4). */
       const gh=p&&+p.w>0?p.w+"×"+p.r:"—";
+      /* Every control here has a name a screen reader can read and a hit area
+         of at least 44 × 44, WIDTH included (B-13, B-43). The name says which
+         exercise and which set, because a card is not a landmark and "plus"
+         on its own is thirty identical buttons. */
+      const at=` ${esc(e.n)} set ${i+1}`;
       h+=`<div class="setrow" data-i="${i}">
-        <span class="idx">${i+1}</span>
-        <span class="stepper"><button data-act="-" data-f="w">&minus;</button>
-          <input class="w" data-f="w" inputmode="decimal" placeholder="0" value="${esc(st.sets[i].w)}">
-          <button data-act="+" data-f="w">+</button></span>
-        <span class="x">×</span>
-        <span class="stepper"><button data-act="-" data-f="r">&minus;</button>
-          <input class="r" data-f="r" inputmode="numeric" placeholder="–" value="${esc(st.sets[i].r)}">
-          <button data-act="+" data-f="r">+</button></span>
+        <span class="idx" aria-hidden="true">${i+1}</span>
+        <span class="grp"><span class="unit" aria-hidden="true">kg</span>
+          <span class="stepper"><button data-act="-" data-f="w" aria-label="Weight down 2.5,${at}">&minus;</button>
+          <input class="w" data-f="w" inputmode="decimal" placeholder="0"
+            aria-label="Weight in kg,${at}" value="${esc(st.sets[i].w)}">
+          <button data-act="+" data-f="w" aria-label="Weight up 2.5,${at}">+</button></span></span>
+        <span class="grp"><span class="unit" aria-hidden="true">reps</span>
+          <span class="stepper"><button data-act="-" data-f="r" aria-label="Reps down 1,${at}">&minus;</button>
+          <input class="r" data-f="r" inputmode="numeric" placeholder="–"
+            aria-label="Reps,${at}" value="${esc(st.sets[i].r)}">
+          <button data-act="+" data-f="r" aria-label="Reps up 1,${at}">+</button></span></span>
         <span class="ghost" data-ghost="${esc(gh)}">${esc(gh)}</span></div>`;
     }
-    h+=`<input class="note" placeholder="Note — RIR, form, pain, anything" value="${esc(st.note)}"></div>
+    h+=`<input class="note" placeholder="Note — RIR, form, pain, anything"
+        aria-label="Note for ${esc(e.n)} — RIR, form, pain, anything" value="${esc(st.note)}"></div>
       <div class="verdict"></div></div>`;
   });
   /* Two slots, deliberately different shapes so they are never confused
@@ -588,9 +736,10 @@ function vSession(){
      row can update it without a render(). Both sit above Save session, where
      his thumb already is. */
   h+=`${S.err?`<div class="warn hi mb12" role="alert">
-      <p style="color:var(--bone);font-size:13px;line-height:1.5">${esc(S.err)}</p></div>`:""}
+      <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div>`:""}
     <div id="bs-slot"></div>
-    <button class="primary mb12" id="finish">Save session</button></div>`;
+    <button class="primary mb12" id="finish">Save session</button>
+    <button id="discard" class="mt24">DISCARD SESSION</button></div>`;
   return h;
 }
 
@@ -606,14 +755,14 @@ function vTrend(){
   let h=`<div class="pad" style="padding-top:26px;padding-bottom:16px">
     <h1>Top sets</h1><p class="sub">The heaviest set on the four lifts that decide whether this is working.</p></div>`;
   if(stalled.length) h+=`<div class="pad mb12"><div class="warn">
-    <p style="color:var(--red);font-size:14px;font-weight:600">Week ${weeksIn()} and no progress on ${esc(stalled.join(", "))}.</p>
-    <p style="color:var(--dim);font-size:13px;margin-top:5px;line-height:1.5">This is the check we agreed on.
+    <p style="color:var(--red);font-size:.875rem;font-weight:600">Week ${weeksIn()} and no progress on ${esc(stalled.join(", "))}.</p>
+    <p style="color:var(--dim);font-size:.8125rem;margin-top:5px;line-height:1.5">This is the check we agreed on.
     The split isn't the problem and neither is the diet. Either the sets aren't close enough to failure,
     or you aren't eating enough. Fix one, not both, and give it three weeks.</p></div></div>`;
 
   const svg=linechart(rows,KEY_LIFTS,230);
   if(!svg) h+=`<div class="pad"><div class="panel" style="text-align:center;padding:34px 16px">
-      <p style="color:var(--dim);font-size:14px">Log two power sessions and the line appears here.</p></div></div>`;
+      <p style="color:var(--dim);font-size:.875rem">Log two power sessions and the line appears here.</p></div></div>`;
   else{
     h+=`<div style="padding:0 8px">${svg}</div><div class="pad legend">`;
     KEY_LIFTS.forEach(l=>h+=`<span><span class="swatch" style="background:${l.c}"></span>${l.n}</span>`);
@@ -625,9 +774,9 @@ function vTrend(){
   rec.forEach(s=>{const d=PROGRAM.find(x=>x.id===s.dayId);
     const n=Object.keys(s.entries).length;
     const v=Object.values(s.entries).reduce((a,e)=>a+PHAT.vol(e.sets),0);
-    h+=`<div class="sess"><div><div style="font-size:14.5px">${esc(d?d.name:"Session")}</div>
-      <div style="color:var(--faint);font-size:12.5px;margin-top:2px">${fmt(s.date)} · ${plural(n,"exercise")}</div></div>
-      <div style="color:var(--dim);font-family:var(--mono);font-size:13px">${Math.round(v).toLocaleString()} kg</div></div>`;});
+    h+=`<div class="sess"><div><div style="font-size:.90625rem">${esc(d?d.name:"Session")}</div>
+      <div style="color:var(--faint);font-size:.78125rem;margin-top:2px">${fmt(s.date)} · ${plural(n,"exercise")}</div></div>
+      <div style="color:var(--dim);font-family:var(--mono);font-size:.8125rem">${sep(v)} kg</div></div>`;});
   h+=`</div>`;
   return h;
 }
@@ -652,22 +801,24 @@ function vWeight(){
   let h=`<div class="pad" style="padding-top:26px;padding-bottom:16px">
     <h1>Bodyweight</h1><p class="sub">Same time, same conditions, every morning.
     The daily number is noise. The weekly average is the signal.</p></div>
-    <div class="pad"><div class="panel"><div style="display:flex;gap:12px;align-items:center">
-      <span class="stepper"><button data-bwact="-">&minus;</button>
+    <div class="pad"><div class="panel">
+      <label class="lbl" for="bwin" style="margin-bottom:6px">Today's weight kg</label>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <span class="grp"><span class="stepper"><button data-bwact="-" aria-label="Bodyweight down 0.1 kg">&minus;</button>
         <input class="bw" id="bwin" inputmode="decimal" placeholder="0" value="${mine?mine.kg:""}">
-        <button data-bwact="+">+</button></span>
-      <button class="primary" id="logbw" style="flex:1;padding:14px">${mine?"Update today":"Log today"}</button>
-    </div>${S.err?`<p style="color:var(--red);font-size:13px;margin-top:10px">${esc(S.err)}</p>`:""}</div></div>`;
+        <button data-bwact="+" aria-label="Bodyweight up 0.1 kg">+</button></span></span>
+      <button class="primary" id="logbw" style="flex:1 1 8.25rem;width:auto">${mine?"Update today":"Log today"}</button>
+    </div>${S.err?`<p style="color:var(--red);font-size:.8125rem;margin-top:10px">${esc(S.err)}</p>`:""}</div></div>`;
 
   if(stats){
     h+=`<div class="pad mt12"><div class="panel">
-      <div class="row"><span style="color:var(--dim);font-size:13.5px">7-day average</span>
+      <div class="row"><span style="color:var(--dim);font-size:.84375rem">7-day average</span>
         <span class="big">${r1(stats.cur)} kg</span></div>`;
     if(stats.delta!==null)
-      h+=`<div class="row" style="margin-top:8px"><span style="color:var(--dim);font-size:13.5px">Change vs last week</span>
-        <span style="font-family:var(--mono);font-size:18px;color:${ok?"var(--green)":"var(--red)"}">
+      h+=`<div class="row" style="margin-top:8px"><span style="color:var(--dim);font-size:.84375rem">Change vs last week</span>
+        <span style="font-family:var(--mono);font-size:1.125rem;color:${ok?"var(--green)":"var(--red)"}">
         ${stats.delta>0?"+":""}${r1(stats.delta)} kg</span></div>`;
-    h+=`<p style="color:var(--dim);font-size:13px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line);line-height:1.5">${advice}</p>
+    h+=`<p style="color:var(--dim);font-size:.8125rem;margin-top:14px;padding-top:13px;border-top:1px solid var(--line);line-height:1.5">${advice}</p>
       <p class="tiny" style="margin-top:7px">Target: 0.2–0.3 kg per week.</p></div></div>`;
   }
   const rows=b.slice(-30).map(e=>({date:fmt(e.date),kg:e.kg}));
@@ -676,15 +827,57 @@ function vWeight(){
   return h;
 }
 
+/* ---- Screens the shell routes to that no milestone has built yet ---------
+   W6 is the frame, not the rooms. A tab that leads nowhere is worse than a
+   tab that says it leads nowhere, and prototype copy pasted in as filler is
+   worse than both — it reads as a promise. So the placeholder names itself,
+   says it is empty on purpose, and states the one fact that matters in a
+   gym: nothing here can touch the log. Copy is NEW and flagged for
+   `ux-designer` review. */
+function vTodo(kick,name,line){
+  return `<div class="hd"><span class="kick">${esc(kick)}</span>
+    <span class="kick">Not built</span></div>
+    <div class="todo"><h1>${esc(name)}</h1>
+    <p>${esc(line)}</p>
+    <p>Nothing on this screen reads or writes your log.</p></div>`;
+}
+const vDiet=()=>vTodo("Diet","Not built yet",
+  "The calorie and protein targets land here. Until then the numbers you need are in the handoff brief, not in this app.");
+const vPlan=()=>vTodo("Plan","Not built yet",
+  "The plan list and the editor land here. The programme you are logging against is unchanged and is still the one on the Train tab.");
+
+/* ---- The progress strip, built once here so no screen can re-invent it ----
+   B-59, spec §0.5. Three states, three FORMS, and the meaning is carried by
+   the text this returns beside them — not by opacity, which is what made the
+   old strip 1.7:1 and unfixable by an alpha bump. The strip itself is
+   redundant graphics and says so. W7 is the first caller. */
+function pipStrip(i,n){
+  if(!(n>0)) return "";
+  let g="";
+  for(let k=0;k<n;k++) g+=`<span class="pip ${k<i?"done":k===i?"now":"next"}"></span>`;
+  return `<p class="sr-only">Exercise ${i+1} of ${n}</p>
+    <div class="pips" aria-hidden="true">${g}</div>`;
+}
+
 /* ============================================================ render */
 /* keepScroll: the blocked-save path must not throw him to the top of a
    ten-exercise page — he tapped Save at the bottom and the answer is there
    (W4 §2.5). Every other caller passes nothing and scrolls as before. */
 function render(keepScroll){
   const v=document.getElementById("view");
-  v.innerHTML = S.tab==="train" ? (S.draft?vSession():vTrain())
-              : S.tab==="trend" ? vTrend() : vWeight();
-  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===S.tab));
+  v.innerHTML = S.tab==="train"  ? (S.draft?vSession():vTrain())
+              : S.tab==="trend"  ? vTrend()
+              : S.tab==="weight" ? vWeight()
+              : S.tab==="diet"   ? vDiet()
+              : S.tab==="plan"   ? vPlan()
+              : vTrain();
+  document.querySelectorAll("nav button").forEach(b=>{
+    const on=b.dataset.tab===S.tab;
+    b.classList.toggle("on",on);
+    /* The amber and the bar are two of three signals; this is the third, and
+       the only one a screen reader gets. */
+    if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+  });
   if(S.draft){ document.querySelectorAll(".card").forEach(c=>paintVerdict(c)); paintProblems(); }
   renderOffer();
   if(!keepScroll) window.scrollTo(0,0);
@@ -701,7 +894,12 @@ function render(keepScroll){
 
    A rule that throws is caught here, per card: the slot goes quiet, the sets
    and the note are untouched, and Save still works (UX spec §1.4). */
-function paintVerdict(card){
+/* {speak} — B-13 asked for aria-live on the verdict; §2.6 allows exactly one
+   live region. Both are satisfied by routing the sentence through #bs-live
+   instead of giving the slot a region of its own. Only the commit paths pass
+   {speak}: a full render paints ten cards and must not read ten verdicts out,
+   and a verdict that has not changed since the last commit is not news. */
+function paintVerdict(card,speak){
   const id=card.dataset.ex; if(!id||!S.draft) return;
   const day=PROGRAM.find(d=>d.id===S.dayId); if(!day) return;
   const ex=day.ex.find(e=>e.id===id); if(!ex) return;
@@ -713,7 +911,10 @@ function paintVerdict(card){
   el.className="verdict"+(vd?" show "+vd.t:"");
   /* x2 is Rule I2's second line and is never appended to the first sentence.
      The slot is white-space:pre-line, so the newline is the line break. */
-  el.textContent=vd?(vd.x2?vd.x+"\n"+vd.x2:vd.x):"";
+  const txt=vd?(vd.x2?vd.x+"\n"+vd.x2:vd.x):"";
+  const changed=el.textContent!==txt;
+  el.textContent=txt;
+  if(speak&&changed&&txt) announce(txt.replace("\n"," "));
 }
 
 /* ============================================================ events */
@@ -738,6 +939,7 @@ document.getElementById("view").addEventListener("click",async e=>{
     const open=box.classList.toggle("on");
     if(open&&!box.innerHTML) box.innerHTML=diagram(fb.dataset.fig);
     fb.innerHTML=(open?"⌄":"›")+" movement &amp; cue";
+    fb.setAttribute("aria-expanded",open?"true":"false");
     return;
   }
 
@@ -807,7 +1009,7 @@ document.getElementById("view").addEventListener("focusout",e=>{
   if(!isNote&&!(t.dataset&&t.dataset.f)) return;
   flushDraft();
   const card=t.closest&&t.closest(".card");
-  if(card&&S.draft) paintVerdict(card);
+  if(card&&S.draft) paintVerdict(card,true);
 });
 
 document.getElementById("view").addEventListener("change",async e=>{
@@ -865,7 +1067,7 @@ function commitField(inp,val){
   const st=S.draft&&S.draft.entries[id]&&S.draft.entries[id].sets[i];
   if(!st) return;
   st[f]=val;
-  paintVerdict(card);
+  paintVerdict(card,true);
   reviewRow(id,i);
 }
 function syncSet(inp,inputType){
@@ -1105,7 +1307,7 @@ function clearSet(key){
   const row=findRow(exId,i);
   if(row){
     row.querySelectorAll("input[data-f]").forEach(inp=>{ inp.value=""; });
-    const card=row.closest(".card"); if(card) paintVerdict(card);
+    const card=row.closest(".card"); if(card) paintVerdict(card,true);
   }
   const before=problemSig();
   const a=document.activeElement;
@@ -1267,9 +1469,10 @@ const isDate=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v);
 /* {date} — weekday + day + month while the draft is a week old or less, day +
    month after that. Anchored at local noon, like fmt(), so it is DST-safe. */
 function fmtDay(ds,ageDays){
-  const d=new Date(ds+"T12:00:00");
-  if(isNaN(d.getTime())) return ds;
-  return dstr(d,ageDays>=0&&ageDays<=6);   // en-GB, same builder as fmt() (B-35)
+  const d=noon(ds);
+  if(!d) return ds;
+  const base=fmt(ds);                       /* PHAT.dayMon + year — never Intl */
+  return (ageDays>=0&&ageDays<=6)?WDAY[d.getDay()]+", "+base:base;
 }
 const plural=(n,w)=>n+" "+w+(n===1?"":"s");
 /* {age} — W4 §0.4, exactly. Calendar day always beats elapsed minutes: a draft
