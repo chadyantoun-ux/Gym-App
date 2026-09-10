@@ -20,3 +20,6 @@ desktop.ini
 
 # Exported training logs (personal data — keep these out of git)
 phat-log-*.json
+
+# Keep the source spreadsheet and brief, they are context not build output
+!docs/context/phat-log.xlsx

@@ -46,3 +46,64 @@ and seeing the number change.
 Ordering principle for the backlog: fix B-01/B-02/B-03 before features, and before Supabase sync —
 syncing data you know is malformed spreads the corruption to a second system.
 **Rules out:** starting E-3 (Supabase) while the local model still drops sets.
+
+### 2026-09-09 — `docs/context/handoff-brief.md` is the source of truth for programme and diet
+Chady supplied the brief from the prior coaching conversation, along with `phat-log.xlsx` (the
+spreadsheet that was chosen as the system of record) and the original `phat-tracker.html` (verified
+byte-identical to our `index.html` apart from the HTML wrapper).
+**Rules out:** inventing training or nutrition logic. Rest periods, the 65–70% speed-work figure, the
+week-6 test, the calorie protocol and the weeks-1–4 volume cut all come from the brief, not from us.
+Anything the app says that contradicts it is a defect.
+
+### 2026-09-09 — Building this app contradicts the brief, and Chady overrode that deliberately
+The brief's own decision table records **"Building a Supabase-backed web app — Rejected: solved
+problem, weekend of work for no gain"** and **"Deploying to Vercel — Not pursued"**, with a standing
+instruction to say so if the next request is another tool. That objection was put to Chady; he
+reaffirmed GitHub, Supabase and Vercel and supplied a Vercel token.
+**Decision:** proceed in full, and keep the standing diagnosis visible (CLAUDE.md §8) rather than
+quietly dropping it. The brief's real point stands regardless of tooling: **zero training sessions
+have been logged.** The measure of this project is a logged Upper Power session, not a green deploy.
+**Rules out:** re-litigating the stack every session, and equally, pretending the tooling is the goal.
+
+### 2026-09-09 — Vercel deployed by API, not yet git-linked
+Project `gym-app`, live at `https://gym-app-psi-eight.vercel.app`, created and deployed through the
+Vercel REST API because no CLI is installed. The Vercel GitHub App is **not** installed on
+`chadyantoun-ux/Gym-App`, so pushes do not auto-deploy yet.
+**Consequence:** `main` and the live site can drift. Until the GitHub App is installed, every release
+is a manual API deploy and `release-engineer` must verify what is actually live.
+**Note:** the token was pasted into a chat transcript and must be rotated.
+
+### 2026-09-09 — Communication style is fixed by the brief
+Lead with the uncomfortable answer; tag claims `[Certain]` / `[Likely]` / `[Guessing]`; disagree with
+structure (because X, instead do Y, risk is Z); hold position under pushback absent new information.
+**Rules out:** hedging, agreement openers, and presenting a coaching opinion as physiology.
+
+### 2026-09-09 — Two files: `index.html` + `logic.js`
+Chady approved the split. Pure logic (dates, validation, migration) moves to `logic.js`, a **classic
+script** — not an ES module, because `tests.html` must open from `file://` where modules, `fetch` and
+iframes all fail on an opaque origin. Both `index.html` and `tests.html` load it with `<script src>`.
+**Why:** it is the only way to get automated tests with no Node and no server, which CLAUDE.md §5
+requires. **Cost accepted:** a manual deploy now covers two files, and a partial upload is a black
+screen — which is why E-2 (git-linking Vercel) was pulled forward.
+**Rules out:** ES modules anywhere in this project, and testing by hand as the permanent answer.
+
+### 2026-09-09 — `0 × 10` is a real set (B-21)
+A bodyweight rack chin, an unweighted dip, a push-up. `done()` currently requires `+s.w>0` and
+silently deletes these rows on save. Zero weight with reps is valid, complete data.
+**Rules out:** treating weight as a required field. If a set is ever rejected, the app says so out
+loud — it never deletes a row without a word.
+
+### 2026-09-09 — A malformed set blocks the save
+Not silent drop (that is B-02, the bug). Not save-and-flag — `vol()` and `topSet()` coerce `NaN` to 0,
+so a flagged bad value silently poisons volume and trend maths.
+**Load-bearing ordering:** blocking a save is only safe once the draft is persisted (W5 before W6).
+Without it, refusing a save creates a *new* loss path if the phone dies while the user fixes a typo.
+**Rules out:** shipping W6 before W5, under any schedule pressure.
+
+### 2026-09-09 — The migration never rewrites a date
+`YYYY-MM-DD` carries no offset, so the original local date of a UTC-stamped row is unrecoverable.
+Shifting every row by a day would corrupt every row that was already correct. Instead: mark them
+(`schemaVersion: 2`, `utcDatedBefore`, `dateBasis:"utc"`) and dedupe same-date bodyweight rows only.
+Chady confirmed he has no logged data yet, so this is a no-op in practice — the property is kept
+anyway because it is the whole point.
+**Rules out:** any "fix up the old dates" migration, now or later.
