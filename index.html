@@ -50,6 +50,22 @@
     --tap:44px;        /* the floor. WIDTH as well as height - B-43 exists
                           because only the height was ever checked.           */
     --key:48px;        /* stepper key height: 44 is the floor, 48 is the size */
+    /* -- THE COLUMN. ONE NUMBER, AND EVERY FIXED THING READS IT -----------
+       The app is a centred column and does not stretch. Logging is a phone
+       activity; desktop is where he REVIEWS. #dock used to be fixed with
+       left:0/right:0, so at 1920px the RESUME button was 1870px wide, the
+       five tabs were 384px each with 350px of gap, and the restore sheet
+       covered four of the five day rows - while #view sat centred at 520.
+       The chrome and the content column disagreed at every width above 520.
+       #view, #dock, #toast and the modal's SHEET all read --col, so they
+       cannot drift apart again. The modal SCRIM is deliberately NOT in that
+       list: it still covers the whole viewport, because a modal that dims
+       part of the screen is worse than one that dims all of it.
+       WHY 520 AND NOT THE DESIGN'S 393: 393 would put gutters either side of
+       a 400px phone, and every W6 measurement - the 44px floor, 200% text,
+       no horizontal scroll - was taken in a 520 column. The phone does not
+       regress to buy a desktop treatment.                                  */
+    --col:520px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
   html,body{background:var(--bg); margin:0; font-family:var(--sans)}
@@ -64,8 +80,18 @@
      scroll on the Weight tab. break-word, not anywhere: it breaks only when
      the word cannot fit, and it leaves flex min-content sizing alone. */
   #app{background:var(--bg); font-family:var(--sans); color:var(--bone);
-    min-height:100vh; position:relative; padding-bottom:78px; overflow-wrap:break-word}
-  #view{max-width:520px; margin:0 auto}
+    min-height:100vh; position:relative; padding-bottom:78px; overflow-wrap:break-word;
+    max-width:var(--col); margin:0 auto}
+  #view{max-width:var(--col); margin:0 auto}
+  /* The column's edges, so a wide screen reads as a column standing on the
+     app's own ground rather than as a broken full-width page. No bezel and no
+     fake phone: two hairlines at --rule (3.3:1) down the full height.
+     box-shadow, not border: it paints OUTSIDE the box, so it costs zero
+     layout width, cannot disturb the 44px set-row arithmetic, adds no
+     horizontal overflow, and falls off-screen by itself on a viewport
+     narrower than the column - no media query, nothing about the phone
+     changes.                                                              */
+  #app,#dock{box-shadow:1px 0 0 var(--rule), -1px 0 0 var(--rule)}
   h1{font-size:2.375rem; font-weight:800; letter-spacing:-.025em; line-height:1.02; margin:0}
   h2{font-size:1.0625rem; font-weight:800; margin:0 0 var(--s2)}
   h3{font-size:1.5625rem; font-weight:800; letter-spacing:-.02em; margin:0; line-height:1.12}
@@ -119,8 +145,15 @@
   .idx{color:var(--faint); font-weight:800; font-size:.8125rem; width:14px; flex:none; align-self:center}
   .grp{flex:1 1 8.5rem; min-width:8.5rem; display:flex; flex-direction:column; gap:3px}
   .unit{font-size:.625rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+  /* B-37: the ghost has its OWN full-width row under the steppers, so the
+     zero-width squeeze that made it invisible at 400px is structurally
+     impossible. It shares the row with Rule X1's EXTRA badge, right-aligned,
+     and the badge changes no height - so a row becoming EXTRA moves nothing. */
   .ghost{color:var(--faint); font-size:.78125rem; flex:1 1 100%;
-    min-height:1.15rem; padding-left:22px}
+    min-height:1.15rem; padding-left:22px; display:flex; align-items:baseline;
+    justify-content:space-between; gap:var(--s2)}
+  .gtxt{min-width:0}
+  .xtra{color:var(--bone); font-size:.6875rem; font-weight:800; letter-spacing:.1em; flex:none}
 
   /* ---- WO-001 W6: a set row marked by a blocked save (W4 2.4) ----
      Nothing here depends on hue: the rule is a rule, the "!" is an "!", the
@@ -154,12 +187,35 @@
   svg.mv{display:block; width:100%; background:var(--bg); border:1px solid var(--line); border-radius:var(--r)}
   .figcue{color:var(--dim); font-size:.78125rem; line-height:1.45; margin-top:var(--s2)}
   .figcue b{color:var(--bone); font-weight:800}
-  .verdict{margin:0 var(--s4) 15px; white-space:pre-line; padding:9px var(--s3); background:var(--bg);
-    border-left:3px solid var(--dim); border-radius:var(--r); font-size:.8125rem;
-    color:var(--dim); line-height:1.45; display:none}
-  .verdict.show{display:block}
-  .verdict.up{border-left-color:var(--green); color:var(--green)}
-  .verdict.down{border-left-color:var(--red); color:var(--red)}
+  /* -- W7: ADVICE vs REFUSAL (spec 2.1) -------------------------------------
+     2a has ONE accent, so the difference cannot be a second colour. It is
+     carried by FORM, four ways at once, and all four survive greyscale:
+       advice   3px rule on the LEFT EDGE only . no glyph . kicker names the
+                block (WAITING / VERDICT / SPEED WORK / DELOAD WEEK) . text
+       refusal  2px border on ALL FOUR sides . a literal "!" (aria-hidden) .
+                a headline that refuses . tappable rows
+     Status is never carried by colour: the sentence carries it, and the
+     up/down glyph beside the kicker is redundant and aria-hidden (B-13). */
+  .advice,.refuse{background:var(--bg); border-radius:var(--r); padding:9px var(--s3);
+    margin-bottom:var(--s3)}
+  .advice{border-left:3px solid var(--dim)}
+  .refuse{border:2px solid var(--red-hi)}
+  .advice p,.refuse p{font-size:.8125rem; line-height:1.45; color:var(--dim)}
+  .refuse p{color:var(--bone)}
+  .advice p+p,.refuse p+p{margin-top:6px}
+  .advice .kick{margin-bottom:4px}
+  .advice .kick .dir{margin-left:5px}
+  /* THE VERDICT SLOT. Reserved height, from first paint, so the card cannot
+     grow under his thumb when the verdict replaces the reminder (0.1 #2).
+     7.75rem is MEASURED, not chosen: every verdict PHAT.verdict can return
+     for all 42 slots, at every rep outcome, deloaded and not, was rendered
+     into this box at a 400px viewport and the tallest was 124px - `Top of
+     range on all 3 sets at zero load. Add 2.5 kg next session.` with Rule
+     I2's second line under it. The reminder is 90px, so 34px of the slot is
+     deliberately empty on most cards. That is the price of the card not
+     moving, and it is paid below the last input, where it costs a scroll and
+     never a mis-tap. rem, so 200% text scales the reservation too. */
+  .vslot{min-height:7.75rem}
 
   /* -- PROGRESS PIPS (spec 0.5, B-59) ---------------------------------------
      The prototype painted three states in one form at three alphas, the
@@ -176,6 +232,75 @@
   .pip.now{background:var(--amber); height:8px}
   .pip.next{background:none; border:1px solid var(--t45); height:4px}
 
+  /* ==== W7: THE SESSION SCREEN ============================================
+     ORDER IS NORMATIVE (spec 4.1): header, pips, fix bar, reintroduction
+     offer, name + target, prescription, movement & cue, SET ROWS, add/remove,
+     NOTE (the last input), then the bottom stack, then prev/next, then
+     DISCARD SESSION, then the rest band in the dock. Nothing that appears or
+     resizes sits above an input, which is the rule that makes this safe. */
+  .sesshead{padding:20px var(--s4) 0}
+  .sesshead .kick{color:var(--faint)}
+  /* The fix bar (spec 2.3 rule 3). Rides the exercise screen he was sent to
+     for as long as a refusal stands. FIXED height, never disappears while the
+     refusal stands - only its text changes - and it renders at FIRST PAINT of
+     that screen, so it is a navigation and not an appearance. */
+  .fixbar{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap:var(--s2); margin:var(--s3) var(--s4) 0; padding:0 0 0 var(--s3);
+    border:2px solid var(--red-hi); border-radius:var(--r); min-height:var(--key)}
+  .fixbar p{color:var(--bone); font-size:.8125rem; font-weight:800; line-height:1.3}
+  .fixbar button{color:var(--amber); font-size:.6875rem; font-weight:800; letter-spacing:.08em;
+    text-transform:uppercase; min-height:var(--key); min-width:6.5rem; padding:0 var(--s3); flex:none}
+  /* Rule V1's reintroduction offer. First exercise screen only, answerable
+     without scrolling from where it appears, "Not yet" lowest and therefore
+     the cheapest tap. Inline, never an overlay, never a focus trap. */
+  .offer{background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+    margin:var(--s3) var(--s4) 0; padding:14px var(--s4)}
+  .offer p{color:var(--bone); font-size:.875rem; line-height:1.45}
+  .offer .btns{margin-top:var(--s3)}
+  .offer .btns button{width:100%}
+  .offer .btns button+button{margin-top:var(--s2)}
+  .exname{padding:var(--s4) var(--s4) 0}
+  /* session 0.1 #9: the TARGET never wraps, truncates or shrinks. The name is
+     what gives way, so it gets min-width:0 and the target gets flex:none. */
+  .exname .row{align-items:baseline}
+  .exname h3{min-width:0; overflow-wrap:anywhere}
+  .rx{color:var(--dim); font-size:.8125rem; line-height:1.45; padding:6px var(--s4) 0}
+  /* MEASURED at 200% text: two 8rem controls side by side are 552px inside a
+     368px column and put 137px of horizontal scroll on the session screen.
+     They wrap instead - nothing shrinks, the row grows downward, and
+     downward is allowed because everything below these is a control. */
+  .ctlrow{display:flex; flex-wrap:wrap; gap:var(--s2); padding:0 var(--s4) var(--s3)}
+  .ctlrow button{flex:1 1 8rem; min-height:var(--key); min-width:8rem;
+    border:2px solid var(--line); border-radius:var(--r); color:var(--bone);
+    font-size:.75rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:0 var(--s2)}
+  /* Removing the last remaining row is not offered (spec 4.5 rule 6). The
+     SPACER keeps the row's height and width identical either way, so the note
+     field below it never moves - an input may not be shifted by a control
+     appearing or disappearing above it (0.1 #1). */
+  .ctlrow .spacer{flex:1 1 8rem; min-width:8rem; min-height:var(--key)}
+  .notewrap{padding:0 var(--s4) var(--s3)}
+  .stack{padding:0 var(--s4)}
+  .navrow{display:flex; flex-wrap:wrap; gap:var(--s2); padding:0 var(--s4)}
+  .navrow button{min-height:52px; border:2px solid var(--line); border-radius:var(--r);
+    color:var(--bone); font-size:.75rem; font-weight:800; letter-spacing:.05em;
+    text-transform:uppercase; padding:0 var(--s3)}
+  .navrow .prev{flex:none; min-width:56px}
+  /* Exercise 1 has nothing behind it. The control still occupies its slot, so
+     NEXT does not move between screen 1 and screen 2 and his thumb has one
+     target, but it must not READ as tappable. */
+  .navrow button[disabled]{color:var(--faint); border-color:var(--rule); cursor:default}
+  .navrow .next{flex:1 1 auto; min-width:0; background:var(--amber); color:var(--bg);
+    border-color:var(--amber); overflow-wrap:anywhere}
+  /* -- THE REST BAND (Rule R1, spec 4.10) ----------------------------------
+     It lives inside #dock, so the space it occupies is reserved by the same
+     measured padding-bottom that keeps an input clear of the nav (B-36). It is
+     PERMANENT from the moment the session opens, so it never appears and never
+     covers the row he just committed. It absorbs taps and does nothing.
+     Its text is written through ONE cached text node and render() is never
+     called from the tick (B-61, B-19). */
+  #rest{background:var(--surface); border-top:1px solid var(--line);
+    padding:var(--s2) var(--s4); min-height:3.4rem; display:flex; align-items:center}
+  #rest p{color:var(--bone); font-size:.8125rem; font-weight:800; line-height:1.35}
   .primary{width:100%; background:var(--amber); color:var(--bg); border-radius:var(--r);
     padding:var(--s4); font-size:.9375rem; font-weight:800; letter-spacing:.04em;
     text-transform:uppercase; min-height:56px}
@@ -201,7 +326,11 @@
      this element's MEASURED height, so no input can hide under it (B-36).
      Five tabs at a 400px viewport are 80px each - over the 78px the control
      inventory asks for (spec 0.4 row 1) - and 52px tall, over the 44 floor. */
-  #dock{position:fixed; bottom:0; left:0; right:0; z-index:40}
+  /* left:0 + right:0 + auto margins is exactly the centring #view gets from
+     margin:0 auto, resolved against the same width, so the two rects match to
+     the pixel at every viewport width. Measured at 1920/1440/1024/768/400/320. */
+  #dock{position:fixed; bottom:0; left:0; right:0; margin:0 auto;
+    max-width:var(--col); z-index:40}
   nav{display:flex; background:var(--bg); border-top:2px solid var(--bone);
     padding-bottom:max(10px, env(safe-area-inset-bottom))}
   nav button{flex:1 1 0; min-width:0; min-height:52px; padding:var(--s3) 2px;
@@ -229,11 +358,13 @@
   .sheet .ghostbtn{min-height:var(--key)}
   /* Destructive: never colour alone - the label always names the count too. */
   .danger{border-color:var(--red-hi); color:var(--red-hi)}
+  /* The scrim is the one fixed thing that is NOT column-width: it covers the
+     viewport. Its contents are, and align to the column exactly. */
   #modal{position:fixed; left:0; right:0; top:0; bottom:0; z-index:60;
-    display:flex; flex-direction:column; justify-content:flex-end}
+    display:flex; flex-direction:column; justify-content:flex-end; align-items:center}
   #modal:empty{display:none}
   #modal .scrim{position:absolute; left:0; right:0; top:0; bottom:0; background:var(--scrim)}
-  #modal .sheet{position:relative}
+  #modal .sheet{position:relative; width:100%; max-width:var(--col)}
   .loading{color:var(--dim); font-size:.875rem; text-align:center; padding:44px var(--s4)}
   .warn.hi{border-left-color:var(--red-hi)}
   /* DISCARD SESSION is destructive and no longer lives in the header. A top
@@ -246,11 +377,20 @@
 
   /* fixed for the same reason as #dock: "Discarded." must be on screen.
      NOT a live region - #bs-live is the only one. See announce(). */
-  #toast{position:fixed; bottom:92px; left:0; right:0; z-index:70; display:flex; justify-content:center;
-    pointer-events:none; opacity:0; transition:opacity .18s}
+  #toast{position:fixed; bottom:92px; left:0; right:0; margin:0 auto; max-width:var(--col);
+    z-index:70; display:flex; justify-content:center; align-items:stretch; gap:2px;
+    padding:0 var(--s4); pointer-events:none; opacity:0; transition:opacity .18s}
   #toast.on{opacity:1}
-  #toast span{background:var(--amber); color:var(--bg); padding:9px 17px; border-radius:var(--r);
-    font-size:.8125rem; font-weight:800}
+  #toast .msg{background:var(--amber); color:var(--bg); padding:9px 17px; border-radius:var(--r);
+    font-size:.8125rem; font-weight:800; display:flex; align-items:center; min-height:var(--key)}
+  /* The undo control (spec 0.4 row 23, 2.4). It is the only part of the toast
+     that takes a tap, and it does NOT expire on a timer: he is out of breath
+     and reading something else, so it lives until he answers it, until another
+     destructive action replaces it, or until the session ends. */
+  #toast button{pointer-events:auto; background:var(--bg); color:var(--bone);
+    border:2px solid var(--amber); border-radius:var(--r); min-width:88px; min-height:var(--key);
+    font-size:.75rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:0 var(--s3)}
+  #toast button[hidden]{display:none}
 
   /* ---- WO-001 W6: the blocked-save message (W4 2.2-2.3) ----
      Sits on --bg directly above Save session, where his thumb already is. */
@@ -302,7 +442,11 @@
   <!-- The visible toast is decoration over the live region below: it carries
        no aria-live of its own, because two regions over one sentence are read
        twice. toast() routes its text through announce() instead. -->
-  <div id="toast" aria-hidden="true"><span></span></div>
+  <!-- aria-hidden is on the MESSAGE, not on the container: the visible text is
+       decoration over #bs-live, which has already said it, but the undo
+       control is a real control and a focusable button inside an aria-hidden
+       subtree is a control a screen-reader user can reach and cannot hear. -->
+  <div id="toast"><span class="msg" aria-hidden="true"></span><button id="toast-act" hidden></button></div>
   <!-- WO-004 W6: THE ONE LIVE REGION. Blocked-save running count, stepper
        normalisations, the verdict on commit, a blocked draft write. Created
        once at boot and outside #view, so no re-render can destroy it — a live
@@ -311,6 +455,11 @@
   <div id="dock">
     <!-- Draft-restore offer sheet (non-modal). Above nav, never covering it. -->
     <div id="dr-offer"></div>
+    <!-- W7: Rule R1's rest band. Sticky above the tab dock by being IN the
+         dock, so reserveDock() reserves its height along with nav's and no
+         input can hide under it. Present from the moment a session opens, at
+         constant size, so it never appears over the row he just committed. -->
+    <div id="rest-box"></div>
     <!-- Five tabs. 400px / 5 = 80px each, over the 78px the control inventory
          asks for, and 52px tall. aria-current, not colour, says which. -->
     <nav aria-label="Screens">
@@ -446,8 +595,14 @@ async function del(k){
    drops a key it didn't understand. */
 /* S.offer is the draft as it sits ON DISK, offered back on the Train tab. It is
    never the same object as S.draft: S.draft is what is on screen. */
+/* W7 adds: exIx (which exercise screen is on, PERSISTED in the draft - a
+   reload that comes back on exercise 1 of 9 has lost his place), rest (Rule
+   R1's one absolute timestamp, never persisted, never in the save path), undo
+   (C-12's removed row, live for the whole session), and v1msg / v1added (Rule
+   V1's answer, in place, for this session). */
 const S={tab:"train",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
-         problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null};
+         problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
+         exIx:0,rest:null,undo:null,v1msg:"",v1added:null};
 const logPayload=()=>Object.assign({},S.logMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,sessions:S.sessions,includeCut:S.includeCut});
 const bwPayload=()=>Object.assign({},S.bwMeta,
@@ -490,10 +645,37 @@ const sep=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,",");
    do not announce it again. {ms} — a failure stays on screen longer than a
    receipt. */
 function toast(m,quiet,ms){const t=document.getElementById("toast");
-  t.querySelector("span").textContent=m;
+  t.querySelector(".msg").textContent=m;
+  const act=document.getElementById("toast-act");
+  if(act){ act.hidden=true; act.textContent=""; }
   if(!quiet) announce(m);
   t.classList.add("on");clearTimeout(toast._t);
   toast._t=setTimeout(()=>t.classList.remove("on"),ms||2100);}
+/* An undo (spec 2.4, defined once): a control in the toast, >= 88 x 48, live
+   for the WHOLE SESSION and not a 5-second timer - he is out of breath and
+   reading something else. It restores the removed object byte-for-byte. A
+   second destructive action replaces the pending undo and the toast says which
+   one it now undoes. */
+function toastUndo(m){
+  const t=document.getElementById("toast"), act=document.getElementById("toast-act");
+  t.querySelector(".msg").textContent=m;
+  announce(m);
+  if(act){ act.hidden=false; act.textContent="Undo"; act.setAttribute("aria-label",m+" Undo."); }
+  t.classList.add("on"); clearTimeout(toast._t);
+  /* The toast is the IMMEDIATE reach. The undo itself does not expire with
+     it: while S.undo stands, the exercise's bottom stack carries a persistent
+     Undo control (vSession), so "live for the whole session" is honoured by a
+     control that is always reachable rather than by a bar that floats over
+     every screen for the rest of the workout.
+     The button is REMOVED, not just faded: #toast hides by opacity, and an
+     opacity-0 button is still focusable and still takes a tap. */
+  toast._t=setTimeout(()=>{ t.classList.remove("on"); if(act) act.hidden=true; },6000);
+}
+function hideToast(){
+  const t=document.getElementById("toast"), act=document.getElementById("toast-act");
+  clearTimeout(toast._t); t.classList.remove("on");
+  if(act){ act.hidden=true; act.textContent=""; }
+}
 function lastDay(id){for(let i=S.sessions.length-1;i>=0;i--)if(S.sessions[i].dayId===id)return S.sessions[i].date;return null;}
 function weeksIn(){return S.sessions.length?Math.floor(ago(S.sessions[0].date)/7)+1:0;}
 
@@ -505,66 +687,78 @@ const PAT={d1a:"hpull",d1b:"vpull",d1c:"vpull",d1d:"hpush",d1e:"dip",d1f:"vpush"
  d4a:"squat",d4b:"squat",d4c:"squat",d4d:"legext",d4e:"hinge",d4f:"legcurl",d4g:"legcurl",d4h:"calf",d4i:"calf",
  d5a:"hpush",d5b:"hpush",d5c:"hpush",d5d:"fly",d5e:"curl",d5f:"curl",d5g:"curl",d5h:"hpush",d5i:"tri",d5j:"tri"};
 
+/* RULE Q1: THE CUE IS NOT THE FIGURE'S, IT IS THE EXERCISE'S. The 15
+   per-pattern cue strings the prototype shipped here have been DELETED, not
+   left in place: they were never reviewed and several fail Q1 outright - a
+   tempo prescription and an assessment (`the lowering half is where the
+   growth is`), a bare assessment (`Half reps do nothing.`), a digit that is
+   neither a setup angle nor exempt. An unreviewed copy source sitting next to
+   the figures is exactly how it gets picked up again by the next thing that
+   needs a cue. The 42 signed-off cues are authored plan data and live on the
+   exercise: PHAT_PLAN's `cue`, read by cueFor() below.
+   PAT stays. It maps a slot to a FIGURE, which is a different job - and B-64
+   says three of those mappings are wrong, so do not lean on it for anything
+   beyond the figure it already draws. */
 const POSES={
- squat:{base:"floor",arrow:[152,52,152,100],cue:"Knees track over the toes. Hit depth before you add weight.",
+ squat:{base:"floor",arrow:[152,52,152,100],
   a:{h:[96,34],sp:[[96,42],[98,80]],ar:[[96,48],[110,56],[112,44]],lg:[[98,80],[100,108],[96,138]],bar:[96,48]},
   b:{h:[88,54],sp:[[88,62],[98,92]],ar:[[88,68],[102,76],[104,64]],lg:[[98,92],[124,108],[96,138]],bar:[88,68]}},
 
- hinge:{base:"floor",arrow:[156,66,156,112],cue:"Push the hips back, don't bend the knees. The bar stays against your legs.",
+ hinge:{base:"floor",arrow:[156,66,156,112],
   a:{h:[96,34],sp:[[96,42],[98,84]],ar:[[96,48],[96,68],[96,92]],lg:[[98,84],[100,110],[96,138]],bar:[96,92]},
   b:{h:[64,60],sp:[[70,64],[100,84]],ar:[[74,68],[76,94],[78,114]],lg:[[100,84],[104,110],[100,138]],bar:[78,114]}},
 
- hpull:{base:"floor",arrow:[160,112,160,80],cue:"Torso stays fixed. Pull to the lower ribs, not the collarbone.",
+ hpull:{base:"floor",arrow:[160,112,160,80],
   a:{h:[62,58],sp:[[68,62],[104,80]],ar:[[72,66],[74,94],[76,114]],lg:[[104,80],[110,110],[104,138]],bar:[76,114]},
   b:{h:[62,58],sp:[[68,62],[104,80]],ar:[[72,66],[92,96],[80,80]],lg:[[104,80],[110,110],[104,138]],bar:[80,80]}},
 
- vpull:{base:"bar",arrow:[158,82,158,48],cue:"Start from a full dead hang. Chest toward the bar, not chin over it.",
+ vpull:{base:"bar",arrow:[158,82,158,48],
   a:{h:[100,54],sp:[[100,62],[100,98]],ar:[[100,64],[100,42],[100,20]],lg:[[100,98],[114,118],[106,136]]},
   b:{h:[100,36],sp:[[100,44],[100,80]],ar:[[100,46],[84,32],[100,20]],lg:[[100,80],[114,100],[106,118]]}},
 
- hpush:{base:"bench",arrow:[158,72,158,46],cue:"Elbows about 45° from the torso. Touch, don't bounce.",
+ hpush:{base:"bench",arrow:[158,72,158,46],
   a:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[66,72],[84,62]],lg:[[118,88],[138,104],[148,126]],db:[[84,62]]},
   b:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[80,64],[84,44]],lg:[[118,88],[138,104],[148,126]],db:[[84,44]]}},
 
- fly:{base:"bench",arrow:[158,68,158,46],cue:"Slight elbow bend, held throughout. Stretch under control — don't drop into it.",
+ fly:{base:"bench",arrow:[158,68,158,46],
   a:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[58,72],[46,58]],lg:[[118,88],[138,104],[148,126]],db:[[46,58]]},
   b:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[74,62],[84,44]],lg:[[118,88],[138,104],[148,126]],db:[[84,44]]}},
 
- dip:{base:"dipbar",arrow:[158,52,158,80],cue:"Lean forward slightly. Stop when the upper arm reaches parallel.",
+ dip:{base:"dipbar",arrow:[158,52,158,80],
   a:{h:[100,30],sp:[[100,38],[100,78]],ar:[[100,44],[99,54],[98,62]],lg:[[100,78],[114,96],[106,114]]},
   b:{h:[100,48],sp:[[100,56],[100,96]],ar:[[100,62],[112,48],[98,62]],lg:[[100,96],[114,114],[106,132]]}},
 
- vpush:{base:"seat",arrow:[160,52,160,24],cue:"Ribs down. Don't arch the lower back to finish the rep.",
+ vpush:{base:"seat",arrow:[160,52,160,24],
   a:{h:[100,36],sp:[[100,44],[110,102]],ar:[[100,50],[86,62],[90,46]],lg:[[110,102],[86,106],[84,132]],db:[[90,46]]},
   b:{h:[100,36],sp:[[100,44],[110,102]],ar:[[100,50],[96,30],[92,12]],lg:[[110,102],[86,106],[84,132]],db:[[92,12]]}},
 
- lat:{base:"floor",arrow:[64,80,50,58],cue:"Lead with the elbow, not the hand. Stop at shoulder height.",
+ lat:{base:"floor",arrow:[64,80,50,58],
   a:{h:[100,30],sp:[[100,38],[100,88]],ar:[[92,48],[86,68],[84,88]],ar2:[[108,48],[114,68],[116,88]],
      lg:[[100,88],[90,112],[88,138]],lg2:[[100,88],[110,112],[112,138]],db:[[84,88],[116,88]]},
   b:{h:[100,30],sp:[[100,38],[100,88]],ar:[[92,48],[70,52],[50,50]],ar2:[[108,48],[130,52],[150,50]],
      lg:[[100,88],[90,112],[88,138]],lg2:[[100,88],[110,112],[112,138]],db:[[50,50],[150,50]]}},
 
- uprow:{base:"floor",arrow:[156,90,156,62],cue:"Keep the grip wide — narrow grips grind the shoulder. Pull to the lower chest.",
+ uprow:{base:"floor",arrow:[156,90,156,62],
   a:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[100,70],[100,94]],lg:[[100,88],[104,112],[100,138]],bar:[100,94]},
   b:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[78,58],[100,60]],lg:[[100,88],[104,112],[100,138]],bar:[100,60]}},
 
- curl:{base:"floor",arrow:[152,92,152,58],cue:"Elbows pinned to your sides. If the hips move, the weight is too heavy.",
+ curl:{base:"floor",arrow:[152,92,152,58],
   a:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[100,70],[102,94]],lg:[[100,88],[104,112],[100,138]],bar:[102,94]},
   b:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[100,70],[92,50]],lg:[[100,88],[104,112],[100,138]],bar:[92,50]}},
 
- tri:{base:"bench",arrow:[152,60,152,40],cue:"Only the forearm moves. The upper arm stays exactly where it started.",
+ tri:{base:"bench",arrow:[152,60,152,40],
   a:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[80,60],[64,58]],lg:[[118,88],[138,104],[148,126]],bar:[64,58]},
   b:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[80,60],[86,40]],lg:[[118,88],[138,104],[148,126]],bar:[86,40]}},
 
- legext:{base:"seat",arrow:[62,124,54,100],cue:"Pause at the top. The lowering half is where the growth is.",
+ legext:{base:"seat",arrow:[62,124,54,100],
   a:{h:[104,40],sp:[[104,48],[112,96]],lg:[[112,96],[88,100],[86,126]]},
   b:{h:[104,40],sp:[[104,48],[112,96]],lg:[[112,96],[88,100],[58,92]]}},
 
- legcurl:{base:"prone",arrow:[54,86,66,64],cue:"Hips flat on the pad. If they lift off, drop the weight.",
+ legcurl:{base:"prone",arrow:[54,86,66,64],
   a:{h:[152,86],sp:[[144,90],[92,92]],lg:[[92,92],[76,94],[56,96]]},
   b:{h:[152,86],sp:[[144,90],[92,92]],lg:[[92,92],[76,94],[74,62]]}},
 
- calf:{base:"block",arrow:[150,62,150,42],cue:"Full stretch at the bottom, full pause at the top. Half reps do nothing.",
+ calf:{base:"block",arrow:[150,62,150,42],
   a:{h:[100,36],sp:[[100,44],[100,88]],ar:[[100,50],[110,68],[110,88]],lg:[[100,88],[100,110],[100,128]],ar2:[[100,128],[118,128]]},
   b:{h:[100,26],sp:[[100,34],[100,78]],ar:[[100,40],[110,58],[110,78]],lg:[[100,78],[100,100],[100,118]],ar2:[[100,118],[118,126]]}}
 };
@@ -596,8 +790,9 @@ function diagram(id){
     block:`<rect x="76" y="128" width="50" height="10" rx="2" fill="var(--line)"/>`,
     prone:`<rect x="48" y="94" width="104" height="5" rx="2" fill="var(--line)"/>`}[P.base]||"";
   const [x1,y1,x2,y2]=P.arrow;
-  /* aria-hidden: the .figcue sentence under it is the accessible description,
-     and a stick figure announced as a pile of polylines is noise. */
+  /* aria-hidden: the cue sentence beside it is the accessible description,
+     and a stick figure announced as a pile of polylines is noise. The cue is
+     appended by figBody(), from the plan - never from this table. */
   return `<svg class="mv" viewBox="0 0 200 150" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <defs><marker id="${mk}" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
       <path d="M0,0 L7,3.5 L0,7 z" fill="var(--amber)"/></marker></defs>
@@ -608,8 +803,28 @@ function diagram(id){
       stroke-linecap="round" marker-end="url(#${mk})"/>
     <text x="10" y="16" fill="var(--faint)" font-size="10">start</text>
     <text x="10" y="30" fill="var(--bone)" font-size="10" opacity=".8">finish</text>
-  </svg>
-  <p class="figcue"><b>Cue.</b> ${esc(P.cue)}</p>`;
+  </svg>`;
+}
+/* Rule Q1's cue, from the PLAN DOCUMENT - 42 per-exercise strings signed off
+   by strength-coach, not the 15 per-pattern ones the prototype carried. No
+   rule reads a cue: it is a function of the exercise and of nothing else -
+   never the week, the load or the verdict. A MISSING CUE IS A LEGAL STATE
+   (normalise drops an empty string, so a blank cue is absent), and a
+   user-created exercise may legitimately have none. */
+function cueFor(id){
+  try{
+    const x=PHAT.exById(PHAT.PHAT_PLAN,id);
+    return (x&&typeof x.cue==="string"&&x.cue.trim()!=="")?x.cue.trim():"";
+  }catch(err){ return ""; }
+}
+const hasFig=id=>!!(PAT[id]&&POSES[PAT[id]]);
+/* Spec 4.13. Figure and cue -> both. Cue but no figure -> the cue alone, with
+   no empty box. Neither -> the disclosure control is not rendered at all (see
+   vSession). No placeholder, no FIG 3 box, no "supply the illustrations"
+   note: an empty frame in the gym is worse than no frame. */
+function figBody(id){
+  const c=cueFor(id);
+  return (hasFig(id)?diagram(id):"")+(c?`<p class="figcue"><b>Cue.</b> ${esc(c)}</p>`:"");
 }
 
 /* ================== verdicts: the rules live in logic.js as PHAT.verdict */
@@ -672,76 +887,234 @@ function vTrain(){
   return h;
 }
 
+/* ============================================================ W7: session
+   ONE EXERCISE PER SCREEN. Everything the screen needs, computed once per
+   paint. Fails OPEN (spec §0.7): if Rule V1 throws, the whole day renders,
+   because a partial day is worse than a full one and a card that is not on
+   screen is a set he cannot log. */
+function sessionCtx(){
+  const day=PROGRAM.find(x=>x.id===S.dayId);
+  const today=PHAT.localDate();
+  const all=day?day.ex.map(e=>e.id):[];
+  let tier=null;
+  try{
+    tier=PHAT.volumeTier({dayId:S.dayId, program:PROGRAM, sessions:S.sessions,
+      state:S.logMeta, todayStr:today, draft:S.draft, plan:PHAT.PHAT_PLAN});
+  }catch(err){ tier=null; }
+  let ids=(tier&&Array.isArray(tier.exerciseIds)&&tier.exerciseIds.length)
+    ? tier.exerciseIds.slice() : all.slice();
+  /* The Full-volume checkbox is B-23 / C-1 and WO-004 W13 DELETES it. Until
+     then it is still on the Train tab, and an inert control is its own lie, so
+     while it is ticked it still forces the whole day. Nothing else reads it,
+     and Rule V1 owns the default. */
+  if(S.includeCut) ids=all.slice();
+  /* Spec §2.3 rule 6: a row a refusal points at must be reachable even when
+     the tier hides it. A refusal pointing at an unreachable row is the worst
+     state in the spec. */
+  S.problems.forEach(pr=>{ if(pr.exId&&ids.indexOf(pr.exId)<0) ids.push(pr.exId); });
+  const list=day?day.ex.filter(e=>ids.indexOf(e.id)>=0):[];
+  let dl={active:false,day:null};
+  try{ dl=PHAT.deloadStatus(S.logMeta,today); }catch(err){}
+  return {day:day, today:today, tier:tier, list:list, deload:dl};
+}
+/* SP1's source lift's CURRENT name, so B-28's rename reaches the fallback copy
+   without touching logic.js (WO-003 Decision 5). */
+function speedSrcName(exId){
+  const src=PHAT.SPEED_SRC&&PHAT.SPEED_SRC[exId];
+  if(!src) return null;
+  let nm=null;
+  PROGRAM.forEach(d=>d.ex.forEach(x=>{ if(x.id===src) nm=x.n; }));
+  return nm;
+}
+/* C-12 rule 2: `- REMOVE` targets the last BLANK row by preference, not the
+   last row. The common case - a row added by mistake - never touches data. */
+const blankSet=s=>String((s&&s.w)==null?"":s.w).trim()===""&&String((s&&s.r)==null?"":s.r).trim()==="";
+function removeTarget(sets){
+  for(let k=sets.length-1;k>=0;k--) if(blankSet(sets[k])) return k;
+  return sets.length-1;
+}
+
+/* The ghost hint for one row. GHOST, NOT PREFILL (spec §4.4, ruled): the row
+   starts empty and last session's numbers sit under it, so a number he did not
+   choose can never reach the log. ACROSS A PRESCRIPTION CHANGE the per-row
+   hint is DELETED, not captioned - prescriptionEpoch reports prefill:false and
+   seed:false, and the provenance line renders in its place. */
+function ghostText(e,prev,k,changed){
+  if(changed) return "";
+  const pv=prev&&prev.sets&&prev.sets[k];
+  if(!pv) return "No prior set.";
+  const pw=PHAT.parseWeight(pv.w), pr=PHAT.parseReps(pv.r);
+  if(!pw.ok||!pr.ok) return "No prior set.";
+  /* Rule Z2: a rack chin reads `Last bodyweight x 10`. No rule and no view in
+     this app produces the string `0 kg`. */
+  const w=pw.value>0?String(r1(pw.value)):PHAT.loadWord(0,e.implement);
+  return "Last "+w+" × "+pr.value;
+}
+
 function vSession(){
-  const d=PROGRAM.find(x=>x.id===S.dayId);
-  /* startDay() drafts every exercise in the day; this filter renders only the
-     ones in today's volume. So a malformed set can sit on a card that is not on
-     screen and block the save from a row he cannot reach (W4 §2.9). A blocked
-     save therefore reveals the offending card — and only that card, and only
-     while it is offending. includeCut is his programme setting; the app does
-     not get to flip it. */
-  const shown={}; S.problems.forEach(p=>{ if(p.exId) shown[p.exId]=1; });
-  const ex=d.ex.filter(e=>S.includeCut||!e.cut||shown[e.id]);
-  /* The header no longer holds Discard. A top corner may hold a control that
-     is neither destructive nor frequent; Discard is destructive and one tap
-     from a whole session, so it moved to the bottom of the scroll (§0.4's
-     top-corner rule, §4.12, B-34 / C-13). */
-  let h=`<div class="pad" style="padding-top:22px;padding-bottom:14px;border-bottom:2px solid var(--rule)">
-      <p class="kick">${esc(fmt(S.draft.date))} · high-carb day</p>
-      <h1 style="margin-top:6px">${esc(d.name)}</h1></div>
-    <div class="pad mt16">`;
-  ex.forEach(e=>{
-    const prev=PHAT.lastFor(S.sessions,e.id), st=S.draft.entries[e.id];
-    const tgt=e.lo===e.hi?`${e.s} × ${e.lo}`:`${e.s} × ${e.lo}–${e.hi}`;
-    h+=`<div class="card" data-ex="${e.id}">
-      <div class="cardhead"><h3>${esc(e.n)}</h3><span class="target">${tgt}</span></div>
-      ${(e.cut&&!S.includeCut)?`<p class="hint">Not in today's volume. It has numbers in it.</p>`:""}
-      ${e.k==="speed"?`<p class="hint">65–70% of your power-day top set. Rest 60–90 seconds.</p>`:""}
-      <button class="showfig" data-fig="${e.id}" aria-expanded="false"
-        aria-controls="fig-${esc(e.id)}">&rsaquo; movement &amp; cue</button>
-      <div class="fig" id="fig-${esc(e.id)}" data-figbox="${e.id}"></div>
-      <div class="sets">`;
-    for(let i=0;i<e.s;i++){
-      const p=prev&&prev.sets[i];
-      /* data-ghost holds last session's numbers verbatim so a marked row can
-         hand the slot back the moment it stops being broken (W4 §2.4). */
-      const gh=p&&+p.w>0?p.w+"×"+p.r:"—";
-      /* Every control here has a name a screen reader can read and a hit area
-         of at least 44 × 44, WIDTH included (B-13, B-43). The name says which
-         exercise and which set, because a card is not a landmark and "plus"
-         on its own is thirty identical buttons. */
-      const at=` ${esc(e.n)} set ${i+1}`;
-      h+=`<div class="setrow" data-i="${i}">
-        <span class="idx" aria-hidden="true">${i+1}</span>
-        <span class="grp"><span class="unit" aria-hidden="true">kg</span>
-          <span class="stepper"><button data-act="-" data-f="w" aria-label="Weight down 2.5,${at}">&minus;</button>
-          <input class="w" data-f="w" inputmode="decimal" placeholder="0"
-            aria-label="Weight in kg,${at}" value="${esc(st.sets[i].w)}">
-          <button data-act="+" data-f="w" aria-label="Weight up 2.5,${at}">+</button></span></span>
-        <span class="grp"><span class="unit" aria-hidden="true">reps</span>
-          <span class="stepper"><button data-act="-" data-f="r" aria-label="Reps down 1,${at}">&minus;</button>
-          <input class="r" data-f="r" inputmode="numeric" placeholder="–"
-            aria-label="Reps,${at}" value="${esc(st.sets[i].r)}">
-          <button data-act="+" data-f="r" aria-label="Reps up 1,${at}">+</button></span></span>
-        <span class="ghost" data-ghost="${esc(gh)}">${esc(gh)}</span></div>`;
-    }
-    h+=`<input class="note" placeholder="Note — RIR, form, pain, anything"
-        aria-label="Note for ${esc(e.n)} — RIR, form, pain, anything" value="${esc(st.note)}"></div>
-      <div class="verdict"></div></div>`;
-  });
-  /* Two slots, deliberately different shapes so they are never confused
-     (W4 §2.10). S.err is a storage failure: a flat bar, no "!", no rows, and
-     --bone on a --red-hi rule because 13px --red was 3.17:1. #bs-slot is the
-     blocked-save block, filled by paintProblems() so that clearing or fixing a
-     row can update it without a render(). Both sit above Save session, where
-     his thumb already is. */
-  h+=`${S.err?`<div class="warn hi mb12" role="alert">
-      <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div>`:""}
-    <div id="bs-slot"></div>
-    <button class="primary mb12" id="finish">Save session</button>
-    <button id="discard" class="mt24">DISCARD SESSION</button></div>`;
+  const C=sessionCtx(), list=C.list, n=list.length;
+  if(!n) return `<div class="todo"><h1>Nothing to log</h1>
+    <p>This day has no exercises in it. Your draft is untouched.</p></div>`;
+  if(!(S.exIx>=0)) S.exIx=0;
+  if(S.exIx>n-1) S.exIx=n-1;
+  const i=S.exIx, e=list[i];
+  const st=S.draft.entries[e.id]||{sets:[{w:"",r:""}],note:""};
+  if(!st.sets.length) st.sets.push({w:"",r:""});
+  /* The prescription that governs. deloadEx is idempotent and returns `ex`
+     itself when no deload is active, so this is the same object on a normal
+     week. A deload reduces the PRESCRIPTION, never the log. */
+  const rx=PHAT.deloadEx(e,C.deload.active===true);
+  const prev=PHAT.lastFor(S.sessions,e.id);
+  let ep=null;
+  try{ ep=PHAT.prescriptionEpoch({ex:e,prev:prev,plan:PHAT.PHAT_PLAN,exId:e.id}); }catch(err){ ep=null; }
+  const changed=!!(ep&&ep.changed);
+  let xs={flags:[],count:0,line:"",idle:false};
+  try{ const r=PHAT.extraSets(st.sets,rx); if(r) xs=r; }catch(err){}
+  let sl=null;
+  if(e.k==="speed"){
+    try{ sl=PHAT.speedLoad(S.sessions,e.id,C.today,speedSrcName(e.id),PHAT.PHAT_PLAN); }
+    catch(err){ sl=null; }
+  }
+  const ag=PHAT.draftAge(S.draft.date,C.today);
+
+  /* ---- header + pips. No destructive control: the header is information,
+     not a control (§4.2, §4.12, B-34 / C-13). The pip strip is aria-hidden
+     redundant graphics; pipStrip() carries `Exercise {i} of {n}` as the
+     accessible carrier (B-59, §0.5). */
+  let h=`<div class="sesshead"><p class="kick">${esc(C.day.name)} &middot; ${i+1} of ${n}</p>`;
+  if(!ag.sameDay) h+=`<p class="sub">It saves under ${esc(fmtDay(S.draft.date,ag.ageDays))}, not today.</p>`;
+  h+=`</div>${pipStrip(i,n)}`;
+
+  /* ---- the fix bar (§2.3 rule 3). It renders at FIRST PAINT of the screen he
+     was sent to, so it is a navigation and not an appearance; it is fixed
+     height and never disappears while a refusal stands. The full message lives
+     once, at the save point, on the last screen. */
+  const showMsg=(i===n-1);
+  if(S.problems.length&&!showMsg)
+    h+=`<div class="fixbar"><p id="fixtxt">${esc(fixText())}</p>
+      <button id="backsave">Back to save</button></div>`;
+
+  /* ---- Rule V1's reintroduction offer. First exercise screen only: the
+     decision is about this session and the moment to make it is before he has
+     lifted anything (§4.11). */
+  if(i===0) h+=vOffer(C);
+
+  /* ---- name, target, prescription. §0.1 #9: the target never wraps, never
+     truncates, never shrinks - the NAME is what gives way. ` . per DB` is
+     required for implement:"db" and the prototype omits it (B-22). */
+  const unit=(e.implement==="db")?" · per DB":"";
+  const tgt=(rx.lo===rx.hi?rx.s+" × "+rx.lo:rx.s+" × "+rx.lo+"–"+rx.hi)+unit;
+  h+=`<div class="exname"><div class="row"><h3>${esc(e.n)}</h3>
+    <span class="target">${esc(tgt)}</span></div></div>`;
+  /* Speed cards print SP1's computed load, never the prototype's static
+     "65-70% of your power-day top set" (B-12). Everything else prints the
+     provenance line, and ONLY across a prescription change - on an unchanged
+     prescription the per-row ghosts already say it, once per row. */
+  const rxline=(e.k==="speed")?(sl?sl.text:""):(changed?ep.line:"");
+  if(rxline) h+=`<p class="rx">${esc(rxline)}</p>`;
+  if(C.tier&&Array.isArray(C.tier.kept)&&C.tier.kept.indexOf(e.id)>=0)
+    h+=`<p class="rx">Not in today's volume. It has numbers in it.</p>`;
+  if(S.v1added===e.id) h+=`<p class="rx">Back in from this session.</p>`;
+
+  /* ---- movement & cue. Neither figure nor cue -> the disclosure is NOT
+     rendered at all. An empty frame in the gym is worse than no frame. */
+  if(hasFig(e.id)||cueFor(e.id))
+    h+=`<button class="showfig" data-fig="${esc(e.id)}" aria-expanded="false"
+      aria-controls="fig-${esc(e.id)}">&rsaquo; movement &amp; cue</button>
+      <div class="fig" id="fig-${esc(e.id)}" data-figbox="${esc(e.id)}"></div>`;
+
+  /* ---- THE INPUTS. Built BEFORE and OUTSIDE every try block above, so no
+     advice rule can prevent a set row painting (§0.7). */
+  h+=`<div class="card" id="excard" data-ex="${esc(e.id)}"><div class="sets">`;
+  for(let k=0;k<st.sets.length;k++){
+    const g=ghostText(e,prev,k,changed);
+    const at=` ${esc(e.n)} set ${k+1}`;
+    h+=`<div class="setrow" data-i="${k}">
+      <span class="idx" aria-hidden="true">${k+1}</span>
+      <span class="grp"><span class="unit" aria-hidden="true">kg</span>
+        <span class="stepper"><button data-act="-" data-f="w" aria-label="Weight down 2.5,${at}">&minus;</button>
+        <input class="w" data-f="w" inputmode="decimal" placeholder="0"
+          aria-label="Weight in kg,${at}" value="${esc(st.sets[k].w)}">
+        <button data-act="+" data-f="w" aria-label="Weight up 2.5,${at}">+</button></span></span>
+      <span class="grp"><span class="unit" aria-hidden="true">reps</span>
+        <span class="stepper"><button data-act="-" data-f="r" aria-label="Reps down 1,${at}">&minus;</button>
+        <input class="r" data-f="r" inputmode="numeric" placeholder="&ndash;"
+          aria-label="Reps,${at}" value="${esc(st.sets[k].r)}">
+        <button data-act="+" data-f="r" aria-label="Reps up 1,${at}">+</button></span></span>
+      <span class="ghost"><span class="gtxt" data-ghost="${esc(g)}">${esc(g)}</span>
+        <span class="xtra" data-xtra="${k}">${xs.flags[k]?"EXTRA":""}</span></span></div>`;
+  }
+  h+=`</div>`;
+
+  /* ---- add / remove. CONTROLS, not inputs, so they sit BELOW every set input
+     and ABOVE the note field: they change the number of rows above them, which
+     is exactly why they must not sit above one (§4.1). The remove control
+     NAMES ITS TARGET so he can see what he is about to lose before he taps
+     (C-12 rule 1). */
+  const tk=removeTarget(st.sets);
+  h+=`<div class="ctlrow"><button id="addset">+ Add set ${st.sets.length+1}</button>`;
+  h+=(st.sets.length>1)
+    ? `<button id="rmset" data-k="${tk}">&minus; Remove set ${tk+1}</button>`
+    : `<span class="spacer" aria-hidden="true"></span>`;
+  h+=`</div>`;
+
+  /* ---- THE NOTE FIELD - C-15, restored. Rule S1's ONLY input, and the LAST
+     input on the card: the whole bottom-stack safety rule is defined relative
+     to it. It grows downward on focus, which is allowed because everything
+     below it is a control. */
+  h+=`<div class="notewrap"><label class="lbl" for="exnote" style="margin-bottom:5px">Note</label>
+    <input class="note" id="exnote" placeholder="Note &mdash; RIR, form, pain, anything"
+      aria-label="Note for ${esc(e.n)} &mdash; RIR, form, pain, anything"
+      value="${esc(st.note)}"></div></div>`;
+
+  /* ---- THE BOTTOM STACK. Every slot here is BELOW the last input, so nothing
+     in it can move an input by appearing or resizing (§0.1 #1). Order is
+     normative: extras -> deload -> pain -> speed flag -> verdict. Filled by
+     paintAdvice() on commit; the verdict slot is never empty and never
+     collapses. */
+  h+=`<div class="stack">
+    <div id="slot-extra"></div>
+    <div id="slot-deload"></div>
+    <div id="slot-pain"></div>
+    <div id="slot-speed"></div>
+    <div id="slot-verdict"></div>`;
+  /* C-12 rule 5. The toast is the immediate reach and it fades; the undo does
+     not. While one stands it is a control in the bottom stack of the exercise
+     it belongs to - below every input, reachable for the whole session, and
+     never a bar floating over the next four screens. */
+  if(S.undo&&S.undo.exId===e.id)
+    h+=`<button class="ghostbtn mb12" id="undoset">Undo &mdash; put set ${S.undo.i+1} back</button>`;
+  if(S.err) h+=`<div class="warn hi mb12" role="alert">
+    <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div>`;
+  if(showMsg) h+=`<div id="bs-slot"></div>`;
+
+  /* ---- prev / next, then DISCARD SESSION as the last element in the scroll. */
+  h+=`</div><div class="navrow">
+    <button class="prev" id="navprev"${i===0?" disabled aria-disabled=\"true\"":""}
+      aria-label="Previous exercise">&larr;</button>`;
+  h+=(i===n-1)
+    ? `<button class="next" id="finish">Save session</button>`
+    : `<button class="next" id="navnext">Next &mdash; ${esc(list[i+1].n)}</button>`;
+  h+=`</div><div class="pad mt24"><button id="discard">DISCARD SESSION</button></div>`;
   return h;
 }
+
+/* Rule V1's offer block. `Not yet` is the LOWEST and therefore the cheapest
+   tap; ignoring it is not declining it - scrolling past or saving with it
+   unanswered stamps nothing and re-offers next session (§4.11). */
+function vOffer(C){
+  if(S.v1msg) return `<div class="offer" id="v1"><p>${esc(S.v1msg)}</p></div>`;
+  const t=C.tier;
+  if(!t) return "";
+  if(t.blocked==="pain"&&t.blockedLine)
+    return `<div class="offer" id="v1"><p>${esc(t.blockedLine)}</p></div>`;
+  if(!t.offer||!t.offerLine) return "";
+  return `<div class="offer" id="v1"><p>${esc(t.offerLine)}</p>
+    <div class="btns"><button class="ghostbtn" id="v1-add">Add it</button>
+    <button class="ghostbtn" id="v1-no">Not yet</button></div></div>`;
+}
+const fixText=()=>{const n=badRows().length;
+  return n?(n===1?"1 set left to fix.":n+" sets left to fix."):"Nothing left to fix.";};
 
 function vTrend(){
   const rows=S.sessions.map(s=>{const r={date:fmt(s.date)};
@@ -878,43 +1251,276 @@ function render(keepScroll){
        the only one a screen reader gets. */
     if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
   });
-  if(S.draft){ document.querySelectorAll(".card").forEach(c=>paintVerdict(c)); paintProblems(); }
+  if(S.draft){ paintAdvice(false); paintProblems(); }
+  renderRest();
   renderOffer();
   if(!keepScroll) window.scrollTo(0,0);
 }
-/* The only caller of the verdict engine. Everything the rules need is passed
-   in: they live in logic.js and cannot reach S, the DOM or storage (B-20).
+/* THE ONLY CALLER OF THE ADVICE ENGINES. Every sentence on this screen comes
+   out of logic.js. Nothing is assembled here: the design supplies the slot,
+   never the sentence (C-4). The prototype's verdict() is gone entirely.
 
-   It runs on COMMIT ONLY — a stepper tap, a field or note leaving focus, a
-   cleared set, and the first paint of a card. Never on `input`. Typing `12`
-   into a reps field passes through `1`, and `1` on a 3–5 exercise used to
-   print `Below the range. Drop to 95 kg.` mid-number; typing `painting`
-   passes through `pain` and would trip Rule S1 on a word that is not the
-   keyword (UX spec §1.2 rule 5, §2.2 rule 3).
+   IT RUNS ON COMMIT ONLY - a stepper tap, a field or the note leaving focus, a
+   cleared set, and first paint. NEVER on `input`. Typing `12` into a reps
+   field passes through `1`, and `1` on a 3-5 exercise used to print `Below the
+   range. Drop to 95 kg.` mid-number; typing `painting` passes through `pain`
+   and would trip Rule S1 on a word that is not the keyword (spec 1.2 rule 5,
+   2.2 rule 3).
 
-   A rule that throws is caught here, per card: the slot goes quiet, the sets
-   and the note are untouched, and Save still works (UX spec §1.4). */
-/* {speak} — B-13 asked for aria-live on the verdict; §2.6 allows exactly one
-   live region. Both are satisfied by routing the sentence through #bs-live
-   instead of giving the slot a region of its own. Only the commit paths pass
-   {speak}: a full render paints ten cards and must not read ten verdicts out,
-   and a verdict that has not changed since the last commit is not news. */
-function paintVerdict(card,speak){
-  const id=card.dataset.ex; if(!id||!S.draft) return;
+   SIX INDEPENDENT CATCHES (spec 0.7). A rule that throws costs its own slot
+   and nothing else: the set rows are already painted, the note is untouched,
+   the draft write path does not run in here, and Save still works. */
+function paintAdvice(speak){
+  const card=document.getElementById("excard");
+  if(!card||!S.draft) return;
+  const id=card.dataset.ex;
   const day=PROGRAM.find(d=>d.id===S.dayId); if(!day) return;
-  const ex=day.ex.find(e=>e.id===id); if(!ex) return;
+  const e=day.ex.find(x=>x.id===id); if(!e) return;
   const st=S.draft.entries[id]; if(!st) return;
-  const el=card.querySelector(".verdict"); if(!el) return;
-  let vd=null;
-  try{ vd=PHAT.verdict({ex:ex, sets:st.sets, prev:PHAT.lastFor(S.sessions,id), note:st.note}); }
-  catch(err){ vd=null; }
-  el.className="verdict"+(vd?" show "+vd.t:"");
-  /* x2 is Rule I2's second line and is never appended to the first sentence.
-     The slot is white-space:pre-line, so the newline is the line break. */
-  const txt=vd?(vd.x2?vd.x+"\n"+vd.x2:vd.x):"";
-  const changed=el.textContent!==txt;
-  el.textContent=txt;
-  if(speak&&changed&&txt) announce(txt.replace("\n"," "));
+  const today=PHAT.localDate();
+  let dl={active:false};
+  try{ dl=PHAT.deloadStatus(S.logMeta,today); }catch(err){}
+  const rx=PHAT.deloadEx(e,dl.active===true);
+  /* Writes only when the slot's contents actually change, and returns whether
+     it did, so nothing is announced that he has already read. */
+  const put=(slot,html)=>{
+    const el=document.getElementById(slot);
+    if(!el||el.innerHTML===html) return false;
+    el.innerHTML=html; return true;
+  };
+
+  /* 0. C-12 rule 1: THE CONTROL NAMES ITS TARGET, so he can see what he is
+     about to lose before he taps - which means the name has to follow the
+     target. The target moves the moment he types into the last blank row, and
+     a label saying SET 3 over a control that would take SET 2 is worse than
+     no label at all. Text only: the control's box is min-width 8rem and does
+     not resize, so nothing below it moves. */
+  const rmb=document.getElementById("rmset");
+  if(rmb&&st.sets.length>1){
+    const tk=removeTarget(st.sets);
+    const lbl="− Remove set "+(tk+1);
+    if(rmb.dataset.k!==String(tk)){ rmb.dataset.k=String(tk); rmb.textContent=lbl; }
+  }
+
+  /* 1. Rule X1 - the EXTRA badges and the line. THE BADGE KEYS OFF THE
+     COMPLETED-SET ORDINAL AND THE COPY NAMES THE ROW NUMBER. They are two
+     different rules pointing at the same physical row, and logic.js carries a
+     DO NOT "FIX" EITHER ONE TO MATCH THE OTHER comment at both sites. Read it
+     before touching either. The badge lives on the ghost row, on the same
+     line, so a row becoming EXTRA changes no height and moves no input. */
+  let xs={flags:[],count:0,line:""};
+  try{ const r=PHAT.extraSets(st.sets,rx); if(r) xs=r; }catch(err){}
+  card.querySelectorAll("[data-xtra]").forEach(sp=>{
+    const t=xs.flags[+sp.dataset.xtra]?"EXTRA":"";
+    if(sp.textContent!==t) sp.textContent=t;
+  });
+  put("slot-extra",xs.line?`<div class="advice"><p>${esc(xs.line)}</p></div>`:"");
+
+  /* 2. A deload reduces the PRESCRIPTION, never the log. A value typed into a
+     row above it still renders and still saves, and the app says which it is
+     rather than hiding the row. */
+  let dlline="";
+  if(dl.active&&e.k!=="speed"){
+    for(let k=rx.s;k<st.sets.length;k++) if(!blankSet(st.sets[k])){
+      dlline="Deload week. This set is above the prescription."; break; }
+  }
+  put("slot-deload",dlline?`<div class="advice"><p>${esc(dlline)}</p></div>`:"");
+
+  /* 3. Rule S1's pain notice. No dismiss, no shortening, no severity word, no
+     substitute, no stretch. It may use the refusal treatment, because there
+     the app really is declining to do something (spec 2.1 exception). */
+  const pain=painHtml(id,st.note,today);
+  if(put("slot-pain",pain)&&speak&&pain) announce(stripTags(pain));
+
+  /* 4. Rule SP1's too-heavy flag. ADVICE, styled as advice: it never alters,
+     blocks, marks or clears the logged weight - the field still reads 110, the
+     draft on disk still holds 110, Save writes 110 - and the input gets NO
+     aria-invalid and no aria-describedby pointing at it, because it is a valid
+     value and telling a screen reader otherwise is a lie with consequences. */
+  let flag="";
+  try{
+    if(e.k==="speed"){
+      const sl=PHAT.speedLoad(S.sessions,id,today,speedSrcName(id),PHAT.PHAT_PLAN);
+      if(sl&&sl.source&&sl.target>0){
+        let worst=null;
+        st.sets.forEach(s=>{
+          if(!PHAT.speedTooHeavy(s.w,sl.source.w)) return;
+          const v=PHAT.parseWeight(s.w);
+          if(v.ok&&(worst===null||v.value>worst)) worst=v.value;
+        });
+        if(worst!==null) flag=PHAT.speedFlagText(worst,sl.target);
+      }
+    }
+  }catch(err){ flag=""; }
+  put("slot-speed",flag?`<div class="advice"><p>${esc(flag)}</p></div>`:"");
+
+  /* 5. THE VERDICT SLOT. Occupied from first paint, for every ex.k, never
+     removed and never collapsed: it holds the reminder when the rule returns
+     null and the verdict when it does not, and .vslot reserves the height so
+     the card cannot grow under his thumb when one replaces the other.
+
+     THE GATE IS `completedSets >= ex.s` AGAINST THE PRESCRIPTION, always, and
+     it lives inside PHAT.verdict where nothing in this file can loosen it. The
+     design's `min(ex.s, sets.length)` fires a verdict on ONE completed set
+     when two are removed - B-24 reopened through a new door (C-11 / B-50).
+     Removing sets does not buy a verdict.
+
+     READ `.absent`, NEVER TRUTHINESS. verdict() returns null (nothing to say),
+     an ABSENT-shaped object (no verdict, and here is why), or a real verdict.
+     The ABSENT object is TRUTHY and carries empty t/x/x2, so `if (v)` paints
+     an empty advice block and `if (v.x)` collapses the slot. It renders as the
+     REFUSAL it is - never as advice with an arrow and a rule name (0.1 #6). */
+  let v=null;
+  try{
+    v=PHAT.verdict({ex:e, sets:st.sets, prev:PHAT.lastFor(S.sessions,id),
+      note:st.note, deload:dl.active===true});
+  }catch(err){ v=null; }
+  let html="", say="";
+  if(v&&v.absent===true){
+    const lines=(v.absentLines&&v.absentLines.length?v.absentLines:[v.absentLine]).filter(Boolean);
+    html=`<div class="refuse vslot">`+
+      lines.map((l,ix)=>`<p>${ix?"":'<span aria-hidden="true">! </span>'}${esc(l)}</p>`).join("")+
+      `</div>`;
+    say=lines.join(" ");
+  }else if(v){
+    /* `t` is a direction token, not a word. It drives a redundant glyph beside
+       the kicker, aria-hidden, and it is never the sole carrier - the sentence
+       carries the status (B-13, 4.7 rule 6). */
+    const dir=v.t==="up"?"&uarr;":v.t==="down"?"&darr;":"";
+    /* x2 is Rule I2's second LINE and is never appended to x's sentence. */
+    html=`<div class="advice vslot"><p class="kick">${dl.active?"Deload week":"Verdict"}`+
+      (dir?`<span class="dir" aria-hidden="true">${dir}</span>`:"")+`</p>`+
+      `<p>${esc(v.x)}</p>`+(v.x2?`<p>${esc(v.x2)}</p>`:"")+`</div>`;
+    say=v.x+(v.x2?" "+v.x2:"");
+  }else if(e.k==="speed"){
+    /* There is ONE source for what to say on a speed card and it is
+       speedLoad(): `text` for the load, `instruction` for how to move it. Both
+       ungated, both permanent. verdict() returns null here by design. */
+    let ins="";
+    try{ const sl=PHAT.speedLoad(S.sessions,id,today,speedSrcName(id),PHAT.PHAT_PLAN);
+         ins=sl?sl.instruction:""; }catch(err){ ins=""; }
+    html=`<div class="advice vslot"><p class="kick">Speed work</p><p>${esc(ins)}</p></div>`;
+  }else{
+    /* Silence looks DELIBERATE and the slot says so in words. One constant
+       line, identical on every card, that never changes while he fills the
+       sets - so it is not something he re-reads. No countdown: a number that
+       ticks down is a number he reads (0.1 #3, 4.7). */
+    html=`<div class="advice vslot"><p class="kick">Waiting</p>`+
+      `<p>Nothing to say until all ${rx.s} sets are in.</p></div>`;
+  }
+  /* B-13 asked for aria-live on the verdict; spec 2.6 allows exactly ONE live
+     region. Both are satisfied by routing the sentence through #bs-live. Only
+     the commit paths pass {speak}. */
+  if(put("slot-verdict",html)&&speak&&say) announce(say);
+}
+const stripTags=h=>String(h).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
+
+/* Rule S1's notice - the pain notice, position 1 in the bottom stack, below
+   the note field that triggers it and above the verdict it explains.
+
+   TWO SOURCES, ONE ELEMENT: the current draft note on commit, and
+   PHAT.painState over the history. The two S1 paragraphs are NOT exported from
+   logic.js as a constant, so the current-note case gets them from painState
+   itself by handing it today's entry - which is exactly what it is. The copy
+   stays verbatim from the engine and no sentence lands in this file.
+   `S1_LINES` is worth exporting; flagged for backend. */
+function painHtml(exId,note,today){
+  let cur=false;
+  try{ cur=PHAT.painFlag(note); }catch(err){ cur=false; }
+  let hist=null;
+  try{ hist=PHAT.painState(S.sessions,exId,today); }catch(err){ hist=null; }
+  let lines=[], prov="";
+  if(cur){
+    let now=null;
+    try{ now=PHAT.painState([{date:today,entries:{[exId]:{sets:[],note:String(note==null?"":note)}}}],
+      exId,today); }catch(err){ now=null; }
+    /* Fails TOWARDS showing: if painState throws and the current note matches,
+       the history's copy stands in rather than the slot going quiet. */
+    lines=(now&&now.active)?now.lines:((hist&&hist.active)?hist.lines:[]);
+  }else if(hist&&hist.active){
+    lines=hist.lines;
+    prov=hist.provenanceLine||"";       /* only when the source is history */
+  }
+  if(!lines.length) return "";
+  return `<div class="refuse">`+
+    lines.map((l,ix)=>`<p>${ix?"":'<span aria-hidden="true">! </span>'}${esc(l)}</p>`).join("")+
+    (prov?`<p>${esc(prov)}</p>`:"")+`</div>`;
+}
+
+/* ============================================================ Rule R1 timer
+   THE ABSOLUTE TIMESTAMP, AND THE ONE textContent CHANNEL.
+
+   B-61: the design's timer calls setState every second, which in this app is
+   innerHTML on the whole view once a second while a thumb is in a weight
+   field - the caret dies every second (B-19). And it decrements a counter, so
+   backgrounding the phone loses the count.
+
+   Neither survives here. S.rest.at is ONE absolute millisecond timestamp;
+   elapsed is recomputed from the wall clock on every tick and on
+   visibilitychange, so three minutes in a pocket comes back as three minutes.
+   The tick writes ONE cached TEXT NODE's nodeValue - a characterData
+   mutation, not a childList one, inside #dock and outside #view - and calls
+   render() from nowhere. Nothing here is persisted and nothing here is in the
+   save path: it is a comfort feature and it may not cost a caret or a set. */
+let restTick=null, restNode=null;
+function restTextNode(){
+  const p=document.getElementById("rest-txt");
+  if(!p) return null;
+  if(restNode&&restNode.parentNode===p) return restNode;
+  if(!p.firstChild) p.appendChild(document.createTextNode(""));
+  restNode=p.firstChild;
+  return restNode;
+}
+function restLoop(on){
+  if(on&&!restTick) restTick=setInterval(paintRest,1000);
+  if(!on&&restTick){ clearInterval(restTick); restTick=null; }
+}
+/* Three transitions, announced once each per rest, through the persistent
+   region: entering "Ready.", entering the past-the-window state, and the stop.
+   The band itself is not a live region (spec 4.10 a11y). */
+const REST_SAY={2:1,3:1,4:1,5:1};
+function paintRest(){
+  const node=restTextNode(); if(!node) return;
+  const day=PROGRAM.find(x=>x.id===S.dayId);
+  let ex=null;
+  if(day){
+    const card=document.getElementById("excard");
+    const id=S.rest?S.rest.exId:(card?card.dataset.ex:null);
+    ex=day.ex.find(x=>x.id===id)||null;
+  }
+  let r;
+  /* Rule R1 renders its idle state rather than NaN:aN for every bad input
+     there is, so a throw here can only cost the band. */
+  try{ r=PHAT.restText(ex,S.rest?(Date.now()-S.rest.at)/1000:null); }
+  catch(err){ r={text:"",state:0,stopped:false}; }
+  if(node.nodeValue!==r.text) node.nodeValue=r.text;
+  if(S.rest&&REST_SAY[r.state]&&!S.rest.said[r.state]){ S.rest.said[r.state]=1; announce(r.text); }
+  reserveDock();
+}
+/* Rule R1 rule 2: starts on a REPS commit - a reps stepper tap, or focusout of
+   a reps field holding a non-empty value. Never a weight field, never a
+   keystroke: typing the `1` of `12` does not start it.
+   Rule 3: a commit on the row that is already running it does not restart it.
+   Rule 1: one timer for the whole app; a commit on another exercise restarts
+   it with that exercise's thresholds. */
+function restStart(exId,k){
+  const key=exId+"|"+k;
+  if(S.rest&&S.rest.key===key) return;
+  S.rest={key:key,exId:exId,at:Date.now(),said:{}};
+  paintRest();
+}
+/* The band lives in #dock, so its height is reserved by the same measured
+   padding-bottom that keeps an input clear of nav (B-36). It is created when a
+   session opens and removed when it closes, and it survives every re-render
+   because #dock is outside #view - which is also why the cached text node
+   survives. */
+function renderRest(){
+  const box=document.getElementById("rest-box"); if(!box) return;
+  const want=!!S.draft, have=!!document.getElementById("rest");
+  if(want&&!have){ box.innerHTML=`<div id="rest"><p id="rest-txt"></p></div>`; restNode=null; }
+  if(!want&&have){ box.innerHTML=""; restNode=null; S.rest=null; }
+  restLoop(want);
+  if(want) paintRest();
 }
 
 /* ============================================================ events */
@@ -937,7 +1543,7 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(fb){
     const box=document.querySelector(`[data-figbox="${fb.dataset.fig}"]`);
     const open=box.classList.toggle("on");
-    if(open&&!box.innerHTML) box.innerHTML=diagram(fb.dataset.fig);
+    if(open&&!box.innerHTML) box.innerHTML=figBody(fb.dataset.fig);
     fb.innerHTML=(open?"⌄":"›")+" movement &amp; cue";
     fb.setAttribute("aria-expanded",open?"true":"false");
     return;
@@ -951,6 +1557,19 @@ document.getElementById("view").addEventListener("click",async e=>{
   const cl=e.target.closest("[data-clear]");
   if(cl){ clearSet(cl.dataset.clear); return; }
 
+  /* ---- W7. One exercise per screen, so navigation is a control like any
+     other and lives in the same delegated listener - no per-node handlers to
+     leak across a re-render. */
+  if(e.target.closest("#navprev")){ goEx(S.exIx-1); return; }
+  if(e.target.closest("#navnext")){ goEx(S.exIx+1); return; }
+  if(e.target.closest("#addset")){ addSet(); return; }
+  const rm=e.target.closest("#rmset");
+  if(rm){ askRemoveSet(+rm.dataset.k); return; }
+  if(e.target.closest("#undoset")){ undoRemove(); return; }
+  if(e.target.closest("#backsave")){ backToSave(); return; }
+  if(e.target.closest("#v1-add")){ await v1Answer(true); return; }
+  if(e.target.closest("#v1-no")){ await v1Answer(false); return; }
+
   const st=e.target.closest("[data-act]");
   if(st){
     const inp=st.parentElement.querySelector("input");
@@ -963,9 +1582,21 @@ document.getElementById("view").addEventListener("click",async e=>{
     if(norm!==null){
       out=norm;
       if(out!=="") announce((f==="w"?"Weight":"Reps")+" now "+out+".");
-    } else out=stepValue(inp.value,f,st.dataset.act==="+"?1:-1);
+    } else {
+      /* THE SEEDING RULE (spec 4.4) buys back the whole ergonomic win of
+         prefill for ONE tap, without prefill's cost. */
+      const seed=seedValue(inp,f,st.dataset.act==="+"?1:-1);
+      if(seed!==null){ out=seed; announce("Weight now "+out+"."); }
+      else out=stepValue(inp.value,f,st.dataset.act==="+"?1:-1);
+    }
     inp.value=out;
     commitField(inp,out);
+    /* Rule R1 rule 2: a REPS stepper tap is a committed rep count and starts
+       the rest. A weight tap never does, and no keystroke ever does. */
+    if(f==="r"&&out!==""){
+      const card=inp.closest(".card"), row=inp.closest(".setrow");
+      if(card&&row) restStart(card.dataset.ex,+row.dataset.i);
+    }
     flushDraft();          // a stepper tap is a committed number: write it now
     return;
   }
@@ -1008,8 +1639,14 @@ document.getElementById("view").addEventListener("focusout",e=>{
   const isNote=!!(t.classList&&t.classList.contains("note"));
   if(!isNote&&!(t.dataset&&t.dataset.f)) return;
   flushDraft();
-  const card=t.closest&&t.closest(".card");
-  if(card&&S.draft) paintVerdict(card,true);
+  if(S.draft) paintAdvice(true);
+  /* Rule R1 rule 2: a REPS field leaving focus with a non-empty value is a
+     committed rep count and starts the rest. A weight field never does, and a
+     keystroke never does. */
+  if(!isNote&&t.dataset.f==="r"&&String(t.value||"").trim()!==""){
+    const card=t.closest(".card"), row=t.closest(".setrow");
+    if(card&&row) restStart(card.dataset.ex,+row.dataset.i);
+  }
 });
 
 document.getElementById("view").addEventListener("change",async e=>{
@@ -1019,6 +1656,9 @@ document.getElementById("view").addEventListener("change",async e=>{
 
 /* Two more delegated roots, same pattern as #view and nav: one listener on a
    container that outlives every node inside it. No per-node listeners. */
+/* The undo control lives outside #view, so it outlives every re-render - the
+   same pattern as #dr-offer and #modal, and the reason neither leaks. */
+document.getElementById("toast-act").addEventListener("click",()=>undoRemove());
 document.getElementById("dr-offer").addEventListener("click",e=>{
   if(e.target.closest("#dr-resume")){ resumeDraft(false); return; }
   if(e.target.closest("#dr-discard")){
@@ -1067,7 +1707,7 @@ function commitField(inp,val){
   const st=S.draft&&S.draft.entries[id]&&S.draft.entries[id].sets[i];
   if(!st) return;
   st[f]=val;
-  paintVerdict(card,true);
+  paintAdvice(true);
   reviewRow(id,i);
 }
 function syncSet(inp,inputType){
@@ -1227,8 +1867,8 @@ function paintProblems(){
      diffing, and it never touches an input's value or the focused node. */
   view.querySelectorAll(".setrow.bad").forEach(row=>{
     row.classList.remove("bad");
-    const g=row.querySelector(".ghost");
-    if(g) g.textContent=g.dataset.ghost||"—";   // last session's numbers come back
+    const g=row.querySelector(".gtxt");
+    if(g) g.textContent=g.dataset.ghost||"";   // last session's numbers come back
     row.querySelectorAll(".stepper").forEach(s=>s.classList.remove("binv"));
     row.querySelectorAll("input[data-f]").forEach(inp=>{
       inp.removeAttribute("aria-invalid"); inp.removeAttribute("aria-describedby");
@@ -1246,7 +1886,7 @@ function paintProblems(){
        row is wrong, "what is wrong right now" beats "what you did last time".
        Real text in a span, never CSS content — a pseudo-element is uncopyable
        and unreliable to assistive tech. */
-    const g=row.querySelector(".ghost");
+    const g=row.querySelector(".gtxt");
     if(g) g.textContent="";
     const tl=document.createElement("p");
     tl.className="badtok";
@@ -1269,6 +1909,14 @@ function paintProblems(){
     row.parentNode.insertBefore(strip,tl.nextSibling);   // row, token, clear
   });
 
+  /* The fix bar rides the exercise screen for as long as the refusal stands.
+     Only its TEXT changes; the bar itself is fixed height and never
+     disappears while a refusal is outstanding (spec 2.3 rule 3). Written
+     here, never through render(), so fixing a row with the keyboard up does
+     not rebuild the view under his thumb. */
+  const fx=document.getElementById("fixtxt");
+  if(fx){ const t=fixText(); if(fx.textContent!==t) fx.textContent=t; }
+
   if(slot){
     /* The fallback is for a problem no row can own — a draft whose shape is
        wrong. There is nothing to point at, so it says only what is true. */
@@ -1286,6 +1934,15 @@ function paintProblems(){
 function gotoProblem(key){
   const r=badRows().find(x=>x.exId+"|"+x.i===key);
   if(!r) return;
+  /* Spec 2.3 rule 1, and it is the problem one-exercise-per-screen creates:
+     the offending row may be four screens away, and a refusal pointing at
+     something unreachable is the worst state in the spec. So a problem row
+     NAVIGATES first - it switches the session to that exercise's screen -
+     and only then scrolls, focuses and selects. render(true), never
+     scrollTo(0,0). */
+  const C=sessionCtx();
+  const ix=C.list.findIndex(x=>x.id===r.exId);
+  if(ix>=0&&ix!==S.exIx){ S.exIx=ix; render(true); }
   const row=findRow(r.exId,r.i);
   if(!row) return;
   const f=(r.primary&&r.primary.field==="r")?"r":"w";
@@ -1307,7 +1964,7 @@ function clearSet(key){
   const row=findRow(exId,i);
   if(row){
     row.querySelectorAll("input[data-f]").forEach(inp=>{ inp.value=""; });
-    const card=row.closest(".card"); if(card) paintVerdict(card,true);
+    paintAdvice(true);
   }
   const before=problemSig();
   const a=document.activeElement;
@@ -1322,6 +1979,132 @@ function clearSet(key){
     const nx=document.getElementById("bs-head")||document.getElementById("finish");
     if(nx){ try{ nx.focus({preventScroll:true}); }catch(e){ nx.focus(); } }
   }
+}
+/* ============================================================ W7 actions */
+/* A navigation, so render() without keepScroll: the top of the new exercise's
+   screen is where he wants to be. Every typed value is already in S.draft -
+   the input handler writes each keystroke - so nothing uncommitted is lost. */
+function goEx(ix){
+  const C=sessionCtx();
+  if(ix<0||ix>=C.list.length||ix===S.exIx) return;
+  S.exIx=ix; flushDraft(); hideToast(); render();
+}
+/* Rule X1: a row beyond ex.s is marked EXTRA, counts in volume, and does NOT
+   change the target line. */
+function addSet(){
+  const C=sessionCtx(), e=C.list[S.exIx]; if(!e) return;
+  const st=S.draft&&S.draft.entries[e.id]; if(!st) return;
+  st.sets.push({w:"",r:""});
+  flushDraft(); render(true);
+  announce("Set "+st.sets.length+" added.");
+}
+/* C-12, ruled. The prototype pops the last row unconditionally, including one
+   holding a completed 120 x 5, with no confirmation and no undo - the same
+   failure class as B-02 and B-21. Here:
+     - the control NAMES ITS TARGET, so he sees what he is about to lose;
+     - it prefers the last BLANK row, so the common case (a row added by
+       mistake) never touches a number;
+     - a blank row goes immediately, with an undo;
+     - a row holding ANY typed value in either field gets a confirmation that
+       NAMES THE NUMBERS, safe button lowest and in the trigger's slot, a
+       300 ms arm, Escape and scrim cancel - WO-001 State 1F's guards;
+     - undo restores the row byte-identically, both raw strings;
+     - and the control is not rendered at all when one row remains: an
+       exercise is skipped by leaving it blank, not by removing its last row. */
+function askRemoveSet(k){
+  const C=sessionCtx(), e=C.list[S.exIx]; if(!e) return;
+  const st=S.draft&&S.draft.entries[e.id]; if(!st||st.sets.length<=1) return;
+  if(!(k>=0&&k<st.sets.length)) k=removeTarget(st.sets);
+  const s=st.sets[k];
+  if(blankSet(s)){ doRemoveSet(e.id,k); return; }
+  const w=String(s.w==null?"":s.w).trim()||"—";
+  const r=String(s.r==null?"":s.r).trim()||"—";
+  askSheet({headline:"Remove set "+(k+1)+"?", body:"It holds "+w+" × "+r+".",
+    danger:"Remove set "+(k+1), safe:"Keep it", back:"rmset",
+    onDanger:()=>{ closeSheet(); doRemoveSet(e.id,k); }});
+}
+function doRemoveSet(exId,k){
+  const st=S.draft&&S.draft.entries[exId];
+  if(!st||st.sets.length<=1) return;
+  const gone=st.sets.splice(k,1)[0]||{w:"",r:""};
+  S.undo={exId:exId,i:k,w:String(gone.w==null?"":gone.w),r:String(gone.r==null?"":gone.r)};
+  /* Marks on the rows BELOW the removed one shift up with them, or a standing
+     refusal would point at the wrong physical row. */
+  S.problems=S.problems.filter(pr=>!(pr.exId===exId&&pr.setIndex===k))
+    .map(pr=>(pr.exId===exId&&pr.setIndex>k)?Object.assign({},pr,{setIndex:pr.setIndex-1}):pr);
+  flushDraft(); render(true);
+  toastUndo("Set "+(k+1)+" removed.");
+}
+function undoRemove(){
+  const u=S.undo; if(!u) return;
+  const st=S.draft&&S.draft.entries[u.exId]; if(!st) return;
+  st.sets.splice(u.i,0,{w:u.w,r:u.r});
+  S.undo=null; hideToast();
+  flushDraft(); render(true);
+  toast("Set "+(u.i+1)+" restored.");
+}
+/* Spec 2.3 rule 4: BACK TO SAVE returns to the screen Save lives on, scrolled
+   to the refusal block, with NO scroll to top. */
+function backToSave(){
+  const C=sessionCtx();
+  if(!C.list.length) return;
+  S.exIx=C.list.length-1; render(true); focusBlocked();
+}
+/* Rule V1's answer. Add it adds ONE accessory and stamps the day; Not yet
+   stamps the 7-day cooldown and nothing else. IGNORING IT STAMPS NOTHING and
+   it is re-offered next session (spec 4.11, train 0.1 #11). Both replace the
+   block in place: the app does not scroll and does not navigate, which is
+   what render(true) buys. */
+async function v1Answer(add){
+  const C=sessionCtx(), t=C.tier;
+  if(!t||!t.offer) return;
+  const name=t.offer.name, exId=t.offer.exId;
+  const next=add?PHAT.acceptReintro(S.logMeta,S.dayId,C.today,t.dayCuts)
+                :PHAT.declineReintro(S.logMeta,S.dayId,C.today);
+  if(next){ S.logMeta=next; await save(LOG,logPayload()); }
+  if(add){
+    S.v1msg=name+" is back in. That is the only addition for 7 days.";
+    S.v1added=exId;
+    const ex=C.day&&C.day.ex.find(x=>x.id===exId);
+    if(ex&&!S.draft.entries[exId]){
+      S.draft.entries[exId]={sets:Array.from({length:ex.s},()=>({w:"",r:""})),note:""};
+      flushDraft();
+    }
+  }else S.v1msg="Left out. Asked again next week.";
+  render(true);
+}
+/* THE SEEDING RULE (spec 4.4). Rows start empty: a prefilled number he does
+   not change is indistinguishable from one he chose, nine engines read that
+   history confidently, and B-05 means he cannot correct it. Prefill also turns
+   every SKIPPED exercise into a blocked save, because the prototype prefills
+   the weight and leaves the reps empty - WO-001's incomplete classification
+   exactly, with a no-reps token on a screen he never visited.
+
+   So: the FIRST + on an EMPTY WEIGHT field adopts last session's weight for
+   THAT SET INDEX, and the second + steps from it. The number is on screen
+   because HE TAPPED FOR IT, so provenance is intact, and it reuses WO-001
+   2.8's precedent - one tap, one state change. Reps are never seeded. Minus
+   from empty stays empty, or minus would increase a value. And across a
+   prescription change prescriptionEpoch reports seed:false, so there is
+   nothing to adopt: the same fact as prefill:false, twice, because the view
+   has two ways to put a number in the box and both are forbidden. */
+function seedValue(inp,f,dir){
+  if(f!=="w"||dir<0) return null;
+  if(String(inp.value==null?"":inp.value).trim()!=="") return null;
+  const card=inp.closest(".card"), row=inp.closest(".setrow");
+  if(!card||!row) return null;
+  const day=PROGRAM.find(d=>d.id===S.dayId); if(!day) return null;
+  const e=day.ex.find(x=>x.id===card.dataset.ex); if(!e) return null;
+  const prev=PHAT.lastFor(S.sessions,e.id);
+  let ep=null;
+  try{ ep=PHAT.prescriptionEpoch({ex:e,prev:prev,plan:PHAT.PHAT_PLAN,exId:e.id}); }
+  catch(err){ return null; }
+  if(!ep||ep.seed!==true) return null;
+  const pv=prev&&prev.sets&&prev.sets[+row.dataset.i];
+  if(!pv) return null;
+  const pw=PHAT.parseWeight(pv.w);
+  if(!pw.ok||!(pw.value>0)) return null;
+  return String(r1(pw.value));
 }
 const problemSig=()=>S.problems.map(p=>[p.exId,p.setIndex,p.field,p.reason,p.value].join(":")).join(",");
 /* Re-read one marked row after he changes it. Only rows that are already
@@ -1395,8 +2178,12 @@ async function saveDraft(draft,dayId){
         note:e.note==null?"":String(e.note)
       };
     });
+    /* exIx rides the draft. Coming back on exercise 1 of 9 after a reload has
+       lost his place, and finding it again means nine taps with chalky hands
+       (W7 data criterion 1). */
     return noteDraftWrite(await save(DRAFT,{schemaVersion:PHAT.SCHEMA_VERSION,
-      dayId:dayId!=null?dayId:S.dayId, date:draft.date, entries, savedAt:Date.now()}),draft);
+      dayId:dayId!=null?dayId:S.dayId, date:draft.date, entries,
+      exIx:(typeof S.exIx==="number"&&S.exIx>=0)?S.exIx:0, savedAt:Date.now()}),draft);
   }catch(e){
     S.err="Could not save your draft. Your entries are still on screen.";
     return noteDraftWrite(false,draft);   // never throws into the caller; the next write retries
@@ -1446,7 +2233,12 @@ function scheduleDraftSave(){
 /* Hiding the tab is the last reliable moment before the OS may kill the page.
    pagehide is the belt to that braces; the bridge may not flush either, which
    is exactly why blur and stepper taps write immediately. */
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flushDraft(); });
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="hidden"){ flushDraft(); return; }
+  /* Back from three minutes in a pocket: elapsed is recomputed from the wall
+     clock, never from a tick count (Rule R1 rule 4, B-61). */
+  paintRest();
+});
 window.addEventListener("pagehide",()=>flushDraft());
 
 /* ============================================================ restore offer (W4 §1)
@@ -1528,10 +2320,22 @@ function renderOffer(){
   const box=document.getElementById("dr-offer");
   const o=(S.tab==="train"&&!S.draft)?offerInfo():null;
   box.innerHTML=o?offerHtml(o):"";
-  /* Keep the last day button clear of the sheet. Measured, not guessed, so a
-     wrapped warning line cannot hide a tap target. */
-  document.getElementById("app").style.paddingBottom=
-    (document.getElementById("dock").offsetHeight+27)+"px";
+  reserveDock();
+}
+/* Every fixed element contributes bottom padding to the scroll container, so
+   ANY input can be scrolled fully clear of all of them (spec 0.6, B-36). The
+   dock now holds the restore sheet, Rule R1's rest band and nav, so this is
+   measured from the dock's real height and never from a magic offset. The
+   toast rides just above it. Writes only when the height actually moved. */
+function reserveDock(){
+  const dock=document.getElementById("dock"), app=document.getElementById("app");
+  if(!dock||!app) return;
+  const h=dock.offsetHeight;
+  if(reserveDock._h===h) return;
+  reserveDock._h=h;
+  app.style.paddingBottom=(h+27)+"px";
+  const t=document.getElementById("toast");
+  if(t) t.style.bottom=(h+12)+"px";
 }
 
 /* ---- Variant B: modal confirm sheet. Safe action lowest, in the slot the
@@ -1584,23 +2388,33 @@ function hydrateDraft(stored){
   const entries={};
   d.ex.forEach(e=>{
     const se=src[e.id]||{};
-    const ss=Array.isArray(se.sets)?se.sets:[];
-    /* max(): if a stored entry somehow holds more sets than the programme
-       defines, keep them rather than truncate. Never drop a typed number. */
-    const len=Math.max(e.s,ss.length);
+    const ss=Array.isArray(se.sets)?se.sets:null;
+    /* THE STORED ROW COUNT IS AUTHORITATIVE, BOTH WAYS. A row he ADDED is
+       kept - never truncate, never drop a typed number. A row he REMOVED
+       stays removed, or C-12's confirmation would be silently undone by a
+       reload and the number would come back from the dead. An entry the
+       stored draft has never seen falls back to the prescription. Floor of
+       one row: an exercise is skipped by leaving it blank, not by having no
+       row at all. */
+    const len=ss?Math.max(1,ss.length):e.s;
     entries[e.id]={
       sets:Array.from({length:len},(_,i)=>({
-        w:ss[i]&&ss[i].w!=null?String(ss[i].w):"",
-        r:ss[i]&&ss[i].r!=null?String(ss[i].r):""})),
+        w:ss&&ss[i]&&ss[i].w!=null?String(ss[i].w):"",
+        r:ss&&ss[i]&&ss[i].r!=null?String(ss[i].r):""})),
       note:se.note==null?"":String(se.note)};
   });
-  return {date:isDate(stored.date)?stored.date:PHAT.localDate(),entries};
+  const ix=(typeof stored.exIx==="number"&&isFinite(stored.exIx)&&stored.exIx>=0)
+    ? Math.floor(stored.exIx) : 0;
+  return {date:isDate(stored.date)?stored.date:PHAT.localDate(),entries,exIx:ix};
 }
 function resumeDraft(withToast){
   const stored=S.offer;
   const hy=stored&&hydrateDraft(stored);
   if(!hy) return false;                       // unknown dayId: Resume is not offered
-  S.dayId=stored.dayId; S.draft=hy; S.err=null; S.problems=[];
+  S.dayId=stored.dayId; S.err=null; S.problems=[];
+  S.exIx=hy.exIx; delete hy.exIx;          /* the index is S's, not the draft's */
+  S.draft=hy;
+  S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
   S.offer=null;
   closeSheet(); render();
   if(withToast) toast("Resumed your unfinished session.");
@@ -1613,6 +2427,7 @@ async function doDiscard(then){
   if(!ok){ sheetErr("Could not discard. Nothing changed. Try again."); return false; }
   S.offer=null; S.draftRead={status:"none"};
   S.draft=null; S.dayId=null; S.err=null; S.problems=[];
+  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
   closeSheet(); toast("Discarded.");
   if(then) then(); else render();
   return true;
@@ -1682,6 +2497,7 @@ async function startDay(id){
   }
   const d=PROGRAM.find(x=>x.id===id);
   S.dayId=id; S.err=null; S.problems=[];
+  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
   S.draft={date:PHAT.localDate(),entries:{}};
   d.ex.forEach(e=>{S.draft.entries[e.id]={sets:Array.from({length:e.s},()=>({w:"",r:""})),note:""};});
   render();
@@ -1704,7 +2520,15 @@ async function finish(){
   /* One builder, shared with the test harness, so the object that reaches
      save() is the object QA asserts on. It returns null rather than guessing:
      no dayId, no usable date, or a draft that does not validate. */
-  const sess=PHAT.buildSession(S.draft,S.dayId,S.draft.date,Date.now());
+  /* planId AND plan. The plan document stamps each entry with the
+     prescription it was logged under (schema 5, Rule PE1) - which is what
+     makes prescriptionEpoch able to tell "he did 100x5 under 3x3-5" from "he
+     did 100x5 under 3x8-12", and therefore what stops the session screen
+     offering a ghost across a prescription change. Both arguments are
+     optional and additive; without them every entry stamps no rx and the
+     epoch check can never fire. */
+  const sess=PHAT.buildSession(S.draft,S.dayId,S.draft.date,Date.now(),
+    PHAT.PHAT_PLAN_ID,PHAT.PHAT_PLAN);
   if(!sess){
     /* Loud, and never save(LOG,null): a null session would overwrite the log
        with garbage, which is the failure this whole batch exists to prevent. */
@@ -1726,6 +2550,7 @@ async function finish(){
   cancelDraftSave();             // a queued autosave must not resurrect the draft
   await clearDraft();
   S.draft=null; S.dayId=null; S.err=null;
+  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
   S.offer=null; S.draftRead={status:"none"};
   render(); toast("Session saved.");
 }
