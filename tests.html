@@ -54,6 +54,13 @@
 <p class="sub">Pure-function regression suite for WO-001 (B-01 / B-02 / B-03 / B-21) and WO-003 (the advice batch).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
+<b>Today: one deliberate failure, and it is a work item, not a carried-forward red.</b>
+<code>strength-coach</code> ruled on 2026-09-10 (addendum &sect;9.13.3) that the
+trainingWeeks-0 line must read <code>3 sessions logged. Week 1 starts when three land in one
+week.</code> <code>logic.js</code> still ships the struck wording, so the regression test was written
+<em>before</em> the fix &mdash; S26 <em>section 9.13 ruling 3</em>. Owner: <code>backend</code>,
+<code>tierLines()</code>. Flip <code>TW0LINE()</code> when it lands and the page returns to N / N / 0
+with no other edit.<br>
 <b>Target shape is N / N / 0.</b> No expected failure is carried forward. A failure kept alive as
 "the known one" becomes a rule applied from memory, and that is how a second, real failure gets waved
 through (WO-003 &sect;Decision 1). Two meta-tests at the end enforce it: one fails on any test NAME
@@ -73,12 +80,19 @@ prefilled into an 8&ndash;12 slot), the deliberate strict key with no tolerance 
 an epoch</em> in both directions, the schema-5 migration and the deliberate asymmetry between the v4 and
 v5 version gates, plus V1a, <code>keyLiftDisclosure</code>, distinct-date session counting, SP1's
 <code>source-not-heavy</code> fallback, X1's extra-set ordinal and S1a's 21-day restatement.
-It also carries the <b>&sect;9.11 role gate</b> (an unrecognised <code>k</code> fires no verdict, for
-any role, deloaded or not &mdash; ten <code>k</code> shapes &times; two deload states) and the
-<b>row-number / completed-set-ordinal divergence</b> in <code>extraSets</code>' <code>Set N</code>
-copy, written with both readings named. Three tests in S26 that pinned wrong behaviour on purpose
-were inverted when <code>fae1fd7</code> fixed them; each keeps the account of what it used to pin and
-asserts the old string is gone, because a fix is only provable against the thing it fixed.</p>
+It also carries the <b>&sect;9.11 / &sect;9.12 role gate</b> (an unrecognised <code>k</code> fires no
+verdict, for any role, deloaded or not &mdash; ten <code>k</code> shapes &times; two deload states)
+and the <b>row-number / completed-set-ordinal divergence</b> in <code>extraSets</code>'
+<code>Set N</code> copy, written with both readings named. Since <code>42e6f96</code> the gate
+returns an <b>ABSENT-shaped object</b> rather than <code>null</code>: <code>t</code>/<code>x</code>/
+<code>x2</code> empty, <code>rule</code> null, <code>absent:true</code> and the coach's refusal copy
+in <code>absentLine</code>. <code>null</code> still means <em>no verdict and nothing to say</em>;
+the object means <em>no verdict, and here is why</em>. <b>Test <code>.absent</code>, never
+truthiness</b> &mdash; both meanings are asserted separately, on purpose, because that is the
+distinction a future tidy-up would collapse. Seven tests in S26 that pinned wrong behaviour on
+purpose were inverted when <code>fae1fd7</code> and <code>42e6f96</code> fixed them; each keeps the
+account of what it used to pin and asserts the old string is gone, because a fix is only provable
+against the thing it fixed.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -4465,6 +4479,32 @@ T("D1 / item 4 - a DELOADED lift in keyLifts is REFUSED by name, not answered of
   a.eq(r.reason, "deloaded-lifts", "it says WHY, so the wiring mistake is visible instead of silent");
 });
 
+/* THE ONE EDIT POINT FOR THE trainingWeeks-0 COUNT LINE.
+   Every assertion in this file that pins that sentence reads it from here, in
+   S22 and in S26 alike, because addendum §9.13 ruling 3 has AMENDED it and
+   logic.js has not followed yet:
+
+     shipping today   N sessions logged. A training week is 3, so week 1
+                      starts when you get there.
+     RULED (§9.13.3)  N sessions logged. Week 1 starts when three land in
+                      one week.
+
+   The coach struck his own §9.8/§9.12 wording: it states the rule as a COUNT
+   when the rule is about CONCENTRATION, which is flatly confusing at three
+   logged sessions and was never right at one. The red test in S26
+   ("section 9.13 ruling 3") pins the ruled string and FAILS until logic.js
+   changes. When backend lands it, change the return below and that test goes
+   green with no other edit anywhere in this file. Do not change one and not
+   the other - that is how the two strings end up both being asserted. */
+function TW0LINE(n){
+  return n + (n === 1 ? " session" : " sessions") +
+    " logged. A training week is 3, so week 1 starts when you get there.";
+}
+function TW0RULED(n){
+  return n + (n === 1 ? " session" : " sessions") +
+    " logged. Week 1 starts when three land in one week.";
+}
+
 T("D1 - cycleLine renders the permanent Train-screen line, and says 'deload' only from week 6", function(a){
   var wk7 = P.cycleLine({ sessions: TFILL(7, MON), state: STORE({ reintro: { d1: 1, d5: 3 } }),
                           program: PROG, todayStr: TODAY });
@@ -4472,10 +4512,27 @@ T("D1 - cycleLine renders the permanent Train-screen line, and says 'deload' onl
   a.eq(wk7.trainingWeeks, 7);
   a.eq(wk7.back, 4);
   a.eq(wk7.cuts, 9);
-  a.eq(P.cycleLine({ sessions: [], state: STORE(), program: PROG, todayStr: TODAY }).text, "",
-    "no sessions: the first-run copy stands and this adds nothing");
-  a.eq(P.cycleLine({ sessions: [TSESS(DA(-2), 1, "d1f", SETS(60, 8))], state: STORE(), program: PROG, todayStr: TODAY }).text,
-    "Reduced volume until you have logged four weeks of three or more sessions.");
+  /* TWO ASSERTIONS INVERTED BY 42e6f96 (addendum §9.12 ruling 3, confirming
+     §9.8). They used to read "" and the reduced-volume line, and both were
+     the wrong first sentence:
+       zero sessions   ""  -> No sessions logged. Start with Upper power.
+       one session     the reduced-volume line -> the count line.
+     The count line WINS over the reduced-volume line at trainingWeeks 0
+     because the number that looks broken there is the week count, and the
+     count line is the one that explains it. The reduced-volume fact is not
+     lost - it is volumeTier.tierLine's, on the day screen, and that split is
+     asserted in S26's "two slots, two sentences" test. The old strings are
+     asserted absent below so neither can quietly come back. */
+  var first = P.cycleLine({ sessions: [], state: STORE(), program: PROG, todayStr: TODAY });
+  a.eq(first.text, "No sessions logged. Start with Upper power.",
+    "day one points at a session, not at the app (§9.12 ruling 3)");
+  a.eq(first.text, first.row, "text IS row - there is no second programme-state line");
+  var one = P.cycleLine({ sessions: [TSESS(DA(-2), 1, "d1f", SETS(60, 8))], state: STORE(),
+                          program: PROG, todayStr: TODAY });
+  a.eq(one.text, TW0LINE(1));
+  a.eq(one.trainingWeeks, 0, "one session is not a training week");
+  a.eq(one.text.indexOf("Reduced volume until"), -1,
+    "the reduced-volume line at tw 0 is volumeTier's slot now, not this one");
   a.eq(P.cycleLine({ sessions: TFILL(3, MON), state: STORE(), program: PROG, todayStr: TODAY }).text,
     "Week 3 of 4 at reduced volume. The cut exercises come back from week 5.");
   a.eq(P.cycleLine({ sessions: TFILL(5, MON), state: STORE(), program: PROG, todayStr: TODAY }).text,
@@ -6411,33 +6468,62 @@ T("W5 / PE1 - kWord: all four strings are approved as written (section 9.11 ruli
   a.eq(kOnly.prefill, false, "a role change is still an epoch change");
 });
 
-T("W5 / section 9.11 - an unrecognised k fires NO verdict (the role gate; was red, fixed in fae1fd7)", function(a){
+T("W5 / section 9.12 - an unrecognised k fires NO verdict and returns the ABSENT object (was red, fixed in fae1fd7 then 42e6f96)", function(a){
   /* SECTION 9.11 RULING 2's RIDER:
        "if k is unrecognised, no verdict may fire for that exercise. An app
         that cannot tell which rule applies must not run one."
+     SECTION 9.12 RULING 1 then said what the slot SAYS instead of firing:
+       "No role set for this exercise, so the app cannot advise on it. Set it
+        to power, hypertrophy or speed in the plan."
 
      WHAT THIS TEST USED TO PIN, kept because a fix is only provable against
-     the thing it fixed: verdict() returned null for k:"speed", routed
-     k:"power" to P1, and fell THROUGH to H1 for everything else, so a corrupt
-     or imported k:"tempo" got H1.4d - a tonnage comparison on an exercise
-     nobody had classified - and a MISSING k got H1.3a. The two assertions
-     below were `ne(..., null)` and each was followed by an assertion naming
-     the H1 branch that fired. Both branch assertions are DELETED, not
-     inverted: with the gate in place there is no object to read `.rule` from,
-     and keeping them would throw a TypeError rather than fail an assertion.
+     the thing it fixed. Two inversions, in two commits:
+       before fae1fd7  verdict() fell THROUGH to H1 for any k it did not
+                       recognise, so k:"tempo" got H1.4d - a tonnage
+                       comparison on an exercise nobody had classified - and a
+                       MISSING k got H1.3a. Those two assertions were
+                       `ne(..., null)` with the H1 branch named.
+       fae1fd7         both became `eq(..., null)`.
+       42e6f96         both become the ABSENT OBJECT. §9.12 moved the fact
+                       extraSets used to imply falsely into the slot that owns
+                       it, so the refusal now has copy attached.
 
-     The gate is `PLAN_KINDS.indexOf(ctx.ex.k) < 0 -> null`, placed ABOVE the
-     deload branch on purpose: a deload is an instruction about a prescription
-     whose role is known, so DL1 must not fire on an unclassified exercise
-     either. That half is asserted in the k-matrix test below. */
+     The gate is `PLAN_KINDS.indexOf(ctx.ex.k) < 0`, placed ABOVE the deload
+     branch on purpose: a deload is an instruction about a prescription whose
+     role is known, so DL1 must not fire on an unclassified exercise either.
+     That half is asserted in the k-matrix test below.
+
+     READ `.absent`, NEVER TRUTHINESS. The object is truthy. A caller that
+     tests `if (v)` gets a "verdict" whose `t`, `x` and `x2` are empty - which
+     renders nothing rather than "undefined", by design - but it will never
+     see the refusal. The separation of the two non-verdicts has its own test
+     below ("two different non-verdicts"). */
   a.deep(P.PLAN_KINDS, ["power", "hyp", "speed"], "the three the validator allows");
+  var ABSENT_COPY = "No role set for this exercise, so the app cannot advise on it. " +
+                    "Set it to power, hypertrophy or speed in the plan.";
+  function isRefusal(v, msg){
+    a.ok(v !== null && typeof v === "object", msg + ": an object, not null");
+    a.eq(v.absent, true, msg + ": .absent is the flag a caller must read");
+    a.eq(v.rule, null, msg + ": no rule fired, so none is named");
+    a.eq(v.t, "", msg + ": no direction arrow");
+    a.eq(v.x, "", msg + ": the sentence is NOT in x - refusal must not be renderable as advice");
+    a.eq(v.x2, "", msg + ": and no increment line");
+    a.deep(v.absentLines, [ABSENT_COPY], msg + ": one rendered line, verbatim");
+    a.eq(v.absentLine, ABSENT_COPY, msg + ": and the joined form for a single-slot caller");
+  }
   var unknown = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "bb" },
                             sets: SETS(60, 10, 60, 10, 60, 10),
                             prev: PREV(SETS(60, 9, 60, 9, 60, 9)) });
-  a.eq(unknown, null, "k:\"tempo\" used to return H1.4d - a tonnage comparison it was never assessed under");
+  isRefusal(unknown, "k:\"tempo\" - used to return H1.4d, a tonnage comparison it was never assessed under");
   var missing = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
                             sets: SETS(60, 10, 60, 10, 60, 10) });
-  a.eq(missing, null, "an ABSENT k used to return H1.3a");
+  isRefusal(missing, "an ABSENT k - used to return H1.3a");
+  /* The copy says nothing about sets. The fact is about the EXERCISE, which is
+     precisely why extraSets went silent instead of inventing a fourth variant. */
+  a.eq(unknown.absentLine.indexOf("verdict"), -1,
+    "it never names a verdict - `the verdict reads the first 3` names one that can never fire");
+  a.eq(unknown.absentLine.indexOf("volume"), -1,
+    "and it makes no claim about today's volume - that was extraSets' false variant");
   /* The two that were right before the gate, so the fix cannot have broken them. */
   a.eq(P.verdict({ ex: { id: "x", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb" },
                    sets: SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3) }), null,
@@ -6449,7 +6535,7 @@ T("W5 / section 9.11 - an unrecognised k fires NO verdict (the role gate; was re
     "and the branch the unrecognised k used to steal is still reachable by the k that owns it");
 });
 
-T("W5 / section 9.11 - the role gate holds for every shape of k, deloaded or not", function(a){
+T("W5 / section 9.12 - the role gate holds for every shape of k, deloaded or not", function(a){
   /* THE GATE IS STRICT, UNTRIMMED AND CASE-SENSITIVE - deliberately, because
      it is `PLAN_KINDS.indexOf(ctx.ex.k)`, the same test validatePlan applies
      at creation. "HYP" and " hyp " are not hyp. If either were ever coerced
@@ -6459,7 +6545,14 @@ T("W5 / section 9.11 - the role gate holds for every shape of k, deloaded or not
      EACH CASE IS RUN TWICE, plain and with deload:true. The gate sits above
      the deload branch, so DL1 - the one rule that fires on ANY role - must be
      unreachable too. Run the gate below `var dl = ...` instead and every row
-     of the deload column comes back "DL1". */
+     of the deload column comes back "DL1".
+
+     SINCE 42e6f96 EVERY ROW IS THE ABSENT OBJECT, not null (§9.12 ruling 1).
+     Each row asserts `.absent === true` AND `.rule === null` AND that `t`,
+     `x` and `x2` are empty: `.absent` alone would pass if a future edit put
+     the refusal copy into `x`, which is the one thing §0.1 #6 forbids because
+     it makes refusal indistinguishable from advice. 22 assertions: ten shapes
+     × plain/deload, plus the two absent-k rows. */
   var shapes = [
     ["empty string",  ""],
     ["upper case",    "HYP"],
@@ -6472,6 +6565,16 @@ T("W5 / section 9.11 - the role gate holds for every shape of k, deloaded or not
     ["near miss",     "hypertrophy"],
     ["near miss 2",   "Power"]
   ];
+  var ABSENT_COPY = "No role set for this exercise, so the app cannot advise on it. " +
+                    "Set it to power, hypertrophy or speed in the plan.";
+  function refuses(v, msg){
+    a.ok(v !== null && typeof v === "object", msg + ": the ABSENT object, never null and never undefined");
+    a.eq(v.absent, true, msg);
+    a.eq(v.rule, null, msg + ": and no rule is named");
+    a.eq(v.t + v.x + v.x2, "", msg + ": t, x and x2 are all empty - a slot rendered without " +
+      "checking .absent shows nothing, and the refusal can never pass as advice");
+    a.eq(v.absentLine, ABSENT_COPY, msg + ": with the coach's copy, verbatim");
+  }
   var i, ex, plain, dl;
   for (i = 0; i < shapes.length; i++) {
     ex = { id: "x", s: 3, lo: 8, hi: 12, implement: "bb", k: shapes[i][1] };
@@ -6479,20 +6582,113 @@ T("W5 / section 9.11 - the role gate holds for every shape of k, deloaded or not
                         prev: PREV(SETS(60, 9, 60, 9, 60, 9)) });
     dl = P.verdict({ ex: ex, sets: SETS(60, 10, 60, 10, 60, 10),
                      prev: PREV(SETS(60, 9, 60, 9, 60, 9)), deload: true });
-    a.eq(plain, null, "k as " + shapes[i][0] + " (" + show(shapes[i][1]) + ") must fire no verdict");
-    a.eq(dl, null, "k as " + shapes[i][0] + " must fire no verdict UNDER A DELOAD either - " +
+    refuses(plain, "k as " + shapes[i][0] + " (" + show(shapes[i][1]) + ") must fire no verdict");
+    refuses(dl, "k as " + shapes[i][0] + " must fire no verdict UNDER A DELOAD either - " +
       "a deload is an instruction about a prescription whose role is known");
   }
   /* k ABSENT entirely, both ways round. */
-  a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
-                   sets: SETS(60, 10, 60, 10, 60, 10) }), null);
-  a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
-                   sets: SETS(60, 10, 60, 10, 60, 10), deload: true }), null);
+  refuses(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
+                      sets: SETS(60, 10, 60, 10, 60, 10) }), "k absent, plain");
+  refuses(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
+                      sets: SETS(60, 10, 60, 10, 60, 10), deload: true }), "k absent, deloaded");
   /* And DL1 is genuinely alive for a k the gate allows, so the rows above are
      the gate refusing and not DL1 being broken. */
   a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb" },
                    sets: SETS(60, 10, 60, 10, 60, 10), deload: true }).rule, "DL1",
     "the control: a recognised k under a deload still reaches DL1");
+});
+
+T("W5 / section 9.12 - null and the ABSENT object are two different non-verdicts, and both meanings survive", function(a){
+  /* THE ASSERTION MOST LIKELY TO BE LOST IN A FUTURE TIDY-UP, which is why it
+     has a test of its own rather than a line inside another one. verdict()
+     has TWO ways of not returning a verdict and they mean different things:
+
+       null            no verdict, AND NOTHING TO SAY.
+                       Below the gate. Speed work (speedLoad owns that card).
+                       Input it cannot read. A caller renders an empty slot.
+       ABSENT object   no verdict, AND HERE IS WHY.
+                       Only ever an unrecognised `k`. A caller renders the
+                       refusal, styled as a refusal.
+
+     Collapse them - "they both mean no verdict, return null everywhere" -
+     and §9.12's whole ruling is undone silently: the fact that the exercise
+     is unclassified has no slot left to live in, because extraSets and
+     incrementLine deliberately gave it up. Collapse them the other way -
+     return the object for every non-verdict - and a set logged below the
+     gate starts telling him to go and edit his plan.
+
+     A CALLER MUST TEST `.absent`, NEVER TRUTHINESS. Both facts are asserted:
+     the object IS truthy, and a normal verdict is NOT absent. */
+  var below = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb" },
+                          sets: SETS(60, 10) });
+  var speed = P.verdict({ ex: { id: "x", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb" },
+                          sets: SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3) });
+  var junk  = P.verdict({ ex: { id: "x", s: "3", lo: 8, hi: 12, k: "hyp" }, sets: SETS(60, 10) });
+  a.eq(below, null, "below the gate (B-24): no verdict and nothing to say");
+  a.eq(speed, null, "speed work: silent by design, speedLoad owns the card");
+  a.eq(junk,  null, "unreadable prescription: null, and it does not throw");
+  a.eq(P.verdict(null), null, "no ctx");
+  a.eq(P.verdict({}), null, "no ex");
+
+  var refusal = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "bb" },
+                            sets: SETS(60, 10, 60, 10, 60, 10) });
+  a.ne(refusal, null, "an unrecognised k is the OTHER non-verdict and must not be flattened to null");
+  a.eq(refusal.absent, true);
+  a.ok(!!refusal, "the object is TRUTHY - which is exactly why `if (v)` is the wrong test");
+  a.ok(refusal.absentLine.length > 0, "and it carries a sentence, unlike null");
+
+  /* The gate is above the completed-set gate too: an unrecognised k with ZERO
+     sets logged still explains itself rather than falling to the B-24 null.
+     Correct - the fact is about the exercise, and it is true before he starts. */
+  var noSets = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "tempo" }, sets: [] });
+  a.eq(noSets.absent, true, "unclassified is true from the first render, not only once 3 sets are in");
+
+  /* A REAL VERDICT IS NOT ABSENT. Asserted as `!== true` rather than
+     `=== false`: verdict()'s success path does not run through notAbsent(),
+     so the property is genuinely missing on an advice object. That asymmetry
+     with volumeTier/stallReport/speedLoad (which do set absent:false) is
+     pinned as a contract question, not asserted as a requirement. */
+  var real = P.verdict({ ex: PE_ROW, sets: SETS(100, 5, 100, 5, 100, 5) });
+  a.eq(real.absent === true, false, "a real verdict is never mistaken for a refusal");
+  a.eq(real.rule, "P1.4", "and the rule that fired is named");
+  a.ok(real.x.length > 0, "advice lives in x; refusal never does");
+});
+
+T("W5 / section 9.12 - the role gate reads the RAW ex.k, so \" hyp \" is silent in all three helpers", function(a){
+  /* THE SPLIT THIS CLOSES. extraSets computes a trimmed local `k` for its
+     role tails, and gating on THAT would let " hyp " collect hypertrophy copy
+     there while verdict()'s untrimmed gate refused the same exercise - one
+     half of the app advising, the other half refusing, on one object. The
+     gate is `PLAN_KINDS.indexOf(ex.k)` at every site: the same test
+     validatePlan applies at creation, so a store holding a `k` the validator
+     rejects cannot get advice from anywhere.
+
+     " hyp " is the padded case specifically because it is the one a paste, a
+     hand-edited export or a future import (WO-002) actually produces. */
+  var pad = { id: "x", s: 3, lo: 8, hi: 12, k: " hyp ", implement: "machine" };
+  var C = { w: 60, r: 10 };
+  a.eq(P.verdict({ ex: pad, sets: SETS(60, 10, 60, 10, 60, 10),
+                   prev: PREV(SETS(60, 9, 60, 9, 60, 9)) }).absent, true,
+    "verdict refuses it");
+  var xs = P.extraSets([C, C, C, C], pad);
+  a.eq(xs.line, "", "extraSets says nothing about the extra set");
+  a.eq(xs.count, 0, "and claims no count");
+  a.eq(xs.idle, false, "and withholds the standing hyp invitation");
+  a.deep(xs.flags, [false, false, false, false], "and badges nothing");
+  a.eq(P.incrementLine(pad), "", "incrementLine prescribes no loading");
+  /* The control: the same exercise with the trimmed value IS hyp everywhere,
+     so the three silences above are the gate refusing and not the helpers
+     being broken. */
+  var ok = { id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine" };
+  a.eq(P.extraSets([C, C, C, C], ok).line,
+    "Set 4 is past the prescription. Counted in today's volume, not in the verdict.");
+  a.eq(P.extraSets([C, C, C, C], ok).idle, true);
+  a.eq(P.incrementLine(ok), "If 2.5 kg is not available, add reps first, then jump.");
+  a.eq(P.verdict({ ex: ok, sets: SETS(60, 10, 60, 10, 60, 10),
+                   prev: PREV(SETS(60, 9, 60, 9, 60, 9)) }).absent === true, false);
+  /* Upper case is the same class of near miss and is refused the same way. */
+  a.eq(P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12, k: "HYP" }).line, "");
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "HYP", implement: "machine" }), "");
 });
 
 T("W5 / section 9.11 - the PER-ROW ghost is DELETED across an epoch, not captioned", function(a){
@@ -6865,20 +7061,265 @@ T("W5 / section 9.4 - the session count is DISTINCT DATES, so three saves on one
   a.eq(n(three.concat([TSESS(DA(-1), 12, "d1a", SETS(100, 5))])), 2, "two dates is two");
 });
 
-T("W5 / section 9.8 - cycleLine never prints Week 0, and states what unlocks week 1", function(a){
+T("W5 / section 9.8 + 9.12 - cycleLine never prints Week 0, and day one names the first day", function(a){
+  /* INVERTED BY 42e6f96. §9.8 gave the zero case as "No sessions logged yet.";
+     §9.12 ruling 3 replaced it, on EVERY plan that can name a first day:
+       "No sessions logged. Start with Upper power."
+     The reason is in CLAUDE.md §8 - the training is the bottleneck, not the
+     tooling - so the first sentence the app ever says points at a session
+     rather than at itself. The old string survives only as the fallback when
+     the plan cannot name a first day; that branch is tested below. */
   var noTier = PEPLAN("d1a");
   delete noTier.reducedWeeks;
   var zero = P.cycleLine({ sessions: [], todayStr: TODAY, plan: noTier });
-  a.eq(zero.text, "No sessions logged yet.");
+  a.eq(zero.text, "No sessions logged. Start with Upper power.");
+  a.eq(zero.text.indexOf("No sessions logged yet."), -1,
+    "the vague first sentence is the thing that was fixed");
   var two = P.cycleLine({ sessions: [TSESS(DA(-1), 1, "d1a", SETS(100, 5)),
                                      TSESS(DA(-2), 2, "d1a", SETS(100, 5))],
                           todayStr: TODAY, plan: noTier });
-  a.eq(two.text, "2 sessions logged. A training week is 3, so week 1 starts when you get there.");
+  a.eq(two.text, TW0LINE(2));
   a.eq(two.trainingWeeks, 0);
   var one = P.cycleLine({ sessions: [TSESS(DA(-1), 1, "d1a", SETS(100, 5))],
                           todayStr: TODAY, plan: noTier });
   a.ok(one.text.indexOf("1 session logged.") === 0, "singular: " + JSON.stringify(one.text));
   a.ok([zero.text, one.text, two.text].join(" ").indexOf("Week 0") < 0, "there is no week 0");
+});
+
+T("W5 / section 9.12 ruling 3 - the day-one line reads the plan's first day, and falls back when it cannot", function(a){
+  /* planFirstDayName is NOT exported, so it is tested through its only
+     consumer. That is a real seam, not a fake one: the observable behaviour
+     is the sentence, and every fallback below changes it. If a future change
+     needs the function pinned directly, ask for the export (B-20) rather than
+     asserting on a private.
+
+     STRICTLY days[0]. It must NOT scan forward to the first day that happens
+     to carry a name - naming day two while day one exists sends him to the
+     wrong session, which is worse than saying nothing. The whitespace-name
+     case below is the one that proves it: day 2 is named "Lower power" and
+     the line still falls back. */
+  var OLD = "No sessions logged yet.";
+  function firstLine(plan){ return P.cycleLine({ sessions: [], todayStr: TODAY, plan: plan }).text; }
+  function mut(fn){ var p = PEPLAN("d1a"); fn(p); return p; }
+
+  a.eq(firstLine(PEPLAN("d1a")), "No sessions logged. Start with Upper power.",
+    "the shipped plan names its first day");
+  a.eq(firstLine(mut(function(p){ p.days[0].name = "  Push  "; })),
+    "No sessions logged. Start with Push.", "the name is trimmed before it is interpolated");
+
+  /* Every shape that cannot name a first day falls back to §9.8's line. The
+     fallback is a sentence, never "Start with ." and never "Start with
+     undefined." - that is the assertion that matters here. */
+  a.eq(firstLine(mut(function(p){ p.days = []; })), OLD, "days: []");
+  a.eq(firstLine(mut(function(p){ p.days[0].name = ""; })), OLD, "days[0].name empty");
+  a.eq(firstLine(mut(function(p){ p.days[0].name = "   "; })), OLD,
+    "days[0].name whitespace - and day 2 IS named, so this also proves it does not scan forward");
+  a.eq(firstLine(mut(function(p){ delete p.days[0].name; })), OLD, "no name field at all");
+  a.eq(firstLine(mut(function(p){ p.days[0] = 7; })), OLD, "a non-object day");
+  a.eq(firstLine(mut(function(p){ p.days[0] = null; })), OLD, "a null day");
+  /* `days` NOT AN ARRAY is not a fallback inside planFirstDayName at all -
+     it fails isPlanDoc, so cycleLine substitutes the shipped PHAT plan and
+     prints PHAT's first day. Pinned separately from the fallbacks above
+     because it is a different mechanism with a louder consequence: a user
+     plan whose `days` is corrupt names a session from a plan he is not
+     running. Documented behaviour (`plan` is optional and defaults to PHAT),
+     flagged in the contract list, not asserted as correct here. */
+  a.eq(firstLine(mut(function(p){ p.days = "nope"; })), "No sessions logged. Start with Upper power.",
+    "OBSERVED: an unreadable plan silently becomes PHAT_PLAN");
+  /* A NUMERIC NAME IS COERCED, NOT REFUSED - pinned as observed, and it is
+     the same coercion-vs-validator gap as `lift:42` (see the contract list).
+     `validatePlan` requires `typeof d.name === "string"`, so this plan could
+     never be built in the app; it is reachable only from a corrupt store or
+     an import (WO-002), which is exactly where guessing is worst. The output
+     is nonsense but not dangerous - "Start with 42." names something, it does
+     not print undefined, and no advice hangs off it. If the importer is ever
+     the thing that fixes this, this assertion is the one to invert. */
+  a.eq(firstLine(mut(function(p){ p.days[0].name = 42; })), "No sessions logged. Start with 42.",
+    "OBSERVED: str() coerces where validatePlan refuses. Unreachable from the editor.");
+
+  var i, all = [firstLine(mut(function(p){ p.days = []; })),
+                firstLine(mut(function(p){ p.days[0].name = ""; })),
+                firstLine(mut(function(p){ p.days[0] = 7; }))];
+  for (i = 0; i < all.length; i++) {
+    a.eq(all[i].indexOf("undefined"), -1, "no fallback ever prints undefined");
+    a.eq(all[i].indexOf("Start with ."), -1, "and none prints an empty imperative");
+  }
+
+  /* A NON-PLAN falls back to the shipped PHAT plan, not to the old string -
+     cycleLine's own default. Worth pinning: it means the fallback line is
+     genuinely reachable only through a plan that exists and cannot name a
+     day, which is the plan-editor case (WO-004 W15). */
+  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY, plan: "nonsense" }).text,
+    "No sessions logged. Start with Upper power.", "a garbage plan is not a plan; PHAT_PLAN answers");
+  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY }).text,
+    "No sessions logged. Start with Upper power.", "and so does no plan argument at all");
+});
+
+T("W5 / section 9.8 + 9.12 - at trainingWeeks 0 cycleLine and volumeTier are two slots, two sentences", function(a){
+  /* DELIBERATE SPLIT, and the likeliest thing for a future tidy-up to
+     "unify". At trainingWeeks 0 with at least one session:
+       cycleLine.text      the count line - Home, top of screen, explains why
+                           there is no week number
+       volumeTier.tierLine Reduced volume until ... - the day screen, explains
+                           why the cut exercises are not rendered
+     Both are true. They answer different questions in different places, and
+     collapsing them loses one of the two answers. */
+  var s1 = [TSESS(DA(-1), 1, "d1a", SETS(100, 5))];
+  var cl = P.cycleLine({ sessions: s1, state: STORE(), program: PROG, todayStr: TODAY });
+  var vt = P.volumeTier({ sessions: s1, todayStr: TODAY, dayId: "d1", program: PROG, state: {} });
+  a.eq(cl.trainingWeeks, 0);
+  a.eq(vt.trainingWeeks, 0);
+  a.eq(cl.text, TW0LINE(1));
+  a.eq(vt.tierLine, "Reduced volume until you have logged four weeks of three or more sessions.");
+  a.ne(cl.text, vt.tierLine, "two slots, two sentences - neither is the other's copy");
+  a.eq(vt.tierLine.indexOf("session logged."), -1, "the tier slot does not repeat the count line");
+  a.eq(cl.text.indexOf("Reduced volume"), -1, "and the count line does not repeat the tier line");
+  /* With NO sessions the tier slot is empty rather than repeating day one:
+     there are no cut exercises hidden from a session he has not started. */
+  var vt0 = P.volumeTier({ sessions: [], todayStr: TODAY, dayId: "d1", program: PROG, state: {} });
+  a.eq(vt0.tierLine, "", "nothing to explain before the first session");
+  a.eq(P.cycleLine({ sessions: [], state: STORE(), program: PROG, todayStr: TODAY }).text,
+    "No sessions logged. Start with Upper power.", "and Home still says the one thing worth saying");
+  /* From week 1 the count line is gone and the tier line is the reduced-volume
+     week counter, so the precedence swap cannot leak past the boundary. */
+  var w1 = P.cycleLine({ sessions: TFILL(1, MON), state: STORE(), program: PROG, todayStr: TODAY });
+  a.eq(w1.trainingWeeks, 1);
+  a.eq(w1.text, "Week 1 of 4 at reduced volume. The cut exercises come back from week 5.");
+  a.eq(w1.text.indexOf("sessions logged."), -1, "the count line is \"\" from training week 1 on");
+});
+
+T("W5 / section 9.12 - a deload row is never swallowed by the count line", function(a){
+  /* The count line is computed for every plan and chosen by precedence, so
+     the one thing to prove is that it cannot outrank the deload row - the
+     most urgent sentence on the screen, and the only one that changes what he
+     does today. tierLines returns on the deload branch BEFORE the count is
+     computed; if that order is ever reversed, this fails. */
+  var st = STORE({ deload: { startDate: DA(-2), endDate: null, trigger: "T1",
+                             declinedAt: null, declinedDays: null, past: [] } });
+  var zero = P.cycleLine({ sessions: [], state: st, program: PROG, todayStr: TODAY });
+  a.eq(zero.deload.active, true);
+  a.ok(zero.text.indexOf("Deload week, day 3.") === 0, "the deload row wins at zero sessions: " + zero.text);
+  a.eq(zero.text.indexOf("No sessions logged"), -1, "day one's line does not overwrite it");
+  var one = P.cycleLine({ sessions: [TSESS(DA(-1), 1, "d1a", SETS(100, 5))], state: st,
+                          program: PROG, todayStr: TODAY });
+  a.ok(one.text.indexOf("Deload week, day 3.") === 0, "and it wins at one session too: " + one.text);
+  a.eq(one.text.indexOf("session logged."), -1, "the count line does not overwrite it either");
+});
+
+T("W5 / section 9.12 - sessions that exist but do not COUNT still print the day-one line", function(a){
+  /* BACKEND'S OWN LEAST-SURE CASE, PINNED AS OBSERVED AND ROUTED, NOT RULED
+     ON HERE. §9.4 counts a session as a DISTINCT DATE with a completed set,
+     so three kinds of save exist on disk and count zero: a note-only save, a
+     future-dated save, an undated save. In all three nSess is 0 while
+     hasSessions is true, and cycleLine prints "No sessions logged. Start with
+     Upper power." over a log that visibly contains a saved session.
+
+     QA'S POSITION: the count is right and the sentence is arguably not. "No
+     sessions logged" is a claim about the log, and the log is not empty - he
+     saved a note after walking out, and the app tells him he has logged
+     nothing. The honest alternatives are the count line ("0 sessions logged.
+     A training week is 3 ...", which reads worse) or a fourth sentence, which
+     is new copy and therefore the coach's call, not QA's and not backend's.
+
+     Nothing is lost either way: the note-only save is kept, stored and shown
+     (B-33), and volumeTier still explains the hidden cut exercises. This is a
+     copy question, not a data question. Pinned so the ruling lands as a
+     deliberate edit to these three assertions. */
+  var DAY1 = "No sessions logged. Start with Upper power.";
+  function line(sess){ return P.cycleLine({ sessions: sess, state: STORE(), program: PROG, todayStr: TODAY }); }
+  var noteOnly = line([TSESS(DA(-1), 1, "d1a", [], "felt flat, went home")]);
+  a.eq(noteOnly.sessions, 0, "a note-only save is not a training day (§9.4)");
+  a.eq(noteOnly.text, DAY1, "OBSERVED: and the app says nothing is logged. Coach ruling outstanding.");
+  var future = line([TSESS(DA(3), 1, "d1a", SETS(100, 5))]);
+  a.eq(future.sessions, 0, "a future-dated save does not count");
+  a.eq(future.text, DAY1, "OBSERVED");
+  var undated = line([{ id: 9, dayId: "d1", entries: { d1a: { sets: SETS(100, 5), note: "" } } }]);
+  a.eq(undated.sessions, 0, "an undated save does not count");
+  a.eq(undated.text, DAY1, "OBSERVED");
+  /* The tier slot does NOT agree, because it keys off sessions.length rather
+     than the counted total - so the day screen already says the block is
+     running while Home says nothing is logged. Both are defensible; they are
+     pinned together so the ruling covers both slots at once. */
+  var vt = P.volumeTier({ sessions: [TSESS(DA(-1), 1, "d1a", [], "felt flat")],
+                          todayStr: TODAY, dayId: "d1", program: PROG, state: {} });
+  a.eq(vt.tierLine, "Reduced volume until you have logged four weeks of three or more sessions.",
+    "OBSERVED: the two slots disagree about whether anything has been logged");
+});
+
+T("W5 / section 9.12 - three or more sessions can still span zero training weeks, and the line says so", function(a){
+  /* THE ARITHMETIC, which is right and is not what was ruled on. A training
+     week is a week containing three or more sessions (Rule TW1), so one
+     session a week for three weeks is three sessions and ZERO training
+     weeks. That is correct at every count and is what this test protects.
+
+     THE SENTENCE was ruled wrong on 2026-09-10, addendum §9.13 ruling 3: it
+     states the rule as a COUNT ("a training week is 3") where the rule is
+     about CONCENTRATION, which collides visibly with the number in front of
+     it at three sessions and was never right at one. The strings below come
+     from TW0LINE(), the single edit point defined above the D1 cycleLine
+     test, and the ruled replacement is pinned red in the next test. Do not
+     "fix" the strings here - change TW0LINE once, when logic.js changes. */
+  function spread(n){
+    var s = [], i;
+    for (i = 0; i < n; i++) s.push(TSESS(P.dateAdd("2026-08-04", i * 7), i + 1, "d1a", SETS(100, 5)));
+    return P.cycleLine({ sessions: s, state: STORE(), program: PROG, todayStr: TODAY });
+  }
+  var three = spread(3);
+  a.eq(three.sessions, 3);
+  a.eq(three.trainingWeeks, 0, "three sessions in three different weeks is zero training weeks");
+  a.eq(three.text, TW0LINE(3),
+    "the shipping sentence, from the one edit point - superseded by §9.13 ruling 3");
+  var five = spread(5);
+  a.eq(five.trainingWeeks, 0);
+  a.eq(five.text, TW0LINE(5),
+    "and it does not degrade as the count climbs, which is what the coach struck");
+  a.eq(five.text.indexOf("Week 0"), -1, "the hard constraint holds throughout: never Week 0");
+  /* The control: three sessions inside ONE week is training week 1, so the
+     line above is TW1 counting correctly and not the count line being stuck. */
+  var packed = P.cycleLine({ sessions: TFILL(1, MON), state: STORE(), program: PROG, todayStr: TODAY });
+  a.eq(packed.trainingWeeks, 1);
+  a.eq(packed.text, "Week 1 of 4 at reduced volume. The cut exercises come back from week 5.");
+});
+
+T("W5 / section 9.13 ruling 3 - the tw-0 line states CONCENTRATION, not a count", function(a){
+  /* THIS TEST IS RED ON PURPOSE AND IS NOT A CARRIED-FORWARD FAILURE. It is
+     the regression test for a copy defect that has been RULED and not yet
+     implemented, written before the fix so the fix is provable - which is
+     the same shape B-38 had, and the opposite of a failure kept alive under
+     a label. It goes green the moment logic.js changes, with no edit here.
+
+     RULED, addendum §9.13 ruling 3 (2026-09-10), superseding the middle line
+     of §9.8 and the second line of §9.12's cycleLine block:
+
+       shipping   N sessions logged. A training week is 3, so week 1 starts
+                  when you get there.
+       ruled      N sessions logged. Week 1 starts when three land in one week.
+
+     The coach amended his own line rather than defending it: the clause
+     states the rule as a COUNT when the rule is about CONCENTRATION. At
+     three logged sessions the count reading collides with the number in
+     front of it - he has done three and is told a training week is three -
+     and it was never the right description even at one. The replacement
+     reads correctly at every count, needs no branch, and says the thing that
+     is actually true of his log: he has the sessions, they are spread out,
+     and concentration is what is missing.
+
+     OWNER: backend, in logic.js `tierLines()`. One string, one branch, no
+     new state, and no interpolation of TRAINING_WEEK_MIN - the ruled copy
+     spells "three" as a word inside a sentence about one week.
+     WHEN IT LANDS: flip TW0LINE() (defined above the D1 cycleLine test) to
+     the ruled form. Every other assertion in this file follows from there. */
+  function line(n){
+    var s = [], i;
+    for (i = 0; i < n; i++) s.push(TSESS(P.dateAdd("2026-08-04", i * 7), i + 1, "d1a", SETS(100, 5)));
+    return P.cycleLine({ sessions: s, state: STORE(), program: PROG, todayStr: TODAY }).text;
+  }
+  a.eq(line(3), TW0RULED(3), "the case that made the wording visibly wrong");
+  a.eq(line(1), TW0RULED(1), "and it has to read correctly at one, where the old line also failed");
+  a.eq(line(2), TW0RULED(2));
+  a.eq(line(5), TW0RULED(5), "and at five, where the old line reads worst");
+  a.eq(line(3).indexOf("A training week is 3"), -1, "the struck clause must be gone, not reworded around");
+  a.eq(line(3).indexOf("Week 0"), -1, "and the §9.8 constraint still holds");
 });
 
 /* ------------------------------------------------- section 9.3: Rule V1a */
@@ -7059,25 +7500,19 @@ T("W5 / X1 - the EXTRA badge keys off completed-set ORDINAL, never the row index
   a.eq(P.extraSets(SETS(100, 5, 100, 5, 100, 5, 90, 5), { s: 3, k: "power" }).idle, false,
     "on a power slot the app does not suggest a fourth hard set");
   a.eq(P.extraSets(SETS(60, 10), ex).idle, true, "on hyp it does");
-  /* OPEN QUESTION, PINNED AS OBSERVED, NOT RULED ON HERE.
-     Since fae1fd7 the n === 1 head clause is SHARED across all three roles,
-     so speed inherits "Set 7 is past the prescription." where this line used
-     to read "1 set past the prescription." Backend's reason for sharing it:
-     two different sentences for the same fact, split by role, is the "one
-     concept, two names" defect the coach rejected twice.
-
-     THE QUESTION PUT TO strength-coach: should the ordinal head clause be
-     POWER-ONLY? The concreteness argument in section 9.11 was made about the
-     power line, where "the verdict reads the first 3" needs a specific row to
-     contrast with. On speed the tail is about fatigue, not about the verdict,
-     so naming a row may be precision nobody asked for.
-
-     This assertion pins WHAT THE APP SAYS TODAY so the ruling, whichever way
-     it goes, lands as a deliberate edit here. Do not "correct" it to the
-     counted form without the ruling. */
+  /* RULED AND CLOSED - addendum §9.12 ruling 2 CONFIRMS the shared head, so
+     the "coach ruling outstanding" note that used to sit here is retired.
+     The n === 1 head clause is shared across all three roles; the coach named
+     the speed line the best of the three ("naming set 7 and then restating
+     that the prescription is six does the work in six words"). Backend's
+     reason stands as recorded: two sentences for one fact, split by role, is
+     the "one concept, two names" defect rejected in §9.2 and §9.11.
+     The behaviour never changed - only the question closed - so the
+     assertion is untouched and only the account of it is corrected. Do not
+     split the head back out per role. */
   a.eq(P.extraSets(SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3), { s: 6, k: "speed" }).line,
     "Set 7 is past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.",
-    "OBSERVED: the ordinal head is shared across roles. Coach ruling outstanding on power-only.");
+    "the ordinal head is shared across all three roles - confirmed, §9.12 ruling 2");
   a.eq(P.extraSets(SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3), { s: 6, k: "speed" }).line,
     "2 sets past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.",
     "the plural speed form is X1's counted line and is not in question either way");
@@ -7240,51 +7675,95 @@ T("W5 / X1 - s === 1 with one extra, and the default object on s < 1 or a garbag
     "ex.s is floored, so 3.7 is a 3-set prescription");
 });
 
-T("W5 / OPEN - extraSets and incrementLine still fall through to HYPERTROPHY copy on an unrecognised k", function(a){
-  /* THE SAME SHAPE AS THE VERDICT DEFECT JUST FIXED, ONE LAYER DOWN, PINNED
-     AS OBSERVED AND ROUTED, NOT FIXED HERE.
+T("W5 / section 9.12 - extraSets and incrementLine GO SILENT on an unrecognised k (was red, fixed in 42e6f96)", function(a){
+  /* THIS TEST WAS AN OPEN PIN AND IS NOW THE RULING. It used to assert the
+     defect as OBSERVED, because §9.11's rider spoke only about VERDICTS and
+     QA does not invent coaching. §9.12 ruling 1 closed it: the rider extends
+     to both, both go silent, and the fact moves to the verdict slot.
 
-     verdict() now refuses an unrecognised `k` outright (the role gate). These
-     two do not: both are written as "if power -> ... ; else -> hyp copy", so
-     k:"tempo", k:"", k:7 and a MISSING k all receive hypertrophy sentences.
+     WHAT IT USED TO PIN, kept because a fix is only provable against the
+     thing it fixed - both helpers were "if power -> ... ; else -> hyp copy",
+     so k:"tempo", k:"", k:7 and a MISSING k all received hypertrophy
+     sentences:
        extraSets     -> "Counted in today's volume, not in the verdict."
        incrementLine -> "If 2.5 kg is not available, add reps first, then jump."
-     Neither is reachable alongside a verdict any more, because there is no
-     verdict. Both are reachable by a view that calls them directly, which is
-     exactly how the verdict defect would have shipped.
+     Both strings are asserted ABSENT below so the fall-through cannot come
+     back the way it arrived.
 
-     WHY IT IS OPEN RATHER THAN A BUG REPORT WITH A FIX ATTACHED: the coach's
-     rider in section 9.11 spoke about VERDICTS. Backend implemented it as
-     written and flagged the rest, which is the correct order. The question
-     for strength-coach is whether "an app that cannot tell which rule applies
-     must not run one" extends to the two copy helpers - i.e. whether
-     extraSets should return line:"" and incrementLine "" on an unrecognised k.
+     THE COACH'S REASONING, because it is what a future edit has to argue
+     against. incrementLine is LOAD ADVICE - "add reps up to N first, then
+     jump" prescribes how to progress - and it already depends on `k` (I2
+     excludes bb and speed), so with `k` unreadable the exclusion cannot even
+     be evaluated. extraSets looked exempt because it states a fact, but every
+     variant of the fact is false here: "Counted in today's volume, not in the
+     verdict" implies a verdict exists, "The verdict reads the first 3" names
+     one that can never fire, and there is no honest fourth variant because
+     the true sentence is not about the extra set at all - it is about the
+     exercise. So it goes silent and verdict() says the true thing instead.
 
-     Note the ONE thing that already refuses: `idle` is `k === "hyp"`, strictly,
-     so the standing "add sets freely" invitation IS withheld. The copy and the
-     flag disagree about the same unknown k, inside the same returned object. */
+     THE ARGUMENT THAT SETTLED IT, worth keeping as a shape and not just an
+     instance: `idle` was already `k === "hyp"` strictly, so the standing "add
+     sets freely" invitation was withheld while `line` still printed the
+     hypertrophy sentence. The copy and the flag disagreed about the same
+     unknown k inside one returned object. Any future per-role branch written
+     as `if power ... else <hyp>` reintroduces exactly that. */
   var C = { w: 60, r: 10 };
-  var unk = P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12, k: "tempo" });
-  a.eq(unk.line, "Set 4 is past the prescription. Counted in today's volume, not in the verdict.",
-    "OBSERVED: hyp copy on a k nobody recognises. Coach ruling outstanding.");
-  a.eq(unk.idle, false, "but `idle` DOES refuse it - the two halves of one object disagree");
-  var noK = P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12 });
-  a.eq(noK.line, "Set 4 is past the prescription. Counted in today's volume, not in the verdict.",
-    "OBSERVED: an ABSENT k does the same");
-  a.eq(noK.idle, false);
+  var OLD_X = "Set 4 is past the prescription. Counted in today's volume, not in the verdict.";
+  var OLD_I = "If 2.5 kg is not available, add reps first, then jump.";
+  function silent(o, rows, msg){
+    a.eq(o.line, "", msg + ": no line");
+    a.eq(o.count, 0, msg + ": no count - a count with no sentence is a number nobody can read");
+    a.eq(o.idle, false, msg + ": no standing invitation");
+    a.eq(o.flags.length, rows, msg + ": ONE FLAG PER ROW still, so a view can zip flags to rows");
+    for (var i = 0; i < o.flags.length; i++) {
+      a.eq(o.flags[i], false, msg + ": row " + (i + 1) + " carries no badge");
+    }
+    a.ne(o.line, OLD_X, msg + ": the hypertrophy sentence must not come back");
+  }
+  silent(P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12, k: "tempo" }), 4, "k:\"tempo\"");
+  silent(P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12 }), 4, "an ABSENT k");
+  silent(P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12, k: "" }), 4, "k:\"\"");
+  silent(P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12, k: 7 }), 4, "k:7");
+  /* THE BADGE GOES SILENT TOO, NOT JUST THE COPY - backend's own call, and it
+     is the reading that fixes the contradiction rather than relocating it.
+     `flags` claims "this row cannot affect the verdict", which is a claim
+     ABOUT a verdict; with no verdict possible the claim is true of every row,
+     so badging some is arbitrary, and a badge with no explanatory line is a
+     mark with no meaning. Eight rows on a 3-set slot: still eight flags, all
+     false, so no view can render a badge it cannot explain. */
+  var many = P.extraSets([C, C, C, C, C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12, k: "tempo" });
+  a.eq(many.flags.length, 8, "flag length EQUALS row count, always - a view zips them");
+  a.eq(many.flags.join(","), "false,false,false,false,false,false,false,false",
+    "and no row is badged, because a badge with no line is a mark with no meaning");
+  a.eq(many.line, "", "which is the same object saying it twice, consistently");
 
-  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "machine" }),
-    "If 2.5 kg is not available, add reps first, then jump.",
-    "OBSERVED: hyp's increment line on an unrecognised k. Coach ruling outstanding.");
-  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, implement: "machine" }),
-    "If 2.5 kg is not available, add reps first, then jump.", "OBSERVED: and on an absent k");
-  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: 7, implement: "db" }),
-    "If 2.5 kg per DB is not available, add reps first, then jump.", "OBSERVED: and on a numeric k");
-  /* The two that are right: power gets its own line, speed is silent. */
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "machine" }), "",
+    "no load advice on a k nobody recognises");
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, implement: "machine" }), "",
+    "nor on an absent k");
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: 7, implement: "db" }), "",
+    "nor on a numeric k - this used to print the per-DB form");
+  a.ne(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "machine" }), OLD_I,
+    "the hypertrophy increment line must not come back");
+  /* The three that are right: power gets its own line, hyp gets the plain
+     one, speed is refused BY NAME - a role the app recognises and declines is
+     a different fact from a role it cannot read, which is why they are two
+     clauses in the code and two assertions here. */
   a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "power", implement: "machine" }),
     "If 2.5 kg is not available, add reps up to 14 first, then jump.");
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine" }), OLD_I,
+    "the hyp line is not deleted - it is withheld from ks that are not hyp");
   a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "speed", implement: "machine" }), "",
     "speed is the one role incrementLine refuses by name");
+  /* AND THE FACT IS NOT LOST. Both helpers gave it up; the verdict slot picks
+     it up. If this assertion ever fails alongside the silences above, the app
+     has stopped explaining itself entirely - which is the failure mode the
+     ruling exists to avoid, and it would otherwise look like a pass. */
+  a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "machine" },
+                   sets: SETS(60, 10, 60, 10, 60, 10, 60, 10) }).absentLine,
+    "No role set for this exercise, so the app cannot advise on it. " +
+    "Set it to power, hypertrophy or speed in the plan.",
+    "one fact, one place - and the place is the slot that owns it");
 });
 
 /* ------------------------------------------------ Rule S1a: the 21-day line */
@@ -7577,16 +8056,27 @@ contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Dele
 
 /* ---------------------------------------------------- WO-004 W5 (S26) --- */
 /* --- three CLOSED in fae1fd7, kept as the record of what was fixed --- */
-contract("<b>CLOSED (fae1fd7) &mdash; an unrecognised <code>k</code> fired a hypertrophy verdict.</b> " +
-  "&sect;9.11's rider is <em>\"if <code>k</code> is unrecognised, no verdict may fire for that exercise. " +
-  "An app that cannot tell which rule applies must not run one.\"</em> <code>verdict()</code> used to " +
-  "return null for <code>speed</code>, route <code>power</code> to P1 and fall THROUGH to H1 for " +
-  "everything else, so <code>k:\"tempo\"</code> got <code>H1.4d</code> and a MISSING <code>k</code> got " +
-  "<code>H1.3a</code>. Now gated on <code>PLAN_KINDS</code>, <b>above</b> the deload branch, so DL1 " +
-  "cannot fire on an unclassified exercise either. <b>Verified:</b> S26 <em>an unrecognised k fires NO " +
-  "verdict</em> and <em>the role gate holds for every shape of k, deloaded or not</em> &mdash; ten " +
-  "<code>k</code> shapes &times; two deload states, all null, with recognised-<code>k</code> controls " +
-  "for P1.4, H1.4d and DL1 so the gate cannot be passing by breaking the rules behind it.");
+contract("<b>CLOSED (fae1fd7, then 42e6f96) &mdash; an unrecognised <code>k</code> fired a hypertrophy " +
+  "verdict; it now returns the ABSENT object.</b> &sect;9.11's rider is <em>\"if <code>k</code> is " +
+  "unrecognised, no verdict may fire for that exercise. An app that cannot tell which rule applies must " +
+  "not run one.\"</em> <code>verdict()</code> used to return null for <code>speed</code>, route " +
+  "<code>power</code> to P1 and fall THROUGH to H1 for everything else, so <code>k:\"tempo\"</code> got " +
+  "<code>H1.4d</code> and a MISSING <code>k</code> got <code>H1.3a</code>. Now gated on " +
+  "<code>PLAN_KINDS</code>, <b>above</b> the deload branch, so DL1 cannot fire on an unclassified " +
+  "exercise either. <b>&sect;9.12 ruling 1 then gave the refusal words:</b> the gate returns " +
+  "<code>{t:\"\", x:\"\", x2:\"\", rule:null, absent:true, absentLine:\"No role set for this " +
+  "exercise&hellip;\"}</code>, <b>not <code>null</code></b>. <b>Verified:</b> S26 <em>an unrecognised k " +
+  "fires NO verdict and returns the ABSENT object</em> and <em>the role gate holds for every shape of " +
+  "k, deloaded or not</em> &mdash; ten <code>k</code> shapes &times; two deload states plus the two " +
+  "absent-<code>k</code> rows, each asserting <code>.absent</code> AND <code>rule === null</code> AND " +
+  "<code>t + x + x2 === \"\"</code>, with recognised-<code>k</code> controls for P1.4, H1.4d and DL1 so " +
+  "the gate cannot be passing by breaking the rules behind it.");
+contract("<b>CLOSED (42e6f96) &mdash; <code>extraSets</code> and <code>incrementLine</code> fell through " +
+  "to HYPERTROPHY copy on an unrecognised <code>k</code>.</b> This was QA's open pin; &sect;9.12 ruling 1 " +
+  "extended the rider to both. Both are silent now, and the fact moved to the slot that owns it. " +
+  "<b>Verified:</b> S26 <em>extraSets and incrementLine GO SILENT on an unrecognised k</em>, which also " +
+  "asserts both old strings are absent and that <code>verdict().absentLine</code> still carries the " +
+  "fact &mdash; so \"everything went quiet\" cannot pass as a fix.");
 contract("<b>CLOSED (fae1fd7) &mdash; X1's line at <code>n === 1</code> counted instead of naming.</b> " +
   "It now reads <code>Set 4 is past the prescription. The verdict reads the first 3.</code>; plural rows " +
   "keep X1's counted form. <b>Verified:</b> S26 <em>at n === 1 the line names the set, not the count</em>, " +
@@ -7598,29 +8088,70 @@ contract("<b>CLOSED (fae1fd7) &mdash; the schema-3 migration pass labelled its o
   "which asserts the literal <code>Schema 3:</code> AND that the note never names " +
   "<code>P.SCHEMA_VERSION</code>, so the next bump re-detects the same class of drift.");
 
-/* --- two OPEN, pinned as observed, named here so the ruling lands deliberately --- */
-contract("<b>OPEN &mdash; should X1's ordinal head clause be POWER-ONLY? <code>strength-coach</code>.</b> " +
-  "The <code>n === 1</code> head is shared across all three roles, so speed now reads <code>Set 7 is " +
-  "past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.</code> Backend's reason " +
-  "for sharing it: two sentences for one fact, split by role, is the \"one concept, two names\" defect " +
-  "the coach rejected twice. The counter-argument: &sect;9.11's concreteness point was made about the " +
-  "POWER line, where the tail (<em>the verdict reads the first 3</em>) needs a specific row to contrast " +
-  "with; on speed the tail is about fatigue and naming a row may be precision nobody asked for. " +
-  "<b>QA is not guessing.</b> The observed speed string is pinned in S26's <em>the EXTRA badge keys off " +
-  "completed-set ORDINAL</em> with the question named in the test, so whichever way it is ruled is a " +
-  "deliberate edit to one assertion.");
-contract("<b>OPEN &mdash; <code>extraSets</code> and <code>incrementLine</code> still fall through to " +
-  "HYPERTROPHY copy on an unrecognised <code>k</code>. <code>strength-coach</code>.</b> The same shape " +
-  "as the verdict defect just fixed, one layer down. Both are <code>if power &hellip; else hyp</code>, so " +
-  "<code>k:\"tempo\"</code>, <code>k:\"\"</code>, <code>k:7</code> and an absent <code>k</code> all get " +
-  "<code>Counted in today's volume, not in the verdict.</code> and <code>If 2.5 kg is not available, add " +
-  "reps first, then jump.</code> Neither is reachable alongside a verdict any more &mdash; there is no " +
-  "verdict &mdash; but both are reachable by a view calling them directly, which is exactly how the " +
-  "verdict defect would have shipped. The rider spoke only about verdicts; backend implemented it as " +
-  "written and flagged this, which is the right order. One thing already refuses: <code>idle</code> is " +
-  "<code>k === \"hyp\"</code> strictly, so the copy and the flag disagree about the same unknown " +
-  "<code>k</code> inside one returned object. Pinned in S26 <em>OPEN &mdash; extraSets and incrementLine " +
-  "still fall through</em>.");
+contract("<b>CLOSED (&sect;9.12 ruling 2) &mdash; X1's ordinal head clause is SHARED, not power-only.</b> " +
+  "QA's open pin asked whether <code>Set 7 is past the prescription.</code> should be power-only, since " +
+  "&sect;9.11's concreteness argument was made about the power tail. The coach confirmed the shared " +
+  "clause and called the speed line the best of the three. <b>No behaviour changed</b> &mdash; the " +
+  "assertion in S26's <em>the EXTRA badge keys off completed-set ORDINAL</em> is untouched and its " +
+  "\"ruling outstanding\" comment has been retired, because a comment that lies is worse than no " +
+  "comment.");
+
+/* --- backend's three calls under the ruling: ruled on 2026-09-10 in §9.13 --- */
+contract("<b>CONFIRMED (&sect;9.13 ruling 1) &mdash; the badge goes silent too, not just the line.</b> " +
+  "&sect;9.12 said <em>extraSets goes silent</em> without literally addressing <code>flags</code>; " +
+  "backend read it as covering the badge and the coach confirmed, declining the counter-argument on the " +
+  "grounds that it asked for a definition change. &sect;8.3's block says the badge <b>means</b> \"this " +
+  "row cannot affect the verdict\", and that verdict-relative meaning is the whole reason completed-set " +
+  "ordinal beat row index there; with no verdict possible the claim is vacuous. It adds nothing as a " +
+  "layout fact either &mdash; the target line already says <code>3 &times; 8&ndash;12</code> and the row " +
+  "is already numbered. <b>Asserted:</b> S26 <em>extraSets and incrementLine GO SILENT</em> pins " +
+  "<code>flags.length === rows</code> at 4 and at 8 rows so a view can still zip flags to rows, all " +
+  "<code>false</code>, alongside <code>line:\"\"</code> &mdash; so no view can render a badge it cannot " +
+  "explain.");
+contract("<b>CONFIRMED (&sect;9.13 ruling 2) &mdash; &sect;9.12's day-one line replaces <code>No " +
+  "sessions logged yet.</code> on EVERY plan, including no-tier plans.</b> \"That is the reach I " +
+  "intended\": whether a plan phases accessories in has nothing to do with where the programme begins, " +
+  "and V1's ABSENT copy lives on the plan screen, not in <code>cycleLine</code>. This also closes the " +
+  "earlier question about &sect;9.8 reading as unconditional &mdash; it now is. Zero sessions prints " +
+  "<code>No sessions logged. Start with Upper power.</code> on the PHAT plan, on a copied plan and on a " +
+  "plan with no volume tier alike; the old string survives <b>only</b> when the plan cannot name a first " +
+  "day (<code>days: []</code>, an empty or whitespace <code>days[0].name</code>, a non-object day). " +
+  "Pinned in S26 <em>the day-one line reads the plan's first day, and falls back when it cannot</em>, " +
+  "which also proves it never scans forward to day two and never prints <code>Start with .</code> or " +
+  "<code>undefined</code>.");
+contract("<b>RULED AND NOT YET IMPLEMENTED &mdash; the one RED test on this page. <code>backend</code>, " +
+  "<code>logic.js</code> &rarr; <code>tierLines()</code>.</b> &sect;9.13 ruling 3 struck the coach's own " +
+  "wording: <code>A training week is 3</code> states the rule as a <b>count</b> where the rule is about " +
+  "<b>concentration</b>, which collides with the number in front of it at three logged sessions and was " +
+  "never right at one. Replacement, superseding &sect;9.8's middle line and &sect;9.12's: <code>3 " +
+  "sessions logged. Week 1 starts when three land in one week.</code> The app still ships the struck " +
+  "line, so S26 <em>section 9.13 ruling 3 &mdash; the tw-0 line states CONCENTRATION, not a count</em> " +
+  "<b>fails today, on purpose, written before the fix so the fix is provable</b> &mdash; the same shape " +
+  "as B-38, and the opposite of a failure kept alive under a label. Every other assertion of that " +
+  "sentence in this file reads <code>TW0LINE()</code>, defined above the D1 cycleLine test: change that " +
+  "one function when logic.js changes and the red goes green with no other edit. <b>The arithmetic is " +
+  "not in question</b> &mdash; one session a week for three weeks IS three sessions and zero training " +
+  "weeks (Rule TW1), and the packed-week control in the neighbouring test proves TW1 is counting and not " +
+  "stuck.");
+contract("<b>OPEN &mdash; a session that exists but does not COUNT still prints <code>No sessions " +
+  "logged.</code> <code>strength-coach</code> / <code>ux-designer</code>.</b> &sect;9.4 counts distinct " +
+  "dates with a completed set, so a note-only save, a future-dated save and an undated save each leave " +
+  "<code>nSess === 0</code> with <code>hasSessions === true</code>, and Home tells him nothing is logged " +
+  "over a log that visibly holds a saved session. <b>Nothing is lost</b> &mdash; the note is stored and " +
+  "shown (B-33) &mdash; and the two slots disagree, because <code>volumeTier.tierLine</code> keys off " +
+  "<code>sessions.length</code> and already says the reduced-volume block is running. A copy question, " +
+  "not a data question, and a fourth sentence would be new user-facing copy, so it is the coach's call " +
+  "and not QA's. Pinned in S26 <em>sessions that exist but do not COUNT still print the day-one " +
+  "line</em>, both slots in one test.");
+contract("<b>NOTED &mdash; <code>verdict()</code>'s success path does not set <code>absent:false</code>, " +
+  "unlike every other engine. P2, backend.</b> <code>volumeTier</code>, <code>stallReport</code>, " +
+  "<code>speedLoad</code> and <code>cycleLine</code> run their happy path through " +
+  "<code>notAbsent()</code>, so <code>absent</code> is present and <code>false</code>; a real verdict " +
+  "has no <code>absent</code> property at all. Harmless &mdash; <code>if (v.absent)</code> reads the " +
+  "same either way &mdash; but it is one more shape a caller has to know, and a <code>hasOwnProperty</code> " +
+  "check would behave differently. S26 asserts <code>real.absent === true</code> is <code>false</code> " +
+  "rather than <code>absent === false</code>, deliberately, so the suite does not freeze the asymmetry " +
+  "in place if backend chooses to normalise it.");
 
 /* --- one judgement call by backend, tested with both readings named --- */
 contract("<b>JUDGEMENT CALL, DOCUMENTED &mdash; <code>extraSets</code>' <code>Set N</code> is the ROW " +
@@ -7641,15 +8172,17 @@ contract("<b>WO-004 W5 &mdash; <code>verdict({epochChanged:false})</code> can re
   "against 1,500 kg.</code> back. Non-Booleans are correctly ignored. <b>The safe call is to pass " +
   "nothing.</b> Pinned in S26 so that a view which does pass it is doing so on purpose; W6/W7 " +
   "verification item.");
-contract("<b>WO-004 W5 &mdash; &sect;9.8's zero-session line only exists on a plan with no volume " +
-  "tier.</b> <code>cycleLine</code> renders <code>No sessions logged yet.</code> and <code>2 sessions " +
-  "logged. A training week is 3&hellip;</code> through the <code>!tier</code> branch. On PHAT, which HAS " +
-  "a tier, zero sessions still yields an empty <code>text</code> and one-to-two sessions yield " +
-  "<code>Reduced volume until you have logged four weeks of three or more sessions.</code> Neither prints " +
-  "<code>Week 0</code>, so the hard constraint holds and nothing is wrong on screen &mdash; but &sect;9.8 " +
-  "reads as unconditional and the copy he will actually see on day one is the reduced-volume line, not " +
-  "the count. <b>One line from <code>strength-coach</code> confirming that is intended.</b> Pinned in S26 " +
-  "on the branch where the copy lives.");
+contract("<b>SUPERSEDED (42e6f96) &mdash; &sect;9.8's zero-session line used to exist only on a plan " +
+  "with no volume tier.</b> The old entry here recorded that on PHAT, which HAS a tier, day one printed " +
+  "an empty <code>text</code> and one-to-two sessions printed <code>Reduced volume until you have logged " +
+  "four weeks&hellip;</code>, and asked the coach whether that was intended. <b>It was not:</b> " +
+  "&sect;9.12 ruling 3 made the count line win over the reduced-volume line at " +
+  "<code>trainingWeeks === 0</code> on every plan, and gave day one its own sentence. The " +
+  "reduced-volume fact did not disappear &mdash; it is <code>volumeTier.tierLine</code>'s, on the day " +
+  "screen, where it explains why the cut exercises are not rendered. <b>Two slots, two sentences,</b> " +
+  "pinned in S26 <em>at trainingWeeks 0 cycleLine and volumeTier are two slots, two sentences</em>, " +
+  "with a deload-precedence test proving the count line cannot swallow the one row that changes what he " +
+  "does today.");
 
 /* ============================================================ render */
 (function render(){
@@ -7764,6 +8297,31 @@ contract("<b>WO-004 W5 &mdash; &sect;9.8's zero-session line only exists on a pl
     "surface at all &mdash; one <code>prevSet</code>, one <code>line</code>, asserted in S26 &mdash; but " +
     "the design's ghost reads <code>prev.sets[i]</code> directly, so suppressing it is the view's job and " +
     "is a W6/W7 acceptance criterion.</p>" +
+    "<p><b>WO-004 W5 / addendum &sect;9.12 &mdash; the refusal has no view yet, and three of its four " +
+    "properties are the view's to honour.</b> <code>verdict()</code> returns an ABSENT-shaped object on " +
+    "an unrecognised <code>k</code>: <code>{t:\"\", x:\"\", x2:\"\", rule:null, absent:true, " +
+    "absentLines:[&hellip;], absentLine:\"&hellip;\"}</code>. The shape is fully asserted in S26. What " +
+    "this page cannot see, and what W6/W7 must be verified against one by one:<br>" +
+    "<b>(1) The caller reads <code>.absent</code>, never truthiness.</b> The object is TRUTHY. " +
+    "<code>if (v) render(v.x)</code> renders an empty slot &mdash; which is why <code>t</code>, " +
+    "<code>x</code> and <code>x2</code> are empty rather than absent, so the failure mode is silence and " +
+    "never the string <code>undefined</code> &mdash; but he is then never told why the card has nothing " +
+    "to say.<br>" +
+    "<b>(2) It is styled as a REFUSAL, not as advice</b> (<code>wo-003-session-screen.md</code> " +
+    "&sect;0.1 #6). No up/down arrow, no verdict colour, no rule name. The engine enforces half of this " +
+    "by refusing to put the sentence in <code>x</code>; the other half is CSS.<br>" +
+    "<b>(3) The slot renders the sentence rather than collapsing</b> (&sect;0.1 #3: silence must look " +
+    "deliberate and say so in words). An empty card next to a filled one reads as a bug, and this is the " +
+    "only place the fact now lives &mdash; <code>extraSets</code> and <code>incrementLine</code> both " +
+    "gave it up under the same ruling. Drop the slot and the app is silently unable to advise on an " +
+    "exercise and never says so.<br>" +
+    "<b>(4) <code>extraSets().flags</code> is still one-per-row and all false here.</b> A view that " +
+    "zips flags to rows keeps working; a view that badges from anything else could mark a row it has no " +
+    "sentence to explain. Asserted at 4 and 8 rows in S26, but only the view can be checked for " +
+    "actually zipping.<br>" +
+    "None of this is reachable today: no plan editor means no exercise without a <code>k</code>, so the " +
+    "refusal is unreachable from the UI and becomes reachable exactly when W15 or the WO-002 importer " +
+    "lands. <b>It is a W6/W7 acceptance criterion, not a bug to hunt now.</b></p>" +
     "<p><b>Where the engine coverage stops: the render boundary.</b> Every rule below is asserted as a " +
     "STRING and a shape coming out of <code>PHAT</code>. Whether that string reaches the screen - the " +
     "Weight tab (W8), the Trend tab (W10), the speed card (W13), the volume-tier UI (W15), the pain notice " +
