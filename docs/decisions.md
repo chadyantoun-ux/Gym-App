@@ -962,3 +962,42 @@ mine to do:** `extraSets` gives an unrecognised `k` the hypertrophy tail (`Count
 not in the verdict.`), and `incrementLine` gives it the hypertrophy increment line. Both are now
 unreachable alongside a verdict, since there is no verdict; both are reachable by a view that calls
 them directly. Flagged to the coach as the next layer of the same question.
+
+### 2026-09-10 — The rider extends, and the honest sentence is about the exercise, not the set
+`incrementLine` was the easy half: it is load advice, and an app that cannot classify an exercise must
+not prescribe how to load it. It also **mechanically cannot run** — I2's rule excludes `bb` and
+`speed`, so it already depends on `k`; with `k` unrecognised the exclusion cannot be evaluated.
+`extraSets` looked different — it states a fact rather than giving advice, and *did that count?*
+deserves an answer. But **all three variants are false**: `not in the verdict` implies a verdict
+exists, `The verdict reads the first 3` names one that will never fire.
+**The reframe:** there is no honest fourth variant, because the true sentence is not about the extra
+set at all — it is about the exercise. So the fact moves to the slot that owns it:
+`No role set for this exercise, so the app cannot advise on it. Set it to power, hypertrophy or speed
+in the plan.` Same ABSENT shape as §8.4.
+**Worth keeping as a method:** when every available phrasing of a fact is false, the fact is in the
+wrong slot.
+
+### 2026-09-10 — Two rules, one row, and neither may be "fixed" to match the other
+The extra-set copy names the **row number**; the EXTRA badge keys off the **completed-set ordinal**.
+They look contradictory and are not — they govern different things and point at the same physical row.
+§8.3 decides *which rows carry the badge* (completed-set ordinal, because the badge is a claim about
+completed sets). §9.12 decides *what number the copy prints* (row number, because the copy must name
+something he can point at). On rows 1/3/4/5 filled: row 5 is the fourth completed set, carries the
+badge, is labelled 5 on screen, and the copy says `Set 5`. Printing `Set 4` would relocate the
+prototype's lie rather than fix it.
+**Flagged by the coach as the likeliest regression here: do not "fix" either to match the other.**
+A comment is wanted at both sites.
+Also confirmed: the head clause is **shared across all three roles**. One factual clause preceding
+three role-specific tails is more consistent, not less — adjacent to the one-concept-two-names
+principle rather than the same as it.
+
+### 2026-09-10 — The first sentence the app ever says points at a session, not at itself
+On PHAT with zero sessions, `cycleLine` yielded `text: ""`. An empty string is the wrong first thing an
+app says, and this one has a specific reason not to be vague — CLAUDE.md §8's standing diagnosis is
+that the training is the bottleneck, not the tooling. So:
+`No sessions logged. Start with Upper power.`
+Read from the first day of the **active plan**, so it needs no PHAT branch and makes no claim about the
+calendar. At one to two sessions the **count line wins over the reduced-volume line**: at
+`trainingWeeks === 0` the week count is the number that looks broken, and the count line is the one
+that explains it — the same job `Week 5 by the calendar, week 3 of real training` does at the other
+boundary.

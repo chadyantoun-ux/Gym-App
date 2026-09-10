@@ -2782,3 +2782,91 @@ is flag 1 in §8.7, and "one line now, never clean again once there is history" 
 of it. Give him the trade in one sentence: a glute-ham raise is the better exercise if he can already
 do controlled sets of ten; the lying curl is the one that progresses in 5 kg steps and is in every gym.
 `[Opinion]`, and it is his call, not mine.
+
+---
+
+## 9.12 The unclassified-`k` rider, at its edges
+
+**Added 2026-09-10.**
+
+### 1. The rider extends to both. **Both go silent, and the verdict slot explains why.** `[Certain]`
+
+`incrementLine` is the clearer of the two: **it is load advice.** *"If 2.5 kg is not available, add
+reps up to N first, then jump"* is a prescription for how to progress, and an app that cannot classify
+the exercise must not prescribe how to load it. There is also a mechanical reason it cannot run —
+§I2's rule is that `bb` and `k:"speed"` get **no** line at all, so I2 already depends on `k`. With `k`
+unrecognised the exclusion cannot be evaluated, so the only honest output is nothing.
+
+`extraSets` looked different to me at first, because it is a statement of fact rather than advice —
+*did that set count* is a fair question and silence is a poor answer to it. But every one of its three
+variants is false here. `Counted in today's volume, not in the verdict` implies a verdict exists;
+`The verdict reads the first 3` names one that will never fire. **There is no honest fourth variant,
+because the true sentence is not about the extra set at all — it is about the exercise.** So it goes
+silent too, and the fact moves to the slot that owns it.
+
+```
+Output copy, verdict slot, k not in PLAN_KINDS:
+  No role set for this exercise, so the app cannot advise on it. Set it to power, hypertrophy or
+  speed in the plan.
+```
+
+That satisfies `wo-003-session-screen.md` §0.1 #3 — silence looks deliberate and the slot says so in
+words — and it is the same ABSENT shape as §8.4: name the missing declaration, say what switches the
+feature on, never guess. One fact, one place, and the fact is "this exercise is unclassified", not
+"your fourth set did or did not count".
+
+### 2. Shared head clause: **confirm.** Row number: **confirm.** `[Certain]`
+
+The shared head is right, though not quite for the cited reason — §9.2 and §9.11 were about one
+*concept* carrying two *names*, and this is one factual clause preceding three role-specific tails,
+which is more consistent rather than less. Right answer, adjacent principle. All three read cleanly:
+
+```
+Set 4 is past the prescription. The verdict reads the first 3.
+Set 4 is past the prescription. Counted in today's volume, not in the verdict.
+Set 7 is past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.
+```
+
+The speed one lands best of the three — naming set 7 and then restating that the prescription is six
+does the work in six words.
+
+**Row number is correct and it does not contradict §8.3.** The two rules govern different things and
+both point at the same physical row:
+
+- §8.3 governs **which rows carry the badge** — completed-set ordinal, because the badge means "this
+  row cannot affect the verdict", and that is a fact about completed sets.
+- This governs **what number the copy prints** — the row number, because the copy has to name
+  something he can point at, and the rows are numbered on screen.
+
+On rows 1, 3, 4, 5 filled on a 3-set exercise: row 5 is the fourth completed set, it carries the
+badge, the screen labels it 5, and the copy says `Set 5`. Printing `Set 4` there would relocate the
+prototype's lie rather than fix it — which is the argument I made in §8.3, turned the right way round.
+**Do not "fix" either one to match the other.** That is the likeliest future regression in this area,
+so it is worth a comment at both sites.
+
+The plural stays a count of extras (`2 sets past the prescription`) rather than a row name. Consistent:
+the singular names a row, the plural counts completed extras, and on any log they agree about which
+rows are involved.
+
+### 3. Day one: one deliberate line. `[Certain]`
+
+An empty string is the wrong first thing an app ever says, and this one has a specific reason not to
+be vague — the standing diagnosis in CLAUDE.md §8 is that the training is the bottleneck, not the
+tooling. **The first sentence should point at a session, not at the app.**
+
+```
+Output copy, cycleLine:
+  zero sessions:            No sessions logged. Start with Upper power.
+  >= 1 session, tw === 0:   2 sessions logged. A training week is 3, so week 1 starts when you get there.
+  tw >= 1:                  unchanged.
+```
+
+`Upper power` is read from the first day of the active plan, so the line works on any plan with no
+PHAT-specific branch. It is imperative, it names the next action, and it makes no claim about the
+calendar — he can open the app on a Thursday and the programme still begins at day one.
+
+**Precedence at one to two sessions: the count line wins over the reduced-volume line.** Both are
+true, but at `tw === 0` the number that looks broken is the week count, and the count line is the one
+that explains it — the same job TW1's `Week 5 by the calendar, week 3 of real training` does at the
+other boundary. The reduced-volume fact is not urgent and is correct from week 1 onward, where it
+already renders. This confirms §9.8 rather than changing it; only the zero-session string is new.
