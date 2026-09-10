@@ -989,7 +989,7 @@
     var next = clonePlan(plan);
     if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
     var days = planDays(next), hit = null;
-    for (var i = 0; i < days.length; i++) if (str(days[i].id).trim() === id) hit = days[i];
+    for (var i = 0; i < days.length; i++) if (isObj(days[i]) && str(days[i].id).trim() === id) hit = days[i];
     if (!hit) return editFail(plan, [{ scope: "day", id: id, field: "id", reason: "unknown" }]);
     hit.name = nm;
     return { ok: true, plan: next, problems: [] };
@@ -1026,7 +1026,7 @@
     if (!next) return { ok: false, plan: plan, exId: null, lift: null,
                         problems: [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }] };
     var days = planDays(next), day = null, i;
-    for (i = 0; i < days.length; i++) if (str(days[i].id).trim() === did) day = days[i];
+    for (i = 0; i < days.length; i++) if (isObj(days[i]) && str(days[i].id).trim() === did) day = days[i];
     if (!day) return { ok: false, plan: plan, exId: null, lift: null,
                        problems: [{ scope: "day", id: did, field: "id", reason: "unknown" }] };
     if (!Array.isArray(day.ex)) day.ex = [];
@@ -1068,7 +1068,7 @@
     var next = clonePlan(plan);
     if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
     var days = planDays(next), day = null, i;
-    for (i = 0; i < days.length; i++) if (str(days[i].id).trim() === did) day = days[i];
+    for (i = 0; i < days.length; i++) if (isObj(days[i]) && str(days[i].id).trim() === did) day = days[i];
     if (!day || !Array.isArray(day.ex)) return editFail(plan, [{ scope: "day", id: did, field: "id", reason: "unknown" }]);
     var n = day.ex.length;
     if (!isInt(from, 0, n - 1) || !isInt(to, 0, n - 1)) {
@@ -1094,7 +1094,7 @@
     if (!next) return { ok: false, plan: plan, removed: null, problems: [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }] };
     var days = planDays(next);
     for (var i = 0; i < days.length; i++) {
-      var ex = Array.isArray(days[i].ex) ? days[i].ex : [];
+      var ex = (isObj(days[i]) && Array.isArray(days[i].ex)) ? days[i].ex : [];
       for (var j = 0; j < ex.length; j++) {
         if (isObj(ex[j]) && str(ex[j].id).trim() === id) { ex.splice(j, 1); j--; }
       }

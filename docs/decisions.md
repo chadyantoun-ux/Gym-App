@@ -594,3 +594,49 @@ restates a decision procedure that contradicts Rule W1's thresholds: the same tw
 shape as B-06.
 All eight macro numbers approved verbatim, with **the brief's medical caveat required** — the tab
 displays 175 g of fat and currently carries none.
+
+### 2026-09-10 — Schema 4: identity is opaque, `lift` is a second field, and no stored session moves
+`backend-engineer`, WO-004 W2. Three decisions in one, all forced by the same finding: the design
+prototype keys exercises `slug(name) + ":" + kind`, and every engine in `logic.js` reads history by
+exercise id.
+- **The id is opaque, minted once, never derived from a name, never rewritten by a rename or a
+  reorder or a plan copy.** `n` is a display field. A rename that moved the key would orphan an
+  exercise's entire history in silence, which is a P0 (CLAUDE.md §3.3).
+- **`lift` is a separate grouping field, and it is also opaque.** Two ids, one lift: `d1h` and `d5i`
+  are both `l_skull`, so Trend charts one Skull crusher line while `lastFor("d1h")` and
+  `lastFor("d5i")` stay two histories — which they must, because one is 3×6–10 power work and the
+  other 3×12–15 hypertrophy. If a rename rewrote `lift`, the grouping would break on exactly the
+  rename this whole design exists to survive, so it does not. The lift's **display name** is resolved
+  at read time from the plan (`liftName`), so a rename does relabel the trend line.
+- **`lift` is plan data and is never written into a session.** A regrouping is therefore free forever
+  and can never touch a logged number.
+
+**The migration is the smallest one that can honestly claim version 4.** A session gains an *optional*
+`planId`; existing sessions are not stamped, because an absent `planId` **means** the shipped PHAT
+plan and `planIdOf` resolves that at read time. Not one stored session is touched and not one key is
+added to the log store — plans live in their own store, `phat:v1:plans`. All the v4 pass writes is the
+version, so the store stops understating its shape to WO-002's importer and to sync. One boot write,
+the same trade QA accepted for v2 → v3.
+
+**The `decisions.md` trap was avoided by construction, not by care.** The dateBasis pass now gates on
+`V_DATEBASIS`, the four state keys on the new `V_STATEKEYS = 3` (it was `logVer < SCHEMA_VERSION`,
+which bumping to 4 would have re-fired), and the plan pass on `V_PLAN = 4`. Asserted: a v3 store whose
+sessions are marked `dateBasis:"local"` still reads `"local"` after migrating to 4.
+
+**Three shipping tests now fail, and QA owns the fix.** `tests.html` lines 470, 786 and 795 assert the
+literal `3` beside the same assertion against `P.SCHEMA_VERSION`. All three are one-token edits and
+none is structural: 344/347, and the failure message on every one is `expected 3 actual 4`. Nothing
+else in the suite moved — the four-argument `buildSession` still produces a byte-identical session
+string, and a v1 store still gains exactly the six schema-3 keys and no seventh.
+**Rules out:** any identity derived from a name; grouping stored history by `lift`; and any future
+migration pass gated on `SCHEMA_VERSION`.
+
+### 2026-09-10 — A plan copy PRESERVES ids. Only user-created slots mint new ones
+`copyPlan` was the one place it would have been natural to re-mint. It must not: "my version of PHAT"
+is the same programme with the same lifts, and re-minting would orphan every logged set at the exact
+moment he first edits his plan — the B-46 bug arriving by a different door. Only `planId`, `name`,
+`from`, `readOnly` and `createdAt` change.
+Two riders: **`createdAt` is passed in, never read from a clock**, and is `null` when no usable local
+date is supplied — a date nobody chose is a silent wrong number. And **removing an exercise from a
+plan deletes no logged set**: history lives in `session.entries[exId]`, so putting the slot back with
+the same id restores the whole trend. `removeExercise` returns the removed object so an undo can.
