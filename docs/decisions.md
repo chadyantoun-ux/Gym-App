@@ -1001,3 +1001,19 @@ calendar. At one to two sessions the **count line wins over the reduced-volume l
 `trainingWeeks === 0` the week count is the number that looks broken, and the count line is the one
 that explains it — the same job `Week 5 by the calendar, week 3 of real training` does at the other
 boundary.
+
+### 2026-09-10 — The copy and the flag disagreed inside one returned object
+QA found the argument that settles the rider question, and it is better than either side's reasoning.
+`extraSets` returns both a `line` and an `idle` flag. `idle` is `k === "hyp"` **strictly**, so the
+standing "add sets freely" invitation was *already* withheld for an unrecognised `k` — while the `line`
+went on speaking the hypertrophy copy. **One object, one unknown `k`, two contradictory answers.**
+That is the shape to look for when deciding whether a rule extends: not "is this advice or fact", but
+"does anything else in the same return value already treat this input as unclassifiable".
+
+### 2026-09-10 — CORRECTION: a v1 store produces three log notes, not two
+I recorded "two notes" from the v4/v5 migration work. Wrong count, right about schemas. Observed, in
+pass order: the dateBasis backfill (v1 is the only shape with no `dateBasis`), `Schema 3: …`, and
+`Schema 5: …`. The schema-4 note is correctly absent under v4's deliberately un-fixed idiom, which is
+itself pinned by the asymmetry test.
+Both readings — the **schema**-note count and the **total** note count — are now asserted separately,
+so neither can be lost to the other. `logChanged` untouched; the label fix cost no byte and no write.
