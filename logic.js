@@ -728,6 +728,416 @@
     }
   }
 
+  /* ============================================================== advice
+     The verdict engine. Every rule below is written by strength-coach and
+     cited by id: P1 (audit §3), H1 (audit §9), S1 (audit §10), and the
+     addendum's Z1/Z2/Z3 (zero load), I2 (the increment line) and G1 (the
+     too-light step). Where a copy line and a worked example disagree, the
+     WORKED EXAMPLE is what ships (WO-003 Decision 5).
+
+     Nothing here reads the DOM, S, or storage, and nothing mutates its
+     arguments: `sets` and `prev` go in as references and come out untouched,
+     because they ARE the draft and the stored session (B-20, W5). */
+
+  /* Rule Z1 — the completed-set test, as numbers.
+     completed(s) = r >= 1 (integer) AND w a finite number >= 0.
+     Returns {w, r} as NUMBERS, or null.
+
+     Blankness is decided on the RAW STRING, before any coercion, by
+     parseWeight: `+"" === 0` in JavaScript, and reading a forgotten weight
+     field as a 0 kg bodyweight set is B-21 reintroduced one layer up
+     (strength-coach, addendum Z1, [Certain]). w === 0 IS completed — a rack
+     chin is real data. */
+  function numSet(x) {
+    if (!isObj(x)) return null;
+    var pw = parseWeight(x.w), pr = parseReps(x.r);
+    if (!pw.ok || !pr.ok) return null;
+    return { w: pw.value, r: pr.value };
+  }
+
+  /* Every completed set, in logged order, as a NEW array of new objects.
+     Nothing that comes out of here aliases the caller's data. */
+  function completedSets(sets) {
+    if (!Array.isArray(sets)) return [];
+    var out = [];
+    for (var i = 0; i < sets.length; i++) {
+      var n = numSet(sets[i]);
+      if (n) out.push(n);
+    }
+    return out;
+  }
+
+  /* Tonnage over the COMPLETED sets only: sum of w*r. A malformed row
+     contributes nothing, and a 0 kg set contributes 0 — which is why Rule Z3
+     bans this number as a comparison basis when either side is zero-load. */
+  function vol(sets) {
+    var C = completedSets(sets), t = 0;
+    for (var i = 0; i < C.length; i++) t += C[i].w * C[i].r;
+    return t;
+  }
+
+  /* The heaviest completed set's weight, or 0 when there are none.
+     Moved out of index.html unchanged in intent but not in test: the old one
+     filtered `+s.w > 0`, so a 0 kg rack chin was invisible to it (B-21/B-32).
+     0 here means "nothing loaded", not "no data" — callers that need to tell
+     those apart ask completedSets().length. */
+  function topSet(sets) {
+    var C = completedSets(sets), m = 0;
+    for (var i = 0; i < C.length; i++) if (C[i].w > m) m = C[i].w;
+    return m;
+  }
+
+  /* Nearest 2.5 kg, TIES DOWNWARD (audit §3, WO-003 Decision 4).
+     70.875 -> 70 · 94.5 -> 95 · 71.25 -> 70 · 102.5 -> 102.5.
+     Garbage in returns NaN rather than 0: a plausible wrong number printed as
+     a load is worse than a visibly broken one, and no caller may invent 0 kg
+     out of an unreadable value. */
+  function round2p5(x) {
+    var n = (typeof x === "number") ? x : Number(str(x));
+    if (!isFinite(n)) return NaN;
+    return Math.ceil(n / 2.5 - 0.5) * 2.5;
+  }
+
+  /* Rule P1's working load: the weight he held for EVERY set — min, not max.
+     `topSet` recommends off a weight hit once and missed twice (B-08).
+     n limits it to the first n completed sets (P1's C). Omit n for all of them.
+     Returns null when there are no completed sets: 0 is a legal load, so it
+     can never double as "no data". */
+  function workingLoad(sets, n) {
+    var C = completedSets(sets);
+    if (typeof n === "number" && isFinite(n) && n >= 0) C = C.slice(0, n);
+    if (!C.length) return null;
+    var m = C[0].w;
+    for (var i = 1; i < C.length; i++) if (C[i].w < m) m = C[i].w;
+    return m;
+  }
+
+  /* Epley estimated 1RM: w * (1 + r/30). Audit §4 (ST1).
+     Returns null on anything unreadable. It does NOT apply ST1's `r <= 8`
+     filter — that is ST1's window, not the formula's, and W9 applies it.
+     w === 0 gives 0, so an all-bodyweight lift can never produce a 0/0 ratio
+     (addendum §5); W9 must exclude zeros before dividing. */
+  function e1rm(w, r) {
+    var pw = parseWeight(w), pr = parseReps(r);
+    if (!pw.ok || !pr.ok) return null;
+    return pw.value * (1 + pr.value / 30);
+  }
+
+  /* Rule S1 — the pain flag. The audit's regex, unchanged.
+     "no pain today" matches: an accepted false positive (audit §10), whose
+     whole cost is one held session. "painting" does not — \b sees the word.
+     Called on COMMIT only: per keystroke, "painting" passes through "pain". */
+  var PAIN_RE = /\b(pain|hurt|hurts|injur\w*|sharp|pinch\w*|tweak\w*|strain\w*)\b/i;
+  function painFlag(note) {
+    return typeof note === "string" && PAIN_RE.test(note);
+  }
+
+  /* Rule Z2 — every load token in every rule goes through this.
+     The string "0 kg" must never be produced by any rule: you cannot subtract
+     load from a body, and "Drop to 0 kg" reads as a broken app.
+     `bodyweight` for a bodyweight-tagged slot, `zero load` for anything else
+     at zero (a mis-logged machine set must not read as a claim about his body).
+     An untagged slot is treated as "any other implement" — the tag is I1's,
+     and until a slot carries one the fallback is the word that says nothing
+     about him. */
+  function loadWord(w, implement) {
+    var p = parseWeight(w);
+    if (!p.ok) return "";
+    if (p.value > 0) return r1(p.value) + " kg";
+    return implement === "bodyweight" ? "bodyweight" : "zero load";
+  }
+
+  /* Rule I2 — the "if 2.5 kg is not available" line, as its own second line.
+     db · machine · cable · bodyweight only. NEVER bb (a 1.25 kg plate per side
+     makes 2.5 kg, so the line is simply false there) and never on speed work.
+     The rep ceiling is ex.hi + 2, not the audit's literal 7 — 7 is hi+2 for a
+     3–5 slot and two reps BELOW the range on a 6–10 one. Hypertrophy carries
+     no number: H1 case 2 triggers on `every r > hi` with no ceiling, and
+     inventing one would be prescribing a rep range. */
+  function incrementLine(ex) {
+    if (!isObj(ex) || ex.k === "speed") return "";
+    var im = ex.implement;
+    if (im !== "db" && im !== "machine" && im !== "cable" && im !== "bodyweight") return "";
+    var unit = (im === "db") ? "2.5 kg per DB" : "2.5 kg";
+    if (ex.k === "power") return "If " + unit + " is not available, add reps up to " + (ex.hi + 2) + " first, then jump.";
+    return "If " + unit + " is not available, add reps first, then jump.";
+  }
+
+  /* Rule G1 — the step when a load is too light. P1 case 3 generalised:
+     2.5% of the load per rep above the top of the range, floored at one
+     increment and capped at 20% of the load in one jump.
+       SLDL 120, hi 8, min r 10 -> 5 -> 125 kg   (reproduces audit §3 ex.5)
+       Cable row 30, hi 12, min r 20 -> 5 -> 35 kg (NOT the audit's stray 42.5)
+       60, hi 12, min r 13 -> floor -> 62.5 kg
+       load 0 -> every multiplicative term is 0 -> 2.5
+     The cap is rounded to the 2.5 grid as well, so no rule can print an
+     off-grid kg (Decision 4). That only binds where the alternative was an
+     unroundable number, and it binds downward. */
+  function g1Step(load, mr, hi) {
+    if (typeof load !== "number" || !isFinite(load) || load < 0) return NaN;
+    var excess = mr - hi;
+    if (!(excess > 0)) excess = 0;
+    var raw = round2p5(load * 0.025 * excess);
+    var cap = round2p5(load * 0.20);
+    return Math.max(2.5, Math.min(raw, cap));
+  }
+
+  /* ------------------------------------------------------- verdict copy */
+
+  function r1(x) { return Math.round(x * 10) / 10; }
+  function kg(x) { return String(r1(x)); }
+  function repWord(n) { return n + (n === 1 ? " rep" : " reps"); }
+  /* 1740 -> "1,740". Built by hand, not toLocaleString: the separator has to
+     be the same character on every phone and in every test. */
+  function grp(n) {
+    var s = String(Math.round(n)), out = "", i, c = 0;
+    for (i = s.length - 1; i >= 0; i--) {
+      out = s.charAt(i) + out;
+      if (++c % 3 === 0 && i > 0) out = "," + out;
+    }
+    return out;
+  }
+  function cap1(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function mk(t, x, x2, rule) { return { t: t, x: x, x2: x2 || "", rule: rule }; }
+  function incOf(ex) {
+    return (isObj(ex) && typeof ex.inc === "number" && isFinite(ex.inc) && ex.inc > 0) ? ex.inc : 2.5;
+  }
+  function allZero(C) {
+    if (!C.length) return false;
+    for (var i = 0; i < C.length; i++) if (C[i].w !== 0) return false;
+    return true;
+  }
+  function anyZero(C) {
+    for (var i = 0; i < C.length; i++) if (C[i].w === 0) return true;
+    return false;
+  }
+  function minRep(C) {
+    var m = C[0].r;
+    for (var i = 1; i < C.length; i++) if (C[i].r < m) m = C[i].r;
+    return m;
+  }
+  function maxW(C) {
+    var m = C[0].w;
+    for (var i = 1; i < C.length; i++) if (C[i].w > m) m = C[i].w;
+    return m;
+  }
+  function minW(C) {
+    var m = C[0].w;
+    for (var i = 1; i < C.length; i++) if (C[i].w < m) m = C[i].w;
+    return m;
+  }
+  function sumR(C) {
+    var t = 0;
+    for (var i = 0; i < C.length; i++) t += C[i].r;
+    return t;
+  }
+  function volOf(C) {
+    var t = 0;
+    for (var i = 0; i < C.length; i++) t += C[i].w * C[i].r;
+    return t;
+  }
+
+  /* Case 1 of both P1 and H1 drops 5% — and at zero load there is nothing to
+     remove (Z2 delta 1). The app does not invent a way to make the movement
+     easier: no band, no rack height, no substitute exercise. It holds.
+     Returns the sentence WITHOUT its final punctuation on the drop branch, so
+     P1 can end it "next session." and H1 can end it "." — the two rules print
+     different tails off the same arithmetic. */
+  function tooHeavy(ex, C, rangeWord) {
+    var im = ex.implement, w0 = C[0].w;
+    var drop = round2p5(w0 * 0.95);
+    var head = repWord(C[0].r) + " at " + loadWord(w0, im) + ". Below the " + rangeWord + ".";
+    if (!(drop > 0)) {
+      return mk("", head + " Hold here until all " + ex.s + " sets reach " + ex.lo + " reps.", "", "1z");
+    }
+    return mk("down", head + " Drop to " + kg(drop) + " kg", "", "1");
+  }
+
+  /* -------------------------------------------------------------- P1 */
+
+  /* Rule P1 — power-day progression (audit §3), with Z1/Z2/G1/I2/S1.
+     C is the first ex.s completed sets, already sliced by verdict(). */
+  function verdictPower(ex, C, pain) {
+    var im = ex.implement;
+    var lo = ex.lo, hi = ex.hi, s = ex.s;
+    var load = minW(C), top = maxW(C);
+    var equal = (top - load) <= 0.01;
+    var word = loadWord(load, im);
+    var hold = mk("", "Stay at " + word + " until all " + s + " sets reach " + hi + " reps.", "", "P1.5");
+
+    /* 1 — too heavy. Beats case 2 deliberately: a mismatch is a symptom of the
+       load being wrong, and the useful instruction is about the load. */
+    if (C[0].r < lo) {
+      var th = tooHeavy(ex, C, "range");
+      return mk(th.t, th.rule === "1" ? th.x + " next session." : th.x, "", "P1." + th.rule);
+    }
+
+    /* 2 — the sets were not matched. Repeat the heaviest, which by
+       construction can never be 0: if it were, every set would be 0 and
+       `equal` would be true, so this branch could not have fired. */
+    if (!equal) {
+      var list;
+      if (anyZero(C)) {
+        list = C.map(function (x) { return loadWord(x.w, im); }).join(" / ");
+      } else {
+        list = C.map(function (x) { return kg(x.w); }).join(" / ") + " kg";
+      }
+      return mk("down", "Sets not matched: " + list + ". Repeat " + loadWord(top, im) +
+        " until all " + s + " sets reach " + hi + " reps.", "", "P1.2");
+    }
+
+    var mr = minRep(C);
+
+    /* 3 — too light, by Rule G1's step. Suppressed by a pain note (Rule S1):
+       every increase downgrades to the hold. */
+    if (mr >= hi + 2) {
+      if (pain) return hold;
+      var step = g1Step(load, mr, hi);
+      var head3 = repWord(mr) + " at " + word + " on every set. Too light. ";
+      return mk("up", head3 + (load === 0 ? "Add " + kg(step) + " kg." : "Go to " + kg(load + step) + " kg."),
+        incrementLine(ex), "P1.3");
+    }
+
+    /* 4 — top of the range on every set. Also suppressed by a pain note. */
+    if (mr >= hi) {
+      if (pain) return hold;
+      var inc = incOf(ex);
+      return mk("up", load === 0
+        ? "Top of range on all " + s + " sets at " + word + ". Add " + kg(inc) + " kg next session."
+        : "Top of range on all " + s + " sets. Go to " + kg(load + inc) + " kg next session.",
+        incrementLine(ex), "P1.4");
+    }
+
+    /* 5 — hold. One rep short is not a rounding error. */
+    return hold;
+  }
+
+  /* -------------------------------------------------------------- H1 */
+
+  /* Rule H1 — hypertrophy verdict (audit §9), with Z1/Z2/Z3/G1/I2/S1.
+     Cprev is the previous entry's first ex.s completed sets, or null. */
+  function verdictHyp(ex, C, Cprev, pain) {
+    var im = ex.implement;
+    var lo = ex.lo, hi = ex.hi, s = ex.s;
+    var range = lo + "–" + hi + " range";
+    var load = minW(C), mr = minRep(C);
+
+    /* 1 — too heavy. */
+    if (C[0].r < lo) {
+      var th = tooHeavy(ex, C, range);
+      return mk(th.t, th.rule === "1" ? th.x + "." : th.x, "", "H1." + th.rule);
+    }
+
+    /* 2 — every set ABOVE the top of the range (12 is inside 8–12, so it does
+       not fire there). This is also the exit from bodyweight: once the reps
+       pass hi at zero load, external load appears and from the next session it
+       is an ordinary loaded exercise (addendum Z3). Suppressed by a pain note,
+       which falls through to the comparison rather than inventing hold copy
+       for a branch the audit gives none for. */
+    if (mr > hi && !pain) {
+      var step = g1Step(load, mr, hi);
+      return mk("up", load === 0
+        ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + kg(step) + " kg next session."
+        : "All sets above " + hi + ". Go to " + kg(load + step) + " kg next session.",
+        incrementLine(ex), "H1.2");
+    }
+
+    /* 3 — no comparable previous entry. */
+    if (!Cprev || Cprev.length < s) {
+      return mk("", "First time logged. This becomes your baseline.", "", "H1.3");
+    }
+
+    /* 4 — Rule Z3. Tonnage is banned when EITHER side is zero-load: it is
+       undefined as a ratio, and today it prints `Volume up 0% — 75 kg against
+       0 kg`. Reps and tonnage are never compared against each other. */
+    var cur = allZero(C), prv = allZero(Cprev);
+    var zword = loadWord(0, im);
+
+    if (cur && prv) {                                    /* 4a — total reps */
+      var a = sumR(C), b = sumR(Cprev);
+      if (a > b) return mk("up", "Reps up: " + a + " against " + b + " at " + zword + ".", "", "H1.4a");
+      if (a < b) return mk("down", "Reps down: " + a + " against " + b + " at " + zword + ". Match it next session.", "", "H1.4a");
+      return mk("", "Same reps at " + zword + ": " + a + ". Add one rep next session.", "", "H1.4a");
+    }
+    if (cur) {                                           /* 4b — basis change */
+      return mk("", cap1(zword) + " this time, loaded last time. Not comparable. New " + zword + " baseline.", "", "H1.4b");
+    }
+    if (prv) {                                           /* 4c — basis change */
+      /* The load he held for every set, unless that is 0 on a mixed session —
+         then the number that describes "added load" is the top one. */
+      var base = load > 0 ? load : maxW(C);
+      return mk("", "Added load since last session. New baseline at " + kg(base) + " kg.", "", "H1.4c");
+    }
+
+    var va = volOf(C), vb = volOf(Cprev);                 /* 4d — tonnage */
+    var p = vb > 0 ? Math.round((va - vb) / vb * 100) : 0;
+    if (va > vb) return mk("up", "Volume up " + p + "% — " + grp(va) + " kg against " + grp(vb) + " kg.", "", "H1.4d");
+    if (va < vb) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or 2.5 kg next time.", "", "H1.4d");
+    return mk("", "Volume matched. One more rep next session.", "", "H1.4d");
+  }
+
+  /* ---------------------------------------------------------- verdict */
+
+  /* verdict(ctx) -> {t, x, x2, rule} | null
+
+     ctx = { ex, sets, prev, note, painFlag }
+       ex        {id, n, s, lo, hi, k, inc?, implement?}          required
+       sets      this exercise's sets, strings or numbers          required
+       prev      the previous ENTRY for this id ({sets, note}), an array of
+                 sets, or null. PHAT.lastFor(sessions, id) returns the right
+                 thing. Read by k:"hyp" only.
+       note      this exercise's note, read only through Rule S1's regex
+       painFlag  optional Boolean; overrides `note` when present, so a caller
+                 can hold a committed flag while the field is still being typed
+
+     One context object, not an argument list: S1, V1 and R1 all add inputs to
+     this function at different points in this batch, and three signature
+     changes to the app's most advice-critical function are three chances to
+     drop an argument silently (WO-003 Decision 3).
+
+     THE GATE (B-24). Below `ex.s` COMPLETED sets there is no verdict at all —
+     null, for every role. `Volume down 66%` after set 1 of 3 is read between
+     sets as an instruction about the set he is about to do. The caller renders
+     a fixed reminder in its place; that copy belongs to the UX spec, not here.
+
+     Extra sets beyond ex.s are ignored, on both sides of a comparison, so the
+     two sides are always the same size (audit §3).
+
+     The returned `rule` names the branch that fired (`P1.4`, `H1.4a`, …) so a
+     test can pin case selection separately from copy. `x2` is Rule I2's second
+     line, "" when there is none — it is a LINE, never appended to x's
+     sentence.
+
+     PURITY: returns a new object built from new numbers. `ctx`, `ctx.sets` and
+     `ctx.prev` are never written to, and nothing here reads or writes storage.
+     It does not throw on bad input; it returns null. */
+  function verdict(ctx) {
+    if (!isObj(ctx)) return null;
+    var ex = ctx.ex;
+    if (!isObj(ex)) return null;
+    var s = ex.s;
+    if (typeof s !== "number" || !isFinite(s) || s < 1) return null;
+
+    var C = completedSets(ctx.sets);
+    if (C.length < s) return null;                 /* B-24 — the gate */
+    C = C.slice(0, s);
+
+    if (ex.k === "speed") {
+      /* Unchanged from the old verdictFor, and deliberately untested: Rule SP1
+         (W12) replaces this whole branch with a computed load. */
+      return mk("", "Submaximal and fast. Do not grind these.", "", "SP0");
+    }
+
+    var pain = (typeof ctx.painFlag === "boolean") ? ctx.painFlag : painFlag(ctx.note);
+
+    if (ex.k === "power") return verdictPower(ex, C, pain);
+
+    var praw = ctx.prev;
+    if (isObj(praw) && Array.isArray(praw.sets)) praw = praw.sets;
+    var Cprev = Array.isArray(praw) ? completedSets(praw).slice(0, s) : null;
+    return verdictHyp(ex, C, Cprev, pain);
+  }
+
   /* ------------------------------------------------------------- exports */
 
   window.PHAT = {
@@ -752,6 +1162,19 @@
     trainingDays: trainingDays,
     trainingWeeks: trainingWeeks,
     lastFor: lastFor,
+    /* advice — W5/W6. Pure, DOM-free, storage-free, callable from tests.html
+       over file://. The rule each one implements is named at its definition. */
+    completedSets: completedSets,
+    vol: vol,
+    topSet: topSet,
+    round2p5: round2p5,
+    workingLoad: workingLoad,
+    e1rm: e1rm,
+    painFlag: painFlag,
+    loadWord: loadWord,
+    incrementLine: incrementLine,
+    g1Step: g1Step,
+    verdict: verdict,
     migrateStore: migrateStore
   };
 })();

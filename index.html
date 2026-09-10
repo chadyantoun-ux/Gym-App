@@ -84,7 +84,7 @@
   svg.mv{display:block; width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px}
   .figcue{color:var(--dim); font-size:12.5px; line-height:1.45; margin-top:8px}
   .figcue b{color:var(--bone); font-weight:600}
-  .verdict{margin:0 16px 15px; padding:9px 12px; background:var(--bg); border-left:3px solid var(--dim);
+  .verdict{margin:0 16px 15px; white-space:pre-line; padding:9px 12px; background:var(--bg); border-left:3px solid var(--dim);
     border-radius:4px; font-size:13px; color:var(--dim); line-height:1.45; display:none}
   .verdict.show{display:block}
   .verdict.up{border-left-color:var(--green); color:var(--green)}
@@ -225,52 +225,52 @@ if(!window.PHAT){
 /* ============================================================ program */
 const PROGRAM = [
  {id:"d1",name:"Upper power",ex:[
-  {id:"d1a",n:"Bent-over row",s:3,lo:3,hi:5,k:"power"},
-  {id:"d1b",n:"Weighted pull-up",s:2,lo:6,hi:10,k:"power"},
-  {id:"d1c",n:"Rack chin",s:2,lo:6,hi:10,k:"power",cut:1},
-  {id:"d1d",n:"Flat DB press",s:3,lo:3,hi:5,k:"power"},
-  {id:"d1e",n:"Weighted dip",s:2,lo:6,hi:10,k:"power"},
-  {id:"d1f",n:"Seated DB shoulder press",s:3,lo:6,hi:10,k:"power"},
-  {id:"d1g",n:"Cambered bar curl",s:3,lo:6,hi:10,k:"power"},
-  {id:"d1h",n:"Skull crusher",s:3,lo:6,hi:10,k:"power"}]},
+  {id:"d1a",implement:"bb",n:"Bent-over row",s:3,lo:3,hi:5,k:"power"},
+  {id:"d1b",implement:"bodyweight",n:"Weighted pull-up",s:2,lo:6,hi:10,k:"power"},
+  {id:"d1c",implement:"bodyweight",n:"Rack chin",s:2,lo:6,hi:10,k:"power",cut:1},
+  {id:"d1d",implement:"db",n:"Flat DB press",s:3,lo:3,hi:5,k:"power"},
+  {id:"d1e",implement:"bodyweight",n:"Weighted dip",s:2,lo:6,hi:10,k:"power"},
+  {id:"d1f",implement:"db",n:"Seated DB shoulder press",s:3,lo:6,hi:10,k:"power"},
+  {id:"d1g",implement:"bb",n:"Cambered bar curl",s:3,lo:6,hi:10,k:"power"},
+  {id:"d1h",implement:"bb",n:"Skull crusher",s:3,lo:6,hi:10,k:"power"}]},
  {id:"d2",name:"Lower power",ex:[
-  {id:"d2a",n:"Squat",s:3,lo:3,hi:5,k:"power"},
-  {id:"d2b",n:"Hack squat",s:2,lo:6,hi:10,k:"power"},
-  {id:"d2c",n:"Leg extension",s:2,lo:6,hi:10,k:"power",cut:1},
-  {id:"d2d",n:"Stiff-leg deadlift",s:3,lo:5,hi:8,k:"power"},
-  {id:"d2e",n:"Glute-ham raise or lying leg curl",s:2,lo:6,hi:10,k:"power"},
-  {id:"d2f",n:"Standing calf raise",s:3,lo:6,hi:10,k:"power"},
-  {id:"d2g",n:"Seated calf raise",s:2,lo:6,hi:10,k:"power"}]},
+  {id:"d2a",implement:"bb",n:"Squat",s:3,lo:3,hi:5,k:"power"},
+  {id:"d2b",implement:"machine",n:"Hack squat",s:2,lo:6,hi:10,k:"power"},
+  {id:"d2c",implement:"machine",n:"Leg extension",s:2,lo:6,hi:10,k:"power",cut:1},
+  {id:"d2d",implement:"bb",n:"Stiff-leg deadlift",s:3,lo:5,hi:8,k:"power"},
+  {id:"d2e",implement:"bodyweight",n:"Glute-ham raise or lying leg curl",s:2,lo:6,hi:10,k:"power"},
+  {id:"d2f",implement:"machine",n:"Standing calf raise",s:3,lo:6,hi:10,k:"power"},
+  {id:"d2g",implement:"machine",n:"Seated calf raise",s:2,lo:6,hi:10,k:"power"}]},
  {id:"d3",name:"Back & shoulders",ex:[
-  {id:"d3a",n:"Row — speed work",s:6,lo:3,hi:3,k:"speed"},
-  {id:"d3b",n:"Rack chin",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d3c",n:"Seated cable row",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d3d",n:"DB row or shrug",s:2,lo:12,hi:15,k:"hyp",cut:1},
-  {id:"d3e",n:"Close-grip pulldown",s:2,lo:15,hi:20,k:"hyp"},
-  {id:"d3f",n:"Seated DB press",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d3g",n:"Upright row",s:2,lo:12,hi:15,k:"hyp",cut:1},
-  {id:"d3h",n:"Lateral raise",s:3,lo:12,hi:20,k:"hyp"}]},
+  {id:"d3a",implement:"bb",n:"Row — speed work",s:6,lo:3,hi:3,k:"speed"},
+  {id:"d3b",implement:"bodyweight",n:"Rack chin",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d3c",implement:"cable",n:"Seated cable row",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d3d",implement:"db",n:"DB row or shrug",s:2,lo:12,hi:15,k:"hyp",cut:1},
+  {id:"d3e",implement:"cable",n:"Close-grip pulldown",s:2,lo:15,hi:20,k:"hyp"},
+  {id:"d3f",implement:"db",n:"Seated DB press",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d3g",implement:"bb",n:"Upright row",s:2,lo:12,hi:15,k:"hyp",cut:1},
+  {id:"d3h",implement:"db",n:"Lateral raise",s:3,lo:12,hi:20,k:"hyp"}]},
  {id:"d4",name:"Lower hypertrophy",ex:[
-  {id:"d4a",n:"Squat — speed work",s:6,lo:3,hi:3,k:"speed"},
-  {id:"d4b",n:"Hack squat",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d4c",n:"Leg press",s:2,lo:12,hi:15,k:"hyp",cut:1},
-  {id:"d4d",n:"Leg extension",s:3,lo:15,hi:20,k:"hyp"},
-  {id:"d4e",n:"Romanian deadlift",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d4f",n:"Lying leg curl",s:2,lo:12,hi:15,k:"hyp"},
-  {id:"d4g",n:"Seated leg curl",s:2,lo:15,hi:20,k:"hyp",cut:1},
-  {id:"d4h",n:"Donkey calf raise",s:4,lo:10,hi:15,k:"hyp"},
-  {id:"d4i",n:"Seated calf raise",s:3,lo:15,hi:20,k:"hyp"}]},
+  {id:"d4a",implement:"bb",n:"Squat — speed work",s:6,lo:3,hi:3,k:"speed"},
+  {id:"d4b",implement:"machine",n:"Hack squat",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d4c",implement:"machine",n:"Leg press",s:2,lo:12,hi:15,k:"hyp",cut:1},
+  {id:"d4d",implement:"machine",n:"Leg extension",s:3,lo:15,hi:20,k:"hyp"},
+  {id:"d4e",implement:"bb",n:"Romanian deadlift",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d4f",implement:"machine",n:"Lying leg curl",s:2,lo:12,hi:15,k:"hyp"},
+  {id:"d4g",implement:"machine",n:"Seated leg curl",s:2,lo:15,hi:20,k:"hyp",cut:1},
+  {id:"d4h",implement:"machine",n:"Donkey calf raise",s:4,lo:10,hi:15,k:"hyp"},
+  {id:"d4i",implement:"machine",n:"Seated calf raise",s:3,lo:15,hi:20,k:"hyp"}]},
  {id:"d5",name:"Chest & arms",ex:[
-  {id:"d5a",n:"Flat DB press — speed work",s:6,lo:3,hi:3,k:"speed"},
-  {id:"d5b",n:"Incline DB press",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d5c",n:"Machine chest press",s:3,lo:12,hi:15,k:"hyp"},
-  {id:"d5d",n:"Incline cable fly",s:2,lo:15,hi:20,k:"hyp",cut:1},
-  {id:"d5e",n:"Cambered bar preacher curl",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d5f",n:"DB concentration curl",s:2,lo:12,hi:15,k:"hyp"},
-  {id:"d5g",n:"Spider curl",s:2,lo:15,hi:20,k:"hyp",cut:1},
-  {id:"d5h",n:"Close-grip bench",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d5i",n:"Skull crusher",s:3,lo:12,hi:15,k:"hyp"},
-  {id:"d5j",n:"Rope pressdown",s:2,lo:15,hi:20,k:"hyp",cut:1}]}
+  {id:"d5a",implement:"db",n:"Flat DB press — speed work",s:6,lo:3,hi:3,k:"speed"},
+  {id:"d5b",implement:"db",n:"Incline DB press",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d5c",implement:"machine",n:"Machine chest press",s:3,lo:12,hi:15,k:"hyp"},
+  {id:"d5d",implement:"cable",n:"Incline cable fly",s:2,lo:15,hi:20,k:"hyp",cut:1},
+  {id:"d5e",implement:"bb",n:"Cambered bar preacher curl",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d5f",implement:"db",n:"DB concentration curl",s:2,lo:12,hi:15,k:"hyp"},
+  {id:"d5g",implement:"bb",n:"Spider curl",s:2,lo:15,hi:20,k:"hyp",cut:1},
+  {id:"d5h",implement:"bb",n:"Close-grip bench",s:3,lo:8,hi:12,k:"hyp"},
+  {id:"d5i",implement:"bb",n:"Skull crusher",s:3,lo:12,hi:15,k:"hyp"},
+  {id:"d5j",implement:"cable",n:"Rope pressdown",s:2,lo:15,hi:20,k:"hyp",cut:1}]}
 ];
 const KEY_LIFTS=[{id:"d1a",n:"Row",c:"var(--amber)"},{id:"d1d",n:"Bench",c:"var(--green)"},
                  {id:"d2a",n:"Squat",c:"var(--bone)"},{id:"d2d",n:"Deadlift",c:"var(--red)"}];
@@ -358,11 +358,6 @@ function dstr(dt,withWeekday){
 const fmt=d=>{const t=new Date(d+"T12:00:00"); return isNaN(t.getTime())?String(d):dstr(t,false);};
 const ago=d=>Math.round((Date.now()-new Date(d+"T12:00:00"))/86400000);
 const r1=x=>Math.round(x*10)/10;
-const vol=sets=>sets.reduce((a,s)=>a+(+s.w||0)*(+s.r||0),0);
-const topSet=sets=>{const d=sets.filter(s=>+s.w>0&&+s.r>0);return d.length?Math.max(...d.map(s=>+s.w)):0;};
-/* Complete sets only, coerced to numbers. 0 kg is a real set (B-21); a
-   malformed one is reported by validateEntry, never silently binned (B-02). */
-const done=sets=>PHAT.validateEntry(sets).sets;
 /* {quiet} — hide this toast from assistive tech, for the one case where the
    same sentence is already going out through #bs-live and would otherwise be
    read twice (B-39). {ms} — a failure gets longer on screen than a receipt. */
@@ -371,9 +366,6 @@ function toast(m,quiet,ms){const t=document.getElementById("toast");
   t.querySelector("span").textContent=m;
   t.classList.add("on");clearTimeout(toast._t);
   toast._t=setTimeout(()=>t.classList.remove("on"),ms||2100);}
-function lastFor(exId){
-  for(let i=S.sessions.length-1;i>=0;i--){const e=S.sessions[i].entries[exId];
-    if(e&&e.sets.some(x=>+x.w>0))return e;} return null;}
 function lastDay(id){for(let i=S.sessions.length-1;i>=0;i--)if(S.sessions[i].dayId===id)return S.sessions[i].date;return null;}
 function weeksIn(){return S.sessions.length?Math.floor(ago(S.sessions[0].date)/7)+1:0;}
 
@@ -484,22 +476,7 @@ function diagram(id){
   <p class="figcue"><b>Cue.</b> ${esc(P.cue)}</p>`;
 }
 
-/* ============================================================ verdicts */
-function verdictFor(ex,sets){
-  const d=done(sets); if(!d.length) return null;
-  if(ex.k==="power"){
-    const w=topSet(sets);
-    if(d.length>=ex.s&&d.every(s=>+s.r>=ex.hi))
-      return{t:"up",x:`Top of range on every set. Go ${r1(w+2.5)} kg next session.`};
-    return{t:"",x:`Stay at ${w} kg until all ${ex.s} sets reach ${ex.hi} reps.`};
-  }
-  if(ex.k==="speed") return{t:"",x:"Submaximal and fast. Do not grind these."};
-  const prev=lastFor(ex.id); if(!prev) return{t:"",x:"First time logged. This becomes your baseline."};
-  const a=vol(sets),b=vol(prev.sets),p=b?Math.round((a-b)/b*100):0;
-  if(a>b) return{t:"up",x:`Volume up ${p}% — ${Math.round(a)} kg against ${Math.round(b)} kg.`};
-  if(a<b) return{t:"down",x:`Volume down ${Math.abs(p)}%. Add a rep or 2.5 kg next time.`};
-  return{t:"",x:"Volume matched. One more rep next session."};
-}
+/* ================== verdicts: the rules live in logic.js as PHAT.verdict */
 
 /* ============================================================ chart */
 function linechart(rows,series,h){
@@ -576,7 +553,7 @@ function vSession(){
       <button class="link" id="discard">Discard</button></div></div>
     <div class="pad mt16">`;
   ex.forEach(e=>{
-    const prev=lastFor(e.id), st=S.draft.entries[e.id];
+    const prev=PHAT.lastFor(S.sessions,e.id), st=S.draft.entries[e.id];
     const tgt=e.lo===e.hi?`${e.s} × ${e.lo}`:`${e.s} × ${e.lo}–${e.hi}`;
     h+=`<div class="card" data-ex="${e.id}">
       <div class="cardhead"><h3>${esc(e.n)}</h3><span class="target">${tgt}</span></div>
@@ -619,11 +596,11 @@ function vSession(){
 
 function vTrend(){
   const rows=S.sessions.map(s=>{const r={date:fmt(s.date)};
-    KEY_LIFTS.forEach(l=>{const e=s.entries[l.id]; if(e) r[l.n]=topSet(e.sets);}); return r;})
+    KEY_LIFTS.forEach(l=>{const e=s.entries[l.id]; if(e) r[l.n]=PHAT.topSet(e.sets);}); return r;})
     .filter(r=>KEY_LIFTS.some(l=>r[l.n]));
   let stalled=[];
   if(weeksIn()>=6) KEY_LIFTS.forEach(l=>{
-    const hits=S.sessions.filter(s=>s.entries[l.id]).map(s=>topSet(s.entries[l.id].sets));
+    const hits=S.sessions.filter(s=>s.entries[l.id]).map(s=>PHAT.topSet(s.entries[l.id].sets));
     if(hits.length>=3&&Math.max(...hits)<=hits[0]) stalled.push(l.n);});
 
   let h=`<div class="pad" style="padding-top:26px;padding-bottom:16px">
@@ -647,7 +624,7 @@ function vTrend(){
   if(!rec.length) h+=`<p class="tiny">Nothing yet.</p>`;
   rec.forEach(s=>{const d=PROGRAM.find(x=>x.id===s.dayId);
     const n=Object.keys(s.entries).length;
-    const v=Object.values(s.entries).reduce((a,e)=>a+vol(e.sets),0);
+    const v=Object.values(s.entries).reduce((a,e)=>a+PHAT.vol(e.sets),0);
     h+=`<div class="sess"><div><div style="font-size:14.5px">${esc(d?d.name:"Session")}</div>
       <div style="color:var(--faint);font-size:12.5px;margin-top:2px">${fmt(s.date)} · ${plural(n,"exercise")}</div></div>
       <div style="color:var(--dim);font-family:var(--mono);font-size:13px">${Math.round(v).toLocaleString()} kg</div></div>`;});
@@ -712,13 +689,31 @@ function render(keepScroll){
   renderOffer();
   if(!keepScroll) window.scrollTo(0,0);
 }
+/* The only caller of the verdict engine. Everything the rules need is passed
+   in: they live in logic.js and cannot reach S, the DOM or storage (B-20).
+
+   It runs on COMMIT ONLY — a stepper tap, a field or note leaving focus, a
+   cleared set, and the first paint of a card. Never on `input`. Typing `12`
+   into a reps field passes through `1`, and `1` on a 3–5 exercise used to
+   print `Below the range. Drop to 95 kg.` mid-number; typing `painting`
+   passes through `pain` and would trip Rule S1 on a word that is not the
+   keyword (UX spec §1.2 rule 5, §2.2 rule 3).
+
+   A rule that throws is caught here, per card: the slot goes quiet, the sets
+   and the note are untouched, and Save still works (UX spec §1.4). */
 function paintVerdict(card){
-  const id=card.dataset.ex;
-  const ex=PROGRAM.find(d=>d.id===S.dayId).ex.find(e=>e.id===id);
-  const vd=verdictFor(ex,S.draft.entries[id].sets);
-  const el=card.querySelector(".verdict");
+  const id=card.dataset.ex; if(!id||!S.draft) return;
+  const day=PROGRAM.find(d=>d.id===S.dayId); if(!day) return;
+  const ex=day.ex.find(e=>e.id===id); if(!ex) return;
+  const st=S.draft.entries[id]; if(!st) return;
+  const el=card.querySelector(".verdict"); if(!el) return;
+  let vd=null;
+  try{ vd=PHAT.verdict({ex:ex, sets:st.sets, prev:PHAT.lastFor(S.sessions,id), note:st.note}); }
+  catch(err){ vd=null; }
   el.className="verdict"+(vd?" show "+vd.t:"");
-  el.textContent=vd?vd.x:"";
+  /* x2 is Rule I2's second line and is never appended to the first sentence.
+     The slot is white-space:pre-line, so the newline is the line break. */
+  el.textContent=vd?(vd.x2?vd.x+"\n"+vd.x2:vd.x):"";
 }
 
 /* ============================================================ events */
@@ -802,9 +797,17 @@ document.getElementById("view").addEventListener("input",e=>{
   if(e.target.dataset.f){ syncSet(e.target,e.inputType); scheduleDraftSave(); }
 });
 /* blur does not bubble; focusout does. Leaving a field commits it immediately,
-   so the only thing a hard kill can cost is the keystroke still in the buffer. */
+   so the only thing a hard kill can cost is the keystroke still in the buffer.
+   A commit is also the only moment advice may change: the verdict and Rule
+   S1's pain flag are evaluated here and on a stepper tap, never per keystroke
+   (UX spec §1.2 rule 5). */
 document.getElementById("view").addEventListener("focusout",e=>{
-  if(e.target.classList.contains("note")||e.target.dataset.f) flushDraft();
+  const t=e.target;
+  const isNote=!!(t.classList&&t.classList.contains("note"));
+  if(!isNote&&!(t.dataset&&t.dataset.f)) return;
+  flushDraft();
+  const card=t.closest&&t.closest(".card");
+  if(card&&S.draft) paintVerdict(card);
 });
 
 document.getElementById("view").addEventListener("change",async e=>{
@@ -893,7 +896,6 @@ function syncSet(inp,inputType){
     }
   }
   st[f]=val;
-  paintVerdict(card);
   reviewRow(id,i);
 }
 
