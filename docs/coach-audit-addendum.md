@@ -2708,3 +2708,77 @@ Output copy, a speed slot whose source was orphaned: no new string. §8.4's SP1 
 Nothing in §9 changes an `id`, `s`, `lo`, `hi`, `cut` or `k` value, and nothing orphans a logged set.
 PE1 asks for one additive field on the entry and is otherwise pure copy and gating. Three items (9.4,
 9.5-conditional, 9.8) change strings that are shipping; the rest are additive.
+
+---
+
+## 9.11 PE1 build — three copy calls, one withdrawal
+
+**Added 2026-09-10.**
+
+### 1. Which set the ghost names: **confirm heaviest, ties to earliest.** `[Certain]`
+
+Not for consistency with `topSet` — for a better reason. **"Last set" is a row-order artefact, and X1
+makes it wrong outright.** Take `100×5, 100×5, 100×5, 80×8 [EXTRA]`: the last set is the back-off,
+which X1 already rules cannot describe the prescription. Naming it in the one sentence he reads while
+deciding what to load would hand him the least representative number in the entry. "Heaviest completed
+set" is stable, explainable and unaffected by blanks, extras and row order.
+
+The counter-argument is real but it does not survive the direction test. Going 3–5 → 8–12 the heaviest
+anchors him high, which is the dangerous direction; going 8–12 → 3–5 it anchors him low, which is not.
+A rule that flips on the direction of the edit is fiddly, hard to test, and buys little — because the
+sentence's job is not to suggest a number at all. That is carried by the second clause, which must
+stay: `Pick a weight for 8–12.` As long as that clause is present, the first number is history rather
+than a target, and the honest history is the heaviest set.
+
+### 2. `kWord`: **all four approved as written.** `[Certain]`
+
+Including `hyp → "hypertrophy work"`, and deliberately. The flag is fair on register, but **the app
+already uses "hypertrophy" as its own word in three of five day names** — *Back & shoulders
+hypertrophy*, *Lower hypertrophy*, *Chest & arms hypertrophy*. Introducing a warmer synonym here means
+one concept with two names, which is the defect in B-27 and the reason I rejected a `short` field in
+§9.2 an hour ago. Consistency beats register when the alternative is a second vocabulary.
+
+`speed work` is the app's own term (it is literally in the exercise names). `power work` stands.
+
+On `unknown k → ", logged under a different role."`: approved, with a rider that costs nothing because
+it is already true — **if `k` is unrecognised, no verdict may fire for that exercise.** An app that
+cannot tell which rule applies must not run one. C-7 makes this unreachable from the editor, so it only
+appears on corrupt or imported data, which is exactly when guessing is worst.
+
+### 3. The per-row ghost across an epoch: **it disappears.** `[Certain]`
+
+Not captioned — gone. The provenance line alone carries it.
+
+`Last 100 × 5` sitting beside a deliberately-emptied weight box **is** a target, whatever caption is
+attached to it, and PE1's entire purpose is that those numbers stop reading as targets. Three or four
+rows each repeating the old prescription also re-inflates the string that B-37 measured at zero width
+at 400 px — the redesign moved that hint to its own full-width row to fix exactly that, and this would
+undo it. Say it once, above, in full width.
+
+### The conflict: **X1's line ships. I withdraw the UX §4.5 line.** `[Certain]`
+
+`Set 4 is beyond the prescription. It counts in volume; the target does not change.` is accurate and
+answers the wrong question. The question a man asks after logging a fourth set is *did that count?* —
+and "the target does not change" is about the prescription line, not about the advice. Only X1's
+version answers it: `The verdict reads the first 3.` X1 is also role-specific, which matters, because
+the correct message on a 3 × 3–5 squat (this is fatigue you will pay for tomorrow) is not the correct
+message on a lateral raise (fine, logged, counted).
+
+Backend read the precedence right. The one thing worth carrying over from the withdrawn line is its
+concreteness — where `n === 1`, prefer `Set 4 is past the prescription. The verdict reads the first 3.`
+over `1 set past the prescription.` Plural rows keep X1's counted form.
+
+### The two implementation notes
+
+**A deload is not an epoch — confirmed, and it is the right call for the right reason.** `[Certain]` A
+deload is a temporary instruction *inside* a prescription, not a change to it: the plan still says
+3 × 3–5, and DL1 says do two of them this week. `rxOf` returning null on `dl:1` is correct. Announcing
+`Prescription changed to 2 × 3–3` would be false on its face — `3–3` was never prescribed — and
+emptying his weight box during a deload would remove the one thing a deload week guarantees, which is
+that the loads stay put. This is the same principle as E2, one layer down.
+
+**`d2e` → `Lying leg curl`, `implement: "machine"` — correct, and asking him directly is right.** That
+is flag 1 in §8.7, and "one line now, never clean again once there is history" is precisely the shape
+of it. Give him the trade in one sentence: a glute-ham raise is the better exercise if he can already
+do controlled sets of ten; the lying curl is the one that progresses in 5 kg steps and is in every gym.
+`[Opinion]`, and it is his call, not mine.

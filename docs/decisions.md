@@ -868,3 +868,44 @@ coach named that as intended, so it must not be softened later as a false-positi
   change in the document, free today and not free later.
 - **The `EXTRA` badge must key off completed-set ordinal, not row index.** As written it badges the rows
   that are driving the verdict.
+
+### 2026-09-10 — The ghost names the heaviest set, and the second clause is not optional
+Confirmed, but **not for the consistency reason I gave**. "Last set" is a row-order artefact, and X1
+makes it wrong outright: on `100×5, 100×5, 100×5, 80×8 [EXTRA]` the last set is the back-off, which X1
+already rules cannot describe the prescription. Naming it in the one sentence he reads *while deciding
+what to load* would hand him the least representative number in the entry.
+The counter-argument — heaviest anchors high in the dangerous direction — is real but does not survive
+the direction test: a rule that flips on edit direction is fiddly for little gain. It holds **only
+because the second clause stays**: `Pick a weight for 8–12.` That clause is what makes the number
+history rather than a target, and it is not optional.
+
+### 2026-09-10 — The per-row ghost disappears across an epoch. Not captioned — gone
+`Last 100 × 5` sitting beside a deliberately-emptied weight box **is** a target, whatever caption is
+attached to it, and PE1 exists precisely to stop those numbers reading as targets. Repeating the old
+prescription on three or four rows would also re-inflate the string B-37 measured at zero width at
+400 px — undoing the redesign's best structural fix.
+**Rules out:** solving a "this number means something different now" problem by labelling the number.
+
+### 2026-09-10 — X1's extra-set line ships; the UX §4.5 line is withdrawn
+Both were the coach's to reconcile and it withdrew its own later one. §4.5 (`It counts in volume; the
+target does not change.`) **answers the wrong question** — "the target does not change" is about the
+prescription line, but the question after logging a fourth set is *did that count?*, and only
+`The verdict reads the first 3.` answers it. X1 is also role-specific, which matters: the right message
+on a 3 × 3–5 squat is not the right message on a lateral raise.
+**Carried over from the withdrawn line:** at `n === 1`, prefer `Set 4 is past the prescription.` over
+`1 set past the prescription.`
+
+### 2026-09-10 — A deload is a temporary instruction inside a prescription, not a change to it
+Confirmed, and the reason is cleaner than the implementation's: the plan still says 3 × 3–5, and DL1
+says do two of them. `Prescription changed to 2 × 3–3` would be **false on its face** — `3–3` was never
+prescribed. And emptying the weight box would remove the one thing a deload week guarantees: the loads
+stay put. Same principle as E2, one layer down.
+
+### 2026-09-10 — An unrecognised `k` fires no verdict at all
+A free rider the coach attached to approving `kWord`'s fallback copy: if an exercise's role is not one
+the rules know, the app says nothing about it rather than guessing which rule to run. Consistent with
+fail-silent-never-fail-confident, and it closes a hole the plan editor could otherwise open.
+**Also approved, with the register objection answered rather than waved:** `hypertrophy work` reads
+clinical, but the app already uses "hypertrophy" in three of five day names, and a warmer synonym would
+give one concept two names — the defect in B-27 and the reason a `short` field was rejected.
+Consistency beats register when the alternative is a second vocabulary.
