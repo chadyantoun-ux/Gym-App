@@ -1046,3 +1046,31 @@ Third, guarding a near-miss: `extraSets` gates on the **raw** `ex.k`, not on the
 local it uses for its copy branch. Trimming there would have let `" hyp "` collect hypertrophy copy
 from one half of the app while `verdict()`'s untrimmed gate refused it — the exact split the role gate
 exists to close.
+
+### 2026-09-10 — "A training week is 3" stated a count where the rule is about concentration
+The coach amended its own line rather than defending it: `A training week is 3` describes the rule as a
+**count**, when the rule is about **concentration**. It was never the right description — three logged
+sessions is just where it becomes obviously wrong, because he has done three and is being told a
+training week is three. Replacement, superseding both §9.8's middle line and §9.12's:
+`3 sessions logged. Week 1 starts when three land in one week.`
+Reads correctly at every count, needs no branch, and says what is actually true of his log: he has the
+sessions, they are spread out, and concentration is the missing thing.
+The engineer was right not to invent copy to patch it — it was the coach's to fix.
+
+### 2026-09-10 — The badge is verdict-relative, so it goes silent with the verdict
+Confirmed, and the coach declined the counter-argument on the grounds that it asked for a definition
+change: §8.3's block says the badge **means** "this row cannot affect the verdict", and that
+verdict-relative meaning is the whole reason completed-set ordinal beat row index there. With no
+verdict possible the claim is vacuous, and reclassifying the badge as a layout fact now would
+retroactively undermine the argument that fixed it.
+It adds nothing as layout either: the target line already says `3 × 8–12` and the row is already
+numbered 4. **On a card whose entire message is "I cannot tell you anything about this exercise", an
+amber badge with no line beside it is noise shaped like information.**
+
+### 2026-09-10 — Two engineering choices the coach called better than its own spec
+- **Reading the raw `ex.k`**: a gate that normalises more leniently than the rule it guards is not a
+  gate. Tolerating `" hyp "` would hide a data defect rather than surface it.
+- **The ABSENT-shaped return** — sentence in `absentLine`, never in `x` — was endorsed as *better than
+  what was specified*: `null` keeps its meaning ("nothing to say"), the object means "no verdict, and
+  here is why", and it enforces `wo-003-session-screen.md` §0.1 #6 (advice and refusal must be
+  distinguishable) **in the data** rather than leaving it to a template.

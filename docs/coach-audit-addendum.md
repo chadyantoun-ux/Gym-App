@@ -2870,3 +2870,67 @@ true, but at `tw === 0` the number that looks broken is the week count, and the 
 that explains it — the same job TW1's `Week 5 by the calendar, week 3 of real training` does at the
 other boundary. The reduced-volume fact is not urgent and is correct from week 1 onward, where it
 already renders. This confirms §9.8 rather than changing it; only the zero-session string is new.
+
+---
+
+## 9.13 Three edges of §9.12
+
+**Added 2026-09-10.**
+
+### 1. The badge goes silent too. **Confirm.** `[Certain]`
+
+The engineer is applying my own definition correctly, and the counter-argument asks me to change that
+definition to rescue the badge. §8.3 says, in the rule block: *"The badge means 'this row cannot
+affect the verdict', so it must be computed the same way C is."* That verdict-relative meaning is the
+entire reason I insisted on completed-set ordinal over row index. With no verdict possible the claim
+is vacuous, and reclassifying the badge as a layout fact now would retroactively undermine the
+argument that fixed it.
+
+It also adds nothing as a layout fact: the target line already says `3 × 8–12` and the row is already
+numbered 4. And on a card whose whole message is *I cannot tell you anything about this exercise*, an
+amber badge with no line beside it is a mark he cannot interpret — noise shaped like information.
+
+One object, one answer to an unrecognised `k`. That resolves QA's contradiction properly rather than
+narrowing it.
+
+### 2. The day-one string everywhere: **confirm, that is the reach I intended.** `[Certain]`
+
+`No sessions logged. Start with <first day>.` is strictly better than `No sessions logged yet.`
+wherever a first day can be named — it points at an action instead of stating an absence — and
+keeping the old string as the fallback for a plan that cannot name one is exactly right.
+
+No interaction with the cut tier: whether a plan phases accessories in has nothing to do with where
+the programme begins, and V1's ABSENT copy lives on the plan screen, not in `cycleLine`. Two
+independent facts, correctly left independent.
+
+### 3. `A training week is 3` after three sessions: **amend the wording.** `[Certain]`
+
+Not a special case — my §9.8 phrasing is simply wrong at any count where the number collides, and
+three is only the most visible one. The clause states the rule as a *count* (`a training week is 3`)
+when the rule is actually about *concentration* (three in one week). At three sessions the count
+reading is flatly confusing, and it was never the right description even at one.
+
+```
+Output copy, cycleLine, >= 1 session and trainingWeeks === 0 (replaces §9.8's line):
+  3 sessions logged. Week 1 starts when three land in one week.
+```
+
+Reads correctly at every count — `1 session logged.` / `2 sessions logged.` / `7 sessions logged.`
+— and it now says the thing that is actually true of his log: he has the sessions, they are spread
+out, and concentration is what is missing. No branch, no count of calendar weeks, one string. **This
+supersedes the second line of §9.12's `cycleLine` block and §9.8's middle line.**
+
+The engineer was right not to invent copy for it. It was mine to fix.
+
+### The two implementation details — both endorsed, no change
+
+**Reading raw `ex.k` rather than a trimmed copy is correct.** A gate that normalises more leniently
+than the rule it guards is not a gate. `" hyp "` collecting hypertrophy copy in `extraSets` while
+`verdict()` refuses it is precisely the split the rider exists to close, and tolerating whitespace
+here would hide a data defect rather than surface it.
+
+**The ABSENT-shaped return with the sentence in `absentLine`, never in `x`, is better than what I
+specified.** It keeps `null` meaning "nothing to say" and gives "no verdict, and here is why" its own
+shape — which is `wo-003-session-screen.md` §0.1 #6, *advice and refusal must be visually
+distinguishable*, enforced in the data rather than left to a template. That is the right layer for it,
+and it is the same separation §9.6 asked for on the ghost line. Carry it.
