@@ -1207,3 +1207,35 @@ is **never attempted** — no rejected promise, no swallowed console error. The 
 and cannot break rendering.
 **Side benefit worth keeping:** because no worker runs on `file://`, opening the file directly always
 shows the bytes on disk. Chady's primary test path can never show him a cached old build.
+
+### 2026-09-10 — The 42 cues: 32 amended, and the failures were categorical
+None of the 40 transcribed cues broke the 90-character limit — the longest was 74. The real violations
+were content: **4 tempo prescriptions, 3 stated loads, 2 assessments, 9 restatements of what the figure
+already draws, and 11 carrying two or three instructions at once.** One (`d1d`, flat DB press) was
+simply backwards.
+**42 slots, 32 distinct strings.** Ten pairs run the same movement and take the same cue. That is
+correct, not a shortcut: per-slot means every slot *has* one, not that all 42 differ, and two cues for
+one movement teach him that one of them is optional.
+**Backend copies the string, never a reference** — a plan edit to `d1a` must not silently rewrite `d3a`.
+
+### 2026-09-10 — The cues carry none of the confusable-pair burden
+`[Certain]`. A cue saying "this is not the other exercise" is a **comparison**, which is neither of the
+two permitted contents and is adjacent to an assessment. The deeper reason: distinguishing the four
+pairs is an acceptance test on **the artwork** (§11.8(5)), and moving that burden into the cue **lets a
+failing figure ship behind a sentence propping it up.**
+The permitted-overlap test: a cue may name a feature that happens to separate a pair **only if it would
+say the same thing if the twin did not exist.** `Do not add knee bend to reach lower.` passes.
+`Do not turn this into a squat.` does not.
+Same logic killed the "say 'upper arm still' once across the seven curl/tri slots" idea — §11.5 already
+requires the fixed upper arm to be visibly fixed in both figures, so repeating it adds nothing at any
+of the seven. **If the redrawn figures fail, fix the figures; do not buy them back with sentences.**
+
+### 2026-09-10 — The speed cues were three struck rulings still living in strings
+All three speed-slot cues are replaced by the parent lift's cue verbatim. What was in them:
+`65–70%` is SP1's number **in kilograms** — printing a percentage he must do arithmetic on is the exact
+defect B-12 exists to remove; `power-day top set` is wording audit §7 already struck as wrong (a top
+set is not a 3–5RM), still sitting in a shipped string; `never ground` duplicates
+`speedLoad().instruction`; `short rest` duplicates R1.
+They could not go empty — §4.13 hides the disclosure when a cue is absent, taking the **figure** with
+it, and SP1/R1 say nothing about *position*. **Two rules about one set is only a problem when they are
+about the same thing.** Position matters more at 6 × 3 fast, because he is not thinking about it.

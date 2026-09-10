@@ -2934,3 +2934,385 @@ specified.** It keeps `null` meaning "nothing to say" and gives "no verdict, and
 shape — which is `wo-003-session-screen.md` §0.1 #6, *advice and refusal must be visually
 distinguishable*, enforced in the data rather than left to a template. That is the right layer for it,
 and it is the same separation §9.6 asked for on the ghost line. Carry it.
+
+---
+
+# 10. The 42 exercise cues — Rule Q1
+
+Written 2026-09-10. Answers `wo-004-screens.md` §11.7, which makes the 42 cues mine to approve, and
+the four questions raised with them. `PHAT_PLAN` carries 40 transcribed from the design prototype
+and two empty slots (`d2e`, `d3d`). **Nothing had ever reviewed the wording.** This is that review.
+
+**Verdict: sign off with changes. 8 kept, 32 amended, 2 new.**
+
+## 10.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| — | The 40 transcribed cues | **8 survive as written.** 32 are amended: 11 for carrying two or three instructions, 9 for restating what §11.5 requires the figure to draw, 4 for a tempo prescription, 3 for stating a load, 2 for an assessment, 3 editorial. |
+| — | Length | **None of the 40 exceeds 90 characters.** Longest transcribed is `d2a` at 74. Longest of mine is `d3d` at 58. The flag comes back negative — that constraint was never at risk. |
+| — | Worst of the 40 | `d4d` `These should burn.` — an assessment, forbidden outright, and not an instruction about anything. |
+| 1 | `d2e` / `d3d` | Written for the exercise as it stands (lying leg curl, DB row). One-line revert string given for each alternate in §10.5. |
+| 2 | Should cues disambiguate the four confusable pairs | **No.** The artwork carries that load and §11.8(5) already gates the artwork on it. A cue may name a feature that happens to separate a pair, but only when it would say the same thing if the twin did not exist. §10.3. |
+| 3 | Seven slots on `curl` / `tri`, all sharing the fixed upper arm | **Ruled: none of the seven says it.** The fixed upper arm is what §11.5 makes the figure draw, and all seven slots have better un-drawable content — the pad, the thigh, the forehead, the rope, the torso. §10.3. |
+| 4 | The three speed slots | **They keep a cue, and it is the parent lift's cue verbatim.** All three current strings are struck: they state a load, they duplicate `speedLoad().text`, and one duplicates `speedLoad().instruction`. §10.4. |
+| — | Distinct strings | 42 slots, **32 distinct strings.** Ten pairs of slots run the same movement and get the same cue. §10.2. |
+| — | Not mine, but found while in here | Three slots are mapped to a figure of a different exercise (`d3c`, `d4c`, and `d3d` if it becomes a shrug). §10.7. |
+
+---
+
+## 10.1 Rule Q1 — the exercise cue
+
+```
+Rule: Q1 — the per-slot movement cue
+Applies to:   every slot in a plan document, all roles (power | hyp | speed). Renders only in the
+              Session screen's MOVEMENT & CUE disclosure (§4.13). It is not advice about a set, it
+              does not read history, and no rule reads it.
+Inputs:       none. The cue is plan data, fixed at authoring time. It is a function of the
+              exercise, never of the log, the week, the load or the verdict.
+Logic:        The cue carries exactly one instruction, chosen in this order:
+              1. If the movement has a SETUP position that is wrong more often than it is right and
+                 that a 64 px figure cannot show — pad height, seat height, grip width, bench angle,
+                 foot placement, where the knee sits relative to a machine's pivot — the cue is that.
+              2. Otherwise the single most common EXECUTION error, preferring one that is dynamic
+                 (changes across a rep or across a set), because a two-pose figure cannot draw a
+                 change.
+              3. Only if neither exists, the prohibition of a state the figure draws (see below).
+              A cue names ONE SUBJECT — one body part, one implement, one position. A second clause
+              is allowed only when it names the specific error the first clause prevents and asks
+              for no new action. `Ribs down, do not arch the lower back.` is one thing.
+              `Torso near-parallel, pull to the navel, no hitching.` is three.
+              THE PROHIBITION PRINCIPLE, which decides most of the overlap questions: a figure can
+              only draw the correct state; it cannot draw the prohibition. A viewer reads a drawn
+              flat lower back as unremarkable, not as an instruction. So a cue MAY name a
+              prohibition of something §11.5 draws — but only where step 1 and step 2 found nothing
+              better for that slot. This is what stops seven curl and triceps slots all saying
+              "upper arm still".
+Output copy:  the string in §10.2. One sentence, imperative, second person, <= 90 characters, no
+              exclamation mark, no emoji.
+              Forbidden, per §11.7 and enforced here: a rep range, a kilogram figure or a
+              percentage, a tempo prescription, a safety claim, "if it hurts", a named substitute
+              exercise, any assessment of the set or the lifter.
+              A setup ANGLE is not a load and is not a tempo. `Set the bench to 30-35 degrees, no
+              steeper.` is permitted and is the only number in the 42.
+              "Do not bounce out of the bottom position." is an error correction, not a tempo
+              prescription. The line is: a tempo prescription names a duration or a count
+              ("pause a beat", "slow return", "three seconds down"). Naming a technique fault does
+              not. The four struck for tempo all named a duration.
+Not enough data: a cue is authored, not inferred, so the insufficient-data state is not statistical
+              — it is "I have not seen this exercise done". Where I could not choose the single most
+              common error without watching him lift, the cue falls back to step 1, the setup
+              position, which is true independent of who is lifting. Five slots are flagged in
+              §10.6. A slot with no cue renders NO disclosure control at all (§4.13) — no empty
+              box, no placeholder. After this document that state is reachable only from a
+              user-created exercise, never from PHAT.
+Worked examples:
+  1. d2a Squat. Step 1 finds no setup non-negotiable a figure cannot show (bar on the back is
+     drawn). Step 2: at 3-5 reps the hips rising ahead of the shoulders is the most common failure
+     and is a change across a rep, which two poses cannot draw. ->
+     `Drive the hips and shoulders up together.`
+  2. d5e Preacher curl. Step 1 finds one: the upper arms on the pad. The generic `curl` figure has
+     no pad, so this is un-drawable and it beats the fixed-upper-arm point at step 3. ->
+     `Keep the upper arms flat on the pad.`
+  3. BOUNDARY. d1f Seated DB shoulder press. Step 1: nothing (the seat with a back pad is drawn).
+     Step 2: the lower back arching under a heavy press — but §11.5 makes the `vpush` figure draw
+     "ribs down" at the finish. Step 3 applies, because there is no better content for this slot,
+     and the drawn state reads as unremarkable. -> `Ribs down, do not arch the lower back.` KEPT.
+  4. FAILING CASE, from the prototype. d4d Leg extension: `These should burn.` It is an assessment,
+     it instructs nothing, it is unfalsifiable, and a lifter who does not feel it will add load to
+     chase a sentence the app printed. Struck. Replaced with the slot's real error.
+  5. FAILING CASE, from the prototype. d3a `65-70% of your power-day top set. Moved fast, never
+     ground.` States a load, restates `speedLoad().text`, restates `speedLoad().instruction`, and
+     is two sentences. Every clause belongs to a rule that already owns it. Struck. §10.4.
+Rationale:    The figure and the cue are one unit with one job between them, so anything the figure
+              carries is a wasted cue and there are only 42 of them. Choosing setup over execution
+              where both are available is deliberate: a setup error is decided before the first rep
+              and persists for every set, an execution error costs one rep. And a wrong cue is a
+              cheap thing to write and an expensive thing to un-learn.
+```
+
+---
+
+## 10.2 The 42
+
+`K` = kept verbatim · `A` = amended · `N` = new. `Chars` is the final string. Basis: `[Certain]`
+mechanical or geometric fact · `[Convention]` standard coaching practice, not physiology ·
+`[Opinion]` my choice among several defensible candidate errors.
+
+### Day 1 — Upper power
+
+| id | Name | Final cue | Chars | K/A/N | Why changed | Basis |
+|---|---|---|---|---|---|---|
+| d1a | Bent-over row | `Keep the torso at the same angle for every rep.` | 47 | A | Three instructions; "pull to the navel" restates the arrow and contradicts §11.5's finish (lower ribs) | `[Convention]` |
+| d1b | Weighted pull-up | `Reach a full dead hang at the bottom of every rep.` | 50 | A | "Chest to the bar" is the figure's finish; "control the descent" is a tempo prescription | `[Convention]` |
+| d1c | Rack chin | `Rest the heels on the rack without pushing through them.` | 56 | A | Two instructions; "squeeze at the top" is the arrow's endpoint and instructs nothing | `[Opinion]` |
+| d1d | Flat DB press | `Keep each wrist stacked under the dumbbell.` | 43 | A | "Elbows at 45°" is drawn by §11.5; "dumbbells stacked over the wrists" is backwards | `[Certain]` |
+| d1e | Weighted dip | `Keep the shoulders down, away from the ears.` | 44 | A | The prototype was an if/then choosing between two variations, which is two cues and a substitution | `[Opinion]` |
+| d1f | Seated DB shoulder press | `Ribs down, do not arch the lower back.` | 38 | A | Kept in substance — contraction normalised only. Rule Q1 step 3, worked example 3 | `[Convention]` |
+| d1g | Cambered bar curl | `Do not rock the torso to start the rep.` | 39 | A | "Elbows pinned at the sides" is exactly what §11.5 makes the `curl` figure draw | `[Convention]` |
+| d1h | Skull crusher | `Take the bar to the forehead on every rep.` | 42 | A | "Elbows still" is drawn; the bar's destination is not, and it is what defines this slot | `[Convention]` |
+
+### Day 2 — Lower power
+
+| id | Name | Final cue | Chars | K/A/N | Why changed | Basis |
+|---|---|---|---|---|---|---|
+| d2a | Squat | `Drive the hips and shoulders up together.` | 41 | A | Three instructions, one of which ("break at the hip and knee together") is the `squat`/`hinge` distinction the figure exists to carry | `[Convention]` |
+| d2b | Hack squat | `Set the feet high enough that the heels stay down.` | 50 | A | "Full depth before the knees drift forward" reads as two conflicting instructions and resolves to neither | `[Opinion]` |
+| d2c | Leg extension | `Keep the hips down in the seat, do not swing the pad up.` | 56 | A | "Pause a beat at lockout" is a tempo prescription — forbidden outright | `[Convention]` |
+| d2d | Stiff-leg deadlift | `Keep the lower back flat for the whole rep.` | 43 | A | Three instructions; "push the hips back" and "bar close" are both drawn by §11.5 | `[Convention]` |
+| d2e | Lying leg curl | `Line the knees up with the machine's pivot.` | 42 | **N** | No cue existed. See §10.5 for the glute-ham raise revert | `[Certain]` |
+| d2f | Standing calf raise | `Keep the knees straight on every rep.` | 37 | A | "Full stretch at the bottom" is the figure's start pose; "pause at the top" is a tempo prescription | `[Certain]` |
+| d2g | Seated calf raise | `Do not bounce out of the bottom position.` | 41 | A | "Slow" is a tempo prescription. The bounce half was right and is kept | `[Convention]` |
+
+### Day 3 — Back & shoulders
+
+| id | Name | Final cue | Chars | K/A/N | Why changed | Basis |
+|---|---|---|---|---|---|---|
+| d3a | Row — speed work | `Keep the torso at the same angle for every rep.` | 47 | A | Stated a load, duplicated two signed-off `speedLoad` strings. §10.4 | `[Convention]` |
+| d3b | Rack chin | `Rest the heels on the rack without pushing through them.` | 56 | A | Same movement as d1c, same cue | `[Opinion]` |
+| d3c | Seated cable row | `Keep the torso still, do not swing back with the weight.` | 56 | A | "Drive the elbows back" restates the arrow | `[Convention]` |
+| d3d | DB row | `Keep the shoulders square, do not twist to finish the rep.` | 58 | **N** | No cue existed. See §10.5 for the shrug revert | `[Convention]` |
+| d3e | Close-grip pulldown | `Set the lean once and hold it for every rep.` | 44 | A | "Pull to the collarbone" is the arrow's endpoint; the lean was the real content and is now the whole cue | `[Opinion]` |
+| d3f | Seated DB press | `Ribs down, do not arch the lower back.` | 38 | A | "Press in a shallow arc" is the arrow. Same movement as d1f, same cue | `[Convention]` |
+| d3g | Upright row | `Take a grip wider than shoulder width.` | 38 | A | Both prototype clauses are drawn by §11.5 (elbows above the hands, bar at the lower chest) | `[Convention]` |
+| d3h | Lateral raise | `Raise the weight without help from the hips.` | 44 | A | Two instructions; "little fingers high" is a contested internal-rotation cue, not a non-negotiable | `[Opinion]` |
+
+### Day 4 — Lower hypertrophy
+
+| id | Name | Final cue | Chars | K/A/N | Why changed | Basis |
+|---|---|---|---|---|---|---|
+| d4a | Squat — speed work | `Drive the hips and shoulders up together.` | 41 | A | Stated a load and a rest period, duplicated `speedLoad`. §10.4 | `[Convention]` |
+| d4b | Hack squat | `Set the feet high enough that the heels stay down.` | 50 | A | `Depth before load.` is a programming opinion, not a positional cue, and it names a load | `[Opinion]` |
+| d4c | Leg press | `Do not let the lower back round off the pad.` | 44 | A | Kept in substance — contraction normalised only. The best single cue in the transcribed 40 | `[Convention]` |
+| d4d | Leg extension | `Keep the hips down in the seat, do not swing the pad up.` | 56 | A | `These should burn.` is an assessment. Worst of the 40 | `[Convention]` |
+| d4e | Romanian deadlift | `Do not add knee bend to reach lower.` | 36 | A | Three instructions; "hamstrings loaded" is anatomy, not a position. This is also what separates the RDL from d2d | `[Convention]` |
+| d4f | Lying leg curl | `Line the knees up with the machine's pivot.` | 42 | A | "Curl to the glutes" restates the arrow; "hips down" is drawn. Same movement as d2e, same cue | `[Certain]` |
+| d4g | Seated leg curl | `Set the lap pad tight enough that the hips cannot lift.` | 55 | A | "Full range" instructs nothing; "slow return" is a tempo prescription | `[Certain]` |
+| d4h | Donkey calf raise | `Keep the hips bent at the same angle for every rep.` | 51 | A | "Deep stretch each rep" is the figure's start pose | `[Convention]` |
+| d4i | Seated calf raise | `Do not bounce out of the bottom position.` | 41 | A | Same movement as d2g, same cue | `[Convention]` |
+
+### Day 5 — Chest & arms
+
+| id | Name | Final cue | Chars | K/A/N | Why changed | Basis |
+|---|---|---|---|---|---|---|
+| d5a | Flat DB press — speed work | `Keep each wrist stacked under the dumbbell.` | 43 | A | Stated a load and a rest period, duplicated `speedLoad`. §10.4 | `[Certain]` |
+| d5b | Incline DB press | `Set the bench to 30–35°, no steeper.` | 36 | A | "Elbows tucked" is drawn. The bench angle is the setup non-negotiable and survives | `[Convention]` |
+| d5c | Machine chest press | `Set the seat so the handles line up with mid-chest.` | 51 | A | "Squeeze at the end of the press" is the arrow's endpoint plus an unfalsifiable instruction | `[Certain]` |
+| d5d | Incline cable fly | `Hold the same slight elbow bend throughout.` | 43 | A | Substance kept, made imperative. The one cue whose content the figure also carries — see §10.6 | `[Convention]` |
+| d5e | Cambered bar preacher curl | `Keep the upper arms flat on the pad.` | 36 | A | "No swinging off the pad" names the wrong error; the elbows lifting off the pad is the error | `[Convention]` |
+| d5f | DB concentration curl | `Brace the elbow against the inner thigh.` | 40 | A | Two instructions, and "supinate hard" is the only "hard" in the 42 | `[Convention]` |
+| d5g | Spider curl | `Keep the upper arms vertical throughout.` | 40 | A | Substance kept — `Arms hanging vertical.` is a fragment, not an imperative, and "arms" should be "upper arms" | `[Certain]` |
+| d5h | Close-grip bench | `Take a shoulder-width grip, no narrower.` | 40 | A | Two instructions; "elbows in" is drawn by §11.5 | `[Convention]` |
+| d5i | Skull crusher | `Take the bar to the forehead on every rep.` | 42 | A | `Elbows still.` is drawn. Same movement as d1h, same cue | `[Convention]` |
+| d5j | Rope pressdown | `Spread the rope at the bottom.` | 30 | **K** | Kept verbatim. One subject, un-drawable (the figure has no rope), fixes the real error (incomplete extension) | `[Convention]` |
+
+**Transcription notes for backend.** `d5b` contains an en dash (U+2013) and a degree sign (U+00B0);
+`d2e` and `d4f` contain an apostrophe (U+2019 is NOT wanted — use the ASCII `'`, escaped or in a
+double-quoted string, to match `machine's` above and the rest of the file). No cue contains a
+double quote, a newline or a character outside Latin-1. All 42 pass `esc()` unchanged.
+
+**Ten pairs share a string** — 42 slots, 32 distinct cues: d1a/d3a, d1c/d3b, d1d/d5a, d1f/d3f,
+d1h/d5i, d2a/d4a, d2b/d4b, d2c/d4d, d2e/d4f, d2g/d4i. **This is correct and is not a shortcut.** The
+per-slot upgrade means every slot HAS a cue, not that all 42 differ. A rack chin's most common error
+does not change between 6-10 and 8-12 reps, and printing two different cues for one movement teaches
+him that one of them is optional. Where the role genuinely changes the error I would have split them;
+it does not, in any of the ten.
+
+---
+
+## 10.3 Questions 2 and 3 — the confusable pairs, and the seven fixed-upper-arm slots
+
+**Question 2: should the cues carry the disambiguation load? No. `[Certain]`, on the spec's own terms.**
+
+Four reasons, the first of which settles it alone:
+
+1. A cue that says "this is not the other exercise" is a **comparison**, and a comparison is not one
+   of the two permitted contents (§11.7: the single positional non-negotiable, or the single most
+   common error). It is closer to an assessment, which is forbidden.
+2. §11.8(5) — *put `squat` and `hinge` side by side: nobody confuses them* — is an acceptance test on
+   **the artwork**, and §11.8 says a figure that fails its tests does not ship. Moving that burden
+   into the cue lets a failing figure ship behind a sentence propping it up.
+3. He is never choosing between the pair. The cue sits under the exercise **name**, inside a session
+   that named the day and the slot. The confusion §11.5 is guarding against is a figure that reads
+   as the wrong movement at a glance — a drawing problem with a drawing fix.
+4. There are 42 cues and each has one slot. Spending one on a comparison spends the slot's real
+   content.
+
+**The permitted overlap, stated as a test.** A cue may name a feature that happens to separate a
+confusable pair when it would say exactly the same thing if the twin did not exist. `d4e`
+`Do not add knee bend to reach lower.` separates the RDL from a squat pattern, and would be the
+right cue on a planet with no squats. That is fine. `Do not turn this into a squat.` is not.
+
+**Question 3: the seven `curl` / `tri` slots — d1g, d5e, d5f, d5g, d1h, d5i, d5j. Ruled: none of the
+seven says "upper arm still". `[Certain]`.**
+
+The premise of the question is right — seven identical cues would be seven wasted slots — but the
+resolution is not "say it once and leave six blank". §11.5 already requires the fixed upper arm to be
+**visibly fixed in both figures**; it is the one thing those two figures are specified to carry, and
+it is the shared point of the pair the artwork is being redrawn to separate. A cue repeating it adds
+nothing at any of the seven.
+
+What settles it is that all seven have better content, and it took no straining to find:
+
+| slot | What the figure cannot draw | Cue |
+|---|---|---|
+| d1g | that a standing curl is loaded enough to make the torso move — a static figure cannot draw a sway | the torso |
+| d5e | there is no preacher pad in the generic `curl` figure | the pad |
+| d5f | there is no thigh in it either | the thigh |
+| d5g | there is no bench, and the spider curl's whole definition is where the arms hang | arms vertical |
+| d1h | the generic `tri` figure folds a forearm; it does not locate the bar relative to the head | the forehead |
+| d5i | same movement as d1h | the forehead |
+| d5j | there is no rope in the figure | spread the rope |
+
+So the answer is neither "the right emphasis" nor "a wasted slot repeated seven times" — it is that
+the emphasis belongs to the artwork, and the seven cues are free for the seven things the artwork
+cannot hold. If the redrawn `curl` and `tri` figures fail §11.8(5) in review, **fix the figures**;
+do not buy them back with seven sentences.
+
+---
+
+## 10.4 Question 4 — the three speed slots
+
+**Ruled: `d3a`, `d4a` and `d5a` keep a cue, and it is the parent lift's cue verbatim. All three
+current strings are struck. `[Certain]`.**
+
+The three transcribed strings:
+
+```
+d3a  65–70% of your power-day top set. Moved fast, never ground.
+d4a  65–70%. Explosive out of the hole, short rest.
+d5a  65–70%. Fast off the chest, short rest.
+```
+
+Every clause in all three belongs to a rule that already owns it, and owns it better:
+
+| Clause | Who owns it | What that rule prints |
+|---|---|---|
+| `65–70%` | Rule SP1 | `67.5 kg. 65–70% of your 100 kg triple. Rest 60–90 s. Fast, never grinding.` — a **kilogram**, computed, which is the entire point of B-12. The cue prints a percentage he has to do arithmetic on with chalky hands, which is the defect B-12 exists to remove. |
+| `power-day top set` | Rule SP1 | And it is **wrong** — audit §7 struck "top set" explicitly, because a top set is not a 3–5RM. This is a defect the app already fixed, still sitting in a string. |
+| `never ground` / `fast` | `speedLoad().instruction` | `If a rep slows down, the set is over. Cut the weight, not the sets.` — signed off, and actionable where "moved fast" is not. |
+| `short rest` | Rule R1 | `restText()`, which counts the actual seconds. |
+| A load, in a cue | — | Forbidden outright by §11.7. |
+
+**Should the three slots then have no cue at all?** No — and this is the part worth stating. §4.13
+would then hide the whole disclosure, taking the **figure** with it. A speed slot is `hpull`,
+`squat` and `hpush`: three of the most useful figures in the set, on the day he is moving fastest.
+And SP1 and R1 between them say nothing whatever about **position** — they are about load, bar speed
+and rest. There is no competition once the cue stops talking about the load: two rules about one set
+is only a problem when they are about the same thing.
+
+The parent lift's cue is the right string because the movement is the same movement. Position does
+not change at 67.5 kg. If anything it matters more: 6 × 3 at speed is where a torso angle drifts,
+because he is not thinking about it.
+
+```
+d3a  ->  d1a's cue    Keep the torso at the same angle for every rep.
+d4a  ->  d2a's cue    Drive the hips and shoulders up together.
+d5a  ->  d1d's cue    Keep each wrist stacked under the dumbbell.
+```
+
+This follows `speedSource` (`{d3a:"d1a", d4a:"d2a", d5a:"d1d"}`) exactly, which is a happy accident
+worth exploiting: **backend should copy the string, not reference it.** A cue is authored data. If a
+plan edit changes `d1a`'s cue it should not silently rewrite `d3a`'s, and SP1's mapping exists for a
+different purpose. Copy the four repeated strings by hand, all ten pairs.
+
+---
+
+## 10.5 The revert lines — one string each, no fresh judgement needed
+
+Per §8.2 Rule A1 both slots are **two exercises, not two names for one**, and the choice is still
+Chady's and still unasked. The cues above are written for the design's default. If he answers the
+other way, exactly one string changes per slot and nothing else in this document moves:
+
+| slot | If it becomes | Cue | Chars |
+|---|---|---|---|
+| `d2e` | Glute-ham raise | `Keep the body in one line from knee to shoulder.` | 47 |
+| `d3d` | Shrug | `Keep the arms straight, no rolling the shoulders.` | 48 |
+
+Both follow Q1 step 2 rather than step 1, because neither has a machine setup to get wrong: a GHR's
+single failure is bending at the hips to cheat the knee flexion, and a shrug's is rolling the
+shoulders and bending the elbows. Note the second-order consequence already recorded in §8.2 — a GHR
+`d2e` also reverts `implement` to `bodyweight`, which changes Z2's load word and switches I2's
+increment line off. **The cue is one string; the slot is not.**
+
+`d1a` needs no revert line. A1 classed bent-over vs Pendlay as **one** exercise (class B), and
+`Keep the torso at the same angle for every rep.` is correct for either — with the caveat that a
+Pendlay row's torso angle is set from a dead stop each rep, which makes the cue easier to obey, not
+different.
+
+---
+
+## 10.6 Where the honest answer needs to see him lift
+
+Five. In each case the cue I have written is defensible without watching him, because it falls back
+to Q1 step 1 (a setup fact that is true for anyone) or to the most common error across lifters
+generally. What I cannot know is whether it is **his** most common error, which is what a cue is
+supposed to be.
+
+1. **`d1d` / `d5a` flat DB press.** I chose the wrist over the elbow path. Wrist collapse is the
+   more common DB-press fault and the more expensive one, but if his elbows flare to 90° the cue is
+   solving the wrong problem. `[Opinion]`. One filmed set answers it.
+2. **`d5d` incline cable fly.** I do not know his setup — an incline bench between two low pulleys
+   and a standing high-to-low fly are different movements sharing a name, and the setup
+   non-negotiable differs (pulley height vs bench angle). I kept the elbow-angle cue because it is
+   true in both. **This is also the one cue whose content §11.5 makes the figure draw** ("elbow angle
+   unchanged"); I accepted it because a 5° elbow change is not drawable at 64 px, so the redundancy
+   is nominal. Weakest of the 42 and the first I would revisit.
+3. **`d1e` weighted dip.** Shoulder position at the bottom is the cue I would give most people. The
+   competing candidate is depth, and which one he needs depends entirely on his shoulder mobility —
+   which is a thing to look at, not infer. `[Opinion]`.
+4. **`d2e` / `d3d`.** Not a cue problem. Two unanswered programme questions with cues attached.
+5. **`d2b` / `d4b` hack squat.** Foot placement is machine-specific; some hack squats have a fixed
+   platform where the cue is unactionable. `[Likely]` it applies to his.
+
+**Not in scope, and stated plainly because §11.7's forbidden list makes it a live risk:** none of
+the 42 cues says anything about pain, and none should. Three of the strings I struck were drifting
+toward it (`Slight forward lean for chest, upright for triceps.` invites him to pick a variation
+based on how a joint feels; `Don't let the lower back round off the pad.` survives only because it
+is stated as a position and makes no claim about consequences). If a movement hurts, that is Rule
+S1's territory and a person's, not a cue's. A cue must never become the place the app hedges.
+
+---
+
+## 10.7 Found while in here — three figures mapped to the wrong exercise
+
+Not mine to fix and not blocking the cues, but it changes what a cue has to carry, so it belongs to
+whoever draws the fifteen. §11.5 says "The map is correct and is kept". **In three places it is not.**
+
+| slot | Mapped to | What the figure will show | Problem |
+|---|---|---|---|
+| `d3c` Seated cable row | `hpull` | A hinged-over torso with a barbell | He sits upright at a machine. Fails §11.8(1) — a person who knows the movement will not name it |
+| `d4c` Leg press | `squat` | A standing figure with a bar on its back | It is not a squat pattern in any drawable sense: different ground reference, different body orientation. §11.2(1) makes the ground reference the thing that makes a pattern legible |
+| `d3d` if it becomes a shrug | `hpull` | A row | Different movement entirely — scapular elevation drawn as horizontal pulling |
+
+`d1c`/`d3b` rack chin drawn as a `vpull` and `d5c` machine chest press drawn as an `hpush` are
+**acceptable** — same body orientation, same joint action, same ground reference class. The three
+above are not. Recommendation: either add two patterns (`seatrow`, `legpress`) or accept that those
+slots ship cue-only, which §4.13 already handles cleanly. **A missing figure is a smaller loss than
+a wrong one** is §11.8's own rule, and it applies here.
+
+---
+
+## 10.8 Verdict
+
+**Sign off with changes**, listed in §10.2: 32 amendments and 2 new strings. The 8 kept in substance
+are `d1f`, `d3f`, `d4c`, `d5d`, `d5g`, `d5j` and, by inheritance, `d2g`'s bounce clause and `d5b`'s
+bench angle.
+
+Three of the amendments are not stylistic and would have been defects on the phone:
+
+- **`d4d` `These should burn.`** — an assessment the app is not entitled to make, that instructs
+  nothing, and that a lifter can chase with load.
+- **`d1d` `dumbbells stacked over the wrists`** — the instruction is backwards.
+- **The three speed cues** — a percentage of a "top set", which is the exact wording audit §7 struck
+  as wrong, printed beside the engine that computes the right number in kilograms.
+
+The rest is the same defect thirty times: a cue that says three things says none of them, and a cue
+that repeats the drawing next to it is a blank line with words on it.
+
+**Nothing here touches `logic.js`, `docs/backlog.md`, `docs/decisions.md`, `index.html` or
+`tests.html`.** Backend transcribes §10.2 into `PHAT_PLAN`'s `cue` fields; the two `N` rows are new
+keys on `d2e` and `d3d`. QA's assertion is mechanical and worth pinning, because it is the only part
+of a cue a test can check: **every slot in `PHAT_PLAN` has a `cue`; every cue is <= 90 characters;
+no cue contains `!`, a digit other than `d5b`'s `30–35`, `%`, `kg`, `rep range`, or the substring
+`if it hurts`.** The `d5b` exemption is deliberate and is the only one.
