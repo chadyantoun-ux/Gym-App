@@ -717,3 +717,55 @@ opacity was carrying. So the meaning moves to text (`Exercise 3 of 7`), the stri
 `aria-hidden`, and the painted pips distinguish by **form** — filled, amber double-height, outline-only.
 **Worth keeping as a method:** when a contrast fix would destroy the signal the colour was carrying,
 move the signal to text and let the graphic become decoration.
+
+### 2026-09-10 — The rules move onto the plan, and ABSENT is a state, not a silence
+`SPEED_SRC`, `REINTRO_ORDER`, `KEY_LIFTS` and the weeks-1–4 block were constants in `logic.js`, which
+asserted that every plan is PHAT. They are now fields on the plan document (`speedSource`,
+`reintroOrder`, `keyLifts`, `reducedWeeks`) and the exported constants are **compiled from the shipped
+plan**, identical in value. A copy inherits them; `removeExercise` scrubs references to a deleted id;
+every reader reconciles again on the way out, so no engine can be handed a dangling id.
+**Three states, not two** (coach Rule C7a): ABSENT is checked **first** and never shares copy with
+not-enough-data. `Log it weekly` is a lie when the plan has the feature switched off — he would log for
+six weeks waiting for a message that cannot arrive. Uniform shape on all five:
+`absent` / `absentLines` / `absentLine`.
+**`reason` is not part of that shape.** `deloadCheck.reason` is a developer signal that must never be
+rendered; overloading it would put a developer token one careless template away from the screen.
+**Defaulting:** every engine's optional `plan` falls back to the **shipped PHAT plan**, never to "a plan
+that declares nothing". A caller's mistake must not become a confident ABSENT sentence about a plan
+that does not exist. `isPlanDoc` (an object with a `days` array) is the test — a plan built from empty
+still has `days: []`, and `{deload:…}` is not a plan.
+
+### 2026-09-10 — ST1: the measurement travels, the diagnosis does not (Rule C7b, implemented)
+`stallReport` is the **measurement** — Epley, `r ≤ 8`, two 21-day blocks, 1.025 — and it is plan-agnostic
+arithmetic that runs on any plan, unchanged, with its three-key shape untouched.
+`stallAdvice` is the **diagnosis** and is a **separate function**, so the arithmetic can be called
+without ever reaching the sentence and the sentence cannot be assembled anywhere else.
+`The split isn't the problem and neither is the diet` is spoken only when `phatProvenance(plan)` is
+true: `planId === "phat"`, or `derivedFrom === "phat"` **and** the same four key lifts are still present
+**and** their `s`/`lo`/`hi` are unchanged. Renaming a slot or editing a cue keeps provenance; a 5 × 5
+squat loses it. It **fails closed** — false costs one sentence of specificity, never a wrong claim.
+D1 splits the same way: T3 (dates only) survives a foreign plan with restated copy; T1 and T2 do not.
+
+### 2026-09-10 — Rule SP0 is deleted rather than left unreachable
+`verdict()` still returned `Submaximal and fast. Do not grind these.` on a speed card — replaced by
+`speedLoad().instruction` in WO-003 §4.2, and unreachable only because the view stopped calling it.
+An unreachable second opinion about speed work is precisely what the next caller finds and ships.
+**Ruled: `verdict` returns `null` for `k:"speed"`.** One source for the speed sentence — `speedLoad`,
+`text` for the load and `instruction` for how to move it. Silence, not a second sentence.
+**Known consequence, accepted:** on today's `index.html` the three speed cards go blank until W7 wires
+`speedLoad`. Losing a sentence sourced from the wrong engine is cheaper than keeping it.
+Confirmed at the same time: **`PHAT.verdict` gains no kicker string.** `t` is `"up"`/`"down"`/`""`, a
+direction token, and nothing in `logic.js` implies a label.
+
+### 2026-09-10 — Rest is a function of the exercise; the caller owns the clock
+`PHAT.restTarget(ex)` reads `ex.k` and `ex.hi` and **nothing else** — no day field, no plan field, no
+history. `rest` is not a field on a day and must not become one: it would be a second source of truth
+for a rule that already has one, and the design's per-day number is wrong on 24 of 42 slots and calls
+him *ready* at speed work's hard cap on the three slots where the short rest **is** the stimulus.
+**`hi` missing → the conservative row, and conservative flips sign by role** (coach §8.5): power 150 and
+hyp 90 are the *longer* rests; speed stays 60/90, the *shorter*, because for speed work resting too long
+is the harmful direction. Written out in the engine rather than derived — it is the one place in the app
+where "play it safe" means two opposite things.
+**`k` unrecognised → `null`**, and `restText` renders its idle line. Fail silent, never fail confident.
+`restText(ex, elapsedSeconds)` takes **elapsed seconds**, so the caller owns one absolute timestamp and
+nothing in this file reads a clock. State 5 reports `stopped` so the caller can stop ticking.
