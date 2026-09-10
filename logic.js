@@ -421,10 +421,62 @@
     return localDate(new Date(t - back * 86400000));
   }
 
+  /* Did this session contain any training at all? True when at least one set
+     anywhere in it passes isDoneSet.
+
+     A save carrying only a note is not a training day (strength-coach ruling,
+     WO-003 W1, [Certain]). The note is kept, stored and shown — it is simply
+     not evidence that he trained. The interaction runs the other way too: a
+     session of nothing but 0 kg rack chins DOES qualify, because isDoneSet
+     tests r > 0 and not w > 0. */
+  function sessionHasCompletedSet(s) {
+    if (!isObj(s) || !isObj(s.entries)) return false;
+    var ids = Object.keys(s.entries);
+    for (var i = 0; i < ids.length; i++) {
+      var e = s.entries[ids[i]];
+      if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      for (var j = 0; j < e.sets.length; j++) {
+        if (isDoneSet(e.sets[j])) return true;
+      }
+    }
+    return false;
+  }
+
+  /* trainingDays(sessions, todayStr) → a NEW array of DISTINCT local dates,
+     ascending, on which at least one set was completed, up to and including
+     todayStr.
+
+     DAYS, not sessions. Three saves on one date are one day of training: a
+     re-save after a mistake and a genuine two-a-day both count once, because
+     everything built on this counts weeks of EXPOSURE, not work done in a day
+     (strength-coach ruling, WO-003 W1, [Certain] — a counting error, not a
+     coaching judgement). Counting saves would tell the app it has evidence it
+     does not have, at every gate that reads it.
+
+     Nothing is dropped from storage here; this returns a view. */
+  function trainingDays(sessions, todayStr) {
+    if (!Array.isArray(sessions)) return [];
+    var today = (typeof todayStr === "string" && DATE_RE.test(todayStr.trim()))
+      ? todayStr.trim() : localDate();
+    var seen = {}, out = [];
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i];
+      var d = sessionDate(s);
+      if (d === "" || d > today) continue;
+      if (!sessionHasCompletedSet(s)) continue;
+      if (Object.prototype.hasOwnProperty.call(seen, d)) continue;
+      seen[d] = true;
+      out.push(d);
+    }
+    out.sort();
+    return out;
+  }
+
   /* trainingWeeks(sessions, todayStr) → integer.
 
-     The number of local Monday-start weeks that hold at least
-     TRAINING_WEEK_MIN (3) logged sessions, up to and including todayStr.
+     The number of local Monday-start weeks holding at least
+     TRAINING_WEEK_MIN (3) distinct TRAINING DAYS, up to and including
+     todayStr.
 
      This is deliberately NOT weeksIn(). weeksIn() measures elapsed time since
      the first session, so a fortnight off the gym still buys two weeks. Every
@@ -434,22 +486,31 @@
      purpose and must be labelled differently wherever both are shown.
 
      Rules:
+     - Distinct dates, not sessions, and only dates carrying a completed set.
+       See trainingDays.
      - Weeks need not be consecutive; they are counted, not spanned.
-     - Sessions dated after todayStr are not counted. A future-dated row cannot
-       be evidence of training already done. It is not touched or removed.
-     - Sessions with no usable date are not counted, for the same reason.
-     - Two sessions on one date are two sessions. That is what was logged.
-     - Empty log, or one session ever, → 0. One session is not a week. */
+     - Dates after todayStr are not counted. A future-dated row cannot be
+       evidence of training already done. It is not touched or removed.
+     - Dates this code cannot read are not counted, for the same reason.
+     - Empty log, or one training day ever, → 0. One day is not a week.
+
+     WHY A FIXED MONDAY GRID AND NOT A ROLLING WINDOW — ruled, do not re-open
+     (strength-coach, WO-003 W1). Sunday belongs to the week before it, so
+     Sun + Mon + Tue is two weeks of one and two days, not one week of three.
+     That straddle is only reachable by training off-programme on a Sunday: the
+     programme is Mon/Tue/Thu/Fri/Sat with Sunday rest. A fixed grid can only
+     ever UNDERCOUNT against a rolling one, so the error runs in the safe
+     direction at all three gates this feeds — it delays a reintroduction, a
+     stall test and a deload rather than bringing one forward. And a rolling
+     count means greedily packed disjoint blocks anchored on the first session:
+     a number he cannot reproduce from a calendar, and one that shifts whenever
+     history is edited. A gate he cannot audit is a gate he will not trust. */
   var TRAINING_WEEK_MIN = 3;
   function trainingWeeks(sessions, todayStr) {
-    if (!Array.isArray(sessions) || sessions.length === 0) return 0;
-    var today = (typeof todayStr === "string" && DATE_RE.test(todayStr.trim()))
-      ? todayStr.trim() : localDate();
+    var days = trainingDays(sessions, todayStr);
     var byWeek = {}, n = 0;
-    for (var i = 0; i < sessions.length; i++) {
-      var d = sessionDate(sessions[i]);
-      if (d === "" || d > today) continue;
-      var wk = weekStart(d);
+    for (var i = 0; i < days.length; i++) {
+      var wk = weekStart(days[i]);
       if (wk === null) continue;
       byWeek[wk] = (byWeek[wk] || 0) + 1;
     }
@@ -684,9 +745,11 @@
     classifyDraftPayload: classifyDraftPayload,
     buildSession: buildSession,
     isDoneSet: isDoneSet,
+    sessionHasCompletedSet: sessionHasCompletedSet,
     sortSessions: sortSessions,
     weekStart: weekStart,
     TRAINING_WEEK_MIN: TRAINING_WEEK_MIN,
+    trainingDays: trainingDays,
     trainingWeeks: trainingWeeks,
     lastFor: lastFor,
     migrateStore: migrateStore
