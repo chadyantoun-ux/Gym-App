@@ -13,12 +13,17 @@ Work orders live in `docs/work-orders/`.
 |---|---|---|
 | [WO-001](work-orders/WO-001-p0-data-loss.md) | B-01, B-02, B-03, B-21 | merged and deployed |
 | WO-002 (planned) | B-04 + B-16 — the backup round trip | not written |
-| [WO-003](work-orders/WO-003-advice.md) | B-30, B-17(sort), B-24, B-08, B-25, B-06, B-07, B-22, B-12, B-23, B-26, B-09, B-18 + B-32, B-20, B-33, B-38, B-27, B-28, B-41, B-42 | **specified, not dispatched** |
+| [WO-003](work-orders/WO-003-advice.md) | B-30, B-17(sort), B-24, B-08, B-25, B-06, B-07, B-22, B-12, B-23, B-26, B-09, B-18 + B-32, B-20, B-33, B-38, B-27, B-28, B-41, B-42 | **engine half built and signed off** (W1/W2/W5/W6/W7/W9/W12/W14/W19/W21). Frontend half — W3/W4 specs written; W8/W10/W11/W13/W15/W16/W17/W18/W20 **held for the redesign**. |
 
 **Suite tripwire.** `tests.html` is **`347 / 347 / 0`** on `wo-003-advice` (was 148/147/1 on `main`). 134 of those cover the nine rule engines; 12 of 13 injected mutants were killed and the survivor was proved an equivalent mutant, not a coverage hole.
-The `N ≥ 236` target assumed W7/W9/W12/W14/W19 were built; they are not yet, and QA correctly refused
-to write tests against unfixed signatures. **Zero expected failures is now enforced by the suite itself**
-— two meta-tests fail on any `known bad` / `xfail` test name or unexplained skip.
+**Zero expected failures is enforced by the suite itself** — two meta-tests fail on any `known bad` /
+`xfail` test name, or on any skip without a stated reason. The earlier `N ≥ 236` target is superseded: it
+assumed a frontend that is now deliberately on hold.
+
+**Signatures in WO-003 are stale; the code is right.** `volumeTier` and `deloadCheck` take a context
+object (the positional lists could not satisfy their own criteria) and `stallReport` takes a fourth
+`state` argument that Rule E2 requires and no document specifies. PM to restate — do not "fix" the code
+back to the work order.
 
 ---
 
