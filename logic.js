@@ -1818,7 +1818,14 @@
         if (v3Added.length || v3Bumped) {
           notes.push({
             level: "info", key: "log",
-            msg: "Schema " + SCHEMA_VERSION + ": added " +
+            /* V_STATEKEYS, not SCHEMA_VERSION. The keys below are schema 3's,
+               and the note is this pass's account of itself (decisions.md:
+               a migration's account of itself is its evidence). Interpolating
+               the CURRENT version made a v1 store report "Schema 5: added
+               reintro, …" — four keys that schema 5 never added. Mislabelled
+               since the 3 -> 4 bump; v4 and v5 already name their own gates,
+               which is why only this one drifted. */
+            msg: "Schema " + V_STATEKEYS + ": added " +
                  (v3Added.length ? v3Added.join(", ") : "no new key") +
                  ". No existing value was changed."
           });
@@ -2408,15 +2415,32 @@
     var k = isObj(ex) ? str(ex.k).trim() : "";
     var rows = Array.isArray(sets) ? sets : [];
     var out = { flags: [], count: 0, line: "", idle: k === "hyp" };
-    var done = 0, i;
+    var done = 0, i, extra, firstExtraRow = 0;
     for (i = 0; i < rows.length; i++) {
-      out.flags.push(s > 0 && done >= s);
-      if (numSet(rows[i])) done++;
+      extra = (s > 0 && done >= s);
+      out.flags.push(extra);
+      if (numSet(rows[i])) {
+        done++;
+        /* The ROW of the first extra COMPLETED set, 1-based — what the view
+           prints next to it (`<span class="idx">${i+1}</span>`) and what the
+           badge sits on. Not the completed-set ordinal: leave row 2 blank on a
+           3-set exercise and fill rows 1, 3, 4, 5 and the extra is the fourth
+           completed set but the FIFTH row, and a sentence naming "Set 4" while
+           the badge is on row 5 is the prototype's lie in a different place.
+           A blank trailing row is flagged but is not a set and cannot be it. */
+        if (extra && !firstExtraRow) firstExtraRow = i + 1;
+      }
     }
     if (s < 1) return out;
     out.count = Math.max(0, done - s);
     if (!out.count) return out;
-    var n = out.count + (out.count === 1 ? " set" : " sets") + " past the prescription.";
+    /* Addendum §9.11, the conflict ruling: X1's line ships, and the one thing
+       carried over from the withdrawn UX §4.5 line is its CONCRETENESS at
+       n === 1 — name the row, not the count. Plural rows keep X1's counted
+       form, which is correct and was not in question. */
+    var n = (out.count === 1 && firstExtraRow)
+      ? "Set " + firstExtraRow + " is past the prescription."
+      : out.count + (out.count === 1 ? " set" : " sets") + " past the prescription.";
     if (k === "power") out.line = n + " The verdict reads the first " + s + ".";
     else if (k === "speed") out.line = n + " Speed work is " + s + " sets. Extra sets are extra fatigue.";
     else out.line = n + " Counted in today's volume, not in the verdict.";
@@ -2685,6 +2709,19 @@
   function verdict(ctx) {
     if (!isObj(ctx)) return null;
     if (!isObj(ctx.ex)) return null;
+
+    /* THE ROLE GATE (addendum §9.11 ruling 2, rider). An unrecognised `k` —
+       "tempo", "", undefined, a number — gets NO verdict, for any role. It
+       used to fall through to H1, so `{s:3, lo:8, hi:12, k:"tempo"}` printed a
+       tonnage comparison and an exercise with no `k` at all printed H1.3a:
+       the app guessing which rule applies, on data that told it that it does
+       not know. "An app that cannot tell which rule applies must not run one."
+       C-7 keeps this unreachable from the plan editor; corrupt or imported
+       data (WO-002) is exactly where it becomes reachable, and exactly where
+       guessing is worst. Above the deload branch too — DL1 is a rule about a
+       prescription whose role is known. */
+    if (PLAN_KINDS.indexOf(ctx.ex.k) < 0) return null;
+
     var dl = (ctx.deload === true);
     var ex = dl ? deloadEx(ctx.ex, true) : ctx.ex;
     var s = ex.s;

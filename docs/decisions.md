@@ -942,3 +942,23 @@ The survivor (`logVer < V_RX` → `logVer < SCHEMA_VERSION`) is **equivalent tod
 5, and the note interpolates `V_RX`, also 5, so no input distinguishes them. It carries a test written
 against the constant that goes red at the 5 → 6 bump, which is when it stops being equivalent. Same
 family as the `V_STATEKEYS` trap, one version later.
+
+### 2026-09-10 — `Set 4` names the ROW, not the completed-set ordinal
+Implementing §9.11's carry-over needed a number the ruling did not have to disambiguate, because in
+its example the two candidates coincide. They separate as soon as a row is left blank: fill rows 1, 3,
+4 and 5 on a 3-set exercise and the extra is the **fourth completed set** but the **fifth row**.
+`extraSets` picks the row — the first flagged row that is itself a completed set — because the number
+in the sentence has to be the number the user can see. The view labels rows `i + 1`
+(`index.html:571`) and the EXTRA badge sits on the row, so an ordinal would put the sentence and the
+badge on different numbers, which is the prototype's lie relocated rather than fixed. The *flags* stay
+ordinal-driven; that was never the question — only the copy is row-numbered, and only at `n === 1`.
+**Unchanged and deliberate:** a blank trailing row is flagged but is not a set and cannot be named.
+
+### 2026-09-10 — The role gate is in `verdict()`, not in every rule that reads `k`
+`PLAN_KINDS.indexOf(ctx.ex.k) < 0 → null`, above the deload branch, so DL1 cannot fire on an
+unclassified exercise either — a deload is an instruction about a prescription whose role is known.
+**Two same-shaped fall-throughs are left alone because no rule covers them, and inventing one is not
+mine to do:** `extraSets` gives an unrecognised `k` the hypertrophy tail (`Counted in today's volume,
+not in the verdict.`), and `incrementLine` gives it the hypertrophy increment line. Both are now
+unreachable alongside a verdict, since there is no verdict; both are reachable by a view that calls
+them directly. Flagged to the coach as the next layer of the same question.
