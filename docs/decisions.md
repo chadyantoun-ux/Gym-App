@@ -107,3 +107,46 @@ Shifting every row by a day would corrupt every row that was already correct. In
 Chady confirmed he has no logged data yet, so this is a no-op in practice — the property is kept
 anyway because it is the whole point.
 **Rules out:** any "fix up the old dates" migration, now or later.
+
+### 2026-09-09 — `malformed` beats `incomplete` when a row is both
+QA found a real ambiguity in the W2 classification: `{w:"7.5.0", r:""}` matches **both** `incomplete`
+("exactly one field non-empty") and `malformed` ("a non-empty field that fails to parse"). `logic.js`
+currently returns `incomplete`. Both block the save, so no data is ever at risk — but the copy differs,
+and that is the whole point of the message.
+**Ruling: `malformed` wins.** Telling the user to "finish this row" when the number they already typed
+is garbage sends them to add reps to a broken weight. Naming the bad value is the useful answer.
+**To apply:** `classifySet` checks parseability of every non-empty field *before* it checks
+completeness. W6 shows the malformed token (`7.5.0`), not the "no reps" token, for this row.
+**Rules out:** completeness-first classification, and any copy that implies the row is merely unfinished.
+
+### 2026-09-09 — `tests.html` cannot cover the storage layer, and that gap is named not hidden
+An iframe is dead on a `file://` opaque origin — QA verified the backend agent's `integration.html`
+scores 1/1 failure without `--allow-file-access-from-files` and 61/61 with it. So the new storage
+contracts (`loadDraft`'s none/ok/error statuses, `startDay` refusing to overwrite a corrupt draft,
+`readRaw`, the verbatim `recover:log:<epoch>` copy, zero-writes-at-boot) are **not** covered by the
+shipping harness, and a green `tests.html` must not be read as covering them.
+**Two extractions will close most of it** (B-20, next batch): `PHAT.classifyDraftPayload(raw)` →
+`{status, draft, reason}`, and `PHAT.buildSession(draft, dayId, dateStr, id)` returning the exact
+object handed to `save()`. Until then, manual checklist items 12–15 cover them from the console.
+**Rules out:** treating a green suite as proof the storage layer is safe, and shipping
+`integration.html` as the test artifact — it needs a browser flag, so it stays a developer tool.
+
+### 2026-09-09 — Out-of-range is `malformed` at the status level, `range` at the field level
+A value that parses but breaks a limit (`600` kg, `0` reps, `101` reps) classifies as **`malformed`**,
+not as a fifth `range` status. One blocking status, because the consequence is identical: it cannot be
+saved. The distinction survives one level down as the per-field `reason`, which stays `"range"`, so W6
+can say "above 500 kg" rather than "not a number" without branching on a second status.
+**Accepted as proposed by `backend-engineer`.** It also matches the doc comment `logic.js` already
+shipped with, so nothing in WO-001 needs re-ruling.
+**Worth recording:** `-5` and `1e3` never reach the range check — the numeric pattern rejects them, and
+`parseWeight("1e3")` returns no `value` property at all. `1000` is never computed, so it can never leak
+into a saved set. Asserted twice.
+**Rules out:** a fifth status, and any copy that calls an out-of-range number "not a number".
+
+### 2026-09-09 — `buildSession` refuses rather than guessing a date
+If no usable date is available (`dateStr` invalid and `draft.date` missing), `buildSession` returns
+`null` instead of falling back to today. Stamping a session with a date nobody chose is a silent wrong
+number, and the caller still holds the draft, so refusing loses nothing.
+**Consequence for the rewiring:** `finish()` must guard the null and fail loudly. It must never call
+`save(LOG, null)`.
+**Rules out:** any "sensible default" date anywhere in the write path.
