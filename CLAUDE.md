@@ -141,6 +141,17 @@ Match the existing code; it has a deliberate style.
 
 ---
 
+## 4b. Committing while agents are running
+
+**Never `git add -A` while another agent is working in this directory.** Agents share one working
+tree, so a blanket add sweeps another agent's half-written file into your commit. It happened on
+2026-09-10: a `git add -A` for a docs-only change pulled ~830 lines of an in-progress `logic.js` into
+an unrelated commit. Nothing was lost, but code was committed before its author had finished or
+reported it, and the history now attributes it to the wrong change.
+
+**Commit named paths.** `git add logic.js docs/decisions.md`, never `-A`, whenever anything else is in
+flight. If you don't know what else is running, name paths anyway — it costs one extra word.
+
 ## 5. Definition of done
 
 An item is not done until all of these are true:

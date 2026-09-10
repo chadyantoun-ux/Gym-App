@@ -649,3 +649,31 @@ renaming a plan would change which rules it is allowed to run.
 `copyPlan` **carries** `derivedFrom` rather than rewriting it — a copy of PHAT is still derived from
 PHAT, and a copy of that copy still is. A plan built from empty has no `derivedFrom` and never
 acquires one, which is exactly the ABSENT state W3 has to make silent.
+
+### 2026-09-10 — Identity is opaque, and `lift` carries the grouping the design wanted
+The plan document ships with **opaque ids minted once and never rewritten** by rename, reorder or copy
+— `d1..d5`, `d1a..d5j` and the lift tokens are hand-authored frozen tokens in that same space, not
+values recomputed from a name. One namespace per plan for day, exercise and lift ids, so a mint cannot
+collide across kinds.
+**`lift` is grouping only, and plan data only** — never written into a session. Regrouping is therefore
+free forever and can never touch a logged number. 34 groups over 42 slots. Grouping rule: same name ⇒
+same lift; a speed slot ⇒ its source lift's group; **ambiguous ⇒ separate**, because a wrong grouping
+merges two lifts into one wrong trend line while a missing one only costs a second line. Display names
+resolve at read time, so renaming "Bent-over row" to "Pendlay row" relabels the trend line correctly.
+**No engine takes a lift id** — Trend calls the id-keyed engines once per id and merges.
+`derivedFrom` is separate from `from` precisely so that renaming a plan can never change which rules it
+is allowed to run (the ST1 diagnosis gate).
+**The trap avoided, one version later:** the v3 pass was gated on `logVer < SCHEMA_VERSION`. Bumping to
+4 would have re-fired WO-001's `dateBasis` pass over a v3 store and stamped correctly local-dated
+sessions as `"utc"` — the identical trap recorded under "Schema 3, and what it obliges". Every pass now
+gates on its own constant: `V_DATEBASIS`, `V_STATEKEYS`, `V_PLAN`.
+**The v4 migration stamps the version and moves zero bytes.** A session's `planId` is optional, and
+absent **means** the shipped PHAT plan, resolved at read time.
+
+### 2026-09-10 — MY ERROR: `git add -A` in a shared worktree
+Committing a docs-only change with `git add -A` swept ~830 lines of `backend-engineer`'s in-progress
+`logic.js` into the coach's commit `ccd1453`. Nothing was lost and the tree is correct, but code was
+committed **before its author had finished or reported it**, and the history attributes it to an
+unrelated change. The branch was not rewritten because another agent was committing to it.
+**Rule, now in CLAUDE.md §4b:** commit named paths, never `-A`, whenever anything else is in flight —
+and if you don't know what else is running, name paths anyway.
