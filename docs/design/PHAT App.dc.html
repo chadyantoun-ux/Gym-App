@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-3ab1afe9-23f0-461c-bd1f-8f6c7dfd142a/styles.css">
+<script src="_ds/modernist-3ab1afe9-23f0-461c-bd1f-8f6c7dfd142a/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#c9c6c4;font-family:"Archivo",system-ui,sans-serif}
+a{color:#ae1800}a:hover{color:#7c1405}
+.turn{padding:44px 48px 38px;border-bottom:2px solid rgba(32,30,29,.4)}
+.tid{font:800 11px "Archivo",monospace;padding:4px 8px;background:#201e1d;color:#f3f2f2;text-decoration:none;letter-spacing:.06em}
+.tname{font:800 15px/1.2 "Archivo",sans-serif;color:#201e1d}
+.lead{max-width:780px;font:400 13px/1.7 "Archivo",sans-serif;color:rgba(32,30,29,.75);margin:10px 0 0}
+.frame{width:393px;height:852px;background:#1c1b1a;border:10px solid #0c0c0b;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 44px rgba(45,43,43,.34);flex:none}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 8px;font:800 12px "Archivo";color:#f0eeea;flex:none}
+.body{flex:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;color:#f0eeea}
+.body::-webkit-scrollbar{width:0}
+.tabs{display:flex;flex:none;border-top:2px solid #f0eeea;background:#1c1b1a;padding-bottom:10px}
+.tab{flex:1;padding:11px 0 10px;text-align:center;font:800 9px "Archivo";letter-spacing:.1em;text-transform:uppercase;color:rgba(240,238,234,.42);background:none;border:0;cursor:pointer;font-family:"Archivo"}
+.tab.on{color:#f5b32b;box-shadow:inset 0 3px 0 #f5b32b}
+.hd{padding:12px 20px;border-bottom:2px solid #f0eeea;display:flex;justify-content:space-between;align-items:center;flex:none}
+.kick{font:800 10px "Archivo";letter-spacing:.12em;text-transform:uppercase;color:rgba(240,238,234,.55)}
+.lbl{font:800 10px "Archivo";letter-spacing:.12em;text-transform:uppercase;color:rgba(240,238,234,.5)}
+.note{font:400 11px/1.55 "Archivo";color:rgba(240,238,234,.55)}
+.stp{display:flex;border:2px solid rgba(240,238,234,.55)}
+.stp button{width:38px;padding:10px 0;background:#2a2827;color:#f0eeea;border:0;font:800 18px/1 "Archivo";cursor:pointer;font-family:"Archivo"}
+.stp button:active{background:#f5b32b;color:#1c1b1a}
+.stp input{flex:1;min-width:0;width:100%;text-align:center;font:800 17px/1 "Archivo";padding:11px 0;background:transparent;color:#f0eeea;border:0;font-family:"Archivo"}
+.stp input:focus-visible{outline:2px solid #f5b32b;outline-offset:-2px}
+.dash{border:2px dashed rgba(240,238,234,.45);padding:11px 13px;font:800 11.5px "Archivo";letter-spacing:.05em;color:#f0eeea;background:none;cursor:pointer;text-align:left;width:100%;font-family:"Archivo"}
+.dash:hover{border-color:#f5b32b;color:#f5b32b}
+.solid{background:#f5b32b;color:#1c1b1a;border:0;padding:16px;display:flex;justify-content:space-between;align-items:center;width:100%;cursor:pointer;font-family:"Archivo"}
+.solid:hover{background:#ffc94f}
+.solid:active{background:#d99b18}
+.outl{background:none;color:#f0eeea;border:2px solid rgba(240,238,234,.45);padding:13px 14px;display:flex;justify-content:space-between;align-items:center;width:100%;cursor:pointer;font:800 12px "Archivo";letter-spacing:.05em;font-family:"Archivo"}
+.outl:hover{border-color:#f5b32b;color:#f5b32b}
+.rowbtn{background:none;border:0;border-top:1px solid rgba(240,238,234,.22);padding:12px 0;display:flex;justify-content:space-between;align-items:baseline;width:100%;cursor:pointer;color:#f0eeea;text-align:left;font-family:"Archivo"}
+.rowbtn:hover{background:#2a2827}
+.seg{display:flex;border:2px solid rgba(240,238,234,.45)}
+.seg button{flex:1;padding:10px 0;background:none;border:0;color:rgba(240,238,234,.6);font:800 11px "Archivo";letter-spacing:.06em;cursor:pointer;font-family:"Archivo"}
+.seg button.on{background:#f5b32b;color:#1c1b1a}
+.idx{display:flex;flex-wrap:wrap;gap:8px;max-width:300px}
+.idx button{background:#f3f2f2;border:2px solid #201e1d;padding:7px 10px;font:800 10px "Archivo";letter-spacing:.06em;cursor:pointer;color:#201e1d;font-family:"Archivo"}
+.idx button:hover{background:#201e1d;color:#f3f2f2}
+</style></helmet>
+
+<section class="turn" id="t3">
+<div style="display:flex;align-items:baseline;gap:12px"><a class="tid" href="#t3">3</a><span class="tname">PHAT — working prototype on 2a (graphite &amp; signal amber)</span></div>
+<p class="lead">Nine screens, live. One exercise per screen, rest timer auto-counts down from the prescribed rest, overload verdict fires inline on the last set, sets can be added or removed, and the plan is yours to edit. Colour explorations are preserved in <a href="PHAT Colour Directions.dc.html">PHAT Colour Directions</a>.</p>
+
+<div style="display:flex;gap:44px;align-items:flex-start;margin-top:26px">
+
+<div class="frame">
+<div class="sbar"><span>9:41</span><span>▮▮▮ ⌁ ▮</span></div>
+<div class="body">
+
+<sc-if value="{{ isOnboard }}">
+<div style="padding:26px 20px 0">
+<div class="kick">First run</div>
+<h1 style="color:#f0eeea;font-size:38px;margin:10px 0 0;letter-spacing:-.02em">Nothing<br>logged yet</h1>
+<p style="font:400 13px/1.6 'Archivo';color:rgba(240,238,234,.7);margin:14px 0 0">This app has one job: make logging a set faster than a spreadsheet. It has no streaks, no badges and no encouragement. It shows you last session's numbers and gets out of the way.</p>
+</div>
+<div style="padding:22px 20px 0">
+<div class="lbl">Your plan</div>
+<div style="background:#2a2827;border-left:3px solid #f5b32b;padding:14px 15px;margin-top:8px">
+<div style="font:800 16px 'Archivo'">PHAT — 5 days</div>
+<div class="note" style="margin-top:4px">Layne Norton. Two power days, three hypertrophy days. Loaded at reduced volume for weeks 1–4.</div>
+</div>
+<button class="outl" style="margin-top:10px" onClick="{{ goPlans }}"><span>OR PICK ANOTHER PLAN</span><span>→</span></button>
+</div>
+<div style="padding:22px 20px 0">
+<div class="lbl">Starting numbers</div>
+<div style="display:flex;gap:10px;margin-top:8px">
+<div style="flex:1"><div class="note" style="margin-bottom:5px">Bodyweight kg</div><div class="stp"><button onClick="{{ bwDown }}">−</button><input value="{{ bwInput }}" onChange="{{ onBw }}" inputMode="decimal"></input><button onClick="{{ bwUp }}">+</button></div></div>
+<div style="flex:1"><div class="note" style="margin-bottom:5px">Height cm</div><div class="stp"><button>−</button><input value="180" onChange="{{ noop }}"></input><button>+</button></div></div>
+</div>
+</div>
+<div style="padding:22px 20px 26px;margin-top:auto">
+<button class="solid" onClick="{{ startFresh }}"><span style="font:800 14px 'Archivo';letter-spacing:.04em">START WITH AN EMPTY LOG</span><span style="font:800 16px 'Archivo'">→</span></button>
+<button class="dash" style="margin-top:10px" onClick="{{ loadDemo }}">LOAD SIX WEEKS OF SAMPLE DATA</button>
+<p class="note" style="margin-top:12px">Sample data lets you see the trend and week-6 screens with something real in them.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div class="hd"><span class="kick">{{ weekLabel }}</span><button class="tab" style="padding:0;letter-spacing:.08em;color:rgba(240,238,234,.6);flex:none" onClick="{{ goSettings }}">SETTINGS</button></div>
+<div style="background:#f5b32b;color:#1c1b1a;padding:20px 20px 0">
+<div style="font:800 10px 'Archivo';letter-spacing:.12em;text-transform:uppercase;opacity:.75">{{ nextKick }}</div>
+<div style="font:800 36px/1.02 'Archivo';letter-spacing:-.025em;margin-top:7px">{{ nextName }}</div>
+<div style="font:400 12.5px 'Archivo';margin-top:9px;padding-bottom:16px">{{ nextMeta }}</div>
+<button class="solid" style="background:#1c1b1a;color:#f5b32b;padding:16px 20px;margin:0 -20px;width:calc(100% + 40px)" onClick="{{ startNext }}"><span style="font:800 15px 'Archivo';letter-spacing:.04em">START SESSION</span><span style="font:800 17px 'Archivo'">→</span></button>
+</div>
+<div style="padding:18px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Or pick any day</div>
+<sc-for list="{{ dayRows }}" as="d" hint-placeholder-count="5">
+<button class="rowbtn" onClick="{{ d.start }}"><span style="font:800 14px 'Archivo'">{{ d.name }}</span><span style="font:400 11.5px 'Archivo';color:rgba(240,238,234,.55)">{{ d.agoText }}</span></button>
+</sc-for>
+</div>
+<div style="padding:20px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">{{ macroLabel }}</div>
+<div style="display:flex;padding-top:11px">
+<div style="flex:1"><div class="lbl">Kcal</div><div style="font:800 18px 'Archivo'">{{ mKcal }}</div></div>
+<div style="flex:1"><div class="lbl">Protein</div><div style="font:800 18px 'Archivo'">{{ mP }}</div></div>
+<div style="flex:1"><div class="lbl">Carb</div><div style="font:800 18px 'Archivo'">{{ mC }}</div></div>
+<div style="flex:1"><div class="lbl">Fat</div><div style="font:800 18px 'Archivo'">{{ mF }}</div></div>
+</div>
+</div>
+<div style="padding:18px 20px 22px;margin-top:auto">
+<div style="border-top:2px solid rgba(240,238,234,.4);padding-top:11px"><div class="lbl">Week 6 test</div>
+<p class="note" style="margin:5px 0 0">{{ testCountdown }}</p></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSession }}">
+<div class="hd"><span class="kick">{{ sessTitle }}</span><button class="tab" style="padding:0;letter-spacing:.08em;color:#f5b32b;flex:none" onClick="{{ discard }}">DISCARD</button></div>
+<div style="display:flex;gap:3px;padding:10px 20px 0">
+<sc-for list="{{ pips }}" as="p" hint-placeholder-count="7">
+<span style="flex:1;height:4px;background:{{ p.bg }}"></span>
+</sc-for>
+</div>
+<div style="padding:14px 20px 13px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h3 style="margin:0;font-size:25px;color:#f0eeea">{{ exName }}</h3><span style="font:800 12.5px 'Archivo';color:#f5b32b;flex:none">{{ exTarget }}</span></div>
+<p class="note" style="margin:6px 0 0">{{ exLast }}</p>
+<button class="tab" style="padding:10px 0 0;letter-spacing:.08em;color:#f5b32b;text-align:left;flex:none" onClick="{{ toggleFig }}">{{ figLabel }}</button>
+<sc-if value="{{ figOpen }}">
+<div style="border:2px solid rgba(240,238,234,.3);background:#2a2827;padding:14px;margin-top:10px;display:flex;gap:14px;align-items:center">
+<div style="width:64px;height:64px;border:2px solid rgba(240,238,234,.35);display:flex;align-items:center;justify-content:center;flex:none"><span class="lbl" style="text-align:center;line-height:1.3">FIG<br>{{ figSlot }}</span></div>
+<div><div class="lbl">Cue</div><p class="note" style="margin:4px 0 0;color:rgba(240,238,234,.8)">{{ exCue }}</p></div>
+</div>
+<p class="note" style="margin:8px 0 0">Placeholder — supply the movement illustrations and they drop in here.</p>
+</sc-if>
+</div>
+<div style="padding:0 20px">
+<sc-for list="{{ setRows }}" as="s" hint-placeholder-count="3">
+<div style="border-top:1px solid rgba(240,238,234,.22);padding:9px 0">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font:800 12px 'Archivo';width:14px;color:{{ s.numColor }}">{{ s.num }}</span>
+<span class="stp" style="flex:1;border-color:{{ s.border }}"><button onClick="{{ s.wDown }}">−</button><input value="{{ s.w }}" onChange="{{ s.onW }}" inputMode="decimal" placeholder="0"></input><button onClick="{{ s.wUp }}">+</button></span>
+<span class="stp" style="width:98px;border-color:{{ s.border }}"><button onClick="{{ s.rDown }}">−</button><input value="{{ s.r }}" onChange="{{ s.onR }}" inputMode="numeric" placeholder="0"></input><button onClick="{{ s.rUp }}">+</button></span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:5px 0 0 22px"><span class="note">{{ s.prevText }}</span><span class="lbl" style="color:#f5b32b">{{ s.flag }}</span></div>
+</div>
+</sc-for>
+<div style="border-top:1px solid rgba(240,238,234,.22);padding:10px 0 0;display:flex;gap:8px">
+<button class="dash" style="flex:1" onClick="{{ addSet }}">{{ addSetLabel }}</button>
+<button class="outl" style="width:104px;justify-content:center;border-color:rgba(240,238,234,.28);color:rgba(240,238,234,.6)" onClick="{{ removeSet }}">− REMOVE</button>
+</div>
+<p class="note" style="margin:8px 0 0">{{ extraNote }}</p>
+</div>
+<sc-if value="{{ hasVerdict }}">
+<div style="margin:14px 20px 0;background:#2a2827;border-left:3px solid #f5b32b;padding:12px 14px">
+<div class="lbl" style="color:#f5b32b">{{ verdictKick }}</div>
+<p class="note" style="margin:4px 0 0;color:rgba(240,238,234,.85)">{{ verdictText }}</p>
+</div>
+</sc-if>
+<div style="padding:16px 20px 22px;margin-top:auto">
+<div style="background:#2a2827;border-left:3px solid {{ restBorder }};padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
+<div><div class="lbl">Rest — {{ restTarget }}</div><div class="note" style="margin-top:2px">{{ restState }}</div></div>
+<div style="display:flex;gap:8px;align-items:center">
+<span style="font:800 25px 'Archivo';letter-spacing:-.02em;color:{{ restColor }}">{{ restText }}</span>
+<button class="outl" style="width:auto;padding:8px 10px;font-size:10px" onClick="{{ toggleRest }}">{{ restBtn }}</button>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-top:10px">
+<sc-if value="{{ hasPrev }}">
+<button class="outl" style="width:56px;justify-content:center" onClick="{{ prevEx }}">←</button>
+</sc-if>
+<button class="solid" style="flex:1" onClick="{{ nextEx }}"><span style="font:800 13.5px 'Archivo';letter-spacing:.04em">{{ nextExLabel }}</span><span style="font:800 15px 'Archivo'">→</span></button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSummary }}">
+<div class="hd"><span class="kick">Session complete</span><span class="kick">{{ todayLabel }}</span></div>
+<div style="padding:18px 20px 0">
+<h3 style="margin:0;font-size:27px;color:#f0eeea">{{ sumName }}</h3>
+<div style="display:flex;margin-top:14px;border-top:2px solid rgba(240,238,234,.4);padding-top:11px">
+<div style="flex:1"><div class="lbl">Sets</div><div style="font:800 21px 'Archivo'">{{ sumSets }}</div></div>
+<div style="flex:1"><div class="lbl">Volume kg</div><div style="font:800 21px 'Archivo'">{{ sumVol }}</div></div>
+<div style="flex:1"><div class="lbl">Extra sets</div><div style="font:800 21px 'Archivo'">{{ sumExtra }}</div></div>
+</div>
+</div>
+<div style="padding:18px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Per exercise</div>
+<sc-for list="{{ sumRows }}" as="r" hint-placeholder-count="4">
+<div style="border-bottom:1px solid rgba(240,238,234,.18);padding:10px 0">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font:800 13.5px 'Archivo'">{{ r.name }}</span><span style="font:400 11.5px 'Archivo';color:rgba(240,238,234,.6);flex:none">{{ r.sets }}</span></div>
+<div class="lbl" style="color:{{ r.color }};margin-top:3px">{{ r.verdict }}</div>
+</div>
+</sc-for>
+</div>
+<div style="padding:18px 20px 22px;margin-top:auto">
+<button class="solid" onClick="{{ saveSession }}"><span style="font:800 14px 'Archivo';letter-spacing:.04em">SAVE SESSION</span><span style="font:800 16px 'Archivo'">→</span></button>
+<p class="note" style="margin-top:10px">Nothing is judged here. The verdicts are arithmetic on your own numbers.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTrend }}">
+<div class="hd"><span class="kick">Trend</span><span class="kick">{{ sessCount }}</span></div>
+<sc-if value="{{ trendEmpty }}">
+<div style="padding:24px 20px">
+<h3 style="margin:0;font-size:24px;color:#f0eeea">No sessions yet</h3>
+<p class="note" style="margin:10px 0 0">Top sets appear here after the first logged session, and the week 6 test unlocks once there are two weeks to compare.</p>
+<button class="dash" style="margin-top:16px" onClick="{{ loadDemo }}">LOAD SAMPLE DATA TO PREVIEW THIS</button>
+</div>
+</sc-if>
+<sc-if value="{{ trendFull }}">
+<div style="padding:16px 20px 0">
+<div style="background:#2a2827;border-left:3px solid #f5b32b;padding:14px 15px">
+<div class="lbl" style="color:#f5b32b">The week 6 test</div>
+<p class="note" style="margin:5px 0 10px;color:rgba(240,238,234,.8)">Are the top sets on row, bench, squat and deadlift higher than week 1?</p>
+<sc-for list="{{ testRows }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(240,238,234,.2);padding:8px 0">
+<span style="font:800 12.5px 'Archivo'">{{ t.name }}</span>
+<span style="font:400 11.5px 'Archivo';color:rgba(240,238,234,.6)">{{ t.pair }}</span>
+<span style="font:800 12.5px 'Archivo';color:{{ t.color }};width:56px;text-align:right">{{ t.delta }}</span>
+</div>
+</sc-for>
+<p class="note" style="margin:10px 0 0">{{ testVerdict }}</p>
+</div>
+</div>
+<div style="padding:18px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Top set by week</div>
+<sc-for list="{{ sparks }}" as="k" hint-placeholder-count="4">
+<div style="border-bottom:1px solid rgba(240,238,234,.18);padding:12px 0;display:flex;align-items:center;gap:12px">
+<div style="flex:1;min-width:0">
+<div style="font:800 13px 'Archivo'">{{ k.name }}</div>
+<div class="note" style="margin-top:2px">{{ k.range }}</div>
+</div>
+<svg viewBox="0 0 120 40" style="width:120px;height:40px;flex:none" xmlns="http://www.w3.org/2000/svg">
+<polyline points="{{ k.points }}" fill="none" stroke="#f5b32b" stroke-width="2.5"></polyline>
+<line x1="0" y1="39" x2="120" y2="39" stroke="rgba(240,238,234,.25)" stroke-width="1"></line>
+</svg>
+<div style="width:56px;text-align:right;font:800 14px 'Archivo';color:{{ k.color }};flex:none">{{ k.delta }}</div>
+</div>
+</sc-for>
+</div>
+<div style="padding:18px 20px 22px;margin-top:auto">
+<div style="border-top:2px solid rgba(240,238,234,.4);padding-top:11px"><div class="lbl">If the bars aren't moving</div>
+<p class="note" style="margin:5px 0 0">The split isn't the problem and neither is the diet. Either the sets aren't close enough to failure, or you aren't eating enough. Fix one, not both, and give it three weeks.</p></div>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ isWeight }}">
+<div class="hd"><span class="kick">Bodyweight</span><span class="kick">{{ bwCount }}</span></div>
+<div style="padding:18px 20px 0">
+<div class="lbl">7-day average</div>
+<div style="display:flex;align-items:flex-end;gap:14px;margin-top:4px">
+<span style="font:800 54px/.9 'Archivo';letter-spacing:-.03em">{{ bwAvg }}</span>
+<span style="font:800 16px 'Archivo';color:#f5b32b;padding-bottom:7px">{{ bwChange }}</span>
+</div>
+<p class="note" style="margin:8px 0 0">The daily number is noise. The weekly average is the signal.</p>
+</div>
+<div style="padding:16px 20px 0">
+<div style="background:#2a2827;border-left:3px solid #f5b32b;padding:13px 15px">
+<div class="lbl" style="color:#f5b32b">Calorie decision</div>
+<p class="note" style="margin:4px 0 0;color:rgba(240,238,234,.85)">{{ calDecision }}</p>
+</div>
+</div>
+<div style="padding:16px 20px 0">
+<div class="lbl" style="margin-bottom:7px">{{ bwEntryLabel }}</div>
+<div style="display:flex;gap:8px">
+<span class="stp" style="flex:1"><button onClick="{{ bwDown }}">−</button><input value="{{ bwInput }}" onChange="{{ onBw }}" inputMode="decimal" placeholder="0"></input><button onClick="{{ bwUp }}">+</button></span>
+<button class="solid" style="width:132px;padding:12px 14px" onClick="{{ logBw }}"><span style="font:800 12px 'Archivo';letter-spacing:.05em">{{ bwBtn }}</span><span style="font:800 14px 'Archivo'">✓</span></button>
+</div>
+</div>
+<div style="padding:18px 20px 22px">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Last 7 entries</div>
+<sc-for list="{{ bwRows }}" as="b" hint-placeholder-count="7">
+<div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(240,238,234,.18);padding:9px 0">
+<span style="font:400 12.5px 'Archivo';color:rgba(240,238,234,.7)">{{ b.date }}</span>
+<span style="font:800 13.5px 'Archivo'">{{ b.kg }}</span>
+</div>
+</sc-for>
+<p class="note" style="margin:12px 0 0">{{ bwEmptyNote }}</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDiet }}">
+<div class="hd"><span class="kick">Diet</span><span class="kick">Targets only</span></div>
+<div style="padding:16px 20px 0">
+<div class="seg">
+<button class="{{ segTrain }}" onClick="{{ pickTrain }}">TRAINING DAY</button>
+<button class="{{ segRest }}" onClick="{{ pickRest }}">REST DAY</button>
+</div>
+</div>
+<div style="padding:18px 20px 0">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:rgba(240,238,234,.3)">
+<div style="background:#2a2827;padding:14px 15px"><div class="lbl">Calories</div><div style="font:800 25px 'Archivo';margin-top:2px">{{ dKcal }}</div></div>
+<div style="background:#2a2827;padding:14px 15px"><div class="lbl">Protein</div><div style="font:800 25px 'Archivo';margin-top:2px">{{ dP }}</div></div>
+<div style="background:#2a2827;padding:14px 15px"><div class="lbl">Carbohydrate</div><div style="font:800 25px 'Archivo';margin-top:2px">{{ dC }}</div></div>
+<div style="background:#2a2827;padding:14px 15px"><div class="lbl">Fat</div><div style="font:800 25px 'Archivo';margin-top:2px">{{ dF }}</div></div>
+</div>
+</div>
+<div style="padding:16px 20px 0">
+<button class="outl" style="border-color:{{ proteinBorder }};color:{{ proteinColor }};align-items:flex-start" onClick="{{ toggleProtein }}">
+<span style="text-align:left"><span style="display:block">{{ proteinLabel }}</span><span class="note" style="display:block;margin-top:4px;letter-spacing:0;font-weight:400;text-transform:none">The one non-negotiable. Rest days included.</span></span>
+<span style="font:800 17px 'Archivo';flex:none">{{ proteinMark }}</span>
+</button>
+</div>
+<div style="padding:18px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">{{ timingTitle }}</div>
+<p class="note" style="margin:10px 0 0">{{ timingBody }}</p>
+</div>
+<div style="padding:18px 20px 22px;margin-top:auto">
+<div style="border-top:2px solid rgba(240,238,234,.4);padding-top:11px"><div class="lbl">Calibration</div>
+<p class="note" style="margin:5px 0 0">Run these for 14 days. +0.2–0.3 kg a week is correct. Flat means add 200 kcal to training days; over +0.5 kg means cut 200. These are estimates — the bodyweight trend overrides them.</p></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPlans }}">
+<div class="hd"><span class="kick">Plans</span><button class="tab" style="padding:0;letter-spacing:.08em;color:rgba(240,238,234,.6);flex:none" onClick="{{ goSettings }}">SETTINGS</button></div>
+<div style="padding:16px 20px 0">
+<sc-for list="{{ planRows }}" as="p" hint-placeholder-count="4">
+<button class="outl" style="margin-bottom:10px;align-items:flex-start;border-style:{{ p.style }};border-color:{{ p.border }};background:{{ p.bg }}" onClick="{{ p.open }}">
+<span style="text-align:left"><span style="display:block;font:800 15px 'Archivo';letter-spacing:0">{{ p.name }}</span><span class="note" style="display:block;margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0">{{ p.meta }}</span></span>
+<span class="lbl" style="color:#f5b32b;flex:none">{{ p.badge }}</span>
+</button>
+</sc-for>
+</div>
+<div style="padding:14px 20px 22px;margin-top:auto">
+<div style="border-top:2px solid rgba(240,238,234,.4);padding-top:11px"><div class="lbl">One honest note</div>
+<p class="note" style="margin:5px 0 0">Editing the plan is the easiest thing in this app to do instead of training. PHAT is already a good plan. The number that moves is sessions logged.</p></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPlanEdit }}">
+<div class="hd"><button class="tab" style="padding:0;letter-spacing:.08em;color:rgba(240,238,234,.6);flex:none" onClick="{{ goPlans }}">‹ PLANS</button><button class="tab" style="padding:0;letter-spacing:.08em;color:#f5b32b;flex:none" onClick="{{ goPlans }}">SAVE</button></div>
+<div style="padding:15px 20px 13px;border-bottom:2px solid rgba(240,238,234,.3)">
+<input value="{{ planName }}" onChange="{{ onPlanName }}" style="width:100%;background:transparent;border:0;color:#f0eeea;font:800 23px 'Archivo';letter-spacing:-.02em;font-family:Archivo;padding:0"></input>
+<div class="note" style="margin-top:4px">{{ planMeta }}</div>
+</div>
+<sc-for list="{{ editDays }}" as="d" hint-placeholder-count="5">
+<div style="border-bottom:1px solid rgba(240,238,234,.22)">
+<div style="display:flex;align-items:center;gap:10px;padding:11px 20px;background:{{ d.bg }};border-left:3px solid {{ d.mark }}">
+<button class="tab" style="padding:0;flex:none;font-size:13px;color:rgba(240,238,234,.5)" onClick="{{ d.up }}">↑</button>
+<button class="tab" style="padding:0;flex:none;font-size:13px;color:rgba(240,238,234,.5)" onClick="{{ d.down }}">↓</button>
+<button class="tab" style="padding:0;text-align:left;letter-spacing:0;text-transform:none;font-size:14px;color:#f0eeea" onClick="{{ d.toggle }}">{{ d.name }}</button>
+<span style="font:400 11px 'Archivo';color:rgba(240,238,234,.55);flex:none">{{ d.meta }}</span>
+</div>
+<sc-if value="{{ d.open }}">
+<div style="padding:0 20px 12px">
+<sc-for list="{{ d.exs }}" as="e" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:8px;padding:8px 0 8px 22px;border-top:1px solid rgba(240,238,234,.14)">
+<input value="{{ e.name }}" onChange="{{ e.rename }}" style="flex:1;min-width:0;background:transparent;border:0;color:{{ e.color }};font:400 12.5px 'Archivo';font-family:Archivo;padding:0;text-decoration:{{ e.strike }}"></input>
+<span style="display:flex;align-items:center;gap:4px;flex:none">
+<button class="tab" style="padding:0;width:16px;font-size:14px;color:rgba(240,238,234,.5)" onClick="{{ e.less }}">−</button>
+<span style="font:800 11.5px 'Archivo';color:rgba(240,238,234,.75);width:52px;text-align:center">{{ e.target }}</span>
+<button class="tab" style="padding:0;width:16px;font-size:14px;color:rgba(240,238,234,.5)" onClick="{{ e.more }}">+</button>
+<button class="tab" style="padding:0;width:20px;font-size:12px;color:#f5b32b" onClick="{{ e.remove }}">✕</button>
+</span>
+</div>
+</sc-for>
+<div style="padding:10px 0 0 22px"><button class="dash" onClick="{{ d.addEx }}">+ ADD EXERCISE</button></div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<div style="padding:14px 20px 22px">
+<button class="dash" onClick="{{ addDay }}">+ ADD DAY</button>
+<p class="note" style="margin-top:12px">Editing the plan never rewrites logged history. Trend keeps comparing whatever lift names you keep.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}">
+<div class="hd"><button class="tab" style="padding:0;letter-spacing:.08em;color:rgba(240,238,234,.6);flex:none" onClick="{{ goHome }}">‹ BACK</button><span class="kick">Settings</span></div>
+<div style="padding:16px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Volume</div>
+<button class="outl" style="margin-top:11px;align-items:flex-start;border-color:{{ cutBorder }}" onClick="{{ toggleCut }}">
+<span style="text-align:left"><span style="display:block">FULL VOLUME</span><span class="note" style="display:block;margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0">Adds the cut accessory work back in. Leave off for weeks 1–4, then reintroduce one movement per session if recovery holds.</span></span>
+<span style="font:800 15px 'Archivo';flex:none;color:{{ cutColor }}">{{ cutMark }}</span>
+</button>
+</div>
+<div style="padding:20px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Weight increment</div>
+<div class="seg" style="margin-top:11px">
+<button class="{{ seg25 }}" onClick="{{ step25 }}">2.5 KG</button>
+<button class="{{ seg5 }}" onClick="{{ step5 }}">5 KG</button>
+</div>
+</div>
+<div style="padding:20px 20px 0">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Rest timer</div>
+<div class="seg" style="margin-top:11px">
+<button class="{{ segAuto }}" onClick="{{ setAuto }}">AUTO-START</button>
+<button class="{{ segManual }}" onClick="{{ setManual }}">MANUAL</button>
+</div>
+<p class="note" style="margin-top:9px">Auto-start begins the countdown the moment a set's reps are entered.</p>
+</div>
+<div style="padding:20px 20px 22px">
+<div class="lbl" style="padding-bottom:8px;border-bottom:2px solid rgba(240,238,234,.4)">Data</div>
+<button class="outl" style="margin-top:11px" onClick="{{ toggleDemo }}"><span>{{ demoLabel }}</span><span>⇄</span></button>
+<button class="dash" style="margin-top:10px" onClick="{{ exportJson }}">EXPORT EVERYTHING AS JSON</button>
+<p class="note" style="margin-top:11px">Your log lives on this device. Export monthly so nothing costs you the history.</p>
+</div>
+</sc-if>
+
+</div>
+<div class="tabs">
+<button class="tab {{ tabTrain }}" onClick="{{ goHome }}">Train</button>
+<button class="tab {{ tabTrend }}" onClick="{{ goTrend }}">Trend</button>
+<button class="tab {{ tabWeight }}" onClick="{{ goWeight }}">Weight</button>
+<button class="tab {{ tabDiet }}" onClick="{{ goDiet }}">Diet</button>
+<button class="tab {{ tabPlan }}" onClick="{{ goPlans }}">Plan</button>
+</div>
+</div>
+
+<div style="width:320px;flex:none">
+<div class="lbl" style="color:rgba(32,30,29,.6)">Jump to a screen</div>
+<div class="idx" style="margin-top:10px">
+<button onClick="{{ goOnboard }}">ONBOARDING</button>
+<button onClick="{{ goHome }}">HOME</button>
+<button onClick="{{ goSessionDemo }}">SESSION</button>
+<button onClick="{{ goSummaryDemo }}">SUMMARY</button>
+<button onClick="{{ goTrend }}">TREND · WK6</button>
+<button onClick="{{ goWeight }}">BODYWEIGHT</button>
+<button onClick="{{ goDiet }}">DIET</button>
+<button onClick="{{ goPlans }}">PLANS</button>
+<button onClick="{{ goPlanEdit }}">PLAN EDITOR</button>
+<button onClick="{{ goSettings }}">SETTINGS</button>
+</div>
+<div style="border-top:2px solid rgba(32,30,29,.4);margin-top:22px;padding-top:12px">
+<div class="lbl" style="color:rgba(32,30,29,.6)">What it does</div>
+<p style="font:400 12px/1.65 'Archivo';color:rgba(32,30,29,.72);margin:8px 0 0">Steppers move weight by your chosen increment and reps by one. Entering reps auto-starts the countdown from the prescribed rest. Finishing an exercise's last set prints the overload verdict inline. <strong>+ Add set</strong> appends beyond the prescription and marks it <em>extra</em>; volume counts it, the prescription doesn't change.</p>
+<p style="font:400 12px/1.65 'Archivo';color:rgba(32,30,29,.72);margin:10px 0 0">The Plan tab treats PHAT as a duplicable template: rename it, reorder days, rename or delete exercises, change set counts, add days, or start from empty. Settings holds the weeks 1–4 volume toggle and switches between sample data and an empty log.</p>
+</div>
+<div style="border-top:2px solid rgba(32,30,29,.4);margin-top:18px;padding-top:12px">
+<div class="lbl" style="color:rgba(32,30,29,.6)">Still open</div>
+<p style="font:400 12px/1.65 'Archivo';color:rgba(32,30,29,.72);margin:8px 0 0">Movement illustrations are labelled placeholders — supply real ones and they drop in. Charting is deliberately four sparklines rather than one multi-lift chart; say the word if you want the combined view. And the honest caveat from the brief still stands: this is the fourth tool built for a programme with sessions still to log.</p>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1560,&quot;height&quot;:1080},&quot;dataState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;empty&quot;],&quot;default&quot;:&quot;populated&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype data&quot;},&quot;fullVolume&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Programme&quot;},&quot;step&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[2.5,5],&quot;default&quot;:2.5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Programme&quot;}}">
+const TODAY = "2026-09-09";
+const D = (s) => new Date(s + "T00:00:00");
+const iso = (d) => d.toISOString().slice(0, 10);
+const addDays = (s, n) => { const d = D(s); d.setDate(d.getDate() + n); return iso(d); };
+const agoDays = (s) => Math.round((D(TODAY) - D(s)) / 86400000);
+const fmtDate = (s) => D(s).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+function ex(n, s, lo, hi, k, cue, cut) {
+  const kind = k || "hyp";
+  return { key: slug(n) + ":" + kind, lift: slug(n), n, s, lo, hi, k: kind, cue: cue || "Controlled negative, no bounce, full range.", cut: !!cut };
+}
+
+const BASE_PLAN = {
+  name: "PHAT — my version",
+  from: "Copied from PHAT (Layne Norton)",
+  days: [
+    { id: "d1", name: "Upper power", rest: 150, carb: "high", exs: [
+      ex("Bent-over row", 3, 3, 5, "power", "Torso near-parallel, pull to the navel, no hitching."),
+      ex("Weighted pull-up", 2, 6, 10, "power", "Chest to the bar, control the descent."),
+      ex("Rack chin", 2, 6, 10, "hyp", "Feet on the rack, squeeze at the top.", true),
+      ex("Flat DB press", 3, 3, 5, "power", "Elbows at 45°, dumbbells stacked over the wrists."),
+      ex("Weighted dip", 2, 6, 10, "power", "Slight forward lean for chest, upright for triceps."),
+      ex("Seated DB shoulder press", 3, 6, 10, "hyp", "Ribs down, don't arch the lower back."),
+      ex("Cambered bar curl", 3, 6, 10, "hyp", "Elbows pinned at the sides."),
+      ex("Skull crusher", 3, 6, 10, "hyp", "Elbows still, lower to the forehead.") ] },
+    { id: "d2", name: "Lower power", rest: 180, carb: "high", exs: [
+      ex("Squat", 3, 3, 5, "power", "Brace hard, knees track over the toes, break at the hip and knee together."),
+      ex("Hack squat", 2, 6, 10, "power", "Full depth before the knees drift forward."),
+      ex("Leg extension", 2, 6, 10, "hyp", "Pause a beat at lockout.", true),
+      ex("Stiff-leg deadlift", 3, 5, 8, "power", "Push the hips back, bar close, neutral spine."),
+      ex("Lying leg curl", 2, 6, 10, "hyp", "Hips down, curl to the glutes."),
+      ex("Standing calf raise", 3, 6, 10, "hyp", "Full stretch at the bottom, pause at the top."),
+      ex("Seated calf raise", 2, 6, 10, "hyp", "Slow, no bouncing off the stretch.") ] },
+    { id: "d4", name: "Back & shoulders", rest: 90, carb: "high", exs: [
+      ex("Bent-over row", 6, 3, 3, "speed", "65–70% of your power-day top set. Moved fast, never ground."),
+      ex("Rack chin", 3, 8, 12, "hyp", "Feet on the rack, squeeze at the top."),
+      ex("Seated cable row", 3, 8, 12, "hyp", "Chest up, drive the elbows back."),
+      ex("DB row", 2, 12, 15, "hyp", "Hip-hinged, pull to the hip.", true),
+      ex("Close-grip pulldown", 2, 15, 20, "hyp", "Lean back slightly, pull to the collarbone."),
+      ex("Seated DB press", 3, 8, 12, "hyp", "Ribs down, press in a shallow arc."),
+      ex("Upright row", 2, 12, 15, "hyp", "Lead with the elbows, stop at chest height.", true),
+      ex("Lateral raise", 3, 12, 20, "hyp", "Little fingers high, no swinging.") ] },
+    { id: "d5", name: "Lower hypertrophy", rest: 90, carb: "high", exs: [
+      ex("Squat", 6, 3, 3, "speed", "65–70%. Explosive out of the hole, short rest."),
+      ex("Hack squat", 3, 8, 12, "hyp", "Depth before load."),
+      ex("Leg press", 2, 12, 15, "hyp", "Don't let the lower back round off the pad.", true),
+      ex("Leg extension", 3, 15, 20, "hyp", "These should burn."),
+      ex("Romanian deadlift", 3, 8, 12, "hyp", "Hips back, hamstrings loaded, spine neutral."),
+      ex("Lying leg curl", 2, 12, 15, "hyp", "Hips down, curl to the glutes."),
+      ex("Seated leg curl", 2, 15, 20, "hyp", "Full range, slow return.", true),
+      ex("Donkey calf raise", 4, 10, 15, "hyp", "Deep stretch each rep."),
+      ex("Seated calf raise", 3, 15, 20, "hyp", "No bouncing.") ] },
+    { id: "d6", name: "Chest & arms", rest: 90, carb: "high", exs: [
+      ex("Flat DB press", 6, 3, 3, "speed", "65–70%. Fast off the chest, short rest."),
+      ex("Incline DB press", 3, 8, 12, "hyp", "30–35° bench, elbows tucked."),
+      ex("Machine chest press", 3, 12, 15, "hyp", "Squeeze at the end of the press."),
+      ex("Incline cable fly", 2, 15, 20, "hyp", "Slight elbow bend held throughout.", true),
+      ex("Cambered bar preacher curl", 3, 8, 12, "hyp", "No swinging off the pad."),
+      ex("DB concentration curl", 2, 12, 15, "hyp", "Elbow into the thigh, supinate hard."),
+      ex("Spider curl", 2, 15, 20, "hyp", "Arms hanging vertical.", true),
+      ex("Close-grip bench", 3, 8, 12, "hyp", "Shoulder-width grip, elbows in."),
+      ex("Skull crusher", 3, 12, 15, "hyp", "Elbows still."),
+      ex("Rope pressdown", 2, 15, 20, "hyp", "Spread the rope at the bottom.", true) ] } ] };
+
+const KEYS = [
+  { lift: "bent-over-row", name: "Bent-over row", base: 82.5 },
+  { lift: "flat-db-press", name: "Flat DB press", base: 40 },
+  { lift: "squat", name: "Squat", base: 110 },
+  { lift: "stiff-leg-deadlift", name: "Stiff-leg deadlift", base: 100 } ];
+
+const DAY_ORDER = ["d1", "d2", "d4", "d5", "d6"];
+
+function buildDemo(plan) {
+  const sessions = [];
+  const offsets = { d1: 0, d2: 1, d4: 3, d5: 4, d6: 5 };
+  for (let w = 0; w < 6; w++) {
+    DAY_ORDER.forEach((id) => {
+      const day = plan.days.find((d) => d.id === id);
+      const date = addDays(TODAY, -(5 - w) * 7 - (6 - offsets[id]));
+      if (agoDays(date) < 0) return;
+      const entries = {};
+      day.exs.forEach((e) => {
+        if (e.cut && w < 4) return;
+        const k = KEYS.find((x) => x.lift === e.lift);
+        const top = k ? k.base + w * 2.5 : Math.round((30 + w * 1.25) * 2) / 2;
+        const sets = [];
+        for (let i = 0; i < e.s; i++) {
+          const wt = e.k === "speed" ? Math.round(top * 0.68 * 2) / 2 : top - (i > 1 ? 2.5 : 0);
+          const reps = e.k === "speed" ? 3 : Math.max(e.lo, e.hi - (i > 1 ? 1 : 0));
+          sets.push({ w: String(wt), r: String(reps) });
+        }
+        entries[e.key] = { sets };
+      });
+      sessions.push({ dayId: id, date, entries });
+    });
+  }
+  sessions.sort((a, b) => a.date.localeCompare(b.date));
+  const bw = [];
+  for (let i = 41; i >= 0; i--) {
+    const kg = 84.0 + (41 - i) * 0.0357 + (i % 3 === 0 ? 0.28 : i % 2 === 0 ? -0.22 : 0.05);
+    bw.push({ date: addDays(TODAY, -i), kg: Math.round(kg * 10) / 10 });
+  }
+  return { sessions, bw };
+}
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const plan = JSON.parse(JSON.stringify(BASE_PLAN));
+    const demo = buildDemo(plan);
+    const empty = (this.props.dataState || "populated") === "empty";
+    this.state = {
+      screen: empty ? "onboard" : "home",
+      plan, demo: !empty,
+      sessions: empty ? [] : demo.sessions,
+      bw: empty ? [] : demo.bw,
+      dayId: null, draft: null, exIdx: 0,
+      figOpen: false, rest: 0, restRun: false, autoRest: true,
+      step: this.props.step || 2.5,
+      includeCut: !!this.props.fullVolume,
+      protein: false, dietDay: "train",
+      bwInput: empty ? "85" : "85.6",
+      openDay: "d2", planName: plan.name, sum: null, editPlan: false };
+  }
+
+  componentDidMount() {
+    this._t = setInterval(() => {
+      if (this.state.restRun && this.state.rest > 0) this.setState((s) => ({ rest: s.rest - 1 }));
+      else if (this.state.restRun && this.state.rest <= 0) this.setState({ restRun: false });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this._t); }
+
+  // ---- data helpers
+  visExs(day) { return day.exs.filter((e) => this.state.includeCut || !e.cut); }
+  lastFor(key) {
+    const ss = this.state.sessions;
+    for (let i = ss.length - 1; i >= 0; i--) if (ss[i].entries[key]) return ss[i].entries[key];
+    return null;
+  }
+  lastDayDate(id) {
+    const ss = this.state.sessions;
+    for (let i = ss.length - 1; i >= 0; i--) if (ss[i].dayId === id) return ss[i].date;
+    return null;
+  }
+  top(sets) { const v = sets.filter((s) => +s.w > 0 && +s.r > 0).map((s) => +s.w); return v.length ? Math.max.apply(null, v) : 0; }
+  vol(sets) { return sets.reduce((a, s) => a + (+s.w || 0) * (+s.r || 0), 0); }
+  weekNo() {
+    if (!this.state.sessions.length) return 1;
+    return Math.floor(agoDays(this.state.sessions[0].date) / 7) + 1;
+  }
+  bwAvgN(n, skip) {
+    const b = this.state.bw.slice(-(n + (skip || 0)));
+    const use = skip ? b.slice(0, n) : b;
+    if (!use.length) return 0;
+    return use.reduce((a, x) => a + x.kg, 0) / use.length;
+  }
+  verdict(e, sets) {
+    const d = sets.filter((s) => +s.w > 0 && +s.r > 0);
+    if (!d.length) return null;
+    if (e.k === "power") {
+      const all = d.length >= e.s && d.every((s) => +s.r >= e.hi);
+      if (all) return { t: "All sets hit the top of the range. Add " + this.state.step + " kg next session.", c: "#f5b32b", k: "Overload" };
+      const low = d.some((s) => +s.r < e.lo);
+      if (low) return { t: "A set fell under " + e.lo + " reps. Hold this weight until all sets clear the range.", c: "rgba(240,238,234,.7)", k: "Hold" };
+      return { t: "In range. Repeat this weight and push for " + e.hi + " on every set.", c: "rgba(240,238,234,.7)", k: "Repeat" };
+    }
+    if (e.k === "speed") return { t: "Speed work logged. Submaximal, moved fast — never graded on load.", c: "rgba(240,238,234,.7)", k: "Logged" };
+    const prev = this.lastFor(e.key);
+    const now = this.vol(d);
+    if (!prev) return { t: "First time logged. This becomes the number to beat.", c: "rgba(240,238,234,.7)", k: "Baseline" };
+    const was = this.vol(prev.sets);
+    const pct = was ? Math.round(((now - was) / was) * 100) : 0;
+    if (pct > 0) return { t: "Volume up " + pct + "% on last time (" + Math.round(now) + " vs " + Math.round(was) + " kg).", c: "#f5b32b", k: "Volume up" };
+    return { t: "Volume down " + Math.abs(pct) + "% (" + Math.round(now) + " vs " + Math.round(was) + " kg). Fine once; a pattern means recovery.", c: "rgba(240,238,234,.7)", k: "Volume down" };
+  }
+
+  // ---- actions
+  go(screen) { this.setState({ screen }); }
+  startDay(id) {
+    const day = this.state.plan.days.find((d) => d.id === id);
+    const entries = {};
+    this.visExs(day).forEach((e) => {
+      const prev = this.lastFor(e.key);
+      const sets = [];
+      for (let i = 0; i < e.s; i++) sets.push({ w: prev && prev.sets[i] ? prev.sets[i].w : "", r: "" });
+      entries[e.key] = { sets };
+    });
+    this.setState({ dayId: id, draft: { date: TODAY, entries }, exIdx: 0, screen: "session", figOpen: false, rest: day.rest, restRun: false });
+  }
+  setVal(key, i, f, v) {
+    this.setState((s) => {
+      const draft = JSON.parse(JSON.stringify(s.draft));
+      draft.entries[key].sets[i][f] = v;
+      const day = s.plan.days.find((d) => d.id === s.dayId);
+      const fire = f === "r" && +v > 0 && s.autoRest;
+      return { draft, rest: fire ? day.rest : s.rest, restRun: fire ? true : s.restRun };
+    });
+  }
+  bump(key, i, f, delta) {
+    const cur = +(this.state.draft.entries[key].sets[i][f] || 0);
+    const next = Math.max(0, cur + delta);
+    this.setVal(key, i, f, next ? String(Math.round(next * 100) / 100) : "");
+  }
+  finish() {
+    const day = this.state.plan.days.find((d) => d.id === this.state.dayId);
+    const exs = this.visExs(day);
+    const rows = [], counts = { sets: 0, vol: 0, extra: 0 };
+    exs.forEach((e) => {
+      const st = this.state.draft.entries[e.key];
+      const done = st.sets.filter((s) => +s.w > 0 && +s.r > 0);
+      counts.sets += done.length;
+      counts.vol += this.vol(done);
+      counts.extra += Math.max(0, done.length - e.s);
+      const v = this.verdict(e, st.sets);
+      rows.push({ name: e.n, sets: done.length ? done.map((s) => s.w + "×" + s.r).join("  ") : "not logged",
+        verdict: v ? v.k.toUpperCase() + " — " + v.t : "SKIPPED", color: v ? v.c : "rgba(240,238,234,.45)" });
+    });
+    this.setState({ screen: "summary", sum: { name: day.name, rows, counts } });
+  }
+  save() {
+    this.setState((s) => ({
+      sessions: s.sessions.concat([{ dayId: s.dayId, date: TODAY, entries: JSON.parse(JSON.stringify(s.draft.entries)) }]).sort((a, b) => a.date.localeCompare(b.date)),
+      draft: null, dayId: null, sum: null, screen: "home", restRun: false }));
+  }
+
+  renderVals() {
+    const S = this.state, self = this;
+    const A = "#f5b32b", DIM = "rgba(240,238,234,.55)";
+    const v = {};
+
+    v.noop = () => {};
+    v.goHome = () => this.go("home");
+    v.goTrend = () => this.go("trend");
+    v.goWeight = () => this.go("weight");
+    v.goDiet = () => this.go("diet");
+    v.goPlans = () => this.setState({ screen: "plans", editPlan: false });
+    v.goPlanEdit = () => this.setState({ screen: "planedit", editPlan: true });
+    v.goSettings = () => this.go("settings");
+    v.goOnboard = () => this.go("onboard");
+    v.goSessionDemo = () => { if (S.draft) this.go("session"); else this.startDay("d2"); };
+    v.goSummaryDemo = () => {
+      if (S.sum) return this.go("summary");
+      const day = S.plan.days.find((d) => d.id === "d2");
+      const entries = {};
+      this.visExs(day).forEach((e) => {
+        const prev = this.lastFor(e.key), sets = [];
+        for (let i = 0; i < e.s; i++) sets.push({ w: prev && prev.sets[i] ? prev.sets[i].w : "60", r: String(e.hi) });
+        entries[e.key] = { sets };
+      });
+      this.setState({ dayId: "d2", draft: { date: TODAY, entries } }, () => this.finish());
+    };
+    v.loadDemo = () => { const d = buildDemo(S.plan); this.setState({ demo: true, sessions: d.sessions, bw: d.bw, bwInput: "85.6", screen: "home" }); };
+    v.startFresh = () => this.setState({ demo: false, sessions: [], bw: [], screen: "home" });
+    v.toggleDemo = () => { if (S.demo) v.startFresh(); else v.loadDemo(); };
+    v.demoLabel = S.demo ? "SWITCH TO AN EMPTY LOG" : "LOAD SIX WEEKS OF SAMPLE DATA";
+    v.exportJson = () => {};
+
+    v.isOnboard = S.screen === "onboard"; v.isHome = S.screen === "home";
+    v.isSession = S.screen === "session"; v.isSummary = S.screen === "summary";
+    v.isTrend = S.screen === "trend"; v.isWeight = S.screen === "weight";
+    v.isDiet = S.screen === "diet"; v.isPlans = S.screen === "plans";
+    v.isPlanEdit = S.screen === "planedit"; v.isSettings = S.screen === "settings";
+    v.tabTrain = (v.isHome || v.isSession || v.isSummary || v.isOnboard || v.isSettings) ? "on" : "";
+    v.tabTrend = v.isTrend ? "on" : ""; v.tabWeight = v.isWeight ? "on" : "";
+    v.tabDiet = v.isDiet ? "on" : ""; v.tabPlan = (v.isPlans || v.isPlanEdit) ? "on" : "";
+
+    // ---- home
+    const wk = this.weekNo();
+    v.weekLabel = S.sessions.length ? "Week " + wk + " · " + S.sessions.length + " sessions" : "Week 1 · nothing logged";
+    const stale = DAY_ORDER.map((id) => {
+      const d = S.plan.days.find((x) => x.id === id), l = this.lastDayDate(id);
+      return { id, name: d.name, day: d, ago: l === null ? 999 : agoDays(l) };
+    }).sort((a, b) => b.ago - a.ago);
+    const next = stale[0];
+    v.nextKick = next.ago === 999 ? "Never logged — start here" : next.ago + " days since this day";
+    v.nextName = next.name;
+    const nvis = this.visExs(next.day);
+    v.nextMeta = nvis.length + " exercises · " + nvis.reduce((a, e) => a + e.s, 0) + " sets · rest " + Math.round(next.day.rest / 60) + " min";
+    v.startNext = () => this.startDay(next.id);
+    v.dayRows = DAY_ORDER.map((id) => {
+      const d = S.plan.days.find((x) => x.id === id), l = this.lastDayDate(id);
+      const a = l === null ? null : agoDays(l);
+      return { id, name: d.name, agoText: a === null ? "Never logged" : a === 0 ? "Done today" : a === 1 ? "1 day ago" : a + " days ago", start: () => this.startDay(id) };
+    });
+    v.macroLabel = "Today — high-carb training day";
+    v.mKcal = "3,200"; v.mP = "170g"; v.mC = "300g"; v.mF = "145g";
+    const toTest = (6 - wk) * 7;
+    v.testCountdown = wk >= 6
+      ? "Live now. Trend compares your top sets on row, bench, squat and deadlift against week 1."
+      : "In " + toTest + " days. It asks one question: are the top sets on row, bench, squat and deadlift higher than week 1?";
+
+    // ---- session
+    if (S.draft) {
+      const day = S.plan.days.find((d) => d.id === S.dayId);
+      const exs = this.visExs(day);
+      const idx = Math.min(S.exIdx, exs.length - 1);
+      const e = exs[idx];
+      const st = S.draft.entries[e.key];
+      const prev = this.lastFor(e.key);
+      v.sessTitle = day.name.toUpperCase() + " · " + (idx + 1) + " / " + exs.length;
+      v.pips = exs.map((x, i) => ({ bg: i < idx ? "rgba(240,238,234,.5)" : i === idx ? A : "rgba(240,238,234,.18)" }));
+      v.exName = e.n;
+      v.exTarget = e.lo === e.hi ? e.s + " × " + e.lo : e.s + " × " + e.lo + "–" + e.hi;
+      v.exLast = e.k === "speed"
+        ? "Speed work — 65–70% of your power-day top set. Rest 60–90 s."
+        : prev ? "Last time " + prev.sets.filter((s) => +s.w > 0).map((s) => s.w + "×" + s.r).join(", ") + ". Rest " + Math.round(day.rest / 60) + " min."
+               : "No history for this lift yet. Pick a weight you could get one more rep with, not two.";
+      v.exCue = e.cue;
+      v.figSlot = String(idx + 1);
+      v.figOpen = S.figOpen;
+      v.figLabel = S.figOpen ? "⌄ MOVEMENT & CUE" : "› MOVEMENT & CUE";
+      v.toggleFig = () => this.setState((s) => ({ figOpen: !s.figOpen }));
+      v.setRows = st.sets.map((row, i) => ({
+        num: String(i + 1), w: row.w, r: row.r,
+        numColor: i >= e.s ? A : "rgba(240,238,234,.5)",
+        border: (+row.r > 0) ? "rgba(240,238,234,.3)" : i >= e.s ? A : "rgba(240,238,234,.55)",
+        prevText: prev && prev.sets[i] && +prev.sets[i].w > 0 ? "last " + prev.sets[i].w + " × " + prev.sets[i].r : "no prior set",
+        flag: i >= e.s ? "EXTRA" : "",
+        wUp: () => this.bump(e.key, i, "w", S.step), wDown: () => this.bump(e.key, i, "w", -S.step),
+        rUp: () => this.bump(e.key, i, "r", 1), rDown: () => this.bump(e.key, i, "r", -1),
+        onW: (ev) => this.setVal(e.key, i, "w", ev.target.value),
+        onR: (ev) => this.setVal(e.key, i, "r", ev.target.value) }));
+      v.addSetLabel = "+ ADD SET " + (st.sets.length + 1);
+      v.addSet = () => this.setState((s) => {
+        const draft = JSON.parse(JSON.stringify(s.draft));
+        const arr = draft.entries[e.key].sets;
+        arr.push({ w: arr.length ? arr[arr.length - 1].w : "", r: "" });
+        return { draft };
+      });
+      v.removeSet = () => this.setState((s) => {
+        const draft = JSON.parse(JSON.stringify(s.draft));
+        const arr = draft.entries[e.key].sets;
+        if (arr.length > 1) arr.pop();
+        return { draft };
+      });
+      v.extraNote = st.sets.length > e.s
+        ? (st.sets.length - e.s) + " set(s) beyond the prescription. Logged and counted in volume — the " + v.exTarget + " target doesn't change."
+        : "Add sets freely. Extras are logged and counted in volume; the prescription stays as written.";
+      const vd = this.verdict(e, st.sets);
+      const filled = st.sets.filter((s) => +s.w > 0 && +s.r > 0).length;
+      v.hasVerdict = !!vd && filled >= Math.min(e.s, st.sets.length);
+      v.verdictKick = vd ? vd.k : "";
+      v.verdictText = vd ? vd.t : "";
+      const m = Math.floor(S.rest / 60), sec = S.rest % 60;
+      v.restText = m + ":" + (sec < 10 ? "0" + sec : sec);
+      v.restTarget = e.k === "speed" ? "60–90 s" : Math.round(day.rest / 60) + " min";
+      v.restState = S.restRun ? "Counting down" : S.rest === 0 ? "Rest done" : S.autoRest ? "Starts when you enter reps" : "Manual";
+      v.restBorder = S.restRun ? A : "rgba(240,238,234,.3)";
+      v.restColor = S.restRun ? A : "#f0eeea";
+      v.restBtn = S.restRun ? "PAUSE" : "START";
+      v.toggleRest = () => this.setState((s) => ({ restRun: !s.restRun, rest: s.rest > 0 ? s.rest : day.rest }));
+      v.hasPrev = idx > 0;
+      v.prevEx = () => this.setState((s) => ({ exIdx: Math.max(0, s.exIdx - 1), figOpen: false }));
+      v.nextExLabel = idx + 1 < exs.length ? "NEXT — " + exs[idx + 1].n.toUpperCase() : "FINISH SESSION";
+      v.nextEx = () => { if (idx + 1 < exs.length) this.setState({ exIdx: idx + 1, figOpen: false }); else this.finish(); };
+      v.discard = () => this.setState({ draft: null, dayId: null, screen: "home", restRun: false });
+    }
+
+    // ---- summary
+    if (S.sum) {
+      v.sumName = S.sum.name; v.sumRows = S.sum.rows;
+      v.sumSets = String(S.sum.counts.sets);
+      v.sumVol = Math.round(S.sum.counts.vol).toLocaleString("en-GB");
+      v.sumExtra = String(S.sum.counts.extra);
+      v.todayLabel = fmtDate(TODAY);
+      v.saveSession = () => this.save();
+    }
+
+    // ---- trend
+    v.sessCount = S.sessions.length + " sessions";
+    v.trendEmpty = S.sessions.length === 0;
+    v.trendFull = S.sessions.length > 0;
+    const weekly = (lift) => {
+      const out = [];
+      for (let w = 1; w <= Math.max(wk, 1); w++) {
+        const from = addDays(TODAY, -(wk - w + 1) * 7), to = addDays(TODAY, -(wk - w) * 7);
+        let best = 0;
+        S.sessions.forEach((s) => {
+          if (s.date < from || s.date > to) return;
+          Object.keys(s.entries).forEach((k) => {
+            const parts = k.split(":");
+            if (parts[0] === lift && parts[1] !== "speed") best = Math.max(best, self.top(s.entries[k].sets));
+          });
+        });
+        out.push(best);
+      }
+      return out.filter((x) => x > 0);
+    };
+    const series = KEYS.map((k) => ({ k, vals: weekly(k.lift) }));
+    v.testRows = series.map((s) => {
+      const first = s.vals[0] || 0, last = s.vals[s.vals.length - 1] || 0, d = last - first;
+      return { name: s.k.name, pair: first ? first + " → " + last + " kg" : "no data",
+        delta: d > 0 ? "+" + d : String(d), color: d > 0 ? A : "rgba(240,238,234,.6)" };
+    });
+    const allUp = series.every((s) => (s.vals[s.vals.length - 1] || 0) > (s.vals[0] || 0));
+    v.testVerdict = allUp
+      ? "All four are up. The programme and the surplus are working — keep going and re-test at week 12."
+      : "Not all four are up. The split isn't the problem: either the sets aren't close enough to failure, or the surplus isn't there.";
+    v.sparks = series.map((s) => {
+      const vals = s.vals.length ? s.vals : [0];
+      const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals), span = max - min || 1;
+      const pts = vals.map((val, i) => {
+        const x = vals.length > 1 ? (i / (vals.length - 1)) * 118 + 1 : 60;
+        const y = 36 - ((val - min) / span) * 30;
+        return Math.round(x * 10) / 10 + "," + Math.round(y * 10) / 10;
+      }).join(" ");
+      const d = (vals[vals.length - 1] || 0) - (vals[0] || 0);
+      return { name: s.k.name, range: vals[0] + " → " + vals[vals.length - 1] + " kg top set",
+        points: pts, delta: d > 0 ? "+" + d : String(d), color: d > 0 ? A : "rgba(240,238,234,.6)" };
+    });
+
+    // ---- weight
+    const avg = this.bwAvgN(7), prevAvg = this.bwAvgN(7, 7);
+    const chg = avg && prevAvg ? avg - prevAvg : 0;
+    v.bwCount = S.bw.length ? S.bw.length + " entries" : "no entries";
+    v.bwAvg = avg ? (Math.round(avg * 10) / 10).toFixed(1) + " kg" : "—";
+    v.bwChange = chg ? (chg > 0 ? "+" : "") + (Math.round(chg * 100) / 100).toFixed(2) + " kg/wk" : "";
+    v.calDecision = !avg ? "Log daily for 14 days before changing anything. Same conditions, same time."
+      : chg >= 0.2 && chg <= 0.35 ? "Correct rate. Hold calories. This is +" + (Math.round(chg * 100) / 100).toFixed(2) + " kg a week — muscle-plausible."
+      : chg > 0.5 ? "Too fast at +" + (Math.round(chg * 100) / 100).toFixed(2) + " kg a week. Cut 200 kcal from training days."
+      : chg < 0.15 ? "Flat or falling. Add 200 kcal to training days and hold for another 14 days."
+      : "Within noise. Give it the full 14 days before touching calories.";
+    v.bwInput = S.bwInput;
+    v.onBw = (ev) => this.setState({ bwInput: ev.target.value });
+    v.bwUp = () => this.setState((s) => ({ bwInput: (Math.round((+s.bwInput + 0.1) * 10) / 10).toFixed(1) }));
+    v.bwDown = () => this.setState((s) => ({ bwInput: (Math.round((+s.bwInput - 0.1) * 10) / 10).toFixed(1) }));
+    const loggedToday = S.bw.length && S.bw[S.bw.length - 1].date === TODAY;
+    v.bwEntryLabel = loggedToday ? "Today, logged" : "Today, " + fmtDate(TODAY);
+    v.bwBtn = loggedToday ? "UPDATE" : "LOG TODAY";
+    v.logBw = () => this.setState((s) => {
+      const kg = Math.round(+s.bwInput * 10) / 10;
+      if (!kg) return {};
+      const bw = s.bw.filter((x) => x.date !== TODAY).concat([{ date: TODAY, kg }]);
+      bw.sort((a, b) => a.date.localeCompare(b.date));
+      return { bw };
+    });
+    v.bwRows = S.bw.slice(-7).reverse().map((b) => ({ date: b.date === TODAY ? "Today" : fmtDate(b.date), kg: b.kg.toFixed(1) + " kg" }));
+    v.bwEmptyNote = S.bw.length ? "Weigh at the same time under the same conditions. The average is what you act on." : "Nothing logged yet. Weigh daily — the 14-day trend overrides every calorie estimate in this app.";
+
+    // ---- diet
+    const train = S.dietDay === "train";
+    v.segTrain = train ? "on" : ""; v.segRest = train ? "" : "on";
+    v.pickTrain = () => this.setState({ dietDay: "train" });
+    v.pickRest = () => this.setState({ dietDay: "rest" });
+    v.dKcal = train ? "3,200" : "2,500";
+    v.dP = train ? "170 g" : "175 g";
+    v.dC = train ? "300 g" : "60 g";
+    v.dF = train ? "145 g" : "175 g";
+    v.proteinLabel = S.protein ? "PROTEIN HIT TODAY" : "PROTEIN NOT YET HIT";
+    v.proteinMark = S.protein ? "✓" : "○";
+    v.proteinBorder = S.protein ? A : "rgba(240,238,234,.45)";
+    v.proteinColor = S.protein ? A : "#f0eeea";
+    v.toggleProtein = () => this.setState((s) => ({ protein: !s.protein }));
+    v.timingTitle = train ? "Carb placement" : "Rest-day watch item";
+    v.timingBody = train
+      ? "80–100 g in the meal two hours before lifting, 80–100 g in the meal after, the rest spread across the day. Rice, potatoes, oats, fruit."
+      : "60 g, not zero — vegetables, berries, a little dairy. Fat at 175 g is easy to overshoot because it's calorically dense; weigh it for the first fortnight.";
+
+    // ---- plans
+    v.planRows = [
+      { name: S.planName, meta: S.plan.days.length + " days · " + S.plan.days.reduce((a, d) => a + d.exs.length, 0) + " exercises · " + S.sessions.length + " sessions logged",
+        badge: "ACTIVE", style: "solid", border: A, bg: "#2a2827", open: () => v.goPlanEdit() },
+      { name: "PHAT — original", meta: "Layne Norton, unedited · read-only template", badge: "", style: "solid", border: "rgba(240,238,234,.45)", bg: "transparent", open: () => v.goPlanEdit() },
+      { name: "Upper / lower — 4 day", meta: "Template · for weeks the fifth session won't happen", badge: "", style: "solid", border: "rgba(240,238,234,.45)", bg: "transparent", open: () => v.goPlanEdit() },
+      { name: "Full body — 3 day", meta: "Template · travel or deload weeks", badge: "", style: "solid", border: "rgba(240,238,234,.45)", bg: "transparent", open: () => v.goPlanEdit() },
+      { name: "+ Build from empty", meta: "Name the days, add the lifts, set the ranges", badge: "", style: "dashed", border: "rgba(240,238,234,.45)", bg: "transparent", open: () => v.goPlanEdit() } ];
+
+    // ---- plan editor
+    v.planName = S.planName;
+    v.onPlanName = (ev) => this.setState({ planName: ev.target.value });
+    v.planMeta = S.plan.from + " · " + S.plan.days.length + " days · edited today";
+    const mutate = (fn) => this.setState((s) => { const plan = JSON.parse(JSON.stringify(s.plan)); fn(plan); return { plan }; });
+    v.editDays = S.plan.days.map((d, di) => ({
+      name: d.name,
+      meta: d.exs.length + " ex · " + d.exs.reduce((a, e) => a + e.s, 0) + " sets",
+      open: S.openDay === d.id,
+      bg: S.openDay === d.id ? "#2a2827" : "transparent",
+      mark: S.openDay === d.id ? A : "transparent",
+      toggle: () => this.setState((s) => ({ openDay: s.openDay === d.id ? null : d.id })),
+      up: () => mutate((p) => { if (di > 0) { const x = p.days.splice(di, 1)[0]; p.days.splice(di - 1, 0, x); } }),
+      down: () => mutate((p) => { if (di < p.days.length - 1) { const x = p.days.splice(di, 1)[0]; p.days.splice(di + 1, 0, x); } }),
+      addEx: () => mutate((p) => { p.days[di].exs.push(ex("New exercise", 3, 8, 12, "hyp", "Add your own cue.")); }),
+      exs: d.exs.map((e, ei) => ({
+        name: e.n,
+        color: e.cut && !S.includeCut ? "rgba(240,238,234,.45)" : "#f0eeea",
+        strike: e.cut && !S.includeCut ? "line-through" : "none",
+        target: e.cut && !S.includeCut ? "cut" : e.s + " × " + (e.lo === e.hi ? e.lo : e.lo + "–" + e.hi),
+        rename: (ev) => { const val = ev.target.value; mutate((p) => { p.days[di].exs[ei].n = val; }); },
+        more: () => mutate((p) => { p.days[di].exs[ei].s = Math.min(9, p.days[di].exs[ei].s + 1); }),
+        less: () => mutate((p) => { p.days[di].exs[ei].s = Math.max(1, p.days[di].exs[ei].s - 1); }),
+        remove: () => mutate((p) => { p.days[di].exs.splice(ei, 1); }) })) }));
+    v.addDay = () => mutate((p) => { p.days.push({ id: "d" + (p.days.length + 10), name: "New day", rest: 120, carb: "high", exs: [] }); });
+
+    // ---- settings
+    v.cutMark = S.includeCut ? "✓" : "○";
+    v.cutBorder = S.includeCut ? A : "rgba(240,238,234,.45)";
+    v.cutColor = S.includeCut ? A : "rgba(240,238,234,.6)";
+    v.toggleCut = () => this.setState((s) => ({ includeCut: !s.includeCut }));
+    v.seg25 = S.step === 2.5 ? "on" : ""; v.seg5 = S.step === 5 ? "on" : "";
+    v.step25 = () => this.setState({ step: 2.5 }); v.step5 = () => this.setState({ step: 5 });
+    v.segAuto = S.autoRest ? "on" : ""; v.segManual = S.autoRest ? "" : "on";
+    v.setAuto = () => this.setState({ autoRest: true }); v.setManual = () => this.setState({ autoRest: false });
+
+    return v;
+  }
+}
+</script>
+</body>
+</html>
