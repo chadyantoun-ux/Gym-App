@@ -51,9 +51,14 @@
 <body>
 
 <h1>Phat Gym Track - test harness</h1>
-<p class="sub">Pure-function regression suite for WO-001 (B-01 / B-02 / B-03 / B-21).
+<p class="sub">Pure-function regression suite for WO-001 (B-01 / B-02 / B-03 / B-21) and WO-003 (the advice batch).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
-Every test is named after the backlog ID and the work-order acceptance criterion it covers.</p>
+Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
+<b>Target shape is N / N / 0.</b> No expected failure is carried forward. A failure kept alive as
+"the known one" becomes a rule applied from memory, and that is how a second, real failure gets waved
+through (WO-003 &sect;Decision 1). Sections <b>S16 and S17</b> are scaffolded against signatures W5/W6
+have not landed yet, so they fail until that code exists. That is the scaffold doing its job, not an
+accepted failure - it goes to zero when W6 lands, and nothing else may be red beside it.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -66,11 +71,14 @@ Every test is named after the backlog ID and the work-order acceptance criterion
 <h2>Open contract questions</h2>
 <div id="contract" class="note"></div>
 
-<h2>Not testable in this harness (needs B-20 extraction)</h2>
+<h2>Not testable in this harness (DOM, storage adapter, browser lifecycle)</h2>
 <div id="untestable" class="note"></div>
 
-<h2>Manual checklist - two minutes, on the phone</h2>
+<h2>What only a phone can answer</h2>
 <div id="manual" class="note"></div>
+
+<h2>Already proven - no action needed</h2>
+<div id="proven" class="note"></div>
 
 <!-- Classic script on purpose. ES modules, fetch and iframes all fail on a file:// opaque origin. -->
 <script src="logic.js"></script>
@@ -167,8 +175,14 @@ function contract(q){ CONTRACT.push(q); }
    `toISOString()` is left alone and still returns the true UTC instant, so the
    pre-fix implementation fails with a readable "expected 2026-01-15, got
    2026-01-14" rather than throwing.
-   Caveat, stated plainly: this proves PHAT.localDate. It does not prove the
-   whole app under a real device timezone - that is manual checklist item 8. */
+   Caveat, stated plainly: this proves PHAT.localDate, not the whole app.
+   NO LONGER A MANUAL ITEM. On 2026-09-09 the whole app was driven under real
+   browser timezones via the DevTools protocol (Emulation.setTimezoneOverride,
+   which works where the TZ environment variable does not): 23:50 in
+   America/Los_Angeles wrote the local day where UTC would have written the
+   next one, 00:10 in Asia/Beirut wrote the new local day where UTC would have
+   written the previous one, same at Pacific/Kiritimati (UTC+14). See the
+   "Already proven" section. */
 function tzDate(utcISO, offsetHours){
   var t = Date.parse(utcISO);
   if (t !== t) throw new Error("bad fixture instant: " + utcISO);
@@ -232,7 +246,7 @@ var TZ_SIM_WHY = "The injected clock is not reaching PHAT.localDate, so this off
   "here. Cause: localDate is re-deriving its components instead of calling the getters on the Date it " +
   "was handed (something like new Date(+d) or Date.UTC round-tripping). Keep localDate reading " +
   "d.getFullYear()/getMonth()/getDate() directly. Until then only the host timezone (" + TZ_NAME +
-  ") is covered, plus manual checklist item 8.";
+  ") is covered here, plus the live timezone-override run recorded under \"Already proven\".";
 var AR5 = "٥"; /* Arabic-Indic digit five */
 
 /* Pre-fix store fixtures: sets are raw strings, dates are bare YYYY-MM-DD, no
@@ -317,6 +331,100 @@ function allSets(entries){
   return out;
 }
 
+/* ---------- WO-003 fixtures: sessions, exercises, verdict contexts ---------- */
+
+/* SESS(date, id, entries) - a session that IS a training day unless you say
+   otherwise: one completed set in it. The default matters, because most of the
+   session fixtures below are about DATES, not about sets. */
+function SESS(date, id, entries){
+  return { id: id, date: date, dayId: "d1",
+           entries: entries || { d1a: { sets: [{ w: 100, r: 5 }], note: "" } } };
+}
+/* A save carrying only a note. Data, but not evidence that he trained. */
+function SESS_NOTE(date, id, note){
+  return { id: id, date: date, dayId: "d1",
+           entries: { d1a: { sets: [], note: note || "felt flat, went home" } } };
+}
+/* A save where nothing reached "completed": blank rows and a half-typed row. */
+function SESS_BLANK(date, id){
+  return { id: id, date: date, dayId: "d1",
+           entries: { d1a: { sets: [{ w: "", r: "" }, { w: "100", r: "" }], note: "" } } };
+}
+/* Nothing but 0 kg rack chins. This IS training (Rule Z1). */
+function SESS_ZERO(date, id){
+  return { id: id, date: date, dayId: "d1",
+           entries: { d3b: { sets: [{ w: 0, r: 10 }, { w: 0, r: 9 }], note: "" } } };
+}
+/* n consecutive days of training starting at a Monday. */
+function WEEK(mondayIso, n, tag){
+  var out = [], t = Date.parse(mondayIso + "T12:00:00"), i;
+  for (i = 0; i < n; i++) out.push(SESS(P.localDate(new Date(t + i * 86400000)), tag + "-" + i));
+  return out;
+}
+
+/* SETS(100,5, 100,5, 95,5) -> [{w:100,r:5},{w:100,r:5},{w:95,r:5}] as NUMBERS,
+   which is what a SAVED set is. `sets("100:5")` above makes STRINGS, which is
+   what a DRAFT set is. Both shapes must read, and the two helpers exist so a
+   test says which one it means. */
+function SETS(){
+  var out = [], i;
+  for (i = 0; i + 1 < arguments.length; i += 2) out.push({ w: arguments[i], r: arguments[i + 1] });
+  return out;
+}
+/* A previous entry, in the shape PHAT.lastFor hands back. */
+function PREV(setList, note){ return { sets: setList, note: note || "" }; }
+
+/* Real PROGRAM exercises, plus the `implement` tag that Rule I1 (W2/W11) adds.
+   Kept here as data so a change to PROGRAM shows up as one edit, not thirty. */
+var EX = {
+  squat:    { id: "d2a", n: "Squat",             s: 3, lo: 3, hi: 5,  k: "power", implement: "bb" },
+  row:      { id: "d1a", n: "Bent-over row",     s: 3, lo: 3, hi: 5,  k: "power", implement: "bb" },
+  sldl:     { id: "d2d", n: "Stiff-leg deadlift",s: 3, lo: 5, hi: 8,  k: "power", implement: "bb" },
+  dbpress:  { id: "d1d", n: "Flat DB press",     s: 3, lo: 3, hi: 5,  k: "power", implement: "db" },
+  rackchin: { id: "d1c", n: "Rack chin",         s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", cut: 1 },
+  legext:   { id: "d2c", n: "Leg extension",     s: 2, lo: 6, hi: 10, k: "power", implement: "machine", cut: 1 },
+  chinhyp:  { id: "d3b", n: "Rack chin",         s: 3, lo: 8, hi: 12, k: "hyp",   implement: "bodyweight" },
+  cablerow: { id: "d3c", n: "Seated cable row",  s: 3, lo: 8, hi: 12, k: "hyp",   implement: "cable" },
+  speedrow: { id: "d3a", n: "Row - speed work",  s: 6, lo: 3, hi: 3,  k: "speed", implement: "bb" }
+};
+
+/* One context object, per WO-003 Decision 3 - not a growing argument list.
+   painFlag is passed in because W5 computes it once at the call site and W6
+   reads ctx.painFlag; if the implementation prefers to derive it from ctx.note
+   this still holds, because both are supplied and agree. */
+function VCTX(ex, setList, prev, note, todayStr){
+  return { ex: ex, sets: setList, prev: prev === undefined ? null : prev,
+           note: note || "", todayStr: todayStr || "2026-09-09",
+           painFlag: (typeof P.painFlag === "function") ? P.painFlag(note || "") : false };
+}
+/* Every string the verdict would put ON SCREEN, joined by newline.
+   WO-003 fixes the return as {t, x}; logic.js ships {t, x, x2, rule} where x2
+   is Rule I2's appendix ("a second line below the verdict, never appended to
+   the same sentence" - the field name is not specified anywhere) and `rule` is
+   a diagnostic tag like "P1.4". This collects the COPY fields only, so the
+   implementer's naming choice changes nothing here and a diagnostic tag is
+   never mistaken for something the user reads.
+   VNONCOPY is the skip list. If a future field carries copy, remove it from
+   here - do not weaken an assertion to accommodate it. */
+var VNONCOPY = { t: 1, rule: 1, k: 1, code: 1, id: 1, kind: 1, cls: 1 };
+function vtext(v){
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") return v;
+  var out = [];
+  (function walk(o){
+    if (typeof o === "string") { if (o !== "") out.push(o); return; }
+    if (!o || typeof o !== "object") return;
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    Object.keys(o).forEach(function(k){ if (!VNONCOPY[k]) walk(o[k]); });
+  })(v);
+  return out.join("\n");
+}
+/* Guard for every S16/S17 test: names the missing function loudly instead of
+   letting a TypeError read as "the rule is wrong". */
+function needFns(a){
+  for (var i = 0; i < arguments.length - 1; i++) a.isFn(P[arguments[i + 1]], arguments[i + 1]);
+}
+
 /* ============================================================ S0 - harness self-check + API surface */
 group("S0 harness");
 
@@ -334,7 +442,7 @@ T("harness - a failing assertion is recorded as a failure", function(a){
   a.ok(caught && caught.isAssert, "A.eq must throw an AssertFail on mismatch");
 });
 
-T("W1/W2/W3 - window.PHAT exposes all nine pure functions", function(a){
+T("WO-001 W1/W2/W3 - window.PHAT exposes the nine WO-001 pure functions", function(a){
   var need = ["localDate","parseWeight","parseReps","classifySet","sanitizeNumericInput",
               "validateEntry","validateDraft","migrateStore","draftAge"], missing = [], i;
   a.ok(typeof window.PHAT === "object" && window.PHAT, "window.PHAT is not defined - is logic.js next to tests.html?");
@@ -342,8 +450,19 @@ T("W1/W2/W3 - window.PHAT exposes all nine pure functions", function(a){
   a.eq(missing.join(",") || "none", "none", "missing PHAT functions");
 });
 
-T("W1 - PHAT.SCHEMA_VERSION is 2 and PHAT.LIMITS matches Decision 4", function(a){
-  a.eq(P.SCHEMA_VERSION, 2, "index.html writes this into every payload");
+T("WO-003 W1 - window.PHAT exposes the session-ordering and training-week surface", function(a){
+  var need = ["sortSessions","trainingDays","trainingWeeks","sessionHasCompletedSet",
+              "isDoneSet","weekStart","lastFor","classifyDraftPayload","buildSession"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none", "missing PHAT functions from WO-003 W1");
+});
+
+T("WO-003 W1 - PHAT.SCHEMA_VERSION is 3, TRAINING_WEEK_MIN is 3, LIMITS matches Decision 4", function(a){
+  /* Was 2 through WO-001. W1 bumped it to 3 when the four V1/D1/W1 keys
+     (reintro, lastReintroDate, calChangedAt, deload) joined the log store.
+     WO-002's importer must accept BOTH 2 and 3 (backlog B-04). */
+  a.eq(P.SCHEMA_VERSION, 3, "index.html writes this into every payload");
+  a.eq(P.TRAINING_WEEK_MIN, 3, "a training week is 3 distinct training DAYS (coach ruling TW1)");
   a.ok(P.LIMITS && typeof P.LIMITS === "object", "LIMITS must be exported so the UI cannot drift from the parser");
   a.eq(P.LIMITS.wMin, 0, "0 kg is a legal weight (B-21)");
   a.eq(P.LIMITS.wMax, 500);
@@ -351,14 +470,61 @@ T("W1 - PHAT.SCHEMA_VERSION is 2 and PHAT.LIMITS matches Decision 4", function(a
   a.eq(P.LIMITS.rMax, 100);
 });
 
-T("B-20 - PHAT does not yet export the advice functions, so nothing here pins them", function(a){
-  /* verdictFor, the stall detector and the calorie thresholds are being
-     rewritten (docs/coach-audit.md). If they appear in PHAT, this suite must
-     still not assert on them - it would lock in the bugs the coach is fixing. */
-  var forbidden = ["verdictFor","vol","topSet","weeksIn","lastFor"], found = [], i;
-  for (i = 0; i < forbidden.length; i++) if (P[forbidden[i]] !== undefined) found.push(forbidden[i]);
-  a.eq(found.join(",") || "none", "none",
-    "these are now exported: if they are being extracted, the coach batch owns their tests, not this file");
+/* ---------------------------------------------------------------------------
+   B-20, restated as the END STATE of the extraction.
+
+   The old form of this test FORBADE the advice functions from appearing on
+   PHAT, and said in its own comment that it dies the moment the extraction
+   happens. W1 exported lastFor and killed it. Patching it once per function as
+   W5 and W6 land would mean rewriting it three times and, worse, would leave
+   the suite silent about the half of B-20 that actually matters: the finish
+   line. So it now asserts the finish line directly.
+
+   B-20 is closed when every rule in docs/coach-audit.md is callable as
+   PHAT.<fn> from file:// with no DOM and no S. Until W5/W6 land this FAILS,
+   and it names exactly what is still missing. That is the point - it is the
+   only test in the file that will tell you the extraction is incomplete.
+   Nothing here pins any advice STRING; the rules are being rewritten and the
+   copy is asserted in S17 against the ruled output, never against today's.
+--------------------------------------------------------------------------- */
+T("B-20 (END STATE) - every WO-003 W1/W5 pure function is callable from PHAT with no DOM", function(a){
+  var need = ["sortSessions","trainingDays","trainingWeeks","sessionHasCompletedSet","isDoneSet",
+              "weekStart","lastFor",
+              "vol","round2p5","workingLoad","e1rm","painFlag","verdict"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none",
+    "B-20 is not closed while these still live inside index.html - they cannot be tested from file://");
+});
+
+T("B-20 (END STATE) - the extracted seam reads no storage and no global state", function(a){
+  var need = ["vol","round2p5","workingLoad","e1rm","painFlag","verdict","lastFor",
+              "sortSessions","trainingDays","trainingWeeks"], i;
+  for (i = 0; i < need.length; i++) a.isFn(P[need[i]], need[i]);
+  var ls;
+  try { ls = window.localStorage; } catch (e) { ls = null; }
+  a.ok(!!ls, "localStorage unavailable, so the spy cannot be installed - re-run in a normal window");
+  var calls = 0, realSet = ls.setItem, realGet = ls.getItem, realDel = ls.removeItem;
+  ls.setItem = function(){ calls++; return realSet.apply(ls, arguments); };
+  ls.getItem = function(){ calls++; return realGet.apply(ls, arguments); };
+  ls.removeItem = function(){ calls++; return realDel.apply(ls, arguments); };
+  var stashed = window.storage, storageHits = 0, stashedS = window.S;
+  window.storage = { get: function(){ storageHits++; }, set: function(){ storageHits++; } };
+  try {
+    delete window.S; /* if anything still reads S it must throw, not read a stale one */
+    P.vol(SETS(100, 5, 100, 5));
+    P.round2p5(70.875); P.workingLoad(SETS(100, 5, 95, 5), 2); P.e1rm(100, 5);
+    P.painFlag("left knee pain on set 2");
+    P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 100, 5), null, ""));
+    P.lastFor([], "d1a");
+    P.sortSessions([]); P.trainingDays([], "2026-09-09"); P.trainingWeeks([], "2026-09-09");
+  } finally {
+    ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel;
+    if (stashed === undefined) { try { delete window.storage; } catch (e) { window.storage = undefined; } }
+    else window.storage = stashed;
+    if (stashedS !== undefined) window.S = stashedS;
+  }
+  a.eq(calls, 0, "an advice function read or wrote localStorage");
+  a.eq(storageHits, 0, "an advice function reached the window.storage bridge");
 });
 
 T("W1 - logic.js clobbers no browser global (the 'top' black-screen incident)", function(a){
@@ -608,11 +774,40 @@ T("B-03 / W1-AC5 - DATA LOSS: logged set values and notes are untouched by the m
   a.eq(bwRows(r.bw)[3].kg, 85.6, "bodyweight value must survive");
 });
 
-T("B-03 / W1 - populated store gets schemaVersion 2 and a utcDatedBefore marker", function(a){
+T("B-03 / W1 - populated store gets schemaVersion 3 and a utcDatedBefore marker", function(a){
   var r = mig(seedLog(), seedBw());
-  a.eq(r.log.schemaVersion, 2, "schemaVersion must be 2");
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION, "schemaVersion must be the current one");
+  a.eq(r.log.schemaVersion, 3, "and the current one is 3 after WO-003 W1");
   a.match(r.log.utcDatedBefore, /^\d{4}-\d{2}-\d{2}$/, "utcDatedBefore must be a local YYYY-MM-DD");
   a.eq(r.log.utcDatedBefore, P.localDate(), "utcDatedBefore must be the migration's LOCAL date");
+});
+
+T("WO-003 W1 - a v1 store reaches schema 3 in ONE pass and gains exactly the four new keys", function(a){
+  /* One pass, not v1 -> v2 -> v3 on two boots: the second boot would be a
+     second write of the same data for no gain. */
+  var r = mig(seedLog(), seedBw());
+  a.eq(r.log.schemaVersion, 3);
+  a.deep(r.log.reintro, {}, "reintro (V1)");
+  a.deep(r.log.lastReintroDate, {}, "lastReintroDate (V1)");
+  a.eq(r.log.calChangedAt, null, "calChangedAt (Rule W1)");
+  a.eq(r.log.deload, null, "deload (Rule D1)");
+  a.eq(r.log.includeCut, false, "includeCut is untouched, never deleted (WO-003 Decision 6)");
+  var seed = seedLog(), before = Object.keys(seed), added = [], i;
+  for (i = 0; i < Object.keys(r.log).length; i++) {
+    var k = Object.keys(r.log)[i];
+    if (before.indexOf(k) < 0) added.push(k);
+  }
+  a.deep(added.sort(), ["calChangedAt","deload","lastReintroDate","reintro","schemaVersion","utcDatedBefore"].sort(),
+    "exactly these keys are added and nothing else");
+});
+
+T("WO-003 W1 - the four v3 defaults are fresh objects, never one shared reference", function(a){
+  /* Two stores migrated in one boot must not end up sharing a reintro object:
+     writing one exercise's reintro would silently write the other's. */
+  var x = mig(seedLog(), null), y = mig(seedLog(), null);
+  x.log.reintro.d1e = "2026-09-09";
+  a.deep(y.log.reintro, {}, "a default leaked between two migrations");
+  a.deep(x.log.reintro, { d1e: "2026-09-09" });
 });
 
 T("B-03 / W1 - every pre-existing session and bodyweight row is marked dateBasis utc", function(a){
@@ -638,13 +833,14 @@ T("B-03 / W1-AC6 - three runs still equal one run (no key duplication, no drift)
 
 T("B-03 / W1 - an already-migrated store is not re-marked and dates stay identical", function(a){
   var log = seedLog(), bw = seedBw(), i;
-  log.schemaVersion = 2; log.utcDatedBefore = "2026-02-01";
+  log.schemaVersion = P.SCHEMA_VERSION; log.utcDatedBefore = "2026-02-01";
+  log.reintro = {}; log.lastReintroDate = {}; log.calChangedAt = null; log.deload = null;
   for (i = 0; i < log.sessions.length; i++) log.sessions[i].dateBasis = "utc";
   for (i = 0; i < bw.entries.length; i++) bw.entries[i].dateBasis = "utc";
   var datesBefore = datesOfLog(clone(log)).concat(datesOfBw(clone(bw)));
   var r = mig(log, bw);
   a.eq(r.log.utcDatedBefore, "2026-02-01", "the original marker date must not be overwritten");
-  a.eq(r.log.schemaVersion, 2);
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION);
   a.deep(datesOfLog(r.log).concat(datesOfBw(r.bw)), datesBefore, "no date may be rewritten on a re-run");
   a.eq(datesOfLog(r.log).length, 3, "no session dropped");
   a.eq(bwRows(r.bw).length, 10, "no bodyweight row dropped");
@@ -701,13 +897,62 @@ T("B-03 / W1 - a dropped duplicate row is handed back in the note, not discarded
   a.eq(note.level, "warn", "dropping data is at least a warning");
 });
 
-T("B-03 / W1 - changed:false on an empty store, so boot writes nothing", function(a){
+T("B-03 / W1 - changed:false on an ABSENT store, so a fresh install boots with zero writes", function(a){
+  /* Unchanged and non-negotiable. Nothing is invented from nothing: a first
+     run must not create a store just to stamp a version into it. */
   var r = P.migrateStore(null, null);
-  a.eq(r.changed, false, "an empty store must not trigger a boot write");
+  a.eq(r.changed, false, "an absent store must not trigger a boot write");
   a.eq(r.logChanged, false);
   a.eq(r.bwChanged, false);
-  r = P.migrateStore({ sessions: [], includeCut: false }, { entries: [] });
-  a.eq(r.changed, false, "an empty-but-present store must not trigger a boot write either");
+  a.eq(r.log, null, "and the absent log store stays absent");
+  a.deep(r.notes, [], "and nothing is said about it");
+  r = P.migrateStore(undefined, undefined);
+  a.eq(r.changed, false, "undefined behaves the same as null");
+  r = P.migrateStore("garbage", 42);
+  a.eq(r.changed, false, "unreadable input is handed back untouched and NOT written");
+  a.eq(r.log, "garbage", "unreadable input is never replaced with an empty store");
+});
+
+/* ---------------------------------------------------------------------------
+   CHANGED BEHAVIOUR, pinned deliberately (WO-003 W1, backend judgement call).
+
+   Before W1: an empty-but-PRESENT v1/v2 store returned changed:false, so it
+   booted with zero writes. After W1 it returns changed:true and triggers ONE
+   boot write.
+
+   QA reviewed the trade and accepts it. The alternative - carrying the four
+   schema-3 keys in memory only - leaves a store that reads schemaVersion 2 on
+   disk while the running code is 3. That store then lies to WO-002's importer
+   (which branches on the stored version, backlog B-04) and to any future sync
+   layer. One idempotent write on one boot is cheaper than a store that
+   misreports its own shape for the rest of its life.
+
+   What this test guards is the boundary of the concession: the write rewrites
+   no existing value, it happens exactly once, and an ABSENT store is still
+   zero writes (asserted above). If a future change makes an absent store write
+   too, that is a different and much worse bug, and the test above catches it.
+--------------------------------------------------------------------------- */
+T("WO-003 W1 - an empty-but-PRESENT v2 store takes exactly one boot write, and rewrites no value", function(a){
+  var store = { sessions: [], includeCut: true, schemaVersion: 2 };
+  var r = P.migrateStore(store, { entries: [], schemaVersion: 2 });
+  a.eq(r.changed, true, "a present store on an old version must be brought to the current one on disk");
+  a.eq(r.logChanged, true);
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION, "the version on disk stops lying about the shape");
+  a.deep(r.log.sessions, [], "no session is invented");
+  a.eq(r.log.includeCut, true, "and no existing value is rewritten");
+  a.eq(r.bwChanged, false, "the bodyweight store carries no schema-3 key, so it is not rewritten");
+  var second = P.migrateStore(r.log, r.bw);
+  a.eq(second.changed, false, "ONE write, not one per boot");
+  a.deep(second.notes, [], "and the second boot says nothing");
+});
+
+T("WO-003 W1 - an empty-but-present store already on the current version writes nothing", function(a){
+  var store = { sessions: [], includeCut: false, schemaVersion: P.SCHEMA_VERSION,
+                reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null };
+  var r = P.migrateStore(store, { entries: [], schemaVersion: P.SCHEMA_VERSION });
+  a.eq(r.changed, false, "nothing to add and nothing to bump - the steady state is zero writes");
+  a.eq(r.logChanged, false);
+  a.eq(r.bwChanged, false);
 });
 
 T("B-03 / W1 - changed:true only when there was legacy data to mark", function(a){
@@ -1435,22 +1680,47 @@ T("PINNED (judgement call, not a ruling) - a whitespace-only note does not resur
   a.eq(Object.keys(v.entries).length, 0, "an all-blank day with a blank note writes nothing");
 });
 
-T("KNOWN BAD (documented, awaiting strength-coach) - a 0 kg set saves but reads back as '0 kg'", function(a){
-  /* B-21 is fixed in the data layer: 0 x 10 is stored. But topSet() in
-     index.html still filters +s.w>0, so a rack-chin-only exercise has a top
-     set of 0 and the verdict reads "Stay at 0 kg until all 3 sets reach 10
-     reps". This test documents the wrong output; it does NOT assert that the
-     wrong output is correct, and it must not be deleted until the coach rules.
-     It fails only if the data-layer fix regresses. */
+/* RETIRED, not deleted (WO-003 W21).
+   This slot used to hold "KNOWN BAD - a 0 kg set saves but reads back as
+   '0 kg'": it reproduced topSet()'s +s.w>0 filter and pinned the wrong string
+   "Stay at 0 kg until all 3 sets reach 10 reps" for the record while the coach
+   ruled. He ruled (Rule Z2), so pinning that string is now actively harmful -
+   it would fail the moment W6 produces the CORRECT copy.
+   The two halves it carried live on, split by owner:
+     - the storage half stays here, below, and passes today;
+     - the advice half is S17's "B-32 / W6 (Z2)" test, which asserts the ruled
+       output `Stay at bodyweight until all 2 sets reach 10 reps.` and that the
+       substring "0 kg" never appears. It is red until W6 lands.
+   Nothing was closed by dropping the set. */
+T("B-21 / B-32 (storage half) - a 0 kg set is stored as the NUMBER 0 and nothing is dropped", function(a){
   var v = P.validateEntry(sets("0:10", "0:9", "0:8"));
   a.deep(v.problems, [], "the data layer is right: nothing is dropped");
   a.eq(v.sets.length, 3);
-  a.eq(v.sets[0].w, 0);
-  /* What the display layer then does with it, reproduced here for the record: */
-  var topSetToday = (function(ss){ var d = ss.filter(function(s){ return s.w > 0 && s.r > 0; });
-                                   return d.length ? Math.max.apply(null, d.map(function(s){ return s.w; })) : 0; })(v.sets);
-  a.eq(topSetToday, 0, "topSet's +s.w>0 filter yields 0, which the verdict prints as 'Stay at 0 kg'");
-  a.ok(true, "WRONG ADVICE, not wrong storage. Owner: strength-coach. Do not 'fix' it by dropping the set.");
+  a.eq(v.sets[0].w, 0, "the number 0, not the string \"0\" and not undefined");
+  a.eq(typeof v.sets[0].w, "number");
+  a.eq(JSON.stringify(v.sets), '[{"w":0,"r":10},{"w":0,"r":9},{"w":0,"r":8}]',
+    "byte-for-byte what must reach the disk - B-32 is an advice bug and may never be closed here");
+});
+
+T("Z1 - blank is not zero: +\"\" === 0 in JS, and that identity is how B-21 comes back", function(a){
+  /* The single most likely way an engineer reintroduces B-21 while believing
+     they implemented Z1. `{w:"", r:"10"}` must NOT read as a 10-rep bodyweight
+     set anywhere in the stack. */
+  a.eq(+"", 0, "the language hazard, stated: an empty string coerces to zero");
+  a.eq(P.parseWeight("").ok, false, "an empty weight does not parse");
+  a.eq(P.parseWeight("").reason, "empty", "and it is reported as EMPTY, not as the value 0");
+  a.eq(P.parseWeight("").value, undefined, "no value is handed out");
+  a.eq(P.parseWeight("0").ok, true, "while a typed 0 does parse");
+  a.eq(P.parseWeight("0").value, 0);
+  a.eq(P.classifySet({ w: "", r: "10" }), "incomplete", "blank weight + reps blocks the save");
+  a.ne(P.classifySet({ w: "", r: "10" }), "complete", "it must never be read as a bodyweight set");
+  a.eq(P.classifySet({ w: "0", r: "10" }), "complete", "a typed 0 IS a complete set");
+  a.eq(P.isDoneSet({ w: "", r: "10" }), false, "and Z1's predicate agrees, on strings");
+  a.eq(P.isDoneSet({ w: "", r: 10 }), false, "and on a mixed row");
+  a.eq(P.isDoneSet({ w: 0, r: 10 }), true, "while a real 0 kg set is completed");
+  var v = P.validateEntry([{ w: "", r: "10" }]);
+  a.eq(v.sets.length, 0, "nothing is saved from a blank-weight row");
+  a.ok(v.problems.length > 0, "and it is reported, not silently skipped");
 });
 
 
@@ -1699,19 +1969,23 @@ T("B-02 / W2 - buildSession refuses a bad dayId and a bad id", function(a){
   a.eq(P.buildSession(d, "d1", "2026-01-15", 0).id, 0, "id 0 is a finite number and is accepted");
 });
 
-T("B-38 (NEW, currently failing) - buildSession accepts a NON-STRING dayId and coerces it", function(a){
-  /* logic.js documents: "Returns null when dayId is not a non-empty string."
-     It does not. str(dayId).trim() coerces, so the number 0 becomes the dayId
-     "0" and a session is built for a day that is not in PROGRAM. Unreachable
-     from the UI today (startDay always passes a data-day string), so this is
-     a defence-in-depth hole rather than a live loss path - but the defence is
-     the whole point of buildSession returning null instead of guessing.
-     Delete this test only when buildSession type-checks dayId. */
+T("B-38 (REGRESSION, fixed in WO-003 W1) - buildSession refuses a NON-STRING dayId instead of coercing it", function(a){
+  /* Was red on main: str(dayId).trim() coerced, so the number 0 became the
+     dayId "0", {} became "[object Object]", and a session was built under a
+     dayId not in PROGRAM - it renders as "Session" with its entries
+     unreachable. Unreachable from the UI (startDay always passes a data-day
+     string), so it was defence-in-depth, but refusing rather than guessing is
+     the entire job of this function. W1 type-checks dayId; this is now the
+     regression test that keeps it type-checked. */
   var d = draft(entry("d1a", sets("100:5")), "2026-01-15");
   a.eq(P.buildSession(d, 0, "2026-01-15", 1), null, "the number 0 is not a day id");
   a.eq(P.buildSession(d, 12, "2026-01-15", 1), null, "nor is the number 12");
   a.eq(P.buildSession(d, true, "2026-01-15", 1), null, "nor is true");
-  a.eq(P.buildSession(d, {}, "2026-01-15", 1), null, "nor is an object, which becomes the dayId [object Object]");
+  a.eq(P.buildSession(d, {}, "2026-01-15", 1), null, "nor is an object, which used to become [object Object]");
+  a.eq(P.buildSession(d, [], "2026-01-15", 1), null, "nor is an empty array, which used to become \"\"");
+  a.eq(P.buildSession(d, ["d1"], "2026-01-15", 1), null, "nor is [\"d1\"], which used to become \"d1\"");
+  a.ok(P.buildSession(d, "d1", "2026-01-15", 1) !== null, "and a real string dayId still builds");
+  a.eq(P.buildSession(d, " d1 ", "2026-01-15", 1).dayId, "d1", "a string dayId is still trimmed");
 });
 
 T("B-03 / W2 - buildSession NEVER falls back to today when there is no usable date", function(a){
@@ -1743,12 +2017,787 @@ T("B-02 / W2 - blank rows are skipped and every other row survives buildSession"
   a.eq(s.entries.d1a.sets.length, 3, "6 blank rows dropped, 3 real sets kept");
   a.deep(s.entries.d1a.sets, [{ w: 100, r: 5 }, { w: 100, r: 5 }, { w: 95, r: 4 }]);
 });
+/* ============================================================ S13 - sortSessions
+   B-17 (sorting half) / WO-003 W1.
+   S.sessions relied on append order. lastFor() scans backwards, weeksIn() reads
+   sessions[0].date, and the volume tier, stall test and deload all gate on a
+   week number - so one backdated or imported row silently corrupted all four.
+   The cases below are lifted from backend's own W1 harness so the suite and the
+   implementation are checked against the same list, not two different ones. */
+group("S13 sortSessions / B-17 / W1");
+
+T("B-17 / W1 - sortSessions returns a NEW array, ascending, and mutates nothing", function(a){
+  var input = [SESS("2026-03-01", 1), SESS("2026-01-05", 2), SESS("2026-02-10", 3)];
+  var before = JSON.stringify(input);
+  var out = P.sortSessions(input);
+  a.deep(out.map(function(s){ return s.date; }), ["2026-01-05", "2026-02-10", "2026-03-01"]);
+  a.eq(JSON.stringify(input), before, "the caller's array must not be reordered under it");
+  a.ne(out, input, "a new array, so a caller holding the old one is not surprised");
+  a.eq(out.length, 3, "nothing added, nothing dropped");
+});
+
+T("B-17 / W1 - sortSessions keeps the SAME OBJECT REFERENCES, never copies", function(a){
+  /* A copy is a data-loss path: anything the copier does not know about
+     (a future key, a note) is dropped, and the caller's edits go to a ghost. */
+  var input = [SESS("2026-03-01", 1), SESS("2026-01-05", 2), SESS("2026-02-10", 3)];
+  var out = P.sortSessions(input);
+  a.ok(out[0] === input[1], "same reference, not a structural clone");
+  a.ok(out[1] === input[2]);
+  a.ok(out[2] === input[0]);
+});
+
+T("B-17 / W1 - sorting is STABLE: same-date sessions keep the order they were logged in", function(a){
+  var tie = [SESS("2026-01-05", "a"), SESS("2026-01-05", "b"),
+             SESS("2026-01-04", "c"), SESS("2026-01-05", "d")];
+  a.deep(P.sortSessions(tie).map(function(s){ return s.id; }), ["c", "a", "b", "d"],
+    "logged order IS the order they happened in; a tiebreak that reshuffles them invents history");
+});
+
+T("B-17 / W1 - an undateable session is never dropped, and sorts FIRST", function(a){
+  /* Sorting an unreadable date to the END would let it drive lastFor, the
+     verdict, the stall check and every week gate. Sorting it to the front
+     keeps it visible and harmless. Either way it stays in the array. */
+  var junk = [SESS("2026-01-05", "a"), { id: "nodate" }, null,
+              SESS("2026-01-04", "b"), { id: "bad", date: "2026-1-5" }];
+  var out = P.sortSessions(junk);
+  a.eq(out.length, 5, "DATA LOSS: an unreadable row was dropped by a sort");
+  a.deep(out.map(function(s){ return s && s.id; }), ["nodate", null, "bad", "b", "a"]);
+});
+
+T("B-17 / W1 - sortSessions is idempotent and never throws on junk", function(a){
+  a.deep(P.sortSessions([]), []);
+  a.deep(P.sortSessions(null), [], "a non-array gives an empty array, never a throw");
+  a.deep(P.sortSessions("x"), []);
+  a.deep(P.sortSessions(undefined), []);
+  var big = [], i;
+  for (i = 0; i < 400; i++) big.push(SESS("2026-0" + (1 + (i % 9)) + "-1" + (i % 9), i));
+  var once = P.sortSessions(big).map(function(s){ return s.id; });
+  a.deep(P.sortSessions(P.sortSessions(big)).map(function(s){ return s.id; }), once);
+});
+
+T("B-17 / W1 - a backdated save lands in date order, and the in-memory array is not mutated", function(a){
+  var live = P.sortSessions([SESS("2026-01-05", 1), SESS("2026-01-20", 2), SESS("2026-02-10", 3)]);
+  var after = P.sortSessions(live.concat([SESS("2026-01-10", 4)]));
+  a.deep(after.map(function(s){ return s.date; }),
+    ["2026-01-05", "2026-01-10", "2026-01-20", "2026-02-10"]);
+  a.eq(live.length, 3, "the save path must not mutate the array the UI is rendering from");
+});
+
+/* ============================================================ S14 - training days and weeks
+   B-30 / WO-003 W1 / coach Rule TW1.
+   THE COUNTING RULING, [Certain]: distinct training DAYS, not saved sessions.
+   Three saves on one date are ONE training day. A session with no completed set
+   is not a training day - a save carrying only a note is not evidence that he
+   trained. A session of nothing but 0 x 10 rack chins IS a training day. */
+group("S14 trainingDays / trainingWeeks / B-30 / TW1 / W1");
+
+T("TW1 / W1 - weekStart is the LOCAL Monday, and Sunday belongs to the week before it", function(a){
+  a.eq(P.weekStart("2026-09-09"), "2026-09-07", "Wednesday to its Monday");
+  a.eq(P.weekStart("2026-09-07"), "2026-09-07", "a Monday is its own week start");
+  a.eq(P.weekStart("2026-09-13"), "2026-09-07", "Sunday belongs to the Monday BEFORE it");
+  a.eq(P.weekStart("2026-03-29"), "2026-03-23", "across a DST boundary the calendar day does not move");
+  a.eq(P.weekStart("2026-01-01"), "2025-12-29", "across a year boundary");
+  a.eq(P.weekStart("2028-02-29"), "2028-02-28", "leap day");
+  a.eq(P.weekStart("nope"), null, "junk to null, never to today");
+  a.eq(P.weekStart(""), null);
+  a.eq(P.weekStart(null), null);
+  a.eq(P.weekStart("2026-9-9"), null, "a non-padded date is not a date");
+});
+
+T("B-30 / TW1 - sessionHasCompletedSet: a note is not evidence, a 0 kg set is", function(a){
+  a.eq(P.sessionHasCompletedSet(SESS("2026-09-08", 1)), true);
+  a.eq(P.sessionHasCompletedSet(SESS_NOTE("2026-09-08", 1)), false,
+    "a save carrying only a note is not evidence that he trained");
+  a.eq(P.sessionHasCompletedSet(SESS_BLANK("2026-09-08", 1)), false,
+    "blank and half-typed rows are not completed sets");
+  a.eq(P.sessionHasCompletedSet(SESS_ZERO("2026-09-08", 1)), true,
+    "a session of nothing but 0 kg rack chins IS training (Rule Z1)");
+  a.eq(P.sessionHasCompletedSet(null), false);
+  a.eq(P.sessionHasCompletedSet({ date: "2026-09-08" }), false);
+  a.eq(P.sessionHasCompletedSet({ date: "2026-09-08", entries: {} }), false);
+});
+
+T("B-30 / TW1 - trainingDays returns DISTINCT dates, ascending, whatever order they were saved in", function(a){
+  a.deep(P.trainingDays([], "2026-09-09"), []);
+  a.deep(P.trainingDays(null, "2026-09-09"), [], "a non-array never throws");
+  a.deep(P.trainingDays([SESS("2026-09-08", 1), SESS("2026-09-08", 2), SESS("2026-09-07", 3)], "2026-09-09"),
+    ["2026-09-07", "2026-09-08"], "three saves across two dates are TWO training days");
+  a.deep(P.trainingDays([SESS_ZERO("2026-09-08", 1)], "2026-09-09"), ["2026-09-08"]);
+  a.deep(P.trainingDays([SESS_NOTE("2026-09-08", 1)], "2026-09-09"), []);
+  a.deep(P.trainingDays([SESS("2026-09-14", 1)], "2026-09-09"), [],
+    "a future-dated row cannot be evidence of training already done");
+  a.deep(P.trainingDays([{ id: 1, entries: {} }], "2026-09-09"), [],
+    "a row whose date cannot be read counts for nothing");
+});
+
+/* THE assertion of this group. "Not evidence" and "not data" must never
+   converge: the counter skips a notes-only session, and the session is still
+   in the array afterwards, and it is still on disk. All three, in one test,
+   because the day someone closes B-33 by deleting the note is the day the two
+   ideas merge. */
+T("B-30 / TW1 / B-33 - a notes-only session is skipped by the counter, still in the array, still on disk", function(a){
+  var src = [SESS("2026-09-08", 1), SESS_NOTE("2026-09-07", 2, "shoulder felt off, went home")];
+  var before = JSON.stringify(src);
+
+  /* 1. NOT EVIDENCE - the counter does not see it. */
+  a.deep(P.trainingDays(src, "2026-09-09"), ["2026-09-08"], "the notes-only day is not a training day");
+  a.eq(P.trainingWeeks(src, "2026-09-09"), 0);
+
+  /* 2. STILL DATA, in memory - nothing was filtered out of the caller's array. */
+  a.eq(src.length, 2, "the session is still in the array the app renders from");
+  a.eq(JSON.stringify(src), before, "and nothing inside it was touched");
+  a.eq(src[1].entries.d1a.note, "shoulder felt off, went home", "the note itself is intact");
+
+  /* 3. STILL DATA, on disk - the exact bytes that would be written are unchanged. */
+  var storeBefore = JSON.stringify({ schemaVersion: P.SCHEMA_VERSION, sessions: src, includeCut: false });
+  P.trainingDays(src, "2026-09-09"); P.trainingWeeks(src, "2026-09-09");
+  P.sortSessions(src); P.lastFor(src, "d1a");
+  a.eq(JSON.stringify({ schemaVersion: P.SCHEMA_VERSION, sessions: src, includeCut: false }), storeBefore,
+    "DATA LOSS: reading the log for a count changed what would be written back");
+
+  /* 4. and the returned array is a fresh one, so a caller cannot write through it. */
+  var out = P.trainingDays(src, "2026-09-09");
+  out.push("2026-01-01");
+  a.deep(P.trainingDays(src, "2026-09-09"), ["2026-09-08"], "the view is rebuilt, never handed out shared");
+});
+
+T("B-30 / TW1 - trainingWeeks counts weeks holding at least 3 distinct training DAYS", function(a){
+  var mons = ["2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24", "2026-08-31"], all = [], i;
+  for (i = 0; i < 5; i++) all = all.concat(WEEK(mons[i], 5, "w" + i));
+  a.eq(P.trainingWeeks(all, "2026-09-06"), 5, "five weeks of five days");
+  var thin = [];
+  for (i = 0; i < 5; i++) thin = thin.concat(WEEK(mons[i], (i === 1 || i === 3) ? 2 : 5, "t" + i));
+  a.eq(P.trainingWeeks(thin, "2026-09-06"), 3, "two of those weeks held only two days");
+  a.eq(P.trainingWeeks(WEEK("2026-09-07", 3, "x"), "2026-09-09"), 1, "exactly 3 is a week");
+  a.eq(P.trainingWeeks(WEEK("2026-09-07", 2, "x"), "2026-09-09"), 0, "2 is not");
+  a.eq(P.trainingWeeks([], "2026-09-06"), 0, "empty log");
+  a.eq(P.trainingWeeks(null, "2026-09-06"), 0, "non-array");
+  a.eq(P.trainingWeeks([SESS("2026-09-08", 1)], "2026-09-09"), 0, "one day ever is not a week");
+  a.eq(P.trainingWeeks(WEEK("2026-01-05", 3, "a").concat(WEEK("2026-06-01", 3, "b")), "2026-09-09"), 2,
+    "weeks are counted, not spanned - they need not be consecutive");
+});
+
+T("B-30 / TW1 - THE RULING: three saves on one date are ONE training day", function(a){
+  a.eq(P.trainingWeeks([SESS("2026-09-08", 1), SESS("2026-09-08", 2), SESS("2026-09-08", 3)], "2026-09-09"), 0,
+    "three saves on one date must not buy a training week");
+  a.eq(P.trainingWeeks([SESS("2026-09-07", 1), SESS("2026-09-08", 2),
+                        SESS("2026-09-08", 3), SESS("2026-09-08", 4)], "2026-09-09"), 0,
+    "that is two days, not four");
+  a.eq(P.trainingWeeks([SESS("2026-09-07", 1), SESS("2026-09-08", 2), SESS("2026-09-08", 3),
+                        SESS("2026-09-08", 4), SESS("2026-09-10", 5)], "2026-09-11"), 1,
+    "three DISTINCT dates do qualify, however many saves are on them");
+  a.eq(P.trainingWeeks([SESS("2026-09-07", 1), SESS("2026-09-09", 2), SESS("2026-09-09", 3),
+                        SESS("2026-09-09", 4)], "2026-09-11"), 0,
+    "and a week of two dates never qualifies, however many times he saved");
+});
+
+T("B-30 / TW1 - a notes-only or blank session cannot complete a training week; 0 kg work can", function(a){
+  a.eq(P.trainingWeeks([SESS("2026-09-07", 1), SESS("2026-09-08", 2), SESS_NOTE("2026-09-09", 3)], "2026-09-11"), 0,
+    "a note is not evidence");
+  a.eq(P.trainingWeeks([SESS("2026-09-07", 1), SESS("2026-09-08", 2), SESS_BLANK("2026-09-09", 3)], "2026-09-11"), 0,
+    "neither is a save with no completed set");
+  a.eq(P.trainingWeeks([SESS("2026-09-07", 1), SESS("2026-09-08", 2), SESS("2026-09-09", 3)], "2026-09-11"), 1,
+    "the same three days with real sets do qualify");
+  a.eq(P.trainingWeeks([SESS_ZERO("2026-09-07", 1), SESS_ZERO("2026-09-08", 2),
+                        SESS_ZERO("2026-09-09", 3)], "2026-09-11"), 1,
+    "a week of nothing but 0 kg rack chins IS a training week (Rule Z1)");
+  a.eq(P.trainingWeeks([SESS("2026-09-07", 1), SESS("2026-09-08", 2),
+                        SESS_NOTE("2026-09-09", 3), SESS("2026-09-09", 4)], "2026-09-11"), 1,
+    "a notes-only save alongside real work on the same date does not remove that day");
+});
+
+T("B-30 / TW1 - the Monday grid, future rows and unsorted input", function(a){
+  a.eq(P.trainingWeeks([SESS("2026-09-06", 1), SESS("2026-09-07", 2), SESS("2026-09-08", 3)], "2026-09-09"), 0,
+    "Sunday belongs to the previous week, so this is 1 day + 2 days, not 3");
+  var fut = WEEK("2026-09-07", 3, "f").concat(WEEK("2026-09-14", 3, "g"));
+  a.eq(P.trainingWeeks(fut, "2026-09-09"), 1, "a future-dated week does not unlock anything early");
+  a.eq(P.trainingWeeks(fut, "2026-09-21"), 2, "and counts once it is genuinely past");
+  a.eq(P.trainingWeeks(WEEK("2026-09-07", 3, "u").reverse(), "2026-09-09"), 1,
+    "an unsorted array still counts correctly - it does not silently rely on the caller sorting");
+  a.eq(P.trainingWeeks([{ id: 1 }, { id: 2 }, { id: 3 }], "2026-09-09"), 0, "undateable rows buy no week");
+  a.ok(P.trainingWeeks(WEEK("2026-08-03", 5, "j"), "junk") >= 0, "a junk todayStr does not throw");
+  a.eq(P.trainingWeeks(WEEK(P.weekStart(P.localDate()), 3, "z")), 1, "todayStr omitted falls back to today");
+});
+
+T("B-30 - trainingWeeks is NOT weeksIn: a fortnight off the gym buys no weeks", function(a){
+  /* The number this replaces measured elapsed calendar time from session one.
+     Every rule in WO-003 that says "week 5" means five weeks of actual
+     training; unlocking an accessory or a deload on the strength of a calendar
+     is the failure this function exists to prevent. */
+  var real = WEEK("2026-08-03", 3, "a");
+  var elapsed = [SESS("2026-08-03", 1), SESS("2026-09-07", 2)];
+  a.eq(P.trainingWeeks(real, "2026-08-09"), 1, "one real week of training");
+  a.eq(P.trainingWeeks(elapsed, "2026-09-13"), 0,
+    "five calendar weeks apart, two days trained: weeksIn would say 6, this says 0");
+});
+
+/* ============================================================ S15 - lastFor / isDoneSet
+   B-21 one layer up / Rule Z1 / WO-003 W1. */
+group("S15 lastFor / isDoneSet / B-21 / Z1 / W1");
+
+T("Z1 / W1 - isDoneSet: r >= 1 and w a number in range; w === 0 IS completed", function(a){
+  a.eq(P.isDoneSet({ w: 0, r: 10 }), true, "the rack chin. This is the whole ruling.");
+  a.eq(P.isDoneSet({ w: 0, r: 1 }), true, "boundary");
+  a.eq(P.isDoneSet({ w: 0, r: 0 }), false, "a set of zero reps is not a set");
+  a.eq(P.isDoneSet({ w: 2.5, r: 8 }), true, "nothing about the loaded case changes");
+  a.eq(P.isDoneSet({ w: -5, r: 5 }), false, "a negative weight is refused, not trusted");
+  a.eq(P.isDoneSet({ w: 600, r: 5 }), false, "out of range is not completed");
+  a.eq(P.isDoneSet({ w: 100, r: 101 }), false);
+  a.eq(P.isDoneSet({ w: 100, r: 5.5 }), false, "reps are integers");
+  a.eq(P.isDoneSet({ w: "0", r: "10" }), true, "reads a drafting set (strings) too");
+  a.eq(P.isDoneSet({ w: "", r: "10" }), false, "BLANK IS NOT ZERO");
+  a.eq(P.isDoneSet({ w: "7.5.0", r: "5" }), false);
+  a.eq(P.isDoneSet(null), false);
+  a.eq(P.isDoneSet(undefined), false);
+  a.eq(P.isDoneSet("100x5"), false);
+  a.eq(P.isDoneSet({}), false);
+});
+
+T("B-21 / W1 - lastFor returns a 0 kg rack chin, BY REFERENCE, not 'First time logged'", function(a){
+  /* index.html's old lastFor required +x.w > 0, so a rack chin was never
+     anybody's last session and the card read "First time logged" for as long
+     as he trained it. That is B-21 surviving one layer up. */
+  var chin = PREV(SETS(0, 10, 0, 9));
+  var sess = [SESS("2026-09-01", 1, { d1c: { sets: SETS(0, 6), note: "" } }),
+              SESS("2026-09-08", 2, { d1c: chin, d1a: { sets: SETS(100, 5), note: "" } })];
+  a.ok(P.lastFor(sess, "d1c") === chin, "the SAME object, not a copy - callers read the stored entry");
+  a.deep(P.lastFor(sess, "d1a").sets, SETS(100, 5));
+});
+
+T("B-21 / W1 - lastFor skips entries with no completed set, and never throws", function(a){
+  var mixed = [SESS("2026-09-01", 1, { d1a: { sets: SETS(100, 5), note: "" } }),
+               SESS("2026-09-08", 2, { d1a: { sets: [], note: "tweaked it" } }),
+               SESS("2026-09-09", 3, { d1a: { sets: [{ w: "", r: "" }], note: "" } })];
+  a.deep(P.lastFor(mixed, "d1a").sets, SETS(100, 5), "a later notes-only entry is not the last session");
+  a.eq(P.lastFor(mixed, "d9z"), null, "never logged");
+  a.eq(P.lastFor(mixed, ""), null);
+  a.eq(P.lastFor(mixed, null), null);
+  a.eq(P.lastFor(null, "d1a"), null);
+  a.eq(P.lastFor([], "d1a"), null);
+  a.eq(P.lastFor([SESS("2026-09-01", 1, {})], "constructor"), null, "a prototype key is not an entry");
+  a.eq(P.lastFor([SESS("2026-09-01", 1, {})], "__proto__"), null);
+  a.eq(P.lastFor([SESS("2026-09-01", 1, { d1a: { sets: SETS(100, 0), note: "" } })], "d1a"), null,
+    "r = 0 is not a completed set");
+});
+
+T("B-21 / W1 - lastFor mutates nothing it reads", function(a){
+  var m = [SESS("2026-09-01", 1, { d1a: { sets: SETS(0, 10), note: "n" } })];
+  var before = JSON.stringify(m);
+  var e = P.lastFor(m, "d1a");
+  a.eq(JSON.stringify(m), before);
+  a.ok(e === m[0].entries.d1a, "returned by reference, per the documented contract");
+});
+
+/* ============================================================ S16 - the verdict seam (WO-003 W5)
+   SCAFFOLD. These are written against the signatures fixed in WO-003 W5 and
+   the coach's rulings, BEFORE the implementation lands. Every test in S16 and
+   S17 is red until W5/W6 are merged; each names the missing function rather
+   than throwing a TypeError, so the failure reads as "not built yet" and not
+   as "the rule is wrong".
+   Nothing here pins current behaviour - the rules are being replaced, and a
+   test that pinned today's copy would have to be deleted by the engineer who
+   fixes it, which is how a suite stops being trusted. */
+group("S16 verdict seam / W5 / B-24 / B-20");
+
+T("W5 - PHAT.round2p5 rounds to the nearest 2.5 kg with ties DOWNWARD", function(a){
+  needFns(a, "round2p5");
+  a.eq(P.round2p5(70.875), 70, "nearest is 70, not 71.25 - it rounds to a multiple of 2.5");
+  a.eq(P.round2p5(94.5), 95);
+  a.eq(P.round2p5(71.25), 70, "an exact tie goes DOWN: the conservative direction");
+  a.eq(P.round2p5(102.5), 102.5, "already on the grid");
+  a.eq(P.round2p5(0), 0);
+  a.eq(P.round2p5(1.25), 0, "tie between 0 and 2.5 goes down");
+  a.eq(P.round2p5(3.75), 2.5, "tie between 2.5 and 5 goes down");
+  a.eq(P.round2p5(126), 125, "the SLDL case from WO-003 Decision 5");
+  a.eq(P.round2p5(100), 100);
+  a.eq(P.round2p5(2.4), 2.5);
+});
+
+T("W5 - every load round2p5 produces is a legal 2.5 kg step (CLAUDE.md section 3.5)", function(a){
+  needFns(a, "round2p5");
+  var i, v, r;
+  for (i = 0; i <= 2000; i++) {
+    v = i * 0.25;
+    r = P.round2p5(v);
+    a.eq(Math.round(r * 10) % 25, 0, "round2p5(" + v + ") = " + r + " is not a multiple of 2.5");
+    a.ok(Math.abs(r - v) <= 1.25 + 1e-9, "round2p5(" + v + ") = " + r + " is not the nearest step");
+  }
+});
+
+T("W5 - PHAT.vol is tonnage, never NaN, and a BLANK set contributes nothing", function(a){
+  needFns(a, "vol");
+  a.eq(P.vol(SETS(100, 5, 100, 5, 95, 5)), 1475);
+  a.eq(P.vol([]), 0);
+  a.eq(P.vol(SETS(0, 10, 0, 9)), 0, "zero load is zero tonnage - which is why H1 may not divide by it");
+  a.eq(P.vol(null), 0, "junk gives 0, never a throw");
+  a.eq(P.vol(undefined), 0);
+  var mixed = P.vol([{ w: "", r: "10" }, { w: 100, r: 5 }]);
+  a.eq(mixed, 500, "a blank row adds nothing - and must not turn the total into NaN");
+  a.eq(mixed === mixed, true, "NaN check");
+  var junk = P.vol([{ w: "7.5.0", r: "5" }, { w: 100, r: 5 }]);
+  a.eq(junk === junk, true, "a malformed row must not poison the total with NaN");
+});
+
+T("W5 / B-08 - PHAT.workingLoad is the MIN of the first ex.s completed sets", function(a){
+  needFns(a, "workingLoad");
+  a.eq(P.workingLoad(SETS(100, 5, 100, 5, 95, 5), 3), 95,
+    "the weight he actually held for the whole prescription, not the one he hit once");
+  a.eq(P.workingLoad(SETS(100, 5, 100, 5, 95, 5), 2), 100, "only the FIRST n sets are considered");
+  a.eq(P.workingLoad(SETS(100, 5, 100, 5, 100, 5, 80, 5), 3), 100, "extra sets beyond n are ignored");
+  a.eq(P.workingLoad(SETS(0, 10, 0, 9), 2), 0, "a 0 kg working load is a real answer, not a missing one");
+  a.eq(P.workingLoad([{ w: "", r: "" }, { w: 100, r: 5 }, { w: 95, r: 5 }, { w: 90, r: 5 }], 3), 90,
+    "blank rows are skipped, they do not fill the quota and they are not 0 kg");
+});
+
+T("W5 - workingLoad with NO completed set returns null, never 0", function(a){
+  /* 0 is a legal load (the rack chin), so it can never double as "no data".
+     If this ever returned 0 the verdict would print a 0 kg instruction off an
+     empty exercise - B-24 and B-32 in one line. */
+  needFns(a, "workingLoad");
+  a.eq(P.workingLoad([], 3), null);
+  a.eq(P.workingLoad(null, 3), null, "junk does not throw");
+  a.eq(P.workingLoad([{ w: "", r: "" }, { w: "", r: "" }], 3), null, "blank rows are not 0 kg sets");
+  a.eq(P.workingLoad([{ w: "7.5.0", r: "5" }], 3), null);
+  a.ne(P.workingLoad([], 3), 0, "0 would be indistinguishable from a real bodyweight working load");
+});
+
+T("W5 - PINNED: workingLoad's n is a SLICE, not a minimum - the gate lives in verdict()", function(a){
+  /* Pinning the contract as documented, and naming the hazard beside it.
+     workingLoad(oneSet, 3) returns that one set's weight, not null: `n` caps
+     how many completed sets are considered, it does not require n of them.
+     That is safe TODAY because PHAT.verdict gates on C.length >= ex.s before
+     P1 ever asks for a load (asserted in "B-24 / W5 - THE GATE"). It is a trap
+     for the next caller: W12 (speed), W14 (volume tier) and W19 (deload) all
+     read history and could ask for a working load off a short session and get
+     a confident number back. Raised as a contract question for W9/W12. */
+  needFns(a, "workingLoad");
+  a.eq(P.workingLoad(SETS(100, 5), 3), 100, "documented behaviour: n caps, it does not require");
+  a.eq(P.workingLoad(SETS(100, 5, 95, 5), 3), 95, "two of three still answers");
+  a.eq(P.workingLoad(SETS(100, 5, 100, 5, 95, 5)), 95, "n omitted considers every completed set");
+  needFns(a, "verdict");
+  a.eq(P.verdict(VCTX(EX.squat, SETS(100, 5), null)), null,
+    "and the gate that makes it safe is here, in verdict(), not in workingLoad()");
+});
+
+T("W5 - PHAT.e1rm is Epley as the audit pins it: w * (1 + r/30)", function(a){
+  /* coach-audit section 4 (ST1) names the formula literally, so this pins it.
+     Note what Epley does at r = 1: e1rm(100, 1) is 103.33, NOT 100 - a genuine
+     100 kg single is scored as a 103.3 kg one-rep max. Harmless inside ST1,
+     which compares two Epley numbers and so inflates both sides equally, and
+     raised as a contract question in case W9 or W10 ever DISPLAYS the figure. */
+  needFns(a, "e1rm");
+  a.eq(P.e1rm(100, 5), 100 * (1 + 5 / 30), "Epley, as pinned by the audit");
+  a.eq(P.e1rm(120, 3), 132);
+  a.ok(P.e1rm(100, 5) >= 110 && P.e1rm(100, 5) <= 120, "100 x 5 estimates 116.7 kg");
+  a.eq(P.e1rm(100, 1), 100 * (1 + 1 / 30), "Epley at one rep: 103.33, not 100. See the contract note.");
+});
+
+T("W5 / B-32 - e1rm at zero load is ZERO, is monotonic, and never returns NaN", function(a){
+  /* The property that matters for the zero-load family: a bodyweight rack chin
+     must not report a positive estimated 1RM, or ST1 would find "strength"
+     in a lift carrying no external load and W9 would divide by it. */
+  needFns(a, "e1rm");
+  a.eq(P.e1rm(0, 10), 0, "zero external load cannot estimate a loaded 1RM");
+  a.eq(P.e1rm(0, 1), 0);
+  a.ok(P.e1rm(100, 5) > P.e1rm(100, 3), "more reps at the same load is a higher estimate");
+  a.ok(P.e1rm(100, 3) > P.e1rm(100, 1));
+  a.ok(P.e1rm(105, 5) > P.e1rm(100, 5), "more load at the same reps is a higher estimate");
+  var bad = [P.e1rm(100, 0), P.e1rm(NaN, 5), P.e1rm(100, NaN), P.e1rm(null, null),
+             P.e1rm("7.5.0", "5"), P.e1rm(-5, 5), P.e1rm(600, 5), P.e1rm(100, 101)], i;
+  for (i = 0; i < bad.length; i++) {
+    a.ok(bad[i] === bad[i], "e1rm must never return NaN (case " + i + ", got " + show(bad[i]) + ")");
+    a.oneOf(bad[i], [null, undefined], "unreadable input must be refused, never estimated (case " + i + ")");
+  }
+});
+
+T("W5 / S1 - painFlag fires on real pain words and NOT on 'painting'", function(a){
+  needFns(a, "painFlag");
+  a.eq(P.painFlag("left knee pain on set 2"), true);
+  a.eq(P.painFlag("no pain today"), true, "accepted false positive, audit section 10 - suppressing is the safe error");
+  a.eq(P.painFlag("RIR 1, good bar path"), false);
+  a.eq(P.painFlag(""), false);
+  a.eq(P.painFlag("HURT"), true, "case-insensitive");
+  a.eq(P.painFlag("tweaked my back"), true);
+  a.eq(P.painFlag("felt a sharp catch"), true);
+  a.eq(P.painFlag("injured last year"), true);
+  a.eq(P.painFlag("strained"), true);
+  a.eq(P.painFlag("pinched nerve feeling"), true);
+});
+
+T("W5 / S1 - painFlag is a WORD match, not a substring match", function(a){
+  /* A bare indexOf would fire on all four of these and the suppression would
+     start looking arbitrary, which is how a safety mechanism gets ignored. */
+  needFns(a, "painFlag");
+  a.eq(P.painFlag("painting the garage tomorrow"), false, "the named case");
+  a.eq(P.painFlag("spain"), false, "'pain' inside another word");
+  a.eq(P.painFlag("painless today"), false, "'pain' with a suffix is not the word");
+  a.eq(P.painFlag("restrained the bar path"), false, "'strain' inside another word");
+  a.eq(P.painFlag("sharpie mark on the plate"), false);
+  a.eq(P.painFlag(null), false, "non-strings never throw");
+  a.eq(P.painFlag(undefined), false);
+  a.eq(P.painFlag(123), false);
+  a.eq(P.painFlag({}), false);
+});
+
+T("B-24 / W5 - THE GATE: no verdict at all until completed sets >= ex.s", function(a){
+  /* The cheapest correctness win in the app. paintVerdict runs on every
+     keystroke, so one completed set of three used to print
+     "Volume down 66%. Add a rep or 2.5 kg next time." while he was still
+     working. It is not a report on the set he just did; it reads as an
+     instruction about the set he is about to do. */
+  needFns(a, "verdict");
+  var prev = PREV(SETS(60, 10, 60, 10, 60, 10));
+  a.eq(P.verdict(VCTX(EX.cablerow, SETS(60, 10), prev)), null, "one completed set of three");
+  a.eq(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10), prev)), null, "two completed sets of three");
+  a.ok(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 9), prev)) !== null, "three produces a verdict");
+  a.eq(vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10), prev))).indexOf("Volume down"), -1,
+    "and specifically never the string 'Volume down 66%'");
+  a.eq(P.verdict(VCTX(EX.squat, SETS(100, 5), null)), null, "power branch is gated identically");
+  a.eq(P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5), null)), null);
+});
+
+T("B-24 / Z1 / W5 - blank rows do not fill the gate, 0 kg sets do", function(a){
+  needFns(a, "verdict");
+  a.eq(P.verdict(VCTX(EX.squat, [{ w: "", r: "" }, { w: "", r: "" }, { w: 100, r: 5 }], null)), null,
+    "two blank rows plus one real set is ONE completed set, not three");
+  a.eq(P.verdict(VCTX(EX.squat, [{ w: "", r: "10" }, { w: "", r: "10" }, { w: "", r: "10" }], null)), null,
+    "BLANK IS NOT ZERO - three blank-weight rows are not three bodyweight sets");
+  a.ok(P.verdict(VCTX(EX.rackchin, SETS(0, 10, 0, 9), null)) !== null,
+    "two 0 kg rack chin sets DO satisfy a 2-set exercise");
+});
+
+T("W5 - DATA LOSS: verdict mutates neither its sets, its prev, nor its note", function(a){
+  needFns(a, "verdict");
+  var setList = SETS(100, 5, 100, 5, 95, 5);
+  var prevEntry = PREV(SETS(100, 5, 100, 5, 100, 5), "belt on");
+  var ctx = VCTX(EX.squat, setList, prevEntry, "left knee pain on set 2");
+  var beforeSets = JSON.stringify(setList), beforePrev = JSON.stringify(prevEntry), beforeNote = ctx.note;
+  P.verdict(ctx);
+  a.eq(JSON.stringify(setList), beforeSets, "the sets the user just typed were rewritten by reading them");
+  a.eq(JSON.stringify(prevEntry), beforePrev, "the STORED previous entry was rewritten by reading it");
+  a.eq(ctx.note, beforeNote);
+  var zero = SETS(0, 10, 0, 9), beforeZero = JSON.stringify(zero);
+  P.verdict(VCTX(EX.rackchin, zero, null));
+  a.eq(JSON.stringify(zero), beforeZero, "a stored {w:0, r:10} is still {w:0, r:10} after the verdict runs");
+  a.eq(beforeZero, '[{"w":0,"r":10},{"w":0,"r":9}]');
+});
+
+/* ============================================================ S17 - the ruled verdict output (WO-003 W6)
+   SCAFFOLD, red until W6 lands. Rules P1 (audit section 3), H1 (section 9),
+   Z1/Z2/Z3 and G1/I2 (coach-audit-addendum). Every string below is the coach's
+   ruled output, never today's. */
+group("S17 verdict rules / W6 / B-08 / B-25 / B-32 / Z2 / Z3 / G1 / I2");
+
+T("B-08 / P1 - 100/100/95 at 5/5/5 recommends REPEATING 100, and never 102.5", function(a){
+  /* The headline of B-08. topSet() is Math.max, so today this says go to
+     102.5 kg off a weight he did not complete for all three sets. */
+  needFns(a, "verdict");
+  var out = vtext(P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 95, 5), null)));
+  a.eq(out, "Sets not matched: 100 / 100 / 95 kg. Repeat 100 kg until all 3 sets reach 5 reps.");
+  a.eq(out.indexOf("102.5"), -1, "the string 102.5 must not appear anywhere in the output");
+});
+
+T("P1 - the five power cases on a 3 x 3-5 squat", function(a){
+  needFns(a, "verdict");
+  a.eq(vtext(P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 100, 5), null))),
+    "Top of range on all 3 sets. Go to 102.5 kg next session.", "case 4 - add");
+  a.eq(vtext(P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 100, 4), null))),
+    "Stay at 100 kg until all 3 sets reach 5 reps.", "case 5 - hold. One rep short is not a rounding error.");
+  a.eq(vtext(P.verdict(VCTX(EX.squat, SETS(100, 2, 90, 4, 90, 5), null))),
+    "2 reps at 100 kg. Below the range. Drop to 95 kg next session.",
+    "case 1 beats case 2 deliberately: the mismatch is a symptom of the load being wrong");
+});
+
+T("P1 / G1 - the SLDL pair, pinned: 120x8 gives 122.5, 120x10 gives 125 not 126", function(a){
+  needFns(a, "verdict");
+  a.eq(vtext(P.verdict(VCTX(EX.sldl, SETS(120, 8, 120, 8, 120, 8), null))),
+    "Top of range on all 3 sets. Go to 122.5 kg next session.");
+  a.eq(vtext(P.verdict(VCTX(EX.sldl, SETS(120, 10, 120, 10, 120, 10), null))),
+    "10 reps at 120 kg on every set. Too light. Go to 125 kg.",
+    "G1: 120 x 0.05 = 6, round2p5 down to 5. WO-003 Decision 5 says 125, not 126.");
+});
+
+T("S1 / W6 - a pain note downgrades every load increase to a hold", function(a){
+  /* No build ever makes a confident load recommendation without this - the
+     mechanism sits in the verdict seam for exactly that reason (WO-003 H4). */
+  needFns(a, "verdict");
+  var pain = "left knee pain on set 2";
+  var up = vtext(P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 100, 5), null)));
+  var held = vtext(P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 100, 5), null, pain)));
+  a.ok(up.indexOf("102.5") >= 0, "without the note it recommends 102.5");
+  a.eq(held.indexOf("102.5"), -1, "with the note no increased load survives");
+  a.eq(held.indexOf("Go to"), -1, "and no increase verb survives either");
+  var light = vtext(P.verdict(VCTX(EX.sldl, SETS(120, 10, 120, 10, 120, 10), null, pain)));
+  a.eq(light.indexOf("125"), -1, "the too-light case is suppressed the same way");
+  var heavy = vtext(P.verdict(VCTX(EX.squat, SETS(100, 2, 90, 4, 90, 5), null, pain)));
+  a.ok(heavy.indexOf("95") >= 0, "but a DROP is never suppressed - reducing load is always allowed");
+});
+
+T("B-32 / Z2 - the headline: 0x10, 0x9 rack chin reads 'bodyweight', never '0 kg'", function(a){
+  /* B-21 is fixed in the data layer. This is the same bug one layer up:
+     topSet's +s.w>0 filter yields 0 and the verdict prints "Stay at 0 kg".
+     Wrong advice on correct data. Do not close it by dropping the set. */
+  needFns(a, "verdict");
+  var setList = SETS(0, 10, 0, 9);
+  var out = vtext(P.verdict(VCTX(EX.rackchin, setList, null)));
+  a.eq(out, "Stay at bodyweight until all 2 sets reach 10 reps.");
+  a.eq(out.indexOf("0 kg"), -1, "the substring '0 kg' must never be produced by any rule");
+  a.eq(JSON.stringify(setList), '[{"w":0,"r":10},{"w":0,"r":9}]', "and the stored set is untouched");
+});
+
+T("Z2 - the load token at zero is 'bodyweight' or 'zero load', by implement", function(a){
+  needFns(a, "verdict");
+  var machine = vtext(P.verdict(VCTX(EX.legext, SETS(0, 8, 0, 8), null)));
+  a.eq(machine, "Stay at zero load until all 2 sets reach 10 reps.",
+    "a mis-logged machine set is handled, not deleted, and not called a claim about his body");
+  a.eq(machine.indexOf("0 kg"), -1);
+});
+
+T("Z2 delta 1 - the too-heavy case at load 0 does NOT print 'Drop to 0 kg'", function(a){
+  /* round2p5(0 * 0.95) is 0. There is nothing to remove, and the app must not
+     invent a way to make the movement easier. */
+  needFns(a, "verdict");
+  var out = vtext(P.verdict(VCTX(EX.rackchin, SETS(0, 4, 0, 6), null)));
+  a.eq(out, "4 reps at bodyweight. Below the range. Hold here until all 2 sets reach 6 reps.");
+  a.eq(out.indexOf("Drop to"), -1, "no drop instruction at zero load");
+  a.eq(out.indexOf("0 kg"), -1);
+  a.eq(out.indexOf("95%"), -1);
+});
+
+T("Z2 delta 2 - the increase verb at load 0 is 'Add 2.5 kg', not 'Go to'", function(a){
+  needFns(a, "verdict");
+  a.ok(vtext(P.verdict(VCTX(EX.rackchin, SETS(0, 10, 0, 10), null)))
+        .indexOf("Top of range on all 2 sets at bodyweight. Add 2.5 kg next session.") === 0,
+    "case 4 at zero load");
+  a.ok(vtext(P.verdict(VCTX(EX.rackchin, SETS(0, 12, 0, 12), null)))
+        .indexOf("12 reps at bodyweight on every set. Too light. Add 2.5 kg.") === 0,
+    "case 3 at zero load - and case 3 beats case 4");
+  a.ok(vtext(P.verdict(VCTX(EX.rackchin, SETS(0, 11, 0, 12), null)))
+        .indexOf("Top of range on all 2 sets at bodyweight. Add 2.5 kg next session.") === 0,
+    "boundary: min rep 11 < hi + 2, so case 3 does not fire");
+});
+
+T("Z2 delta 3 - a mixed-load mismatch lists each load in full", function(a){
+  needFns(a, "verdict");
+  a.eq(vtext(P.verdict(VCTX(EX.rackchin, SETS(2.5, 8, 0, 10), null))),
+    "Sets not matched: 2.5 kg / bodyweight. Repeat 2.5 kg until all 2 sets reach 10 reps.");
+});
+
+T("Z2 - INVARIANT: the repeat target in the not-matched case can never be 0", function(a){
+  /* If max(weights in C) were 0 every set would be 0, `equal` would be true,
+     and case 2 could not have fired. Worth asserting because a bug here prints
+     "Repeat 0 kg", which is the B-32 failure wearing a different sentence. */
+  needFns(a, "verdict");
+  var cases = [[EX.rackchin, SETS(2.5, 8, 0, 10)], [EX.rackchin, SETS(0, 10, 5, 8)],
+               [EX.squat, SETS(100, 5, 100, 5, 95, 5)]], i, out;
+  for (i = 0; i < cases.length; i++) {
+    out = vtext(P.verdict(VCTX(cases[i][0], cases[i][1], null)));
+    a.eq(out.indexOf("Repeat 0 kg"), -1, "case " + i);
+    a.eq(out.indexOf("Repeat bodyweight"), -1, "case " + i);
+  }
+});
+
+T("B-25 / H1 - the rep range is the primary signal, not tonnage", function(a){
+  /* 3 x 20 on an 8-12 exercise scores as progress today because tonnage rose.
+     He trained a completely different quality. */
+  needFns(a, "verdict");
+  var prev = PREV(SETS(30, 12, 30, 12, 30, 12));
+  var out = vtext(P.verdict(VCTX(EX.cablerow, SETS(30, 20, 30, 20, 30, 20), prev)));
+  a.ok(out.indexOf("All sets above 12.") === 0, "case 2 fires before any tonnage comparison");
+  a.eq(out.indexOf("Volume up"), -1, "and no volume verdict is printed at all");
+});
+
+T("G1 - the too-light increment is 2.5% of load per rep above the range: 30x20 gives 35, not 42.5", function(a){
+  /* THE CONTRADICTION, and it is deliberate. WO-003 section W6 pins
+     `Go to 42.5 kg` for this case. The coach's addendum section 4 shows 42.5 is
+     not derivable from any rule in the audit - it is a stray illustrative
+     number - and the PM accepted G1 over the criterion on 2026-09-09.
+     G1: excess = 20 - 12 = 8; 30 x 0.025 x 8 = 6; round2p5 -> 5;
+         max(2.5, 5) = 5; cap 0.20 x 30 = 6, not binding; next = 35. */
+  needFns(a, "verdict");
+  var prev = PREV(SETS(30, 12, 30, 12, 30, 12));
+  var out = vtext(P.verdict(VCTX(EX.cablerow, SETS(30, 20, 30, 20, 30, 20), prev)));
+  a.ok(out.indexOf("All sets above 12. Go to 35 kg next session.") === 0,
+    "G1 gives 35. WO-003's own 42.5 is the stray number, and the PM restated the criterion.");
+  a.eq(out.indexOf("42.5"), -1, "42.5 is not derivable from any rule and must not appear");
+});
+
+T("G1 - the 2.5 kg floor: one rep above the range still moves the load", function(a){
+  /* 60 x 0.025 x 1 = 1.5, round2p5 -> 0. Without the floor the app would say
+     "too light" and then recommend the same weight. */
+  needFns(a, "verdict");
+  var prev = PREV(SETS(60, 12, 60, 12, 60, 12));
+  var out = vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 13, 60, 13, 60, 13), prev)));
+  a.ok(out.indexOf("All sets above 12. Go to 62.5 kg next session.") === 0, "floor applies: +2.5");
+});
+
+T("G1 - at zero load every multiplicative term is zero, so the step is the 2.5 kg floor", function(a){
+  needFns(a, "verdict");
+  var prev = PREV(SETS(0, 12, 0, 12, 0, 12));
+  var out = vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 13, 0, 13, 0, 13), prev)));
+  a.ok(out.indexOf("All sets above 12 at bodyweight. Add 2.5 kg next session.") === 0,
+    "the rack chin's exit from bodyweight - this is what proves the loop terminates");
+  a.eq(out.indexOf("0 kg"), -1);
+});
+
+T("G1 - the 20% cap binds, and the capped load is still a legal 2.5 kg step", function(a){
+  /* excess = 22 - 12 = 10 -> 30 x 0.025 x 10 = 7.5, which would be 37.5 kg.
+     G1's cap is 0.20 x 30 = 6. Applied literally that gives 36 kg, which is
+     NOT a 2.5 kg step and CLAUDE.md section 3.5 makes that a defect. logic.js
+     rounds the cap to the grid first (round2p5(6) = 5), giving 35 and staying
+     on-grid - a resolution G1's text does not state. Pinned here and raised as
+     a contract question so it is a decision rather than an accident. */
+  needFns(a, "verdict");
+  var prev = PREV(SETS(30, 12, 30, 12, 30, 12));
+  var out = vtext(P.verdict(VCTX(EX.cablerow, SETS(30, 22, 30, 22, 30, 22), prev)));
+  var m = out.match(/Go to ([\d.]+) kg/);
+  a.ok(!!m, "expected a 'Go to N kg' recommendation, got: " + show(out));
+  var next = Number(m[1]);
+  a.eq(Math.round(next * 10) % 25, 0, next + " kg is not a legal 2.5 kg step");
+  a.ok(next > 30, "it must still be an increase");
+  a.eq(next, 35, "the cap binds: uncapped this would be 37.5, and 36 would be off-grid");
+  a.ne(next, 37.5, "if this is 37.5 the cap did not bind at all");
+  a.ne(next, 36, "if this is 36 the cap was applied without re-rounding");
+});
+
+T("H1 - the tonnage comparison, the boundary at hi, and the baseline", function(a){
+  needFns(a, "verdict");
+  var prev = PREV(SETS(57.5, 10, 57.5, 10, 57.5, 10));
+  var up = vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 9), prev)));
+  a.match(up, /^Volume up 1% [—–-] 1,740 kg against 1,725 kg\.$/,
+    "the dash is the ux-designer's to pin; the numbers and the thousands separator are the coach's");
+  var atHi = vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 12, 60, 12, 60, 12), PREV(SETS(60, 10, 60, 10, 60, 10)))));
+  a.eq(atHi.indexOf("above 12"), -1, "12 is inside 8-12: the prescription was met, not exceeded");
+  a.eq(atHi.indexOf("Too light"), -1);
+  a.ok(atHi.indexOf("Volume") === 0, "it falls through to the tonnage comparison");
+  a.eq(vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), null))),
+    "First time logged. This becomes your baseline.");
+});
+
+T("H1 - too heavy names the range it fell below", function(a){
+  needFns(a, "verdict");
+  var out = vtext(P.verdict(VCTX(EX.cablerow, SETS(40, 6, 40, 8, 40, 8), PREV(SETS(40, 10, 40, 10, 40, 10)))));
+  a.match(out, /^6 reps at 40 kg\. Below the 8[–-]12 range\. Drop to 37\.5 kg\.$/);
+});
+
+T("Z3 - hypertrophy at zero load compares total REPS, and never divides by zero", function(a){
+  /* Today this divides by zero and prints "Volume up 0% - 75 kg against 0 kg",
+     or says "Volume matched. One more rep next session." every week for a year. */
+  needFns(a, "verdict");
+  var up = vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 10, 0, 10, 0, 9), PREV(SETS(0, 9, 0, 9, 0, 8)))));
+  a.eq(up, "Reps up: 29 against 26 at bodyweight.");
+  a.eq(up.indexOf("%"), -1, "no percentage on small integers - this app does not decorate");
+  a.eq(up.indexOf("Volume"), -1);
+  a.eq(vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 10, 0, 10, 0, 10), PREV(SETS(0, 10, 0, 10, 0, 10))))),
+    "Same reps at bodyweight: 30. Add one rep next session.");
+  a.eq(vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 8, 0, 8, 0, 8), PREV(SETS(0, 10, 0, 10, 0, 10))))),
+    "Reps down: 24 against 30 at bodyweight. Match it next session.");
+});
+
+T("Z3 - a change of basis refuses to compare rather than producing a number", function(a){
+  needFns(a, "verdict");
+  a.eq(vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 10, 0, 10, 0, 10), PREV(SETS(2.5, 10, 2.5, 10, 2.5, 10))))),
+    "Bodyweight this time, loaded last time. Not comparable. New bodyweight baseline.");
+  var loaded = vtext(P.verdict(VCTX(EX.chinhyp, SETS(2.5, 10, 2.5, 10, 2.5, 10), PREV(SETS(0, 10, 0, 10, 0, 10)))));
+  a.eq(loaded, "Added load since last session. New baseline at 2.5 kg.");
+  a.eq(loaded.indexOf("Volume up 0%"), -1, "today this computes (75 - 0) / 0");
+  a.eq(loaded.indexOf("against 0 kg"), -1);
+  a.eq(loaded.indexOf("Infinity"), -1);
+  a.eq(loaded.indexOf("NaN"), -1);
+});
+
+T("Z3 - a session that carried ANY load is not a zero-load session", function(a){
+  needFns(a, "verdict");
+  var out = vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 10, 0, 10, 2.5, 10), PREV(SETS(2.5, 10, 2.5, 10, 2.5, 10)))));
+  a.ok(out.indexOf("Volume") === 0, "he did carry load, and the tonnage says so");
+  a.eq(out.indexOf("NaN"), -1);
+  a.eq(out.indexOf("Infinity"), -1);
+});
+
+T("Z3 - a failing zero-load hypertrophy set holds, it does not drop", function(a){
+  needFns(a, "verdict");
+  var out = vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 6, 0, 7, 0, 8), PREV(SETS(0, 10, 0, 10, 0, 10)))));
+  a.match(out, /^6 reps at bodyweight\. Below the 8[–-]12 range\. Hold here until all 3 sets reach 8 reps\.$/);
+  a.eq(out.indexOf("0 kg"), -1);
+  a.eq(out.indexOf("Drop to"), -1);
+});
+
+T("I2 - the increment line appears for db, machine, cable and bodyweight", function(a){
+  needFns(a, "verdict");
+  a.ok(vtext(P.verdict(VCTX(EX.dbpress, SETS(30, 5, 30, 5, 30, 5), null)))
+        .indexOf("If 2.5 kg per DB is not available, add reps up to 7 first, then jump.") >= 0,
+    "db, power, hi 5 -> ceiling 7. Per DUMBBELL, which B-22 ruled.");
+  a.ok(vtext(P.verdict(VCTX(EX.rackchin, SETS(0, 10, 0, 10), null)))
+        .indexOf("If 2.5 kg is not available, add reps up to 12 first, then jump.") >= 0,
+    "bodyweight, power, hi 10 -> ceiling 12. The audit's literal 7 would stop him BELOW his range.");
+  a.ok(vtext(P.verdict(VCTX(EX.cablerow, SETS(30, 20, 30, 20, 30, 20), PREV(SETS(30, 12, 30, 12, 30, 12)))))
+        .indexOf("If 2.5 kg is not available, add reps first, then jump.") >= 0,
+    "cable, HYPERTROPHY -> no rep ceiling; inventing one would be prescribing a rep range");
+});
+
+T("I2 - the increment line NEVER appears for a barbell, a hold, or speed work", function(a){
+  needFns(a, "verdict");
+  a.eq(vtext(P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 100, 5), null))).indexOf("If 2.5 kg"), -1,
+    "a barbell makes 2.5 kg with a 1.25 kg plate per side - the line would be a lie");
+  a.eq(vtext(P.verdict(VCTX(EX.sldl, SETS(120, 10, 120, 10, 120, 10), null))).indexOf("If 2.5 kg"), -1,
+    "bb, too-light case");
+  a.eq(vtext(P.verdict(VCTX(EX.legext, SETS(0, 8, 0, 8), null))).indexOf("If 2.5 kg"), -1,
+    "a HOLD carries no appendix - it is only actionable when he is about to make a jump");
+  a.eq(vtext(P.verdict(VCTX(EX.squat, SETS(100, 2, 90, 4, 90, 5), null))).indexOf("If 2.5 kg"), -1,
+    "nor does a drop");
+  a.eq(vtext(P.verdict(VCTX(EX.speedrow, SETS(70, 3, 70, 3, 70, 3, 70, 3, 70, 3, 70, 3), null)))
+        .indexOf("If 2.5 kg"), -1,
+    "and never on speed work - SP1 computes and rounds that number itself");
+});
+
+T("W6 - DATA LOSS: a stored 0 kg session is byte-identical after every verdict above", function(a){
+  needFns(a, "verdict");
+  var session = SESS("2026-09-08", 1, { d3b: { sets: SETS(0, 10, 0, 10, 0, 9), note: "rack chins" } });
+  var store = { schemaVersion: P.SCHEMA_VERSION, sessions: [session], includeCut: false,
+                reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null };
+  var before = JSON.stringify(store);
+  var entryRef = P.lastFor([session], "d3b");
+  P.verdict(VCTX(EX.chinhyp, SETS(0, 10, 0, 10, 0, 10), entryRef));
+  P.verdict(VCTX(EX.chinhyp, entryRef.sets, PREV(SETS(0, 9, 0, 9, 0, 9))));
+  P.verdict(VCTX(EX.rackchin, entryRef.sets.slice(0, 2), null));
+  a.eq(JSON.stringify(store), before,
+    "reading history to give advice must never write to it - prev is handed over BY REFERENCE");
+  a.eq(JSON.stringify(session.entries.d3b.sets), '[{"w":0,"r":10},{"w":0,"r":10},{"w":0,"r":9}]');
+});
+
 /* ============================================================ S9 - suite budget (W7) */
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
   var ms = Date.now() - T0;
   a.ok(ms < 2000, "suite took " + ms + " ms; the work order's budget is 2000 ms");
+});
+
+/* This replaces "expect exactly one failure". A test kept red on purpose is a
+   rule stored in a human's memory, and the next REAL failure hides behind it
+   (WO-003 Decision 1). Registered last, so it sees every result above it. */
+T("SUITE TRIPWIRE - no test is named as a deliberate or carried-forward failure", function(a){
+  var banned = ["currently failing", "known bad", "known-bad", "deliberately failing",
+                "expected failure", "expected to fail", "xfail", "todo:"];
+  var offenders = [], i, j, n;
+  for (i = 0; i < RESULTS.length; i++) {
+    n = RESULTS[i].name.toLowerCase();
+    for (j = 0; j < banned.length; j++) {
+      if (n.indexOf(banned[j]) >= 0) { offenders.push(RESULTS[i].name); break; }
+    }
+  }
+  a.eq(offenders.join(" | ") || "none", "none",
+    "a failure carried forward under a label is how the next real one gets waved through: " +
+    "fix it, or delete it and file the backlog item");
+});
+
+T("SUITE TRIPWIRE - nothing is silently skipped without a stated reason", function(a){
+  var bad = [], i;
+  for (i = 0; i < RESULTS.length; i++) {
+    if (RESULTS[i].skip && !String(RESULTS[i].msg).trim()) bad.push(RESULTS[i].name);
+  }
+  a.eq(bad.join(" | ") || "none", "none",
+    "a criterion that could not be tested is a FAIL with a reason, never a quiet pass");
 });
 
 /* ============================================================ contract questions */
@@ -1760,10 +2809,59 @@ contract("<b>migrateStore return shape - now settled.</b> The work order fixed t
 contract("<b>\" 5 \", \"5.\", \".5\", the NOW fallback, notes-only entries</b> are pinned in section S8 as " +
   "<em>judgement calls, not rulings</em>. Each pins current behaviour with the rationale on record. " +
   "Reversing one should be a deliberate edit to that test, never a silent change.");
-contract("<b>KNOWN BAD, awaiting strength-coach.</b> <code>0 x 10</code> now saves (B-21 fixed in the data " +
-  "layer) but <code>topSet</code> still filters <code>+s.w&gt;0</code>, so the verdict reads " +
-  "\"Stay at 0 kg until all 3 sets reach 10 reps\". The S8 test documents the wrong output rather than " +
-  "blessing it. This is wrong advice, not wrong storage - do not close it by dropping the set again.");
+contract("<b>B-32 - the old KNOWN-BAD test is retired, not deleted.</b> It used to pin the wrong string " +
+  "\"Stay at 0 kg until all 3 sets reach 10 reps\" for the record while <code>strength-coach</code> ruled. " +
+  "He ruled (Rule Z2), so that string is now the thing the suite must REJECT. The two halves it carried " +
+  "were split: the storage half is S8's <em>B-21 / B-32 (storage half)</em> and passes today, and the " +
+  "advice half is S17's <em>B-32 / Z2</em>, which asserts " +
+  "<code>Stay at bodyweight until all 2 sets reach 10 reps.</code> and that <code>0 kg</code> never " +
+  "appears. Still wrong advice on correct data - still not closeable by dropping the set.");
+contract("<b>G1 contradicts WO-003 &sect;W6's own acceptance criterion, and the tests follow G1.</b> " +
+  "W6 pins <code>All sets above 12. Go to 42.5 kg next session.</code> for <code>30&times;20 &times;3</code>. " +
+  "The coach's addendum &sect;4 shows 42.5 is not derivable from any rule in the audit; G1's formula " +
+  "(2.5% of load per rep above the range) gives <b>35</b>, and the same formula reproduces the pinned " +
+  "SLDL <code>120 &rarr; 125 kg</code>. The PM accepted G1 and restated the criterion on 2026-09-09. " +
+  "S17 asserts 35 and asserts 42.5 is absent. If W6 ships 42.5 the suite is right and the code is wrong.");
+contract("<b>G1's 20% cap: how it avoids an off-grid load is an implementation choice, not a ruling.</b> " +
+  "At <code>30&times;22 &times;3</code> (excess 10) the step is <code>round2p5(7.5) = 7.5</code> and the cap " +
+  "is <code>0.20 &times; 30 = 6</code>. G1's text says <code>min(step, 0.20 &times; load)</code>, which " +
+  "literally gives <b>36 kg</b> - not a 2.5 kg step, and CLAUDE.md &sect;3.5 makes that a defect. " +
+  "<code>logic.js</code> rounds the cap to the grid first (<code>round2p5(6) = 5</code>) and lands on " +
+  "<b>35 kg</b>, which is correct and conservative. The suite pins 35 and rejects both 36 and the " +
+  "uncapped 37.5. <b>Wanted: one confirming line from <code>strength-coach</code></b> - the code is " +
+  "right, G1's wording is what is loose, and the cap now binds marginally earlier than its text says.");
+contract("<b>Epley at one rep.</b> <code>e1rm(100, 1)</code> is <b>103.33</b>, not 100 - " +
+  "<code>w &times; (1 + r/30)</code> as coach-audit &sect;4 pins it, with no <code>r = 1</code> case. " +
+  "Harmless inside ST1, which compares two Epley figures and inflates both sides equally, and the " +
+  "monotonicity ST1 depends on is intact. It matters only if W9 or W10 ever puts the number on screen: " +
+  "\"estimated 1RM 103.3 kg\" off a logged 100 kg single reads as a bug to the lifter. " +
+  "<b>Ruling wanted from <code>strength-coach</code> before ST1's copy is written</b>, not before W6.");
+contract("<b><code>workingLoad(sets, n)</code>'s <code>n</code> caps, it does not require.</b> " +
+  "<code>workingLoad([100&times;5], 3)</code> returns <b>100</b>, not null - one completed set of three " +
+  "answers confidently. Safe today: <code>PHAT.verdict</code> gates on <code>C.length &gt;= ex.s</code> " +
+  "before P1 ever asks for a load, and that gate is asserted. It is a trap for the NEXT caller - W12 " +
+  "(speed), W14 (volume tier) and W19 (deload) all read history and could take a load off a short " +
+  "session. Pinned as documented behaviour; <b>W9/W12 should either gate at the call site or ask for a " +
+  "<code>requireN</code> variant</b>.");
+contract("<b><code>PHAT.e1rm</code>'s formula is not named anywhere.</b> WO-003 fixes the signature and " +
+  "leaves Epley vs Brzycki to ST1 (W9). S16 pins only the properties any correct estimator must have - " +
+  "<code>e1rm(w,1) === w</code>, <code>e1rm(0,r) === 0</code>, monotonic in both arguments, never NaN, " +
+  "and <code>100&times;5</code> inside 110-120 kg (Epley 116.7, Brzycki 112.5 both qualify). W9 must " +
+  "state which, and then this becomes an exact test.");
+contract("<b><code>PHAT.workingLoad</code> below the minimum set count.</b> Not specified. Returning " +
+  "<code>0</code> would be a live bug - it becomes a printed <code>0 kg</code> instruction off a " +
+  "half-finished exercise, B-24 and B-32 at once. The test asserts only that it is <b>not a number</b> " +
+  "(<code>null</code> or <code>undefined</code>), which is the invariant, and does not pin which.");
+contract("<b>Rule I2's appendix has no field name.</b> It is \"a second line below the verdict, never " +
+  "appended to the same sentence\", and <code>PHAT.verdict</code> is fixed as <code>{t, x}</code>. S17 " +
+  "reads every string in the returned object via <code>vtext()</code>, so whichever field W6 chooses, " +
+  "these tests hold. If the appendix ships as a separate return key, say which in W6's notes and " +
+  "<code>vtext()</code> stays as is.");
+contract("<b>Copy punctuation is the <code>ux-designer</code>'s, not the coach's.</b> The audit writes " +
+  "<code>Volume up 1% &mdash; 1,740 kg against 1,725 kg.</code> with an em dash and a thousands comma. " +
+  "S17 asserts the numbers and the separator strictly and allows em dash / en dash / hyphen, because a " +
+  "dash is a typography decision and a wrong number is a coaching one. Same for the <code>8&ndash;12</code> " +
+  "range token.");
 contract("<b>bw argument.</b> Assumed to be the whole <code>phat:v1:bw</code> store object " +
   "<code>{entries:[...]}</code>, matching <code>load(BWK)</code>. A bare array is also accepted by the helper.");
 contract("<b>Reason for <code>-5</code> and <code>1e3</code>.</b> Decision 4 does not say whether a parseable " +
@@ -1789,8 +2887,10 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
   "given. If it is ever changed to re-derive the components (<code>new Date(+d)</code>, a " +
   "<code>Date.UTC</code> round trip), the injection silently collapses to the host zone - so a probe " +
   "detects that and turns those tests into loud skips instead of lies. Injecting the clock proves " +
-  "<code>PHAT.localDate</code>; it does not prove the app end to end under a real device timezone, " +
-  "which stays manual item 8.");
+  "<code>PHAT.localDate</code> and nothing more - but the app <i>was</i> proven end to end under real device " +
+  "timezones on 2026-09-09, by overriding the zone through the DevTools protocol " +
+  "(<code>Emulation.setTimezoneOverride</code>) and driving the shipping <code>index.html</code>. That " +
+  "closes the old manual item; the evidence is under \"Already proven\".");
 
 /* ============================================================ render */
 (function render(){
@@ -1822,8 +2922,9 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
     '<div style="margin-top:10px;color:var(--dim);font-size:12px">Device timezone under test: <b>' +
       esc(TZ_NAME) + "</b> (" + offsetLabel(janOff) +
       (janOff === julOff ? ", no DST" : " in January, " + offsetLabel(julOff) + " in July") + "). " +
-      "The date tests adapt to it. B-03 is a timezone bug, so <b>run this page again on the phone, in " +
-      "the timezone the app is actually used in</b> - some criteria only bite east of UTC.</div>";
+      "The date tests adapt to it, and inject UTC+3 / UTC+0 / UTC-5 / UTC-8 / UTC+5:30 on top. " +
+      "<b>You do not need to open this page in another timezone.</b> The whole app was driven under real " +
+      "browser zones (UTC-7, UTC+3, UTC+14) on 2026-09-09 - evidence under \"Already proven\".</div>";
 
   if (typeof window.PHAT !== "object" || !window.PHAT) {
     document.getElementById("banner").innerHTML =
@@ -1857,13 +2958,19 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
   document.getElementById("contract").innerHTML = c + "</ol>";
 
   document.getElementById("untestable").innerHTML =
-    "<p>Two of the three gaps this section used to list are <b>closed</b>. " +
+    "<p><b>B-20 is now closed for everything WO-003 W1/W5/W6 touches.</b> " +
     "<code>PHAT.classifyDraftPayload(raw)</code> and <code>PHAT.buildSession(draft, dayId, dateStr, id)</code> " +
-    "were extracted (B-20, partial), so <code>none</code>/<code>ok</code>/<code>parse</code>/<code>shape</code> " +
-    "and the serialized session JSON are now asserted here, in sections S11 and S12. " +
+    "were extracted in WO-001, so <code>none</code>/<code>ok</code>/<code>parse</code>/<code>shape</code> " +
+    "and the serialized session JSON are asserted here in S11 and S12. " +
     "<code>loadDraft()</code> is a thin wrapper over the first of them, so the path that ships is the path this " +
     "page exercises; only <code>reason:\"read\"</code> - the storage call itself throwing - is left in " +
-    "<code>index.html</code>.</p>" +
+    "<code>index.html</code>. WO-003 W1/W5/W6 then moved <code>vol</code>, <code>topSet</code> (now " +
+    "<code>workingLoad</code>), <code>lastFor</code> and <code>verdictFor</code> out too, so <b>every rule in " +
+    "<code>docs/coach-audit.md</code> that this batch has implemented is asserted here over " +
+    "<code>file://</code> with no DOM</b> - sections S13 to S17. The END-STATE test in S0 names anything still " +
+    "missing. The rules not yet built (W7 bodyweight windows, W9 stall, W12 speed, W14 volume tier, W19 " +
+    "deload) have no tests here on purpose: their signatures are not fixed, and a test written against a " +
+    "guessed signature is a test the engineer deletes.</p>" +
     "<p><b>What this page still cannot assert, and how it was covered in the W8 verification pass.</b> " +
     "Everything below needs the DOM, the async storage adapter or the browser lifecycle. It was verified on " +
     "2026-09-09 by driving <code>index.html</code> in a same-origin iframe from a throwaway probe harness served " +
@@ -1879,11 +2986,11 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
     "<span class=\"skipmsg\">W8: verified by exhausting the real storage quota.</span></li>" +
     "<li><b>W3</b> - <code>reason:\"read\"</code>, and <code>startDay()</code> refusing rather than overwriting. " +
     "<span class=\"skipmsg\">W8: verified with a bridge whose get() rejects; zero writes to the draft key over " +
-    "two attempts.</span> Manual items 12 and 13.</li>" +
+    "two attempts.</span> Now items 11 and 12 under \"Already proven\".</li>" +
     "<li><b>W3</b> - the verbatim <code>phat:v1:recover:log:&lt;epoch&gt;</code> copy, and the write-block when " +
-    "that copy itself fails. <span class=\"skipmsg\">W8: verified both branches.</span> Manual item 14.</li>" +
+    "that copy itself fails. <span class=\"skipmsg\">W8: verified both branches.</span> Now item 13 under the proven list.</li>" +
     "<li><b>W1</b> - boot performing ZERO writes on an empty store, twice. <span class=\"skipmsg\">W8: " +
-    "verified.</span> Manual item 15.</li>" +
+    "verified.</span> Now item 14 under the proven list.</li>" +
     "<li><b>W1</b> - the bodyweight same-day dedupe in the click handler, and the trend chart rendering after a " +
     "migration. <span class=\"skipmsg\">W8: verified.</span> <b>Still worth extracting (B-20):</b> " +
     "<code>PHAT.upsertBwRow(rows, date, kg)</code> would make the dedupe a two-line test in here.</li>" +
@@ -1892,64 +2999,184 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
     "<span class=\"skipmsg\">W8: verified; 80 keystrokes, zero mutations under #view.</span></li>" +
     "<li><b>W6</b> - paste versus keystroke, the stepper normalising a malformed field, and the blocked-save " +
     "message. <span class=\"skipmsg\">W8: verified.</span></li>" +
-    "<li><b>Nothing automated reaches these at all:</b> a real phone lock, a real browser kill and relaunch, a " +
-    "real device timezone change, the software keyboard covering a focused field (B-36), pinch-zoom (B-13), " +
-    "OS text scaling, and screen reader announcement of the <code>aria-live</code> message. They are the " +
-    "manual checklist, and they are the reason it exists.</li></ul>";
+    "<li><b>What nothing automated reaches - now four things, not seven.</b> A real process kill on a mobile " +
+    "OS; a software keyboard, both for <code>inputType</code> fidelity under an IME and for B-36; OS text " +
+    "scaling with one-handed reach and legibility; and a screen reader actually speaking the live region. " +
+    "Those are the four items above. <b>Struck from this list on 2026-09-09, because they were observed:</b> " +
+    "the phone lock (<code>visibilitychange</code> flush, measured), a browser kill and relaunch (proven up to " +
+    "the OS boundary), and a real device timezone change (driven through " +
+    "<code>Emulation.setTimezoneOverride</code> at UTC-7, UTC+3 and UTC+14). Pinch-zoom needs no check " +
+    "either: <code>index.html</code> still ships " +
+    "<code>&lt;meta name=\"viewport\" content=\"...,maximum-scale=1\"&gt;</code>, which is B-13 by " +
+    "inspection - reading the tag settles it, tapping at the screen does not.</li></ul>";
 
+  /* ---------------------------------------------------------------------
+     The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a
+     headless-Chrome probe rig (a PowerShell static server on 127.0.0.1 plus a
+     same-origin iframe driving the real index.html), so they are now evidence,
+     not chores - they moved to "Already proven" below. Fourteen are closed
+     outright; three (the process kill, typing with a real IME, and big text /
+     thumb reach) keep a named residue that a desktop browser physically cannot
+     be: a mobile OS, a software keyboard, a screen reader, an eye in bright
+     light. Those residues, merged, are the four items here.
+     --------------------------------------------------------------------- */
   document.getElementById("manual").innerHTML =
-    "<p>Run in order. Stop at the first failure and report it. Two minutes.</p><ol>" +
-    "<li><b>Draft survives a lock.</b> Start Day 1. Type <code>100</code> / <code>5</code> in set 1. " +
-    "Lock the phone, count to ten, unlock. The set is still on screen.</li>" +
-    "<li><b>Draft survives a kill.</b> Add <code>100</code>/<code>5</code> and <code>95</code>/<code>4</code> and a " +
-    "note. Do not save. Swipe the browser away, reopen the app. It offers the session back, naming Day 1 and " +
-    "today's date. Resume: all three sets and the note are exactly as typed.</li>" +
-    "<li><b>A bad number cannot be typed.</b> In a weight field type <code>7</code> <code>.</code> <code>5</code> " +
-    "<code>.</code> - the field reads <code>7.5</code> and the caret has not jumped. Nothing you type makes the " +
-    "number bigger than what you typed.</li>" +
-    "<li><b>A bad number cannot be lost.</b> Paste <code>7.5.0</code> into a weight field. It stays <code>7.5.0</code>. " +
-    "Tap Save: it refuses and names the exercise and the set. One tap on the message lands on that row.</li>" +
-    "<li><b>Fixing it keeps everything.</b> Correct that row to <code>7.5</code> and Save. All four sets are in the " +
-    "saved session. None vanished.</li>" +
-    "<li><b>Rack chin (B-21).</b> Log a set as <code>0</code> x <code>10</code>. Save. Reopen the session: it is " +
-    "still there as 0 x 10.</li>" +
-    "<li><b>Offline.</b> Airplane mode on. Log a full day and save. Reload. Everything is there.</li>" +
-    "<li><b>Midnight (B-03).</b> Set the phone clock to 23:50, start a day - the date shown is today. Set it to " +
-    "00:10 the next day and log bodyweight - it lands on the new day, and yesterday's row is untouched. " +
-    "Put the clock back. While you are in there: open this test page on the phone once, in Beirut time - " +
-    "the UTC+3 date tests only run east of UTC and are skipped on the dev machine.</li>" +
-    "<li><b>One weight a day.</b> Log bodyweight twice within a minute. Exactly one row for today, holding the " +
-    "second value.</li>" +
-    "<li><b>Thumb pass.</b> At 400 px, one hand, text size at 200% in OS settings: every button is reachable and " +
-    "nothing clips. Rotate to landscape and back.</li>" +
-    "<li><b>Discard is last on purpose.</b> Discard a draft: it must ask first and say how many sets it will " +
-    "destroy. Confirm, reload - no restore offer, and the saved history is untouched.</li></ol>" +
-    "<p>Three more, only when a build changes the storage layer. Needs the browser console " +
-    "(desktop, or a phone with remote debugging):</p><ol start=\"12\">" +
-    "<li><b>Corrupt draft must refuse, not overwrite.</b> With a real draft saved, run " +
-    "<code>localStorage.setItem('phat:v1:draft','{oops')</code> and reload. Expected: the app says the draft " +
-    "could not be read and <b>Start Day 1 refuses</b>. It must not silently show an empty Train tab and then " +
-    "overwrite the draft on the next tap.</li>" +
-    "<li><b>Wrong-shape draft.</b> Same again with " +
-    "<code>localStorage.setItem('phat:v1:draft','[1,2,3]')</code>: valid JSON, not a draft. Same refusal, " +
-    "different reason.</li>" +
-    "<li><b>Unreadable log is copied before anything writes.</b> " +
-    "<code>localStorage.setItem('phat:v1:log','{trunc')</code>, reload, then check " +
-    "<code>Object.keys(localStorage)</code> for a <code>phat:v1:recover:log:&lt;number&gt;</code> holding the " +
-    "original text byte for byte. Only then may the app write to <code>phat:v1:log</code>.</li>" +
-    "<li><b>Empty store writes nothing.</b> <code>localStorage.clear()</code>, reload, and without touching " +
-    "anything check <code>Object.keys(localStorage)</code> - it must still be empty. The version lands on the " +
-    "first real save, not on boot.</li>" +
-    "<li><b>A full disk must not fail quietly.</b> Fill storage from the console (write 64 KB strings under " +
-    "<code>filler:N</code> until it throws), then keep typing sets. <b>Known open defect (B-39):</b> the draft " +
-    "stops being written and nothing on screen says so - <code>S.err</code> is set but never painted, because " +
-    "autosave is forbidden from calling <code>render()</code>. Tapping Save does fail loudly and keeps every " +
-    "number on screen. Delete the filler keys and Save again: all sets save. Re-run this item when B-39 is " +
-    "fixed; it should then say so while you are still typing.</li>" +
-    "<li><b>Private window / site data blocked.</b> Open the app with storage denied. It boots and shows the " +
-    "day list, and tapping a day <b>refuses</b> with a message rather than opening a session it cannot save. " +
-    "<b>Known open defect (B-40):</b> the message it shows is the draft one, which hides the more serious " +
-    "\"nothing will be written to your log\" notice, and its advice - reopen the app - does not help.</li></ol>";
+    "<p><b>Five items. Two minutes. Everything else on this page is already covered by " +
+    "automation - see the section under this one for what was measured and how.</b></p><ol>" +
+
+    "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
+    "<i>Squat</i>. Type set 1 as <code>100</code>/<code>5</code>: <b>the grey verdict line must stay empty.</b> " +
+    "Type set 2 the same: still empty. Type set 3: only now does " +
+    "<i>Top of range on all 3 sets. Go to 102.5 kg next session.</i> appear. Then open <i>Rack chin</i>, log " +
+    "<code>0</code>/<code>10</code> and <code>0</code>/<code>9</code>, and read the line - it must say " +
+    "<b>bodyweight</b>, never <code>0 kg</code>.<br><span class=\"skipmsg\">Why a phone: the RULE is fully " +
+    "asserted here (S16 \"THE GATE\", S17 \"B-32 / Z2\") and <code>paintVerdict</code> is now a two-line caller " +
+    "of <code>PHAT.verdict</code>. What this page cannot see is the slot itself repainting on every keystroke - " +
+    "whether a partly-typed <code>10</code> flashes a verdict for one frame before the third set is finished, " +
+    "and whether Rule I2's second line wraps rather than pushing the Save button off-screen at 400 px. Both are " +
+    "render behaviour, and both are read one-handed between sets.</span></li>" +
+
+    "<li><b>Kill it and come back.</b> Start Day 1, type <code>100</code>/<code>5</code> and " +
+    "<code>95</code>/<code>4</code> and a note. Do <i>not</i> save. Lock the phone, count to ten, unlock - the " +
+    "set is still there. Now swipe the browser out of the app switcher (a real force-kill, not a tab close), " +
+    "reopen it, and expect the restore offer naming <i>Upper power</i> and today's date; Resume gives back " +
+    "every number and the note.<br><span class=\"skipmsg\">Why a phone: every step of this is proven headless " +
+    "(draft written with no lifecycle event at all, offer, Resume byte for byte). What is not, and cannot be, " +
+    "is whether iOS or Android actually keeps <code>localStorage</code> across a process kill - Safari's " +
+    "intelligent-tracking eviction, \"clear data on exit\" settings and low-storage reclaim are OS policy, not " +
+    "browser API. This is the P0 promise of the whole app, so it is worth thirty seconds once.</span></li>" +
+
+    "<li><b>Type with the real keyboard, and watch the bottom bar.</b> On the session screen, tap into a " +
+    "weight field so the keyboard comes up. Type <code>7</code> <code>.</code> <code>5</code> <code>.</code> - " +
+    "it must read <code>7.5</code> and the caret must not jump. Swipe-type or let autocorrect fire in the note " +
+    "field. While the keyboard is up, check the bottom nav and <b>Save session</b> are still where they belong " +
+    "and still tappable.<br><span class=\"skipmsg\">Why a phone: the sanitiser branches on " +
+    "<code>e.inputType</code>, and GBoard, swipe input and iOS composition can report " +
+    "<code>insertCompositionText</code> or <code>insertReplacementText</code> where a hardware key reports " +
+    "<code>insertText</code> - that routes the value down the keep-verbatim path. No desktop browser emits " +
+    "those. Second half is <b>B-36</b>: iOS Safari lifts <code>position:fixed</code> out of place when the " +
+    "keyboard opens, and <code>#dock</code> is fixed. Headless has no software keyboard.</span></li>" +
+
+    "<li><b>Big text, one hand, bright light.</b> Set OS text size to 200%. Open a session and try to log a set " +
+    "with the hand you would actually have free. Then look at it outdoors or under gym lights.<br>" +
+    "<span class=\"skipmsg\">Why a phone: geometry at 400 px is measured (no overflow, dock stays in the " +
+    "viewport, tap targets listed below). But iOS Dynamic Type and the Android font scale are applied by the " +
+    "OS, not by CSS, and \"can I reach it\" and \"can I read it\" are judgements. Known open and already " +
+    "measured, so no need to hunt for them: <b>B-37</b>, the last-session ghost hint renders 6.9 px wide; the " +
+    "stepper buttons are 40 px across, under the 44 px rule; the \"movement &amp; cue\" line is 26 px tall.</span></li>" +
+
+    "<li><b>Turn the screen reader on, once.</b> VoiceOver or TalkBack. Paste <code>7.5.0</code> into a weight " +
+    "field and tap Save - it should speak <i>Not saved. 1 set needs a fix.</i> and land you on that row. " +
+    "<br><span class=\"skipmsg\">Why a phone: the live regions and their text are asserted present and " +
+    "correct; whether the assistive technology actually announces them is behaviour of the AT on the device, " +
+    "which no browser API reports.</span></li></ol>" +
+
+    "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
+    "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
+    "iOS Safari's quota semantics differ and can throw on the first write. Do not go and fill your phone; just " +
+    "know that if you ever see <i>Your session is not being saved</i> on the phone, it is real, and Save still " +
+    "keeps every number on screen.</p>";
+
+  /* ---------------------------------------------------------------------
+     Everything that used to be on his list, with what was measured.
+     --------------------------------------------------------------------- */
+  document.getElementById("proven").innerHTML =
+    "<p>Sixteen of the old seventeen items, re-run against the shipping <code>index.html</code> on " +
+    "2026-09-09. Rig: a static server on <code>http://127.0.0.1</code> serving the real files, a same-origin " +
+    "iframe driving the real app, headless Chrome. Not checked in - a suite that needs a server stops being a " +
+    "file you can double-click. Re-run it, or these items, when the storage layer changes. The seventeenth, " +
+    "\"draft survives a kill\", is proven up to the point where the operating system takes over, which is why " +
+    "it is item 1 above. Three items below carry a named residue; nothing else does.</p><ol>" +
+
+    "<li><b>Draft survives a lock.</b> <span class=\"skipmsg\">Proven: a <code>visibilitychange</code> to " +
+    "hidden wrote <code>{w:\"100\",r:\"5\"}</code> to <code>phat:v1:draft</code> with no blur and without " +
+    "waiting out the 400 ms debounce; the set was still on the same DOM node afterwards. The remaining " +
+    "OS-level half is item 1 above.</span></li>" +
+
+    "<li><b>A bad number cannot be typed.</b> <span class=\"skipmsg\">Proven, per keystroke with a real " +
+    "<code>InputEvent</code>: <code>7 . 5 .</code> &rarr; <code>\"7.5\"</code>, caret 3; a refused character " +
+    "typed at caret 1 moved neither the caret nor the digits; <code>5.5</code> in a reps field &rarr; " +
+    "<code>\"55\"</code>; <code>-3</code> &rarr; <code>\"3\"</code>; <code>100 kg</code> &rarr; " +
+    "<code>\"100\"</code>; <code>1e3</code> never became 1000; <code>00100</code> was kept verbatim rather " +
+    "than silently rewritten. The IME half is item 2 above.</span></li>" +
+
+    "<li><b>A bad number cannot be lost.</b> <span class=\"skipmsg\">Proven: a pasted <code>7.5.0</code> " +
+    "stayed <code>7.5.0</code>; Save refused with <i>Not saved. 1 set needs a fix.</i>; the row button read " +
+    "<i>Bent-over row &middot; set 3 &middot; 7.5.0</i>; <code>phat:v1:log</code> was still " +
+    "<code>null</code>; all four typed numbers were still on screen; one tap on the message put focus on that " +
+    "exact row's weight input.</span></li>" +
+
+    "<li><b>Fixing it keeps everything.</b> <span class=\"skipmsg\">Proven: corrected to <code>7.5</code> and " +
+    "saved as <code>d1a=[{w:100,r:5},{w:100,r:5},{w:7.5,r:5}] d1b=[{w:20,r:8}]</code> - four sets, none " +
+    "vanished - and the draft key was only cleared after the save succeeded.</span></li>" +
+
+    "<li><b>Rack chin, 0 x 10 (B-21).</b> <span class=\"skipmsg\">Proven: stored as " +
+    "<code>{sets:[{w:0,r:10}]}</code> and still in the history after a reload.</span></li>" +
+
+    "<li><b>Offline.</b> <span class=\"skipmsg\">Proven structurally, which is stronger than airplane mode: " +
+    "the running app requested exactly one resource, <code>logic.js</code>, and nothing off-origin - there is " +
+    "no network call to fail. Save-then-reload kept the session. <b>Read this next bit:</b> no service worker " +
+    "is registered, so an offline <i>reload of the Vercel URL</i> is at the mercy of the HTTP cache and is not " +
+    "guaranteed. That is epic E-4, not a checklist item - a manual pass could not fix it and might pass by " +
+    "luck.</span></li>" +
+
+    "<li><b>Midnight and timezone (B-03).</b> <span class=\"skipmsg\">Proven end to end, on the real app, " +
+    "under real browser timezones - not just on <code>PHAT.localDate</code>. The device zone was overridden " +
+    "through the DevTools protocol (<code>Emulation.setTimezoneOverride</code>), which is the way round " +
+    "\"Chrome on Windows ignores <code>TZ</code>\". At 23:50 in <b>America/Los_Angeles</b> - 06:50 the " +
+    "<i>next</i> day in UTC - bodyweight and the draft both landed on <code>2026-09-09</code>, the local day; " +
+    "UTC would have written 09-10. At 00:10 in <b>Asia/Beirut</b> - still the previous day in UTC - it landed " +
+    "on the new local day. Same result at <b>Pacific/Kiritimati</b> (UTC+14) and on the host " +
+    "(America/New_York). Two rows, both values kept, yesterday untouched, every time. " +
+    "<b>This item is retired: opening this page on the phone in Beirut time adds nothing that has not been " +
+    "observed here.</b></span></li>" +
+
+    "<li><b>One weight a day.</b> <span class=\"skipmsg\">Proven: two weigh-ins a minute apart left exactly " +
+    "one row, <code>[{date:\"2026-09-09\",kg:85.6}]</code>, holding the second value.</span></li>" +
+
+    "<li><b>Layout at 400 px.</b> <span class=\"skipmsg\">Measured with the desktop scrollbar suppressed so " +
+    "the viewport really is 400 CSS px: no horizontal overflow on either the Train tab or the session view, " +
+    "no overflow rotated to 820x400, and the fixed dock stayed inside a 400 px-tall viewport (top 346, bottom " +
+    "400, height 54). Two things failed and are already open: <b>B-37</b>, ghost hint 6.9 px wide, and the " +
+    "sub-44 px controls listed in item 3 above. The human half - 200% text, thumb reach, legibility - is item " +
+    "3.</span></li>" +
+
+    "<li><b>Discard.</b> <span class=\"skipmsg\">Proven: it asked first, headline <i>Discard 2 logged sets?</i> " +
+    "with the count taken from what was on screen; the destructive button was inert " +
+    "(<code>pointer-events:none</code>) for the first 300 ms; confirming cleared the draft key; after a reload " +
+    "there was no restore offer and the saved log was byte-identical.</span></li>" +
+
+    "<li><b>Corrupt draft refuses, not overwrites.</b> <span class=\"skipmsg\">Verified in the W8 pass: " +
+    "<code>reason:\"read\"</code> with a bridge whose <code>get()</code> rejects, and <code>startDay()</code> " +
+    "refusing rather than overwriting - zero writes to the draft key over two attempts. The " +
+    "<code>parse</code> and <code>shape</code> branches are pure tests in section S11 of this page.</span></li>" +
+
+    "<li><b>Wrong-shape draft.</b> <span class=\"skipmsg\">Same as above: " +
+    "<code>PHAT.classifyDraftPayload</code> is asserted directly in S11, and <code>loadDraft()</code> is a " +
+    "thin wrapper over it, so the path that ships is the path this page exercises.</span></li>" +
+
+    "<li><b>Unreadable log is copied before anything writes.</b> <span class=\"skipmsg\">Verified in the W8 " +
+    "pass: the verbatim <code>phat:v1:recover:log:&lt;epoch&gt;</code> copy, and the write-block when that " +
+    "copy itself fails - both branches.</span></li>" +
+
+    "<li><b>Empty store writes nothing.</b> <span class=\"skipmsg\">Verified in the W8 pass: boot performed " +
+    "zero writes on an empty store, twice. The version lands on the first real save.</span></li>" +
+
+    "<li><b>A full disk does not fail quietly.</b> <span class=\"skipmsg\"><b>B-39 is fixed and this now " +
+    "passes.</b> Storage was exhausted for real (100 filler keys, then finer chunks until even 512 bytes was " +
+    "refused). While still typing, the app said so: <code>#bs-live</code> and a visible toast both read " +
+    "<i>Your session is not being saved. Tap Save to keep it.</i> The write that did not fit was absent from " +
+    "disk (typed note 1199 chars, on-disk note 0) while every number stayed on screen; Save failed loudly with " +
+    "<i>Could not save. Your entries are still on screen - try again.</i>; after freeing space Save kept both " +
+    "sets, <code>[{w:100,r:5},{w:95,r:4}]</code>. The old wording of this item, calling B-39 an open defect " +
+    "where nothing on screen says so, was stale.</span></li>" +
+
+    "<li><b>Site data blocked.</b> <span class=\"skipmsg\"><b>B-40 is fixed and this now passes.</b> Booted " +
+    "with <code>localStorage</code> throwing <code>SecurityError</code> on access: the day list still " +
+    "rendered, and the notice shown was the <i>worst</i> fact, not the draft one - <i>Your saved log could not " +
+    "be read and could not be copied aside. Nothing will be written to it. Reload before logging.</i> Tapping " +
+    "a day refused: still on the Train tab, zero set rows. The old wording of this item was stale.</span></li>" +
+    "</ol>";
 })();
 </script>
 </body>

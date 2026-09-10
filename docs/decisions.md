@@ -164,3 +164,175 @@ were overreach in the work order, not defects in the code.
 reader announcement. Both are on the 17-item manual checklist, which is the thing that actually
 settles this batch.
 **Rules out:** treating WO-001 as proven before that checklist is run on the phone.
+
+### 2026-09-09 — Chady is redesigning the visual language; frontend items are on hold
+He said plainly the current design is not good enough and is working on a better one.
+**Held:** every frontend implementation item in WO-003 — Weight tab, Trend tab, speed card, volume
+tier UI, pain notice, rest timer, deload banner. Building eight screens against a design that is being
+replaced is waste.
+**Still running:** the logic. Calorie bands, stall detector, progression, speed load, volume tier
+engine, deload triggers — all pure functions in `logic.js` with tests, all design-independent.
+**Redirected, not killed:** the UX specs now lead with states, copy and constraints rather than visual
+treatment, and each opens with "what a new visual design must still honour". Seven advice states are
+seven advice states whatever the screen looks like.
+**Carried into the new design as evidence, not opinion:** `--faint` on `--surface` is 2.30:1 and
+`--red` is 2.84:1, both failing; and B-37 — at 400 px a set row is 369 px inside a 366 px content box,
+so the last-session ghost text renders at zero width. The app's best idea has never been visible on a
+phone; the redesign is the moment to fix it.
+**Rules out:** implementing WO-003's frontend items before his design lands.
+
+### 2026-09-09 — Rule G1: the hypertrophy load increase is 2.5% of load per rep above the range
+`strength-coach` escalated rather than letting an engineer choose a multiplier. The audit's §9 gives
+`Go to 42.5 kg` as H1 case 2 copy but states **no formula**, and 42.5 is not derivable from anything in
+the document — P1 on the same numbers gives 32.5. G1 generalises P1 case 3's own 2.5%-per-rep constant,
+reproduces the pinned SLDL `120 → 125 kg` exactly, and yields **35 kg** for the cable-row case.
+**Accepted.** The WO-003 acceptance criterion is restated from 42.5 to 35.
+**Rules out:** any load-increase multiplier chosen at implementation time. A number the app tells him
+to put on a bar is a coaching decision, always.
+
+### 2026-09-09 — Schema 3, and what it obliges
+`SCHEMA_VERSION` is 3 on branch `wo-003-advice`: additive keys `reintro`, `lastReintroDate`,
+`calChangedAt`, `deload`. No value rewritten, v1 and v2 both accepted, idempotent.
+**Near-miss worth recording:** WO-001's `dateBasis:"utc"` marking pass was gated on
+`logVer < SCHEMA_VERSION`. Bumping the constant would have re-run it over a v2 store and stamped
+**correctly local-dated, post-WO-001 sessions as `"utc"`** — silently corrupting the provenance flag
+every date window in this batch depends on. Now gated on its own `V_DATEBASIS` constant, with a test.
+**Obligation:** WO-002's importer must accept `schemaVersion` **2 and 3**.
+**Also decided:** an undateable session sorts **first**, never last and never dropped — a row with no
+usable date must not be able to pose as the most recent one and drive a verdict.
+
+### 2026-09-09 — Training weeks count distinct training DAYS, not saved sessions
+`strength-coach`, `[Certain]`, framed as a counting error rather than a preference: three saves on one
+date is one day of training. Counting them as three tells the app it has evidence it does not have,
+and an inflated count unlocks accessory work early — the exact burial the weeks 1–4 block exists to
+prevent. A re-save counts once; a genuine two-a-day also counts once, because `trainingWeeks` is a
+proxy for weeks of *exposure*, and the three gates it feeds (volume tier, stall test, deload) ask how
+long he has been training, not how much he did in a day.
+**Added clause:** a session with no completed set is not a training day — a save carrying only a note
+is not training. The note is still kept and shown; it is just not evidence. The converse holds too: a
+session of nothing but 0 kg rack chins **does** qualify (Rule Z1).
+**Extends to:** ST1's "two sessions of that lift per block" and D1's T1 "two consecutive sessions".
+Otherwise one re-saved session unlocks a stall verdict, and a correction saved beside its original
+reads as two consecutive failures.
+**Rules out:** counting raw session records anywhere a rule reasons about training exposure.
+
+### 2026-09-09 — The Monday-start week stands; no rolling window
+Sun + Mon + Tue currently buys zero training weeks. Ruled to leave it: his programme is already
+Monday-start (Mon/Tue/Thu/Fri/Sat, Sunday rest), so the straddle is only reachable by training
+off-programme; a fixed grid can only ever **undercount** versus rolling, so every error runs in the
+safe direction — the accessory offer is delayed, the stall test stays silent rather than accusing
+early, and only D1's T3 backstop slips while T1 and T2 still fire on evidence; and a rolling count
+needs greedily-packed disjoint blocks anchored on the first session, a number he cannot reproduce from
+a calendar and which shifts whenever history is edited. A gate he cannot audit is a gate he will not
+trust.
+**Consequence for the redesign — load-bearing:** V1's line `Week 5 by the calendar, week 3 of real
+training. Reduced volume holds.` must survive. If the two numbers can differ, the screen shows both or
+the count simply looks broken.
+**Rules out:** a rolling 7-day training-week count.
+
+### 2026-09-09 — Advice evaluates on COMMIT, never on keystroke
+`ux-designer` found two live-input bugs with the same root. Typing `12` into a reps field passes
+through `1`, so a 3–5 rep exercise would print `Below the range. Drop to 95 kg.` mid-number. Typing
+`painting` passes through `pain`, tripping the S1 suppression rule on a word that is not the keyword.
+**Ruling:** verdicts and the pain notice evaluate on commit — blur or stepper tap — never on the
+`input` event. This is distinct from B-24 (which gates on *completed sets*); both are required.
+**Also ruled, same family:** nothing that appears or resizes may sit above an input on a card. The
+verdict, pain notice and speed flag all render after the note field, so their reflow can only push the
+*next* card, never the row under his thumb. And the verdict slot is held by a reminder line before a
+verdict exists, so the card cannot grow when one appears — and the new silence does not read as
+breakage.
+**Rules out:** any advice computed from a partially-typed value.
+
+### 2026-09-09 — Three engine dependencies the work order missed
+`ux-designer` found these while specifying the states; all three are engine-side, so they bind even
+while the frontend is on hold:
+1. **`rollbackReintro` must return `{exId, name, date}`.** W14 returns nothing, so no UI can name the
+   exercise in `Progress stalled. Pulling {ex} back out for now.` or know when to stop showing it.
+2. **`endDeload(state, todayStr)` must exist.** W19 has no way out of a deload — and a deload renders
+   two set rows, so without an exit he cannot log a third set he actually did.
+3. **`calChangedAt` needs a clearer, not just W7's setter.** Otherwise one absent-minded tap silences
+   calorie advice for seven days with no way back.
+**To apply:** fold into the W7, W14 and W19 briefs at dispatch.
+
+### 2026-09-09 — Two work-order conflicts, resolved without a planning round
+- **W15 and W20 both print a week-7 line.** V1's status line and D1's cycle line would sit together
+  showing two near-identical `Week 7 · … accessories back` strings. Resolved by precedence: V1's status
+  line from week 5, D1's cycle line from week 6. Both engine-level criteria pass unchanged; W15's DOM
+  criterion is restated.
+- **W7 quotes a truncated string.** It gives `+0.34 kg per week. Above target, inside the margin.
+  Change nothing.` where audit §2 ends with ` Recheck in 7 days.` The audit copy list is authoritative
+  — Decision 5 was about a number and a name, not about dropping a sentence. W7/W8 assert substrings.
+**Correction to the record:** `--red-hi` on `--bg` measures **5.4 : 1**, not the 8.0 : 1 logged during
+WO-001. It still passes AA everywhere it is used, so no decision changes, but 8.0 should not be quoted.
+
+### 2026-09-09 — W5/W6: seven calls the audit and the addendum do not cover
+
+Implementing `PHAT.verdict` needed seven answers neither document gives. All are engine-level, all are
+cheap to reverse, and the two marked **coach** should be confirmed before the batch ships.
+
+1. **Rule I2's second line ships as `x2` on the verdict object.** The coach requires the increment line
+   to be *"a second line below the verdict, never appended to the same sentence"*. Frontend is on hold,
+   so the engine returns `{t, x, x2, rule}` and `paintVerdict` writes `x + "\n" + x2` into the existing
+   slot, which gained one CSS declaration (`white-space:pre-line`). No new node, no new element, and
+   the empty-verdict assertion still reads the same node.
+2. **A pain note on H1 case 2 falls THROUGH to the comparison; it does not print a hold.** `[coach]`
+   Audit §10 says "show the hold copy instead", but H1 has no hold copy — inventing one would have the
+   app prescribe reps (`until all 3 sets reach 12 reps`), which §10 forbids in the same sentence. So a
+   flagged hypertrophy exercise gets its factual comparison (`Reps up: 39 against 30 at bodyweight.`)
+   and no load increase. P1's suppression is unchanged: cases 3 and 4 downgrade to case 5's hold copy.
+3. **G1's 20% cap is rounded to the 2.5 grid, downward.** G1 caps the step at `0.20 × load` and leaves
+   it unrounded; an unrounded cap can print an off-grid kg, which Decision 4 forbids. Rounding it
+   changes nothing in any of G1's four worked examples and only ever binds downward.
+4. **`round2p5` of unreadable input is `NaN`, not `0`.** A plausible wrong load is worse than a visibly
+   broken one, and `0` would be laundered by `loadWord` into the word `bodyweight`.
+5. **The 42 implement tags (Rule I1) landed here, with W6, not in W11.** Z2's copy is a function of the
+   tag: without it the rack chin prints `zero load` instead of `bodyweight` and the B-32 acceptance
+   string cannot be produced in the app. Data only — the ` · per DB` display half of W11 is untouched
+   and still open. An untagged slot falls back to `zero load` and gets no increment line, so a missing
+   tag can only ever cost a line, never a load.
+6. **Z3 4b/4c copy is generalised through `loadWord`.** `[coach]` The coach wrote 4b for a bodyweight
+   slot (`Bodyweight this time, loaded last time.`). A mis-logged 0 kg machine set renders
+   `Zero load this time, loaded last time. Not comparable. New zero load baseline.` In 4c the baseline
+   names the working load, except on a mixed session where that is 0, where it names the top weight —
+   otherwise "added load" would print "at bodyweight".
+7. **The speed branch is gated like every other and its text is unchanged.** W5's rule is literal:
+   below `ex.s` completed sets, `PHAT.verdict` returns `null` for every `ex.k`. Speed cards keep their
+   own hint paragraph meanwhile, and W12 replaces the branch with SP1 outright.
+**Rules out:** any advice string built outside `logic.js`; any load token that bypasses `loadWord`.
+
+### 2026-09-09 — CORRECTION: Node is installed. The no-build rule stands anyway, for better reasons
+An early `command -v node` in git bash returned nothing and I recorded "Node is not installed" in
+CLAUDE.md §3.1 and in `project-phat-stack-and-toolchain` memory as the *reason* for the no-build
+constraint. That was a false negative — Node is at `C:\Program Files\nodejs`, **v24.14.1, npm 11.11.0**,
+simply not on the git-bash `PATH`. Found by `backend-engineer`, who used it as a local syntax checker
+and reported the discrepancy rather than quietly relying on it.
+**The constraint is unchanged, but its justification is now honest:** the app is one file a phone opens
+directly; it must run from `file://` and from static hosting with nothing between the source and the
+screen; and a build step is one more thing that can break or be forgotten between him and a logged set.
+**What this does unlock, if ever wanted:** `npm i -g` for the `gh`, `vercel` and `supabase` CLIs, which
+would end the manual three-file API deploys. The browser test harness stays regardless — the app runs
+in a browser, so that is where its tests belong.
+**Rules out:** citing "Node isn't available" as a reason for anything. Verify a tool's absence with a
+real path check before writing it down as a constraint.
+
+### 2026-09-09 — The "no expected failures" rule is now enforced by the suite, not by memory
+`qa-engineer` registered two meta-tests: one fails if any test name contains `currently failing`,
+`known bad`, `expected failure` or `xfail`; one fails if anything is skipped without a stated reason.
+**Why it matters:** the PM's original point was that a carried-forward expected failure turns "expect
+exactly one failure" into a rule applied from memory, which is how a second, real failure gets waved
+through. A rule enforced by the thing it governs cannot be forgotten.
+**Also:** the B-32 KNOWN-BAD test was retired rather than deleted — split into a storage half (asserts
+the exact JSON) and an advice half (asserts the ruled copy), because it pinned a string the coach has
+since ruled against and would have failed the moment W6 produced the *correct* output.
+
+### 2026-09-09 — Three findings routed rather than fixed
+- **`workingLoad(sets, n)`'s `n` caps but does not require.** One completed set of three returns a
+  load. Harmless today — `verdict()` gates before P1 asks — but it is a trap for W12, W14 and W19,
+  which all read history and could take a confident load off a half-finished session. That is B-24
+  re-entering through the back door. Pinned with the hazard named beside it; gate at each call site.
+- **`e1rm(100, 1)` returns 103.3.** One rep at 100 kg is a 100 kg single. The code matches audit §4's
+  `w*(1+r/30)` exactly, so this is the coach's to rule, not a defect. Harmless inside ST1 (both sides
+  inflate, monotonicity holds) — it only bites if W9/W10 ever *displays* the number.
+- **G1's 20% cap is loosely worded.** Taken literally it yields an off-grid load; `logic.js` rounds the
+  cap to the 2.5 grid first and lands on 35, which is correct and conservative but a resolution the
+  ruling's text does not state. Code is right; the wording wants one confirming line.
