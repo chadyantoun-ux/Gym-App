@@ -5083,6 +5083,37 @@ T("W2-AC2 - rename there and back leaves the plan byte-identical", function(a){
   a.deep(diffPaths(base, back.plan), [], "and nothing at all differs");
 });
 
+T("W2-AC2 - after a rename stallReport still finds the history, and names it by the NEW name", function(a){
+  /* Criterion 2's last clause, stated in the work order as "stallReport still
+     names it". ST1 takes the key lifts AND their display names from the
+     caller, which reads them off the plan - so the name a warning prints
+     follows the rename automatically, precisely because the id did not move.
+     Same seed as S19's re-baselining regression: prior 110x5, recent 100x5. */
+  function kl(plan){
+    var ids = Array.isArray(plan.keyLifts) ? plan.keyLifts : ["d1a","d1d","d2a","d2d"];
+    return ids.map(function(id){
+      var e = P.exById(plan, id);
+      return { id: id, n: e.n, s: e.s, lo: e.lo, hi: e.hi };
+    });
+  }
+  var base = MYPHAT();
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(110, 5)), ROW(38, "p2", SETS(110, 5)),
+    ROW(20, "r1", SETS(100, 5)), ROW(17, "r2", SETS(100, 5))
+  ]);
+  var logJSON = JSON.stringify(s);
+  a.deep(ST1CALL(s, TODAY, kl(base), STORE()).stalled, ["Bent-over row"], "the stall fires before the rename");
+  var r = P.renameExercise(base, "d1a", "Pendlay row");
+  a.eq(r.ok, true);
+  a.deep(ST1CALL(s, TODAY, kl(r.plan), STORE()).stalled, ["Pendlay row"],
+    "the SAME history is found after the rename, under the new name - a name-derived key would find none");
+  a.eq(JSON.stringify(s), logJSON, "and the rename reached no stored session");
+  /* Rename back and the report is character-identical to where it started. */
+  var back = P.renameExercise(r.plan, "d1a", "Bent-over row");
+  a.eq(JSON.stringify(ST1CALL(s, TODAY, kl(back.plan), STORE())),
+       JSON.stringify(ST1CALL(s, TODAY, kl(base), STORE())), "and back again is character-identical");
+});
+
 T("W2 - the shipped PHAT plan REFUSES a rename: readOnly is enforced, not documented", function(a){
   var before = JSON.stringify(P.PHAT_PLAN);
   var r = P.renameExercise(P.PHAT_PLAN, "d1a", "Nope");
