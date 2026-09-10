@@ -2100,7 +2100,24 @@
      no number: H1 case 2 triggers on `every r > hi` with no ceiling, and
      inventing one would be prescribing a rep range. */
   function incrementLine(ex) {
-    if (!isObj(ex) || ex.k === "speed") return "";
+    if (!isObj(ex)) return "";
+    /* THE ROLE GATE, addendum §9.12 ruling 1 — the §9.11 rider extends here.
+       An unrecognised `k` ("tempo", "", 7, missing) gets NO line. This used to
+       be written `if power -> ... ; else -> the hyp sentence`, so every k
+       nobody recognised received hypertrophy load advice.
+
+       Two reasons, and the second is mechanical. (1) This is LOAD ADVICE — "add
+       reps up to N first, then jump" is a prescription for how to progress, and
+       an app that cannot classify the exercise must not prescribe how to load
+       it. (2) I2's own rule excludes `bb` and `k:"speed"`, so it ALREADY
+       depends on `k`; with `k` unrecognised the exclusion cannot be evaluated,
+       and the only honest output is nothing.
+
+       The `speed` test stays as a separate clause below rather than folding
+       into this one: speed is a role the app RECOGNISES and refuses by name,
+       which is a different fact from a role it cannot read. */
+    if (PLAN_KINDS.indexOf(ex.k) < 0) return "";
+    if (ex.k === "speed") return "";
     var im = ex.implement;
     if (im !== "db" && im !== "machine" && im !== "cable" && im !== "bodyweight") return "";
     var unit = (im === "db") ? "2.5 kg per DB" : "2.5 kg";
@@ -2408,7 +2425,30 @@
      The verdict is unaffected by any of this — verdict() already truncates to
      the first ex.s completed sets on both sides. Two numbers, two purposes:
      the verdict is about the prescription, the session total is about the
-     work, and extras are in the total. */
+     work, and extras are in the total.
+
+     THE ROLE GATE, addendum §9.12 ruling 1. An unrecognised `k` returns the
+     fully silent object: no flags, no count, no line, idle false. This looked
+     exempt — it states a fact rather than advising, and "did that set count"
+     deserves an answer — but every variant of the fact is FALSE here.
+     `Counted in today's volume, not in the verdict` implies a verdict exists;
+     `The verdict reads the first 3` names one that can never fire. There is no
+     honest fourth variant, because the true sentence is not about the extra
+     set at all — it is about the exercise. So the fact moves to the slot that
+     owns it: verdict() returns the ABSENT copy naming the missing role.
+
+     THE ARGUMENT THAT SETTLED IT, worth keeping because it is the shape of the
+     bug and not just this instance: `idle` is `k === "hyp"` strictly, so the
+     standing "add sets freely" invitation was ALREADY withheld for an unknown
+     k while `line` still printed the hypertrophy sentence. The copy and the
+     flag disagreed about the same unknown k inside one returned object. Any
+     future per-role branch written as `if power … else <hyp>` reintroduces
+     exactly that. Branch on the three roles by name; let the unknown fall out.
+
+     THE BADGE GOES SILENT TOO, not just the copy. `flags` claims "this row
+     cannot affect the verdict", which is a claim about a verdict; with no
+     verdict possible the claim is true of EVERY row, so badging some of them
+     is arbitrary. Flags stay one-per-row so a view can still zip them. */
   function extraSets(sets, ex) {
     var s = (isObj(ex) && typeof ex.s === "number" && isFinite(ex.s) && ex.s >= 1)
       ? Math.floor(ex.s) : 0;
@@ -2416,7 +2456,30 @@
     var rows = Array.isArray(sets) ? sets : [];
     var out = { flags: [], count: 0, line: "", idle: k === "hyp" };
     var done = 0, i, extra, firstExtraRow = 0;
+    /* Gated on the RAW ex.k, not on `k` above — `str().trim()` would let
+       " hyp " through here while verdict()'s untrimmed gate refuses it, and a
+       store holding a `k` the validator rejects would get advice from one half
+       of the app and silence from the other. Same test as validatePlan. */
+    if (!isObj(ex) || PLAN_KINDS.indexOf(ex.k) < 0) {
+      for (i = 0; i < rows.length; i++) out.flags.push(false);
+      out.idle = false;
+      return out;
+    }
     for (i = 0; i < rows.length; i++) {
+      /* SITE 1 OF 2 — THE BADGE. Addendum §8.3: which rows carry it is the
+         COMPLETED-SET ORDINAL, because the badge means "this row cannot affect
+         the verdict", and that is a fact about completed sets. `i >= s` is the
+         prototype's bug and badges rows that DO drive the verdict.
+
+         THE COPY AT SITE 2 PRINTS A ROW NUMBER INSTEAD, AND THAT IS CORRECT.
+         §8.3 and §9.12 govern different things and point at the same physical
+         row: §8.3 decides which rows are badged, §9.12 decides what number the
+         sentence prints, because the sentence has to name something he can
+         point at and the rows are numbered on screen. Rows 1, 3, 4, 5 filled
+         on a 3-set exercise: row 5 is the fourth completed set, it carries the
+         badge, the screen labels it 5, and the copy says "Set 5".
+         DO NOT "FIX" EITHER ONE TO MATCH THE OTHER. The coach named this the
+         likeliest regression in the batch. */
       extra = (s > 0 && done >= s);
       out.flags.push(extra);
       if (numSet(rows[i])) {
@@ -2434,13 +2497,30 @@
     if (s < 1) return out;
     out.count = Math.max(0, done - s);
     if (!out.count) return out;
-    /* Addendum §9.11, the conflict ruling: X1's line ships, and the one thing
-       carried over from the withdrawn UX §4.5 line is its CONCRETENESS at
-       n === 1 — name the row, not the count. Plural rows keep X1's counted
-       form, which is correct and was not in question. */
+    /* SITE 2 OF 2 — THE COPY. Addendum §9.11's conflict ruling: X1's line
+       ships, and the one thing carried over from the withdrawn UX §4.5 line is
+       its CONCRETENESS at n === 1 — name the row, not the count. Plural rows
+       keep X1's counted form, which is correct and was not in question.
+
+       `firstExtraRow` IS A ROW NUMBER (i + 1) AND NOT THE COMPLETED-SET
+       ORDINAL, confirmed in §9.12 ruling 2. It will disagree with the ordinal
+       whenever a row is left blank — rows 1, 3, 4, 5 on a 3-set exercise print
+       "Set 5" for the FOURTH completed set — and that disagreement is the
+       point: the badge is a claim about completed sets, the sentence names a
+       row he can point at. Printing "Set 4" here would relocate the
+       prototype's lie rather than fix it. DO NOT "FIX" THIS TO MATCH THE
+       FLAG COMPUTATION AT SITE 1 ABOVE.
+
+       The plural stays a COUNT OF EXTRAS ("2 sets past the prescription")
+       rather than a row name, and on any log the two agree about which rows
+       are involved. */
     var n = (out.count === 1 && firstExtraRow)
       ? "Set " + firstExtraRow + " is past the prescription."
       : out.count + (out.count === 1 ? " set" : " sets") + " past the prescription.";
+    /* The head clause is SHARED across all three roles — confirmed §9.12
+       ruling 2. One factual clause followed by three role-specific tails is
+       more consistent, not less; splitting it would be one concept carrying
+       two names, the defect the coach rejected in §9.2 and §9.11. */
     if (k === "power") out.line = n + " The verdict reads the first " + s + ".";
     else if (k === "speed") out.line = n + " Speed work is " + s + " sets. Extra sets are extra fatigue.";
     else out.line = n + " Counted in today's volume, not in the verdict.";
@@ -2703,9 +2783,25 @@
      line, "" when there is none — it is a LINE, never appended to x's
      sentence.
 
+     TWO NON-VERDICTS, AND THEY ARE NOT THE SAME THING. `null` means "no
+     verdict, and nothing to say" — below the gate, on speed work, on input it
+     cannot read. An ABSENT-SHAPED OBJECT (addendum §9.12) means "no verdict,
+     and here is why" — only ever for an unrecognised `k`. A caller must test
+     `.absent`, never truthiness, to tell a verdict from an explanation.
+
      PURITY: returns a new object built from new numbers. `ctx`, `ctx.sets` and
      `ctx.prev` are never written to, and nothing here reads or writes storage.
      It does not throw on bad input; it returns null. */
+
+  /* Rule C7a's ABSENT copy for the verdict slot (addendum §9.12), verbatim,
+     ONE rendered line. It names the missing declaration and what switches the
+     feature back on, and it says nothing about sets — the fact extraSets used
+     to state falsely is a fact about the exercise, so it is stated as one. */
+  var VERDICT_ABSENT = [
+    "No role set for this exercise, so the app cannot advise on it. " +
+    "Set it to power, hypertrophy or speed in the plan."
+  ];
+
   function verdict(ctx) {
     if (!isObj(ctx)) return null;
     if (!isObj(ctx.ex)) return null;
@@ -2719,8 +2815,27 @@
        C-7 keeps this unreachable from the plan editor; corrupt or imported
        data (WO-002) is exactly where it becomes reachable, and exactly where
        guessing is worst. Above the deload branch too — DL1 is a rule about a
-       prescription whose role is known. */
-    if (PLAN_KINDS.indexOf(ctx.ex.k) < 0) return null;
+       prescription whose role is known.
+
+       IT NOW RETURNS SOMETHING AGAIN, AND IT IS NOT A VERDICT (§9.12 ruling
+       1). The same ABSENT shape as §8.4 — name the missing declaration, say
+       what switches the feature on, never guess — because extraSets and
+       incrementLine both went silent under the same ruling, and the fact they
+       used to (falsely) imply has to land somewhere. The verdict slot is the
+       slot that owns it: the true sentence is not about the fourth set, it is
+       about the exercise. This also satisfies wo-003-session-screen §0.1 #3 —
+       silence looks deliberate, and the slot says so in words.
+
+       THE DISTINCTION IS STRUCTURAL, NOT A CONVENTION. `t`, `x` and `x2` are
+       EMPTY and `rule` is null, so a caller that renders the verdict slot
+       without checking `.absent` renders nothing — never "undefined", and
+       never this copy dressed as advice with an up/down arrow and a rule
+       name. Putting the sentence in `x` would make refusal indistinguishable
+       from advice, which §0.1 #6 forbids. Read `.absentLine`/`.absentLines`,
+       and style it as the refusal it is. */
+    if (PLAN_KINDS.indexOf(ctx.ex.k) < 0) {
+      return markAbsent({ t: "", x: "", x2: "", rule: null }, VERDICT_ABSENT);
+    }
 
     var dl = (ctx.deload === true);
     var ex = dl ? deloadEx(ctx.ex, true) : ctx.ex;
@@ -4327,6 +4442,24 @@
     return false;
   }
 
+  /* The name of the FIRST day of a plan, or "" if it has none worth printing.
+     Addendum §9.12 ruling 3: day one's line points at a session ("Start with
+     Upper power"), and it reads the name from the plan so the sentence works
+     on any plan with no PHAT-specific branch and makes no claim about the
+     calendar - he can open the app on a Thursday and the programme still
+     begins at day one.
+
+     STRICTLY days[0]. It does NOT scan forward for the first day that happens
+     to carry a name: naming day two while day one exists sends him to the
+     wrong session, which is worse than saying nothing. An unnamed first day
+     falls back to "" and the caller drops the clause. */
+  function planFirstDayName(plan) {
+    var p = isPlanDoc(plan) ? plan : null;
+    if (!p || !Array.isArray(p.days) || !p.days.length) return "";
+    var d = p.days[0];
+    return isObj(d) ? str(d.name).trim() : "";
+  }
+
   /* Small-number English, so the weeks-1-4 sentence can carry a plan's own
      number without a second copy of the sentence. Not training vocabulary -
      just the word for a digit. */
@@ -4344,6 +4477,11 @@
        status      the accessory count line, after the reduced-volume block
        divergence  calendar week vs training week, when they differ
        explain     the one sentence that answers the divergence
+       count       the day-one / pre-first-week line (§9.8, §9.12 ruling 3).
+                   "" from training week 1 onward. It is a CANDIDATE, not the
+                   answer: cycleLine prefers it over `row`, volumeTier does
+                   not, because the tier slot on the day screen still has to
+                   explain why the cut exercises are hidden
 
      `rw`    the plan's reduced-volume block in training weeks (4 on PHAT)
      `tier`  does a reduced-volume block RUN on this plan — the plan has a cut
@@ -4353,15 +4491,41 @@
              the sentence about the missing number is volumeTier's, said once,
              on the plan screen
      `nSess` logged sessions — DISTINCT DATES with a completed set (§9.4), for
-             the row that cannot count accessories */
-  function tierLines(tw, cw, back, cuts, hasSessions, dl, rw, tier, nSess) {
-    var out = { row: "", status: "", divergence: "", explain: "" };
+             the row that cannot count accessories
+     `firstDay` the name of the plan's first day, for the day-one line. "" is
+             a legitimate value and drops the clause; it is the LAST argument
+             so the two call sites read the same up to it */
+  function tierLines(tw, cw, back, cuts, hasSessions, dl, rw, tier, nSess, firstDay) {
+    var out = { row: "", status: "", divergence: "", explain: "", count: "" };
     rw = (typeof rw === "number" && isFinite(rw) && rw >= 0) ? Math.floor(rw) : PLAN_REDUCED_DEFAULT;
     tier = (tier !== false);
     nSess = (typeof nSess === "number" && isFinite(nSess) && nSess >= 0) ? Math.floor(nSess) : 0;
+    firstDay = str(firstDay).trim();
     if (isObj(dl) && dl.active) {
       out.row = dl.text;
       return out;
+    }
+
+    /* §9.8 and §9.12 ruling 3 — the two pre-first-week lines, computed for
+       EVERY plan and never inside a tier branch. NEVER `Week 0`: there is no
+       week 0, and this is the first line he sees on day one, where looking
+       broken is expensive.
+
+       DAY ONE POINTS AT A SESSION, NOT AT THE APP. An empty string was the
+       wrong first thing to say, and vague was the wrong correction: CLAUDE.md
+       §8's standing diagnosis is that the training is the bottleneck, not the
+       tooling, so the first sentence names the next action. It falls back to
+       the plain no-history line only when the plan cannot name a first day.
+
+       Below it, the count line explains the gap between what he has done and
+       what the app counts - the same job the divergence line does at the
+       other boundary (`Week 5 by the calendar, week 3 of real training`). */
+    if (nSess === 0) {
+      out.count = firstDay ? "No sessions logged. Start with " + firstDay + "."
+                           : "No sessions logged yet.";
+    } else if (tw === 0) {
+      out.count = nSess + (nSess === 1 ? " session" : " sessions") + " logged. A training week is " +
+                  TRAINING_WEEK_MIN + ", so week 1 starts when you get there.";
     }
 
     if (hasSessions && cw !== tw && tw > 0) {
@@ -4379,18 +4543,12 @@
        part that is true on any plan: which week it is, and how much he has
        logged. */
     if (!tier) {
-      /* Addendum §9.8 — the zero cases, and NEVER `Week 0`. There is no week
-         0, and this is the first line he sees on day one, where looking broken
-         is expensive. The middle line is the honest one: it explains the gap
-         between what he has done and what the app counts, which is the same
-         explanation TW1 gives at the other boundary. */
-      if (nSess === 0) out.row = "No sessions logged yet.";
-      else if (tw === 0) {
-        out.row = nSess + (nSess === 1 ? " session" : " sessions") + " logged. A training week is " +
-                  TRAINING_WEEK_MIN + ", so week 1 starts when you get there.";
-      } else {
-        out.row = "Week " + tw + " · " + nSess + (nSess === 1 ? " session" : " sessions");
-      }
+      /* The zero cases are computed above, for every plan - this branch has no
+         second copy of them. There is no reduced-volume line here to lose a
+         precedence contest with, so `row` simply IS the count line when there
+         is one. */
+      out.row = out.count ||
+        ("Week " + tw + " · " + nSess + (nSess === 1 ? " session" : " sessions"));
       return out;
     }
 
@@ -4486,7 +4644,8 @@
     var runs = tier && declared !== null;
     var tot = accessoryTotals(program, state);
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
-                          rw, runs, loggedSessions(sessions, today));
+                          rw, runs, loggedSessions(sessions, today),
+                          planFirstDayName(plan));
 
     var order = runs ? orderFor(dayId, exList, declaredOrder(plan, dayId)) : [];
     /* Inside the reduced-volume block: zero, and there is no override anywhere
@@ -5401,8 +5560,8 @@
      section 8's cycle line - at week 7 the second contains the first and
      printing both is the app repeating itself to a man trying to pick a day).
 
-       no sessions          ""                    (the first-run copy stands)
-       tw 0, sessions       reduced volume until ...
+       no sessions          No sessions logged. Start with Upper power.
+       tw 0, sessions       n sessions logged. A training week is 3, ...
        tw 1-4               Week n of 4 at reduced volume ...
        tw 5                 Week 5 - n of 9 accessories back in.
        tw 5, all back       Full volume. All 9 accessories are in.
@@ -5438,10 +5597,19 @@
       cuts: (typeof c.cuts === "number" && isFinite(c.cuts)) ? c.cuts : 0
     };
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
-                          rw, runs, nSess);
+                          rw, runs, nSess, planFirstDayName(plan));
+    /* PRECEDENCE AT ZERO AND AT ONE TO TWO SESSIONS (§9.12 ruling 3): the
+       count line WINS over the reduced-volume line. Both are true, but at
+       trainingWeeks 0 the number that looks broken is the week count, and the
+       count line is the one that explains it. The reduced-volume fact is not
+       urgent, it is correct from week 1 onward, and it already renders there
+       and on the day screen through volumeTier's tierLine.
+       `count` is "" from training week 1 on, and "" during a deload, so this
+       cannot swallow any other row. */
+    var row = lines.count || lines.row;
     var out = notAbsent({
-      text: lines.row,
-      row: lines.row,
+      text: row,
+      row: row,
       divergence: lines.divergence,
       explain: lines.explain,
       trainingWeeks: tw,

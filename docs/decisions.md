@@ -1017,3 +1017,32 @@ pass order: the dateBasis backfill (v1 is the only shape with no `dateBasis`), `
 itself pinned by the asymmetry test.
 Both readings — the **schema**-note count and the **total** note count — are now asserted separately,
 so neither can be lost to the other. `logChanged` untouched; the label fix cost no byte and no write.
+
+### 2026-09-10 — `verdict()` returns something again, and it is structurally not a verdict
+§9.12's ruling means an unrecognised `k` now yields an object where it used to yield `null`. The risk
+that creates is a caller reading it as advice, so the distinction is carried by the *shape*, not by a
+convention anyone has to remember:
+
+```
+{ t: "", x: "", x2: "", rule: null,
+  absent: true, absentLines: [ … ], absentLine: "…" }
+```
+
+`t`, `x` and `x2` are **empty** and `rule` is `null`, so a view that renders the verdict slot without
+checking `.absent` renders nothing — never `undefined`, and never the refusal copy dressed as advice
+with a direction arrow and a rule name. The copy lives only in `absentLines`, the same three fields
+SP1/V1/ST1/D1 already use, so the session screen reads one shape for every absent state and styles it
+as the refusal it is (`wo-003-session-screen.md` §0.1 #6). **Two non-verdicts, and they differ:**
+`null` is "no verdict and nothing to say" (below the gate, speed work, unreadable input); the absent
+object is "no verdict, and here is why". Test `.absent`, never truthiness.
+
+Second call, smaller: the day-one line is a **candidate** returned by `tierLines`, not a decision it
+makes. `tierLines` now returns `count` alongside `row`, and `cycleLine` prefers it; `volumeTier` does
+not, because the tier slot on the day screen still has to explain why the cut exercises are hidden.
+Putting the precedence in the shared helper would have replaced `Reduced volume until you have logged
+four weeks…` on the session screen — a sentence nobody asked to lose.
+
+Third, guarding a near-miss: `extraSets` gates on the **raw** `ex.k`, not on the `str().trim()`ed
+local it uses for its copy branch. Trimming there would have let `" hyp "` collect hypertrophy copy
+from one half of the app while `verdict()`'s untrimmed gate refused it — the exact split the role gate
+exists to close.
