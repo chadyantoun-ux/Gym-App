@@ -1,0 +1,22 @@
+# Secrets — never commit. The Supabase service_role key belongs in Vercel env vars only.
+.env
+.env.*
+!.env.example
+
+# Local snapshot tooling
+.snapshots/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+*.bak
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Vercel
+.vercel/
+
+# Exported training logs (personal data — keep these out of git)
+phat-log-*.json
