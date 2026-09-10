@@ -1179,3 +1179,31 @@ cannot do.
 Fixable within every constraint: inline the face as a base64 woff2 — no build step, no network, works
 from `file://`, ~30–50 KB. Filed as B-63.
 **Worth stating plainly:** a design system whose typeface does not ship is half decorative.
+
+### 2026-09-10 — The service worker refreshes the shell atomically, and never reloads him
+Cache-first, not network-first: with the radio fully off `fetch` fails instantly, but **on one bar it
+hangs** — and the app must never wait on a network to open. That is the gym case, not a hypothetical.
+**The refresh is atomic and this is the part to defend.** It re-fetches the whole core shell
+(`index.html` + `logic.js`) and commits **nothing** unless every file came back a real 200. Those two
+files are one unit: a new `index.html` over a stale `logic.js` is this project's black-screen failure
+mode, and **naive stale-while-revalidate produces it whenever the network drops between two
+revalidations.**
+**Worst-case staleness is one launch.** The refresh runs every launch and is deliberately *not* gated
+on the cache version — a freshness mechanism that depends on someone remembering to bump a constant is
+a mechanism that will be forgotten.
+**No `skipWaiting()`, and no `controllerchange` auto-reload.** A new worker waits for old pages to
+close, so a fresh shell can never activate underneath a page already running the old `logic.js`.
+Reloading him mid-workout is not something this app may do.
+**Never caches a failure:** status exactly 200, non-opaque, and a content-type matching the extension —
+so a 404 body, a `206` partial, a `30x` and an HTML-typed `logic.js` are all refused, and a bad install
+writes no cache at all rather than activating a worker that serves half an app.
+**It cannot touch the log.** `localStorage` is not exposed to a worker scope at all; it only intercepts
+same-origin GETs on an explicit shell list; and cache deletion is prefix-scoped and version-filtered,
+never an indiscriminate enumerate-and-delete.
+
+### 2026-09-10 — `file://` stays the honest test path
+The registration guard checks protocol before calling `register()`, so on a `file://` open the worker
+is **never attempted** — no rejected promise, no swallowed console error. The manifest is inert there
+and cannot break rendering.
+**Side benefit worth keeping:** because no worker runs on `file://`, opening the file directly always
+shows the bytes on disk. Chady's primary test path can never show him a cached old build.
