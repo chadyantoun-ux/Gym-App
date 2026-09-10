@@ -31,9 +31,16 @@
           The only thing it writes is the version itself, so the store stops
           understating its own shape to WO-002's importer and to sync.
           Plans live in their own store (`phat:v1:plans`), not in the log.
+       5  WO-004 W5 — Rule PE1, the prescription epoch. An ENTRY written from
+          here on may carry `rx: {s, lo, hi, k}`, the prescription that was in
+          force when it was logged. Same deal as 4 and for the same reason:
+          NOTHING existing is stamped, an ABSENT rx MEANS "the plan's current
+          prescription", and that reading is exactly true of every entry logged
+          before this version, because no plan had been edited yet. The v5 pass
+          writes the version and nothing else.
      A store written by any earlier version must still load, forever.
-     WO-002's importer therefore owes schema 2, 3 AND 4. */
-  var SCHEMA_VERSION = 4;
+     WO-002's importer therefore owes schema 2, 3, 4 AND 5. */
+  var SCHEMA_VERSION = 5;
   /* EVERY migration pass gates on its OWN constant, never on SCHEMA_VERSION.
      The near-miss on record (decisions.md, "Schema 3, and what it obliges"):
      the dateBasis pass was gated on `logVer < SCHEMA_VERSION`, so bumping the
@@ -44,6 +51,7 @@
   var V_DATEBASIS = 2;
   var V_STATEKEYS = 3;   /* the four V1/D1/W1 keys — was `logVer < SCHEMA_VERSION` */
   var V_PLAN = 4;        /* the plan document */
+  var V_RX = 5;          /* Rule PE1 — entries may carry `rx` */
   /* The keys schema 3 adds to the log store, and their defaults. Built fresh
      on every call — a shared {} default would be handed to two stores. */
   var V3_KEYS = ["reintro", "lastReintroDate", "calChangedAt", "deload"];
@@ -413,7 +421,22 @@
      absent planId as the shipped PHAT plan, which is what every session logged
      before schema 4 was. It is NOT a refusal like a missing date, because a
      missing date is unrecoverable and a missing planId is not. */
-  function buildSession(draft, dayId, dateStr, id, planId) {
+  /* `plan` (schema 5, Rule PE1) is OPTIONAL and is the LAST argument for the
+     same reason planId was: the five-argument call builds the byte-identical
+     session it always built. Given a plan document, every entry whose exercise
+     the plan still contains gains `rx: {s, lo, hi, k}` — the prescription in
+     force when it was logged. Given nothing, no entry gains anything, and an
+     absent rx reads as "the plan's current prescription", which is what every
+     entry logged before this shipped actually was.
+
+     A DRAFT ENTRY MAY CARRY ITS OWN `rx` and it WINS — a frontend that stamps
+     the prescription when the card opens is more faithful to "in force when it
+     was logged" than one that stamps at save time, and if he edits the plan
+     mid-session the draft's copy is the true one.
+
+     The plan's prescription, never a deloaded one: pass the PLAN document, not
+     a deloadEx()'d day. A deload is a week, not an epoch (Rule PE1). */
+  function buildSession(draft, dayId, dateStr, id, planId, plan) {
     var v = validateDraft(draft);
     if (!v.ok) return null;
 
@@ -440,6 +463,18 @@
     var out = { id: sid, date: date, dayId: day };
     if (typeof planId === "string" && planId.trim() !== "") out.planId = planId.trim();
     out.entries = v.entries;
+
+    /* Rule PE1's stamp. Additive per entry, and it can only ADD a key: the
+       sets and the note are already built and are not re-read here. An entry
+       the plan no longer contains gets no rx rather than a guessed one. */
+    var p = isPlanDoc(plan) ? plan : null;
+    if (p || isObj(draft.entries)) {
+      Object.keys(out.entries).forEach(function (exId) {
+        var src = isObj(draft.entries) ? draft.entries[exId] : null;
+        var rx = entryRx(src) || (p ? rxOf(exById(p, exId)) : null);
+        if (rx) out.entries[exId].rx = rx;
+      });
+    }
     return out;
   }
 
@@ -899,8 +934,21 @@
   function isPlanDoc(p) { return isObj(p) && Array.isArray(p.days); }
 
   var PLAN_KEYLIFT_MAX = 4;   /* audit 12: four lifts, and that is settled   */
-  var PLAN_REDUCED_DEFAULT = 4;  /* the weeks-1-4 block, when a plan that HAS
-                                    a cut tier declares no number of its own */
+  var PLAN_REDUCED_DEFAULT = 4;  /* the brief's block, and the number the
+                                    arithmetic uses once a block is known to
+                                    run. NOT applied to a plan that declares
+                                    nothing — see planReducedDeclared (V1a) */
+  /* What the plan editor PRE-FILLS into the picker when he marks the first
+     exercise `cut`. Same number, visible and editable: a suggestion, not a
+     prescription (Rule V1a). */
+  var PLAN_REDUCED_SUGGESTED = PLAN_REDUCED_DEFAULT;
+  var V1A_PROMPT = "How many weeks at reduced volume before these come back?";
+  var V1A_PROMPT_SUGGEST = "Suggested: " + PLAN_REDUCED_SUGGESTED;
+  /* Rule V1a's ABSENT copy, verbatim. Plan screen only, like V1_ABSENT. */
+  var V1A_ABSENT = [
+    "This plan marks accessories to cut but does not say for how long.",
+    "Set a block length in the plan, or they all run from week 1."
+  ];
 
   /* planSpeedSource(plan) -> { speedExId: sourceExId }.
      Both ends must still exist in the plan or the pair is dropped. */
@@ -981,13 +1029,34 @@
     return false;
   }
 
-  /* planReducedWeeks(plan) -> integer. A declared value wins. A plan that
-     marks accessories `cut` but declares no number gets the shipped 4: the
-     tier exists, so the coach's rule for it applies, and the alternative is an
-     accessory tier with no end date. Zero is legal and means "no block". */
+  /* planReducedDeclared(plan) -> integer, or NULL when the plan declares no
+     block length. Rule V1a (addendum §9.3).
+
+     THE 4 IS NOT A GENERAL FACT. It is the brief's number, for PHAT, for a
+     lifter coming off a self-described low-intensity baseline into a five-day
+     split. Inferring it onto a plan nobody assessed is the app prescribing a
+     block length it has no basis for, so the block does NOT run on a plan that
+     never named one — every exercise renders from week 1, no reintroduction
+     ramp, and volumeTier says so in one sentence rather than silently ignoring
+     the `cut` flags he set on purpose.
+
+     `a pre-filled 4 he can see and change is a suggestion; an invisible 4 is a
+     prescription` — the coach, and that is the whole distinction. The editor's
+     picker pre-fills PLAN_REDUCED_SUGGESTED and stores what he chooses.
+     Zero is legal and declared, and means "no block". */
+  function planReducedDeclared(plan) {
+    return (isObj(plan) && isInt(plan.reducedWeeks, 0, 52)) ? plan.reducedWeeks : null;
+  }
+
+  /* planReducedWeeks(plan) -> integer. The block length to COUNT WITH once it
+     is known to run. A declared value wins; absent, it answers the shipped 4
+     so that arithmetic and copy have a number, and it is the CALLER's job to
+     ask planReducedDeclared first and not run the block at all when that is
+     null (Rule V1a). Do not "simplify" these two into one function: that is
+     the invisible default the coach rejected. */
   function planReducedWeeks(plan) {
-    if (isObj(plan) && isInt(plan.reducedWeeks, 0, 52)) return plan.reducedWeeks;
-    return PLAN_REDUCED_DEFAULT;
+    var d = planReducedDeclared(plan);
+    return d === null ? PLAN_REDUCED_DEFAULT : d;
   }
 
   /* phatProvenance(plan) -> Boolean. Rule C7b, addendum 8.4.
@@ -1113,6 +1182,12 @@
        refusing to save a plan over a stale entry in a lookup table would cost
        him the edit. Only a table of the wrong SHAPE is rejected, because that
        is the one a reader cannot interpret. */
+    /* FEWER THAN FOUR KEY LIFTS IS A VALID PLAN and this must never be
+       "fixed" to require four (addendum §9.9, [Certain]). A three-day
+       full-body plan naming three lifts is legitimate; a validator that
+       rejected it would block a plan in order to protect a test. Only the
+       MAXIMUM is enforced. What a short list needs is disclosure, and that is
+       keyLiftDisclosure() and removeExercise()'s notice, not a refusal. */
     if (plan.keyLifts !== undefined) {
       if (!Array.isArray(plan.keyLifts)) bad("plan", str(plan.planId), "keyLifts", "type");
       else if (plan.keyLifts.length > PLAN_KEYLIFT_MAX) bad("plan", str(plan.planId), "keyLifts", "range");
@@ -1289,12 +1364,12 @@
      object is RETURNED so an undo can put it back byte-for-byte. */
   function removeExercise(plan, exId) {
     var id = str(exId).trim();
-    if (!isObj(plan)) return { ok: false, plan: plan, removed: null, problems: [{ scope: "plan", id: null, field: null, reason: "missing" }] };
-    if (plan.readOnly === true) return { ok: false, plan: plan, removed: null, problems: [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }] };
-    if (!exById(plan, id)) return { ok: false, plan: plan, removed: null, problems: [{ scope: "ex", id: id, field: "id", reason: "unknown" }] };
+    if (!isObj(plan)) return { ok: false, plan: plan, removed: null, notices: [], problems: [{ scope: "plan", id: null, field: null, reason: "missing" }] };
+    if (plan.readOnly === true) return { ok: false, plan: plan, removed: null, notices: [], problems: [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }] };
+    if (!exById(plan, id)) return { ok: false, plan: plan, removed: null, notices: [], problems: [{ scope: "ex", id: id, field: "id", reason: "unknown" }] };
     var removed = clonePlan(exById(plan, id));
     var next = clonePlan(plan);
-    if (!next) return { ok: false, plan: plan, removed: null, problems: [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }] };
+    if (!next) return { ok: false, plan: plan, removed: null, notices: [], problems: [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }] };
     var days = planDays(next);
     for (var i = 0; i < days.length; i++) {
       var ex = (isObj(days[i]) && Array.isArray(days[i].ex)) ? days[i].ex : [];
@@ -1306,8 +1381,24 @@
        and keep the rest: deleting the row costs d3a its computed speed load
        and costs no other slot, no other table and no logged set. `next` is a
        fresh clone, so the caller's plan is not touched. */
+    var was = planKeyLiftIds(plan).indexOf(id) >= 0;
     scrubPlanRefs(next, id);
-    return { ok: true, plan: next, removed: removed, problems: [] };
+    /* Addendum §9.9 — DISCLOSURE, not prevention. Removing a key lift leaves a
+       VALID plan: a three-day full-body plan naming three lifts is legitimate,
+       and a validator that rejected it would block a plan to protect a test.
+       `validatePlan` must never be "fixed" to require four. What is missing is
+       that ST1's authority comes from being the four-lift check agreed in
+       advance, and it must not narrow its evidence base in silence.
+
+       `notices` is copy for the editor, returned rather than rendered, and it
+       is not a problem: `ok` stays true and the edit stands. */
+    var notices = [];
+    if (was) {
+      var nm = str(removed && removed.n).trim() || id;
+      notices.push(nm + " is one of the lifts the six-week check reads. Removing it leaves " +
+                   planKeyLiftIds(next).length + ".");
+    }
+    return { ok: true, plan: next, removed: removed, problems: [], notices: notices };
   }
 
   /* copyPlan(plan, name, todayStr) -> {ok, plan, problems}
@@ -1358,9 +1449,10 @@
 
      CUES ARE TRANSCRIBED FROM THE DESIGN PROTOTYPE AND ARE NOT YET SIGNED OFF
      (WO-004 C-8 is escalated to Chady). Nothing renders `cue` today. Two slots
-     deliberately carry NO cue - d2e "Glute-ham raise or lying leg curl" and
-     d3d "DB row or shrug" - because the design dropped the alternate and its
-     cue is wrong for the other half of the pair (B-28 / WO-004 W1).
+     deliberately carry NO cue - d2e and d3d "DB row or shrug" - because the
+     design dropped the alternate and its cue is wrong for the other half of
+     the pair (B-28 / WO-004 W1). d2e's NAME is now resolved (Rule A1, §8.2);
+     its cue is still unwritten and the coach gave none.
 
      LIFT GROUPS. Two slots share a lift if and only if they name the same
      movement, plus each speed slot sharing its source lift's group (which is
@@ -1434,7 +1526,19 @@
           cue: "Pause a beat at lockout." },
         { id: "d2d", n: "Stiff-leg deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l_sldl",
           cue: "Push the hips back, bar close, neutral spine." },
-        { id: "d2e", n: "Glute-ham raise or lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_ghr" },
+        /* Rule A1 (addendum §8.2), resolved. The brief's slot reads "Glute-ham
+           raise or lying leg curl" — TWO exercises, not two names for one:
+           different implement, different load scale, different joint action.
+           One history cannot describe both, and logging both here puts 0 kg ×
+           8 and 45 kg × 8 in one column that lastFor, P1, Z1/Z2 and the trend
+           all read. Resolved to the lying leg curl, which carries `implement:
+           "machine"` with it — that is the one data-touching change in the
+           coach's document, and it is free ONLY while the log is empty: after
+           six weeks every historic d2e entry would re-render with a different
+           load word (Z2) and gain an increment line (I2). Done now for that
+           reason. `lift` stays `l_ghr`: an id is opaque, minted once and never
+           recomputed from a name (WO-004 C-6). */
+        { id: "d2e", n: "Lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_ghr" },
         { id: "d2f", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfstand",
           cue: "Full stretch at the bottom, pause at the top." },
         { id: "d2g", n: "Seated calf raise", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfseat",
@@ -1755,6 +1859,46 @@
         }
       }
 
+      /* ---- schema 5: the prescription epoch (WO-004 W5, Rule PE1) ----
+         The same pass as v4, one version later, and deliberately as small.
+
+         An ENTRY gains an OPTIONAL `rx`. Existing entries are NOT stamped:
+         absence MEANS "the plan's current prescription", and that is exactly
+         true of everything logged before this shipped, because no plan had
+         been edited. Stamping them would be inventing a fact — this code
+         cannot know what the plan said in June — and PE1's whole design is
+         built on absence being the correct, honest reading.
+
+         So every stored session, every {w, r}, every note and every entry key
+         comes out of this pass byte-identical. All it writes is the version,
+         so the store stops understating its shape to WO-002's importer and to
+         any sync layer that has to know an entry may carry rx.
+
+         Gated on V_RX, never on SCHEMA_VERSION. */
+      var v5Bumped = false;
+      if (logVer < V_RX && (nlog || logIsObj)) {
+        if (!nlog) {
+          nlog = {};
+          Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
+        }
+        /* NOT `nlog.schemaVersion !== SCHEMA_VERSION`, which is how v4 asks the
+           question and which stops working the moment there is a v5. On a v3
+           store the v4 pass has already stamped the number to 5, so that test
+           reads false here and the v5 fact goes unrecorded — the exact failure
+           tests.html warns about ("same bytes on disk, wrong account of what
+           happened"). The pass RAN, because the store was below V_RX, and that
+           is what it reports. A v3 store now correctly produces two notes. */
+        v5Bumped = true;
+        nlog.schemaVersion = SCHEMA_VERSION;
+        if (v5Bumped) {
+          notes.push({
+            level: "info", key: "log",
+            msg: "Schema " + V_RX + ": entries may now carry rx, the prescription " +
+                 "in force when they were logged. No entry was touched and no key was added."
+          });
+        }
+      }
+
       /* ---- the plan store, if the caller has one ----
          Absent (undefined) is the normal case today and does nothing: an empty
          install still boots with zero writes. Repairs are additive only. */
@@ -1782,7 +1926,7 @@
          The bodyweight store carries no schema-3 key, so a v2 bw store is not
          rewritten just to restamp its version — bwPayload() stamps it on the
          next real bodyweight entry. One less boot write, no content at stake. */
-      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped;
+      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped || v5Bumped;
       out.bwChanged = markedBw > 0 || dropped.length > 0;
       out.plansChanged = pres.changed === true;
       out.changed = out.logChanged || out.bwChanged || out.plansChanged;
@@ -2031,6 +2175,254 @@
     return t;
   }
 
+  /* ================================================ Rule PE1 — W5, the
+     PRESCRIPTION EPOCH. strength-coach, addendum §9.1.
+
+     THE QUESTION IS NOT "which field changed". It is "what is this rule asking
+     history FOR", and the answer sorts the rules into two piles.
+
+       MEASUREMENTS CROSS. A logged set is a measurement: 100 kg × 5 is 100 kg
+       × 5 whether the plan called for 3–5 or 8–12 that day. He lifted it, and
+       a plan edit cannot retroactively un-lift a weight. ST1's e1RM, SP1's
+       heaviest triple, the trend chart and every volume total read history as
+       QUANTITIES and are untouched by this rule.
+
+       PRESCRIPTION-RELATIVE COMPARISONS DO NOT CROSS. `lastFor`'s ghost text
+       and weight prefill, and H1 cases 3 and 4, ask "did you do what was
+       prescribed, and how does that compare with the last time you did it".
+       That question presumes the prescription held. When it did not, the
+       honest answer is a fresh baseline and one sentence saying why.
+
+     NOTHING HERE HIDES, RE-KEYS OR DROPS ANYTHING. No session leaves a chart,
+     no entry is orphaned, no id moves. All that changes is whether one rule
+     may compare ACROSS the change. The reset costs exactly one session.
+
+     P1 IS NOT AFFECTED — it is history-free, its inputs are this session's
+     sets. T1 SELF-PROTECTS: workingLoadStrict refuses a load that does not
+     satisfy the CURRENT prescription, so an old 100×5/5/5 cannot anchor a
+     failure row under a new lo:8. SP1 SELF-LIMITS through its reps-in-[3,5]
+     filter. The coach verified all three rather than assuming them.
+
+     THE HAZARD THIS EXISTS FOR. The design prefills the weight box from the
+     last session (`PHAT App.dc.html:629`). Across a 3 × 3–5 → 3 × 8–12 change
+     that types his 3–5RM into an 8–12 slot: a failed rep under a loaded bar,
+     not a wrong percentage. `prefill:false` also forbids the UX spec §4.4
+     SEED — the first `+` adopting last session's weight is a prefill one tap
+     later, and it puts the same number in the same slot.
+
+     THE KEY IS STRICT: (s, lo, hi, k), field by field, NO TOLERANCE BAND. It
+     over-triggers on purpose. 8–12 → 10–12 costs one session of reset copy,
+     and the coach took that cost rather than defend a band that calls one
+     range "close enough" and another not (addendum §9.1, worked example 2).
+     Do not soften it here; it is a coaching ruling, not an implementation
+     detail.
+
+     THE STORED SHAPE — one additive field on the ENTRY:
+
+         entries: { d1a: { sets:[…], note:"", rx:{s,lo,hi,k} } }
+
+     written at save time by buildSession. ABSENT MEANS "the plan's current
+     prescription", which is true of every entry logged before schema 5,
+     because no plan had been edited. `planId` cannot answer this — an in-place
+     edit does not change it — and this deliberately builds no plan-history
+     machinery to answer it either.
+
+     A DELOAD IS NOT AN EPOCH. `rx` records the PLAN's prescription and never
+     deloadEx()'s temporary one: if it recorded the reduced sets, every deload
+     week would fake an epoch change and the week after would fake another.
+     verdict() compares against ctx.ex, the raw exercise, for the same reason.
+
+     Pure: no DOM, no S, no storage, no clock, no mutation of any argument. */
+
+  /* The four fields, normalised, or null when the object cannot supply them.
+     Null is never a change — see rxDiff. */
+  function rxOf(x) {
+    if (!isObj(x)) return null;
+    /* A DELOADED PRESCRIPTION IS NOT AN EPOCH AND IS NEVER STAMPED. deloadEx
+       marks its output `dl:1` precisely so a reduced prescription cannot
+       launder itself clean (§7.4), and this is the second place that mark
+       earns its keep: hand a deloaded exercise to any of this, by mistake or
+       through an idempotent call path, and the answer is "no prescription
+       here" — which reads as "same epoch" everywhere downstream. Otherwise
+       every deload week would fake an epoch change, empty his weight box and
+       print `Prescription changed to 2 × 3–3`, and the week after would fake
+       another one. Fail quiet, never fail confident. */
+    if (x.dl === 1) return null;
+    if (typeof x.s !== "number" || !isFinite(x.s)) return null;
+    if (typeof x.lo !== "number" || !isFinite(x.lo)) return null;
+    if (typeof x.hi !== "number" || !isFinite(x.hi)) return null;
+    var k = str(x.k).trim();
+    if (k === "") return null;
+    return { s: x.s, lo: x.lo, hi: x.hi, k: k };
+  }
+
+  /* The prescription a stored ENTRY was logged under, or null for "absent,
+     therefore the plan's current one". Reads {sets, note, rx}; an array of
+     sets has no rx and is null, which is the same answer. */
+  function entryRx(entry) {
+    return isObj(entry) ? rxOf(entry.rx) : null;
+  }
+
+  /* The epoch key, for a caller or a test that wants the identity itself.
+     null when the prescription is unreadable — never a key built from holes. */
+  function epochKey(x) {
+    var v = rxOf(x);
+    return v === null ? null : (v.s + "|" + v.lo + "|" + v.hi + "|" + v.k);
+  }
+
+  /* Which of s / lo / hi / k moved, in that order. [] when nothing moved and
+     [] when EITHER side is unreadable: absence means "same epoch", so a
+     missing rx can never produce a reset. Fail quiet, never fail confident. */
+  function rxDiff(a, b) {
+    var x = rxOf(a), y = rxOf(b), out = [];
+    if (x === null || y === null) return out;
+    if (x.s !== y.s) out.push("s");
+    if (x.lo !== y.lo) out.push("lo");
+    if (x.hi !== y.hi) out.push("hi");
+    if (x.k !== y.k) out.push("k");
+    return out;
+  }
+
+  function sameEpoch(a, b) { return rxDiff(a, b).length === 0; }
+
+  /* "3 × 3–5" and "8–12". The target line's format (UX spec §4.3) so the two
+     strings on screen read the same way. */
+  function rxLabel(x) {
+    var v = rxOf(x);
+    return v === null ? "" : v.s + " × " + v.lo + "–" + v.hi;
+  }
+  function rangeLabel(x) {
+    var v = rxOf(x);
+    return v === null ? "" : v.lo + "–" + v.hi;
+  }
+
+  /* The role word for the k-only sentence. `power` is the coach's own example
+     ("logged as power work"); the other two are the same construction and are
+     flagged in the report as derived, not quoted. */
+  var K_WORD = { power: "power work", hyp: "hypertrophy work", speed: "speed work" };
+  function kWord(k) {
+    var v = str(k).trim();
+    return Object.prototype.hasOwnProperty.call(K_WORD, v) ? K_WORD[v] : "";
+  }
+
+  /* The set the ghost names: the HEAVIEST completed set, ties to the earliest.
+     The coach's example (100×5/5/5) is degenerate and does not choose for us;
+     the top set is what "what you did last time" means everywhere else in this
+     file (topSet, SP1's source, ST1's best). Flagged for sign-off. */
+  function ghostSet(prev) {
+    var raw = (isObj(prev) && Array.isArray(prev.sets)) ? prev.sets : prev;
+    var C = completedSets(raw), best = null;
+    for (var i = 0; i < C.length; i++) if (best === null || C[i].w > best.w) best = C[i];
+    return best;
+  }
+
+  /* prescriptionEpoch(ctx) -> everything the session screen needs to decide
+     whether last session's numbers may be offered as a target.
+
+     ctx = { ex, prev, plan, exId }
+       ex     the CURRENT exercise {s, lo, hi, k}, the plan's, never deloadEx's.
+              Omitted, it is looked up as exById(plan, exId).
+       prev   the previous ENTRY for this exercise — PHAT.lastFor(sessions, id)
+              returns exactly the right thing. An array of sets is accepted and
+              carries no rx, which reads as "same epoch".
+       plan   optional, only used to resolve `ex` from `exId`.
+
+     -> { exId, rx, prevRx, hasPrev, same, changed, fields, kOnly,
+          prefill, seed, prevSet, oldLabel, newRange, line }
+
+       prefill / seed  FALSE across an epoch change, and false when there is
+                       nothing to prefill. These are the same fact twice
+                       because the view has two ways to put the number in the
+                       box; both are forbidden.
+       line            the §9.6 provenance field's content, epoch-dependent.
+                       "" when there is no history to describe.
+       fields          which of s/lo/hi/k moved, for a view or a test.
+
+     Never throws, mutates nothing, and returns the same shape on garbage. */
+  function prescriptionEpoch(ctx) {
+    var c = isObj(ctx) ? ctx : {};
+    var plan = isPlanDoc(c.plan) ? c.plan : null;
+    var ex = isObj(c.ex) ? c.ex : (plan ? exById(plan, str(c.exId).trim()) : null);
+    var id = str(c.exId).trim() || (isObj(ex) ? str(ex.id).trim() : "");
+    var rx = rxOf(ex);
+    var prev = (isObj(c.prev) || Array.isArray(c.prev)) ? c.prev : null;
+    var prevSet = prev ? ghostSet(prev) : null;
+    var prevRx = entryRx(prev);
+    var out = {
+      exId: id, rx: rx, prevRx: prevRx,
+      hasPrev: prevSet !== null,
+      same: true, changed: false, fields: [], kOnly: false,
+      prefill: prevSet !== null, seed: prevSet !== null,
+      prevSet: prevSet ? { w: prevSet.w, r: prevSet.r } : null,
+      oldLabel: rxLabel(prevRx), newRange: rangeLabel(rx),
+      line: prevSet !== null ? S1_PROVENANCE : ""
+    };
+    var d = rxDiff(prevRx, rx);
+    if (!d.length) return out;
+
+    out.same = false;
+    out.changed = true;
+    out.fields = d;
+    out.kOnly = (d.length === 1 && d[0] === "k");
+    out.prefill = false;
+    out.seed = false;
+    if (prevSet === null) { out.line = ""; return out; }
+
+    var head = kg(prevSet.w) + " × " + prevSet.r;
+    if (out.kOnly) {
+      var w = kWord(prevRx.k);
+      out.line = head + (w ? ", logged as " + w + "." : ", logged under a different role.") +
+                 " Pick a weight for the new range.";
+      return out;
+    }
+    out.line = head + ", under the old " + out.oldLabel +
+               ". Pick a weight for " + out.newRange + ".";
+    return out;
+  }
+
+  /* Rule X1 — extra sets and the badge (addendum §8.3). W7 renders it; the
+     ORDINAL is computed here because the prototype computes it from the row
+     index and the badge then lies.
+
+     extraSets(sets, ex) -> { flags:[Boolean], count, line, idle }
+
+       flags[i]  TRUE when the number of COMPLETED sets in rows 0..i-1 is
+                 already >= ex.s — i.e. "this row cannot affect the verdict".
+                 NOT `i >= ex.s`: leave row 2 blank on a 3-set exercise and
+                 fill rows 1, 3 and 4 and row 4 IS the third completed set, so
+                 it drives the verdict and carries no badge. Same computation
+                 as C, because it is a claim about C.
+       count     completed sets past the prescription.
+       line      X1's copy, by role. "" when there are no extras.
+       idle      may the view show the standing "add sets freely" invitation.
+                 hyp only (X1 ii): on a power slot the app does not suggest a
+                 fourth hard set, and on speed an extra set is extra fatigue.
+
+     The verdict is unaffected by any of this — verdict() already truncates to
+     the first ex.s completed sets on both sides. Two numbers, two purposes:
+     the verdict is about the prescription, the session total is about the
+     work, and extras are in the total. */
+  function extraSets(sets, ex) {
+    var s = (isObj(ex) && typeof ex.s === "number" && isFinite(ex.s) && ex.s >= 1)
+      ? Math.floor(ex.s) : 0;
+    var k = isObj(ex) ? str(ex.k).trim() : "";
+    var rows = Array.isArray(sets) ? sets : [];
+    var out = { flags: [], count: 0, line: "", idle: k === "hyp" };
+    var done = 0, i;
+    for (i = 0; i < rows.length; i++) {
+      out.flags.push(s > 0 && done >= s);
+      if (numSet(rows[i])) done++;
+    }
+    if (s < 1) return out;
+    out.count = Math.max(0, done - s);
+    if (!out.count) return out;
+    var n = out.count + (out.count === 1 ? " set" : " sets") + " past the prescription.";
+    if (k === "power") out.line = n + " The verdict reads the first " + s + ".";
+    else if (k === "speed") out.line = n + " Speed work is " + s + " sets. Extra sets are extra fatigue.";
+    else out.line = n + " Counted in today's volume, not in the verdict.";
+    return out;
+  }
+
   /* Case 1 of both P1 and H1 drops 5% — and at zero load there is nothing to
      remove (Z2 delta 1). The app does not invent a way to make the movement
      easier: no band, no rack height, no substitute exercise. It holds.
@@ -2110,7 +2502,7 @@
 
   /* Rule H1 — hypertrophy verdict (audit §9), with Z1/Z2/Z3/G1/I2/S1.
      Cprev is the previous entry's first ex.s completed sets, or null. */
-  function verdictHyp(ex, C, Cprev, pain) {
+  function verdictHyp(ex, C, Cprev, pain, epochChanged) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var range = lo + "–" + hi + " range";
@@ -2153,6 +2545,24 @@
        Deliberately NOT "look further back for a comparable entry" — comparing
        this week to a session three weeks old and printing `Volume up 4%` is a
        comparison across a gap the copy does not disclose. */
+    /* 3c — Rule PE1. The previous entry was logged under a different
+       prescription, so there is nothing here to compare against: cases 4a–4d
+       would be measuring a plan edit and calling it training. It takes case 3
+       with the epoch copy, and the copy says out loud that nothing was lost —
+       because nothing was: the sets are still in the history and still on the
+       chart, and ST1 still reads every one of them at r <= 8.
+
+       Ordered AFTER cases 1 and 2, which read this session only and are
+       unaffected by an epoch change, and BEFORE 3a/3b, which are about a
+       missing comparison rather than an invalid one. With no completed set on
+       the previous side there is no epoch claim worth making, so it falls
+       through to 3a/3b, which describe that case correctly already. */
+    if (epochChanged === true && Cprev && Cprev.length > 0) {
+      return mk("", "Prescription changed to " + s + " × " + lo + "–" + hi +
+        ". This is the new baseline. Your earlier sets are still in the history and on the chart.",
+        "", "H1.3c");
+    }
+
     if (!Cprev || Cprev.length === 0) {
       return mk("", "First time logged. This becomes your baseline.", "", "H1.3a");
     }
@@ -2231,6 +2641,10 @@
        note      this exercise's note, read only through Rule S1's regex
        painFlag  optional Boolean; overrides `note` when present, so a caller
                  can hold a committed flag while the field is still being typed
+       epochChanged optional Boolean; Rule PE1. Omitted, it is DERIVED from
+                 prev.rx against ex — pass it only to override. When true, H1
+                 takes case 3c (a new baseline, with the reason) instead of
+                 comparing tonnage across a prescription change
        deload    optional Boolean; true when deloadStatus().active is true for
                  the session's date. Threaded exactly like painFlag, because it
                  is the same mechanism for the same reason: a fact about today
@@ -2306,10 +2720,22 @@
 
     if (ex.k === "power") return verdictPower(ex, C, pain);
 
+    /* Rule PE1. Computed HERE from the entry rather than trusted from the
+       caller, so a view that forgets to pass anything still cannot compare
+       across a prescription change. `ctx.epochChanged` is an override for a
+       caller holding the fact already (prescriptionEpoch().changed); an
+       explicit Boolean wins, anything else is ignored.
+
+       Compared against ctx.ex, the PLAN's exercise — never `ex`, which may be
+       deloadEx()'s reduced prescription. A deload is a week, not an epoch. */
+    var epoch = (typeof ctx.epochChanged === "boolean")
+      ? ctx.epochChanged
+      : !sameEpoch(entryRx(ctx.prev), rxOf(ctx.ex));
+
     var praw = ctx.prev;
     if (isObj(praw) && Array.isArray(praw.sets)) praw = praw.sets;
     var Cprev = Array.isArray(praw) ? completedSets(praw).slice(0, s) : null;
-    return verdictHyp(ex, C, Cprev, pain);
+    return verdictHyp(ex, C, Cprev, pain, epoch);
   }
 
   /* ==================================================== Rule W1 - W7
@@ -2686,6 +3112,15 @@
      to their slots so the NAME ST1 says is the name on the card. Exported for
      a caller that has no plan in hand; index.html's KEY_LIFTS keeps its chart
      colours, which are a view concern and are not programme data. */
+  /* THE NAME IN ST1's SENTENCE IS THE PLAN'S FULL NAME (addendum §9.2,
+     [Certain]). `No progress on Bent-over row, Squat` — never `Row, Squat`.
+     There is no `short` field and none may be added: short labels for these
+     four lifts is literally B-27 ("the mapping is right, the labels lie"), a
+     second name field is a second thing a rename has to keep in sync against
+     C-6's one-id-one-name rule, and on a user plan there would be no short
+     name to have. The sentence being longer is a real cost and the coach
+     accepted it. The view may not truncate it either — that is the same lie
+     one layer down, where nobody will find it. */
   var KEY_LIFTS = deepFreeze(planKeyLifts(PHAT_PLAN));
 
   /* Rule C7b's copy (addendum 8.4). Three blocks, and which one is spoken is
@@ -2717,7 +3152,66 @@
     "Six weeks of data and the numbers have not moved. Change one thing — how hard the sets are, " +
     "how much you are eating, or the plan — and give it three weeks."
   ];
-  var ST1_THIN_ALL = "Six weeks in but the log is too thin to test. Log all four lifts weekly.";
+  /* Addendum §9.5 — the string was FALSE at any count but four, and after a
+     plan edit it can be three. The fix is not to count, it is to NAME them:
+     it degrades to three, two or one with no special case, it tells him
+     exactly what to do, and no plan edit can falsify it. `ST1_THIN_ALL` is
+     therefore a builder, not a constant. */
+  function st1ThinAll(names) {
+    return "Six weeks in but the log is too thin to test. Log " + andList(names) + " weekly.";
+  }
+
+  /* Addendum §9.1 — a key lift the six-week check CANNOT read, because the
+     plan now prescribes it above 8 reps and ST1 scores nothing above 8. This
+     is not thin data: logging it weekly will never help, so it must not get
+     the "log it weekly" line. */
+  function st1Unreadable(name) {
+    return name + " is prescribed above " + ST1_REPS + " reps, so the six-week check " +
+           "cannot read it. It needs sets at " + ST1_REPS + " reps or fewer.";
+  }
+
+  /* Addendum §9.9 — ST1's authority is that it is a FOUR-lift check agreed in
+     advance. Becoming a three-lift check silently is the app narrowing its own
+     evidence base without saying so. It partly self-corrects (C7b's provenance
+     test fails, so the generic diagnosis fires), and he should still be told.
+
+     The missing lift is named when it can be named: an id the plan still
+     declares but no longer contains, or — on a plan DERIVED FROM PHAT — one of
+     the shipped plan's four that this copy no longer declares. On a plan built
+     from scratch that simply names three lifts there is nothing to name and
+     nothing was lost, so only the count clause is spoken. Nothing here guesses
+     a name from an id. */
+  function keyLiftDisclosure(plan) {
+    var out = { n: 0, max: PLAN_KEYLIFT_MAX, missing: [], line: "" };
+    if (!isPlanDoc(plan)) return out;
+    var have = planKeyLiftIds(plan);
+    out.n = have.length;
+    if (out.n >= PLAN_KEYLIFT_MAX) return out;
+
+    var declared = Array.isArray(plan.keyLifts) ? plan.keyLifts : [];
+    var seen = {}, i, id, e;
+    for (i = 0; i < declared.length; i++) {
+      id = str(declared[i]).trim();
+      if (id === "" || have.indexOf(id) >= 0 || own(seen, id)) continue;
+      seen[id] = true;
+      e = exById(PHAT_PLAN, id);
+      if (isObj(e) && str(plan.derivedFrom).trim() === PHAT_PLAN_ID) out.missing.push(e.n);
+    }
+    if (str(plan.derivedFrom).trim() === PHAT_PLAN_ID) {
+      var want = planKeyLiftIds(PHAT_PLAN);
+      for (i = 0; i < want.length; i++) {
+        if (have.indexOf(want[i]) >= 0 || own(seen, want[i])) continue;
+        seen[want[i]] = true;
+        e = exById(PHAT_PLAN, want[i]);
+        if (isObj(e)) out.missing.push(e.n);
+      }
+    }
+    out.line = "Reading " + out.n + " of " + PLAN_KEYLIFT_MAX + " key lifts." +
+      (out.missing.length
+        ? " " + andList(out.missing) + (out.missing.length === 1 ? " is" : " are") + " not in this plan."
+        : "");
+    return out;
+  }
 
   /* One set's ST1 score, or null when the set does not count:
      - not a completed set under Z1 (blank, malformed, out of range);
@@ -2935,7 +3429,13 @@
 
     var out = notAbsent({
       state: "quiet", provenance: null, week: tw,
-      stalled: [], untested: [], lines: [], text: "",
+      stalled: [], untested: [], unreadable: [], lines: [], text: "",
+      /* Addendum §9.9. Its own field, never joined into `text`: it is a
+         disclosure about the CHECK, not a finding about a lift, and it renders
+         on the Trend tab whenever ST1 actually runs. "" when four lifts are
+         declared, which is the normal case and says nothing. */
+      disclosure: keyLiftDisclosure(plan),
+      disclosureLine: "",
       report: { stalled: [], untested: [], testable: false }
     });
 
@@ -2958,6 +3458,11 @@
 
     if (!rep.testable) { out.state = "early"; return out; }
 
+    /* From here the check RUNS, which is the condition §9.9 attaches the
+       disclosure to. Before week 6 it renders nothing at all, so a narrowed
+       evidence base is not yet a claim about anything. */
+    out.disclosureLine = out.disclosure.line;
+
     if (rep.stalled.length) {
       out.state = "stalled";
       out.provenance = phatProvenance(plan) ? "phat" : "generic";
@@ -2972,14 +3477,39 @@
 
     if (rep.untested.length) {
       out.state = "thin";
-      /* All of them, and there are exactly four: the audit's own sentence.
-         Any other count and that sentence would be false, so it falls to the
-         per-lift line, which is true at any count. */
-      if (rep.untested.length === lifts.length && lifts.length === PLAN_KEYLIFT_MAX) {
-        out.lines = [ST1_THIN_ALL];
+      /* Addendum §9.5 and §9.1. Two reasons a lift is untested, and they need
+         different sentences:
+
+           UNREADABLE  the plan now prescribes it above 8 reps, so ST1 can
+                       score nothing on it. "Log it weekly" is false advice —
+                       he could log it every day and the check still could not
+                       read it. It names the reps it needs instead.
+           THIN        genuinely not enough sessions. Unchanged copy.
+
+         When EVERY declared lift is merely thin, one sentence NAMES them all
+         (never counts them). Any other mix falls to the per-lift lines, which
+         are true at any count. */
+      var lo = {}, i2, l2, nm2;
+      for (i2 = 0; i2 < lifts.length; i2++) {
+        l2 = lifts[i2];
+        if (!isObj(l2)) continue;
+        nm2 = (typeof l2.n === "string" && l2.n.trim() !== "") ? l2.n : str(l2.id).trim();
+        if (nm2 !== "" && typeof l2.lo === "number" && isFinite(l2.lo)) lo[nm2] = l2.lo;
+      }
+      var thin = [], unreadable = [];
+      for (i2 = 0; i2 < rep.untested.length; i2++) {
+        nm2 = rep.untested[i2];
+        if (own(lo, nm2) && lo[nm2] > ST1_REPS) unreadable.push(nm2);
+        else thin.push(nm2);
+      }
+      out.unreadable = unreadable.slice(0);
+      if (thin.length && thin.length === lifts.length) {
+        out.lines = [st1ThinAll(thin)];
       } else {
         out.lines = rep.untested.map(function (n) {
-          return "Not enough sessions on " + n + " to judge. Log it weekly.";
+          return (unreadable.indexOf(n) >= 0)
+            ? st1Unreadable(n)
+            : "Not enough sessions on " + n + " to judge. Log it weekly.";
         });
       }
       out.text = out.lines.join(" ");
@@ -3196,6 +3726,27 @@
     var win = SP1_WINDOW;
     if (src === null) { src = sp1Source(sessions, out.srcId, todayStr, SP1_WIDE); win = SP1_WIDE; }
     if (src === null) {
+      /* Rule PE1's SP1 clause (addendum §9.1). SP1 self-limits — its
+         reps-in-[3,5] filter means a source lift moved to 8–12 simply stops
+         producing candidates and it ages out to this fallback within 28–56
+         days, with the old triples staying valid evidence in the meantime.
+         Only the COPY is wrong when it gets here: `Log a heavy triple on
+         Bent-over row` asks him to do something the plan no longer prescribes.
+
+         The test is the CURRENT prescription overlapping [3,5] at all. It is
+         PRESENT-THIN, not ABSENT — a source lift is set, it just cannot
+         produce a triple — so `reason` is its own value and the ABSENT
+         machinery is untouched. */
+      var sx = exById(p, out.srcId);
+      var heavy = !isObj(sx) || typeof sx.lo !== "number" || typeof sx.hi !== "number" ||
+                  (sx.lo <= SP1_REP_HI && sx.hi >= SP1_REP_LO);
+      if (!heavy) {
+        out.reason = "source-not-heavy";
+        out.text = name + " is no longer prescribed at " + SP1_REP_LO + "–" + SP1_REP_HI +
+          " reps, so there is no triple to work from. Point this speed work at a lift you " +
+          "train heavy, or set the load yourself. Until then: 65–70% of a weight you could triple.";
+        return out;
+      }
       out.reason = "no-source";
       out.text = "Log a heavy triple on " + name +
                  " and this becomes a number. Until then: 65–70% of a weight you could triple.";
@@ -3322,10 +3873,39 @@
      lines today and add this one only once the coach has signed it off. */
   var S1_PROVENANCE = "From your last session on this.";
 
-  function painState(sessions, exId) {
+  /* Rule S1a (addendum §9.7) — a pain notice with no subsequent entry.
+
+     THE CLEARING RULE IS UNCHANGED and confirmed as built: the notice stands
+     until a LATER session logs that exercise with no matching note. A blank
+     card is not evidence he trained it pain-free, and "it appeared on screen"
+     is not an all-clear.
+
+     But a notice that never changes for six weeks stops being read, and the
+     state it describes has changed: he is not lifting through pain any more,
+     he is avoiding the movement. That is a different fact and the app may
+     state it, because it is a fact about his LOG and not an assessment.
+
+     After 21 days with no entry for that exercise the text changes ONCE. It
+     never becomes an all-clear, it never disappears on its own, it does not
+     ask him to test it — "try it and see" is medical advice — and it points at
+     a person. The wording is fixed (§10); do not interpolate anything into it
+     but the date, and the date goes through dayMon, never Intl.
+
+     21 days is the coach's `[Opinion]`, chosen as three missed opportunities
+     at a five-day frequency. The constant is here, not inline, so a revision
+     is one number.
+
+     STILL NO CLOCK. `todayStr` is OPTIONAL and is the caller's date, exactly
+     like every other rule in this file. Omit it, or hand it something
+     unusable, and the restatement simply does not fire: the notice renders as
+     it always did. An undated session cannot age either, for the same reason —
+     the copy names a date, and the app does not name a date it is guessing. */
+  var S1A_DAYS = 21;
+
+  function painState(sessions, exId, todayStr) {
     var id = str(exId).trim();
     var out = { active: false, exId: id, date: null, note: "", lines: [], text: "",
-                provenanceLine: "", checked: false };
+                provenanceLine: "", checked: false, days: null, stale: false };
     if (!Array.isArray(sessions) || id === "") return out;
 
     var best = null, bestDate = "", i, j, s, d, e, hasSet, note;
@@ -3358,6 +3938,20 @@
     out.lines = S1_LINES.slice(0);
     out.text = S1_LINES.join(" ");
     out.provenanceLine = S1_PROVENANCE;
+
+    /* Rule S1a. Only when the caller gave a date AND the note carries one:
+       an unusable date leaves the notice exactly as it was. */
+    var today = (typeof todayStr === "string" && DATE_RE.test(str(todayStr).trim()))
+      ? str(todayStr).trim() : null;
+    var gap = (today !== null && out.date !== null) ? dayGap(out.date, today) : null;
+    if (gap !== null) out.days = gap;
+    if (gap !== null && gap >= S1A_DAYS) {
+      out.stale = true;
+      out.lines = ["You noted pain on this on " + dayMon(out.date) +
+        " and have not logged it since. The app cannot tell you whether it has settled. " +
+        "If it still hurts, see someone qualified to look at it."];
+      out.text = out.lines[0];
+    }
     return out;
   }
 
@@ -3533,16 +4127,24 @@
     "Mark accessories as cut in the plan to phase them in."
   ];
 
-  /* How many sessions he has actually logged - a session with at least one
-     completed set, the same test every other rule in this file uses for "did
-     he train". It is the count in the ABSENT cycle line (`Week 7 · 31
-     sessions`), which is the only number that line can honestly carry once the
-     accessory count is gone. */
-  function loggedSessions(sessions) {
-    if (!Array.isArray(sessions)) return 0;
-    var n = 0;
-    for (var i = 0; i < sessions.length; i++) if (sessionHasCompletedSet(sessions[i])) n++;
-    return n;
+  /* How many sessions he has actually logged. It is the count in the ABSENT
+     cycle line (`Week 7 · 31 sessions`), which is the only number that line
+     can honestly carry once the accessory count is gone.
+
+     DISTINCT DATES, NOT SAVES (addendum §9.4, and it is TW1 §6a reaching one
+     more place). It used to count saved sessions, and it sits in the same
+     sentence as a week number derived from distinct dates: 31 saves across 24
+     dates printed `Week 7 · 31 sessions`, two numbers in one line built on two
+     different definitions of a training day, which makes the week count look
+     broken. That is the failure C-10 was raised to prevent.
+
+     The word `sessions` is still right — a session is a gym visit, and two
+     saves on one date is one visit. `trainingDays` already IS this test (at
+     least one completed set, dates this code can read, nothing in the future),
+     so this is one call and not a second definition. A save carrying only a
+     note is kept, stored and shown, and is not a training day. */
+  function loggedSessions(sessions, todayStr) {
+    return trainingDays(sessions, todayStr).length;
   }
   var V1_COOLDOWN = 7;       /* days between offers, per day id           */
 
@@ -3707,8 +4309,14 @@
        explain     the one sentence that answers the divergence
 
      `rw`    the plan's reduced-volume block in training weeks (4 on PHAT)
-     `tier`  does the plan HAVE a reduced-volume tier at all (Rule C7a)
-     `nSess` logged sessions, for the ABSENT row that cannot count accessories */
+     `tier`  does a reduced-volume block RUN on this plan — the plan has a cut
+             tier (Rule C7a) AND declares a block length (Rule V1a). A plan
+             that marks accessories `cut` and never says for how long gets the
+             same lines as a plan with no tier at all, because no block runs;
+             the sentence about the missing number is volumeTier's, said once,
+             on the plan screen
+     `nSess` logged sessions — DISTINCT DATES with a completed set (§9.4), for
+             the row that cannot count accessories */
   function tierLines(tw, cw, back, cuts, hasSessions, dl, rw, tier, nSess) {
     var out = { row: "", status: "", divergence: "", explain: "" };
     rw = (typeof rw === "number" && isFinite(rw) && rw >= 0) ? Math.floor(rw) : PLAN_REDUCED_DEFAULT;
@@ -3718,9 +4326,8 @@
       out.row = dl.text;
       return out;
     }
-    if (!hasSessions) return out;
 
-    if (cw !== tw && tw > 0) {
+    if (hasSessions && cw !== tw && tw > 0) {
       /* The suffix is a claim about a volume tier. On a plan that has none it
          is dropped; the week arithmetic is plan-agnostic and stays. */
       out.divergence = "Week " + cw + " by the calendar, week " + tw + " of real training." +
@@ -3735,9 +4342,22 @@
        part that is true on any plan: which week it is, and how much he has
        logged. */
     if (!tier) {
-      out.row = "Week " + tw + " · " + nSess + (nSess === 1 ? " session" : " sessions");
+      /* Addendum §9.8 — the zero cases, and NEVER `Week 0`. There is no week
+         0, and this is the first line he sees on day one, where looking broken
+         is expensive. The middle line is the honest one: it explains the gap
+         between what he has done and what the app counts, which is the same
+         explanation TW1 gives at the other boundary. */
+      if (nSess === 0) out.row = "No sessions logged yet.";
+      else if (tw === 0) {
+        out.row = nSess + (nSess === 1 ? " session" : " sessions") + " logged. A training week is " +
+                  TRAINING_WEEK_MIN + ", so week 1 starts when you get there.";
+      } else {
+        out.row = "Week " + tw + " · " + nSess + (nSess === 1 ? " session" : " sessions");
+      }
       return out;
     }
+
+    if (!hasSessions) return out;
 
     if (back >= cuts && cuts > 0 && tw > rw) {
       out.status = "Full volume. All " + cuts + " accessories are in.";
@@ -3822,11 +4442,16 @@
     var cw = calendarWeeks(sessions, today);
     var rw = planReducedWeeks(plan);
     var tier = planHasCutTier(plan);
+    /* Rule V1a. The tier exists but the plan never said for how long, so no
+       block runs: every exercise renders from week 1, there is no ramp, and
+       the app says which of the two it is instead of assuming 4. */
+    var declared = planReducedDeclared(plan);
+    var runs = tier && declared !== null;
     var tot = accessoryTotals(program, state);
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
-                          rw, tier, loggedSessions(sessions));
+                          rw, runs, loggedSessions(sessions, today));
 
-    var order = tier ? orderFor(dayId, exList, declaredOrder(plan, dayId)) : [];
+    var order = runs ? orderFor(dayId, exList, declaredOrder(plan, dayId)) : [];
     /* Inside the reduced-volume block: zero, and there is no override anywhere
        in the app. During a deload: zero, accessories are out (audit section 8).
        The counter is NOT decremented for a deload here - rollbackReintro is
@@ -3835,7 +4460,10 @@
 
     var inTier = {}, i, id;
     for (i = 0; i < exList.length; i++) {
-      if (isObj(exList[i]) && !exList[i].cut) inTier[str(exList[i].id).trim()] = true;
+      /* `!runs` means EVERY exercise renders, cut flags included (Rule V1a).
+         He marked them and he meant something by it; the app must not hide
+         work on the strength of a block length nobody declared. */
+      if (isObj(exList[i]) && (!runs || !exList[i].cut)) inTier[str(exList[i].id).trim()] = true;
     }
     for (i = 0; i < n; i++) inTier[order[i]] = true;
 
@@ -3868,11 +4496,17 @@
       dayCuts: order.length,
       statusLine: lines.status,
       tierLine: lines.divergence !== "" ? lines.divergence
-                                        : ((tier && tw <= rw) ? lines.row : ""),
+                                        : ((runs && tw <= rw) ? lines.row : ""),
       tierNote: lines.explain,
+      /* Which of the two absent states this is, for a caller and a test:
+         null · "no-cut-tier" (C7a) · "no-block-length" (V1a). They print
+         different sentences and must not be told apart by string matching. */
+      reason: null,
+      reducedWeeks: declared,
       deload: { active: dl.active, day: dl.day }
     });
-    if (!tier) markAbsent(out, V1_ABSENT);
+    if (!tier) { out.reason = "no-cut-tier"; markAbsent(out, V1_ABSENT); }
+    else if (!runs) { out.reason = "no-block-length"; markAbsent(out, V1A_ABSENT); }
 
     /* ---- the offer gate (audit section 5, addendum S2b) ---- */
     var stalled = (isObj(c.stallReport) && Array.isArray(c.stallReport.stalled))
@@ -4760,13 +5394,14 @@
     var cw = calendarWeeks(sessions, today);
     var rw = planReducedWeeks(plan);
     var tier = planHasCutTier(plan);
-    var nSess = loggedSessions(sessions);
+    var runs = tier && planReducedDeclared(plan) !== null;   /* Rule V1a */
+    var nSess = loggedSessions(sessions, today);
     var tot = program ? accessoryTotals(program, state) : {
       back: (typeof c.back === "number" && isFinite(c.back)) ? c.back : 0,
       cuts: (typeof c.cuts === "number" && isFinite(c.cuts)) ? c.cuts : 0
     };
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
-                          rw, tier, nSess);
+                          rw, runs, nSess);
     var out = notAbsent({
       text: lines.row,
       row: lines.row,
@@ -4786,6 +5421,7 @@
        volume tier belongs on the plan screen, said once, by volumeTier. The
        flag exists so a caller and a test can see WHY the clause is gone. */
     if (!tier) { out.absent = true; out.reason = "no-cut-tier"; }
+    else if (!runs) { out.absent = true; out.reason = "no-block-length"; }
     return out;
   }
 
@@ -4860,6 +5496,15 @@
     planKeyLifts: planKeyLifts,
     planHasCutTier: planHasCutTier,
     planReducedWeeks: planReducedWeeks,
+    /* Rule V1a — W5. `planReducedDeclared` returns NULL when the plan names no
+       block length, and that is the value V1 must gate on: a pre-filled 4 he
+       can see and change is a suggestion, an invisible 4 is a prescription.
+       PLAN_REDUCED_SUGGESTED and V1A_PROMPT are the editor's picker. */
+    planReducedDeclared: planReducedDeclared,
+    PLAN_REDUCED_SUGGESTED: PLAN_REDUCED_SUGGESTED,
+    V1A_PROMPT: V1A_PROMPT,
+    V1A_PROMPT_SUGGEST: V1A_PROMPT_SUGGEST,
+    V1A_ABSENT: V1A_ABSENT,
     phatProvenance: phatProvenance,
     /* advice — W5/W6. Pure, DOM-free, storage-free, callable from tests.html
        over file://. The rule each one implements is named at its definition. */
@@ -4875,6 +5520,24 @@
     incrementLine: incrementLine,
     g1Step: g1Step,
     verdict: verdict,
+    /* Rule PE1 — W5. The prescription epoch. `rx` is the additive field on a
+       stored ENTRY; absent means "the plan's current prescription", which is
+       what every entry logged before schema 5 was.
+
+       prescriptionEpoch(ctx) is what the SESSION SCREEN needs: `prefill` and
+       `seed` are false across an epoch change (the box stays empty and the
+       first `+` may not adopt last session's weight), and `line` is the ghost
+       row's sentence, already assembled. Nothing here hides history — `prev`,
+       `prevSet` and every chart still read every set ever logged.
+
+       extraSets() is Rule X1's badge, computed from COMPLETED-SET ORDINAL and
+       never from the row index. */
+    epochKey: epochKey,
+    entryRx: entryRx,
+    sameEpoch: sameEpoch,
+    rxOf: rxOf,
+    prescriptionEpoch: prescriptionEpoch,
+    extraSets: extraSets,
     /* Rule W1 — W7. The bodyweight windows, the calorie decision, and the
        cooldown stamp WITH its clearer. Nothing here reads or writes storage:
        setCalChanged/clearCalChanged return a new state object and the caller
@@ -4898,6 +5561,11 @@
     e1rmByDate: e1rmByDate,
     stallReport: stallReport,
     stallAdvice: stallAdvice,
+    /* Addendum §9.9 — the Trend tab's disclosure when ST1 reads fewer than
+       four lifts. Also on stallAdvice().disclosure, which is where the view
+       reads it; exported alone so the plan screen can ask without running the
+       check. */
+    keyLiftDisclosure: keyLiftDisclosure,
     /* Rule SP1 - W12. Speed load. Never cached; the pain flag does not
        touch it (addendum S2a). speedTooHeavy is advice and blocks nothing. */
     SPEED_SRC: SPEED_SRC,
@@ -4912,6 +5580,12 @@
        exercise carry a note". One regex, painFlag, behind both — there is one
        definition of the word in this file and no second date window. */
     PAIN_DAYS: PAIN_DAYS,
+    /* Rule S1a — W5. `painState(sessions, exId, todayStr)`: the third argument
+       is OPTIONAL and additive. With it, a notice standing 21 days with no
+       entry on that exercise restates itself once — naming the avoidance,
+       declining to assess, pointing at a person. Never an all-clear, and it
+       never clears itself. Without it, nothing changes and no clock is read. */
+    S1A_DAYS: S1A_DAYS,
     painWindow: painWindow,
     painState: painState,
     /* Rule R1 - W4. Rest is computed from the EXERCISE (k, hi) and from
