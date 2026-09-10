@@ -833,3 +833,38 @@ costs `d4a`, `d5a`, the reintro order and the other three key lifts nothing.
 **Accepted regression, temporary:** `verdict()` now returns `null` for `k:"speed"` (SP0 deleted, one
 source for the speed sentence), so the three speed slots render blank on the branch until W7 wires
 `speedLoad`. Losing a sentence sourced from the wrong engine is the cheaper side.
+
+### 2026-09-10 — Rule PE1, and the one hazard in this project with physical stakes
+I put the copied-plan history question to the coach with two framings. It rejected both and reframed
+it: not *which field changed*, but **what the rule asks history for**. **Measurements cross a
+prescription change; prescription-relative comparisons do not.** History is never hidden, never re-keyed.
+It then checked rather than assumed, and three of the four rules I named do not have the problem:
+P1 is history-free (this session's sets only); T1 self-protects — an old `100×5/5/5` fails a new `lo:8`,
+so 100 kg cannot anchor a failure row; SP1 self-limits through its reps-in-[3,5] filter.
+
+**The hazard that was not on my list is the serious one.** `PHAT App.dc.html:629` prefills the weight
+box from the last session. Across a 3–5 → 8–12 prescription change **that types his 3–5RM into an 8–12
+slot.** In the coach's words: a failed rep under a loaded bar, not a wrong percentage. PE1 empties the
+box and relabels the ghost across an epoch change.
+**Two agents rejected prefill from two unrelated directions** — `ux-designer` because prefilled weight
+with blank reps is WO-001's `incomplete`, silently arming a blocked save on every skipped exercise;
+`strength-coach` because of this. Neither knew the other's reason. That is the argument for having both.
+Epoch key is strict `(s, lo, hi, k)` with **no tolerance band** — it over-triggers deliberately, and the
+coach named that as intended, so it must not be softened later as a false-positive "fix".
+
+### 2026-09-10 — Small rulings that each close a seam
+- **ST1 names lifts with the plan's full name; no `short` field.** My `Row, Squat` example is
+  superseded — a short-name field would be B-27 with a schema slot to live in.
+- **`reducedWeeks` pre-fills 4 visibly and editably, never invisibly.** A default applied silently to a
+  self-built tier is the app making a programming decision it was not asked to make.
+- **The session count counts distinct dates**, or the line contradicts the training-week number printed
+  beside it. The counting ruling reaching one more place.
+- **ST1 below four key lifts names them, never counts them** — and **fewer than four key lifts is a
+  VALID plan.** Do not let `validatePlan` be "fixed" to reject it; what is missing is disclosure.
+- **`cycleLine` never prints `Week 0`.**
+- **`painState` clearing confirmed as built**, with a 21-day restatement that **names the avoidance and
+  points at a person, never an all-clear.** Not adjustable wording.
+- **`d2e` resolving to lying leg curl needs `implement: bodyweight → machine`** — the one data-touching
+  change in the document, free today and not free later.
+- **The `EXTRA` badge must key off completed-set ordinal, not row index.** As written it badges the rows
+  that are driving the verdict.

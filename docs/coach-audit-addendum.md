@@ -2337,3 +2337,374 @@ logged sessions.** Every ruling above is calibrated against a brief and my own j
 anything he has done. Rulings (b) items 1–3 and flag 3 in §8.7 would each be settled by a single
 logged session. The advice layer is now more thoroughly specified than the training is performed, and
 that gap is not something another work order closes.
+
+---
+
+# 9. The Plan Editor's advice consequences
+
+**Added 2026-09-10, from QA and the W3/W4 build.** Eight items: the copied-plan history question, then
+seven sign-offs.
+
+---
+
+## 9.1 Rule PE1 — is history before a prescription change still evidence?
+
+**Neither of the first two framings. The third has the right shape and the wrong axis.**
+
+The discriminator is not *which field changed*. It is **what the rule is asking the history for.**
+Sort the rules by their question and the answer falls out:
+
+- **Rules that ask "how much did you lift."** Load and reps as raw quantities. ST1's e1RM, SP1's
+  heaviest 3–5 rep set, the trend chart, volume totals. **These cross a prescription change unchanged.**
+  `[Certain]` — 100 kg × 5 is 100 kg × 5 whether the plan called for 3–5 or 8–12 that day. He lifted
+  it. A rep range is a plan; a logged set is a measurement, and a plan edit cannot retroactively
+  un-lift a weight.
+- **Rules that ask "did you do what was prescribed, and how does that compare with the last time you
+  did it."** H1's tonnage comparison, H1's baseline test, and `lastFor`'s ghost text and weight
+  prefill. **These must not cross.** The comparison is only meaningful between two attempts at the
+  same prescription.
+
+So: **the history is always kept, always charted, never hidden, never re-keyed. What changes is
+whether a given rule may compare *across* the change.** Framing 2's cost — "he loses his baseline
+every time he edits" — only lands on the second class, which is where losing it is correct.
+
+### First, a correction: the exposure is narrower and sharper than the question assumes
+
+I checked each rule against what it actually reads. Three of the four named do not have the problem,
+and one that was not named is the one with physical stakes.
+
+| Rule | What it reads history for | Crosses an epoch? |
+|---|---|---|
+| **P1** | **Nothing.** Its inputs are `ex {s,lo,hi}` and *this session's* completed sets (`coach-audit.md` §3). It is history-free. | **n/a — not affected at all** |
+| **`lastFor` → ghost + weight prefill** | "what you did last time", rendered as an implied target and typed into the weight box | **NO. This is the one that matters.** |
+| **H1 cases 1–2** (range compliance) | nothing — this session only | n/a |
+| **H1 case 3** (baseline test) | the previous entry's completed-set count | **NO** |
+| **H1 case 4** (tonnage) | the previous entry's `C` tonnage | **NO** |
+| **ST1 / `e1rmByDate`** | weight × reps, Epley, `r <= 8` | **YES — unaffected by construction** |
+| **SP1 / `speedLoad`** | heaviest completed set at 3–5 reps in 28/56 days | **YES — self-limiting** |
+| **D1 trigger T1** | a load *previously completed for the full prescription* | **YES — self-protecting, verified** |
+| **Trend chart, volume totals** | weight × reps | **YES** |
+
+**T1 self-protects and I checked it rather than assuming.** `logic.js:1896` `workingLoadStrict` returns
+`null` below `n` completed sets, and T1's qualifying load must satisfy the *current* prescription. Move
+`d1a` from 3–5 to 8–12 and his old `100×5/5/5` no longer counts as completed (5 < `lo` 8), so 100 kg is
+not a "previously completed" load and cannot anchor a failure row. T1 goes quiet until he completes the
+new prescription once. That is the right behaviour and it is already there. `[Certain]`
+
+**SP1 self-limits.** Its filter is *reps in [3,5]*, so a source lift moved to 8–12 stops producing
+candidates and SP1 ages out to its fallback within 28–56 days. The old triples it uses in the meantime
+are genuine heavy triples and remain valid evidence. Only the fallback *copy* is wrong — see 9.1(c).
+
+**The one with physical stakes was not on the list.** The design prefills the weight field from the
+last session (`PHAT App.dc.html:629`, `w: prev && prev.sets[i] ? prev.sets[i].w : ""`). Across a
+change from 3 × 3–5 to 3 × 8–12, that types his **3–5RM into an 8–12 slot**. He is in a gym with chalk
+on his hands, the box says 100, and the target line says 8–12. `[Certain]` that is a failed rep under a
+loaded bar, which is the cost CLAUDE.md tells me to weigh above all others. Everything else in this
+question costs a wrong percentage; this one costs a rep he cannot rack.
+
+### The rule
+
+```
+Rule: PE1 — prescription epochs
+Applies to:   `lastFor`-driven ghost text and weight prefill; H1 cases 3 and 4. Session screen.
+              NOT P1 (history-free). NOT ST1, SP1, the trend chart or any volume total.
+Inputs:       the prescription in force when a set was logged: {s, lo, hi, k}.
+              Cheapest shape: store it ON THE ENTRY at save time. Additive, self-describing,
+              survives export/import, needs no plan-history machinery, and an ABSENT value means
+              "same as current" — which is correct for every set logged to date, because nothing
+              has been edited yet. `planId` cannot answer this: an in-place edit does not change it.
+              Storage shape is backend's call; the rule needs the fact, however it is carried.
+              Minimum data: none. This is a property of the plan and the entry, not of history size.
+Logic:        epochKey = (s, lo, hi, k), compared by strict equality. No tolerance band.
+              1. Same epoch  -> current behaviour, unchanged.
+              2. Different epoch:
+                 a. DO NOT prefill the weight field. Leave it empty.
+                 b. Show the last set as history, explicitly labelled with the old prescription.
+                    Never as a target.
+                 c. H1 takes case 3 (baseline) with the epoch-change copy, not the
+                    "First time logged" copy.
+                 d. Once one session exists in the new epoch, everything resumes normally
+                    against that session. The reset costs exactly one session.
+              3. The history is never hidden, never re-keyed, never dropped from a chart or a
+                 volume total, and no set is orphaned. Nothing here touches an id.
+```
+
+**Output copy**
+
+```
+Ghost row, across an epoch boundary (replaces "From your last session on this."):
+  100 × 5, under the old 3 × 3–5. Pick a weight for 8–12.
+
+Ghost row, across an epoch boundary, when only `k` changed:
+  100 × 5, logged as power work. Pick a weight for the new range.
+
+Verdict, first session in a new epoch (replaces H1's "First time logged. This becomes your baseline."):
+  Prescription changed to 3 × 8–12. This is the new baseline. Your earlier sets are still in the
+  history and on the chart.
+
+SP1, when the source lift is no longer prescribed at 3–5 reps:
+  Bent-over row is no longer prescribed at 3–5 reps, so there is no triple to work from.
+  Point this speed work at a lift you train heavy, or set the load yourself.
+  Until then: 65–70% of a weight you could triple.
+
+ST1, when a key lift's `lo` is above 8 so no set can be read:
+  Squat is prescribed above 8 reps, so the six-week check cannot read it. It needs sets at
+  8 reps or fewer.
+```
+
+**Not enough data.** Not applicable — PE1 needs no history to decide. That is deliberate: the ghost
+and the prefill are the first thing on screen in a new epoch, before any new set exists, which is
+exactly when a stale target is most dangerous.
+
+**Worked examples**
+
+1. He copies PHAT, changes `d1a` to 3 × 8–12, opens Day 1. Last logged `d1a` was `100×5/5/5` under
+   3 × 3–5. → different epoch → weight box **empty**, ghost reads
+   `100 × 5, under the old 3 × 3–5. Pick a weight for 8–12.` He logs `70×10/10/10` → H1 case 3 →
+   `Prescription changed to 3 × 8–12. This is the new baseline. Your earlier sets are still in the
+   history and on the chart.` The trend chart shows all sessions, unbroken. ST1's e1RM reads
+   `70×10`? No — `r <= 8` excludes it; it reads the older 5-rep sets until 8-rep sets arrive.
+2. **Boundary — the deliberate over-trigger.** He changes `d3c` seated cable row from 3 × 8–12 to
+   3 × 10–12. Trivial edit, and PE1 fires: one session of reset copy and no prefill. **I am taking
+   that cost on purpose.** A tolerance band that decides 8–12 → 10–12 is "close enough" but 8–12 →
+   8–15 is not would be a number I cannot defend, and getting it wrong prints a confident percentage
+   comparing two different qualities of work. One session of "prescription changed" is cheap; a wrong
+   `Volume up 50%` is the class of defect B-25 exists for. `[Opinion]`, conservative.
+3. **Failing case — what ships today.** Copy the plan, change `d1a` to 8–12, log `70×10/10/10`
+   against a previous `100×5/5/5`. Tonnage 2,100 vs 1,500 → `Volume up 40% — 2,100 kg against
+   1,500 kg.` He did not get 40% better at anything. He changed the plan. And the session before it,
+   the weight box offered him 100 kg for a set of 8–12.
+4. **Crossing the other way.** 8–12 back to 3–5. Same reset, one session. His 8–12 history stays on
+   the chart and stays in ST1's e1RM series wherever `r <= 8`, so the six-week check is continuous
+   across both edits. That continuity is the whole reason the two classes are separated.
+
+**Rationale.** A logged set is a measurement and a prescription is a plan; edits to the plan cannot
+change what he lifted, so the rules that read quantities carry straight through. The rules that
+compare against "last time" are asking a question that presumes the prescription held, and when it did
+not the honest answer is a fresh baseline and a sentence saying why. The prefill ruling is not really
+about comparability at all — it is about the app not typing a heavy-triple weight into a slot that now
+asks for twelve reps.
+
+**What this needs that does not exist.** How often he actually edits a prescription. If it is twice a
+year, PE1's strict test is free. If he tunes ranges weekly, one session of reset copy each time will
+become noise and the tolerance question comes back — with real data to answer it. Zero plan edits and
+zero logged sessions exist today, so I am ruling conservative and expecting to revisit it. `[Guessing]`
+on the frequency, `[Certain]` on the direction.
+
+---
+
+## 9.2 Item 1 — which name goes in ST1's sentence: **the plan's full name.** `[Certain]`
+
+**`No progress on Bent-over row, Squat`. No `short` field, and no truncation in the view.**
+
+My `Row, Squat` example predates the plan document, and **I am superseding it.** Three reasons, in
+order of weight:
+
+1. **Short labels for these four lifts is literally B-27.** `KEY_LIFTS` called a flat DB press "Bench"
+   and a stiff-leg deadlift "Deadlift", and the backlog entry reads *"The mapping is right, the labels
+   lie."* A `short` field is that defect with a schema slot to live in. The sentence that fires here is
+   the app's most serious claim — six weeks, no progress, change something — and it must name the lift
+   he actually did.
+2. **A second name field is a second thing a rename has to keep in sync**, and C-6's entire ruling is
+   one stable id and one display name. A rename that updates `n` and leaves `short` stale puts a dead
+   name inside the stall sentence.
+3. **On a user plan there is no short name to have**, so it would need a fallback to the full name
+   anyway — and he would get `No progress on Row, Bulgarian split squat` in one sentence. Two formats
+   is worse than one long one.
+
+The sentence being longer is a real cost and I am accepting it. It reads fine: *"Week 7 and no progress
+on Bent-over row, Squat."* And **not the view's business either** — truncating "Bent-over row" to
+"Row" in a template is the same lie one layer down, where nobody will find it.
+
+---
+
+## 9.3 Item 2 — `reducedWeeks` defaults to 4: **sign off with a change.** `[Certain]`
+
+**Reject the invisible default. Keep the visible one.**
+
+The 4 is the brief's, for PHAT, for a lifter coming off a self-described low-intensity baseline into a
+five-day split. It is not a general fact about reduced-volume blocks, and inferring it onto a plan
+nobody assessed is the app prescribing a block length it has no basis for.
+
+But "no default" must not mean the `cut` flags silently do nothing — he marked them, he meant
+something by it.
+
+```
+Rule: V1a — block length on a plan that declares a cut tier
+Applies to:   V1, on any plan where at least one exercise carries `cut` and the plan declares no
+              block length. Plan editor and Train screen.
+Inputs:       plan.reducedWeeks. No user history.
+Logic:        The plan editor ASKS, at the moment he marks the first exercise `cut`. The picker is
+              PRE-FILLED with 4 and is editable — visible suggestion, his choice, stored on the plan.
+              If the value is absent (an imported or older plan): V1's block does NOT run. Every
+              exercise renders from week 1, no reintroduction ramp, and the app says so. It does
+              not silently assume 4 and it does not silently ignore the flags.
+Output copy:  Editor prompt:  How many weeks at reduced volume before these come back?
+                              Suggested: 4
+              Absent value:   This plan marks accessories to cut but does not say for how long.
+                              Set a block length in the plan, or they all run from week 1.
+Not enough data: covered above — absence is a plan property, not a history property.
+```
+
+The distinction that carries the ruling: **a pre-filled 4 he can see and change is a suggestion; an
+invisible 4 is a prescription.** Same 4, and only one of them is the app deciding his programme for
+him. On PHAT the plan declares 4 explicitly and nothing changes.
+
+---
+
+## 9.4 Item 3 — what "31 sessions" counts: **change it.** `[Certain]`
+
+**Count distinct dates carrying at least one completed set. Keep the word `sessions`.**
+
+The number currently counts *saved sessions*, but it sits in the same line as a week number derived
+from **TW1**, which ruled `[§6a]` that qualifying **distinct dates** are what count and that three
+saves on one date is one day. Two numbers in one sentence must use one definition of a training day,
+or the line contradicts itself: `Week 7 · 31 sessions` where 31 saves happened across 24 dates makes
+the week count look broken, which is exactly the failure C-10 was raised to prevent.
+
+The word `sessions` is right and should stay — a session is a gym visit, and two saves on one date is
+one visit. The "at least one completed set" test is correct and matches B-33's ruling that an exercise
+counts when it has a completed set. A save with a note and no sets is data worth keeping and is not a
+training day.
+
+---
+
+## 9.5 Item 4 — `Log all four lifts weekly`: **confirm the fallback, and replace the string.** `[Certain]`
+
+Correct catch — the string is false at any count but four, and after a plan edit it can be three. The
+fix is not to count; it is to **name them**, which works at every count and is more useful anyway.
+
+```
+Output copy, ST1 thin-data, no lift testable (replaces `Log all four lifts weekly.`):
+  Six weeks in but the log is too thin to test. Log Bent-over row, Flat DB press, Squat and
+  Stiff-leg deadlift weekly.
+
+Output copy, ST1 thin-data, some lifts testable: unchanged, per-lift.
+  Not enough sessions on Stiff-leg deadlift to judge. Log it weekly.
+```
+
+Naming them degrades gracefully to three, two or one with no special case, tells him exactly what to
+do, and never states a count that a plan edit can falsify. **Confirm the per-lift fallback** as
+shipped — it was already the right shape.
+
+---
+
+## 9.6 Item 5 — `From your last session on this.`: **approve, conditionally.** `[Certain]`
+
+Approve the line and approve shipping it in its own field. It is accurate, terse, and it answers the
+question a ghost row raises.
+
+**The condition is PE1.** That field is precisely where the epoch caveat has to live, so its content
+is epoch-dependent:
+
+```
+Same epoch:      From your last session on this.
+Different epoch: 100 × 5, under the old 3 × 3–5. Pick a weight for 8–12.
+```
+
+Keeping it in a separate field, never joined into the approved verdict text, is the right structure and
+is what makes PE1 cheap to add. Ship it as-is today; it becomes conditional when PE1 lands.
+
+---
+
+## 9.7 Item 6 — `painState`'s clearing rule: **confirm, and add a time-based restatement.** `[Likely]`
+
+**Confirm the engineer's reading.** A blank card is not evidence he trained it pain-free, and treating
+"it appeared on screen" as an all-clear would let the notice be dismissed by scrolling past it. In §10
+the word doing the work is `logs`, and the engineer read it correctly.
+
+**But a notice that never changes for six weeks stops being read**, and the state it describes has
+changed: he is not lifting through pain any more, he is avoiding the movement. That is a different
+fact and the app may state it, because it is a fact about his log and not an assessment.
+
+```
+Rule: S1a — a pain notice with no subsequent entry
+Applies to:   Rule S1's notice, per exercise id.
+Inputs:       the date of the most recent matching note; whether any later session logged that
+              exercise (completed set OR note). No new input.
+Logic:        Clearing rule unchanged: the notice stands until a later session logs that exercise
+              with no matching note.
+              Additionally: if 21 days pass with no logged entry for that exercise, the notice text
+              changes once. It NEVER becomes an all-clear and it never disappears on its own.
+Output copy:  Within 21 days: unchanged, Rule S1's referral line.
+              After 21 days:
+                You noted pain on this on 14 Aug and have not logged it since. The app cannot tell
+                you whether it has settled. If it still hurts, see someone qualified to look at it.
+Not enough data: n/a.
+```
+
+The second string does what §10 requires: it states what the log says, declines to assess, and points
+at a person. It does not ask him to test it, because "try it and see" is medical advice and is not the
+app's to give. `[Certain]` on that constraint; `[Opinion]` on 21 days, chosen as three missed
+opportunities at his five-day frequency.
+
+---
+
+## 9.8 Item 7 — `cycleLine` at `trainingWeeks === 0`: **give the zero case.** `[Certain]`
+
+`Week 0 · 2 sessions` is wrong twice: there is no week 0, and it is the **first line he sees on day
+one**, where looking broken is expensive. My shape did only cover `tw >= 1`; filling it now.
+
+```
+Rule: cycleLine, zero and pre-first-week states
+Logic:  no sessions at all              -> the no-history line
+        >= 1 session, trainingWeeks 0   -> no week number. State the count and what unlocks week 1.
+        trainingWeeks >= 1              -> unchanged.
+Output copy:
+  No sessions logged yet.
+  2 sessions logged. A training week is 3, so week 1 starts when you get there.
+  Week 7 · 31 sessions          (unchanged, with 9.4's counting rule)
+```
+
+The middle line is the honest one: it explains the gap between what he has done and what the app
+counts, which is the same explanation TW1 already gives at the other boundary
+(`Week 5 by the calendar, week 3 of real training`). Never print `Week 0`.
+
+---
+
+## 9.9 The `removeExercise` undo — the copy is mine, the fix is not
+
+The dangling-reference bug is engineering. Two coaching points on top of it.
+
+**1. Fewer than four key lifts is a VALID plan.** Do not let `validatePlan` be "fixed" by requiring
+four — a three-day full-body plan naming three lifts is legitimate, and a validator that rejects it
+would block a plan to protect a test. `ok` is the right verdict. What is missing is not validity but
+**disclosure**. `[Certain]`
+
+**2. The app must say when the stall test loses a lift**, because ST1's whole authority is that it is a
+four-lift check agreed in advance. Silently becoming a three-lift check and still printing the brief's
+`[Certain]` diagnosis is the app narrowing its evidence base without telling him. Note this partly
+self-corrects: dropping a key lift fails C7b's four-lifts-present test, so provenance goes FALSE and
+the generic copy fires. He should still be told at the moment it happens.
+
+```
+Output copy, plan editor, on removing an exercise that is a key lift:
+  Bent-over row is one of the lifts the six-week check reads. Removing it leaves 3.
+
+Output copy, Trend tab, whenever ST1 runs with fewer than 4 declared key lifts:
+  Reading 3 of 4 key lifts. Bent-over row is not in this plan.
+
+Output copy, a speed slot whose source was orphaned: no new string. §8.4's SP1 ABSENT copy is
+  already exactly right — `No source lift set for this speed work. Set one in the plan to get a
+  number.` — which is a good sign that the absent state was specified at the right level.
+```
+
+---
+
+## 9.10 Verdict on the eight
+
+| | Ruling |
+|---|---|
+| **PE1** | Neither framing. **Measurements cross a prescription change; prescription-relative comparisons do not.** History is never hidden or re-keyed. P1 is unaffected (history-free); T1 and SP1 self-protect, verified. **The real hazard is the weight prefill**, which types a 3–5RM into an 8–12 slot. Copy given. |
+| **1** | **Plan's full name.** `Bent-over row, Squat`. No `short` field — that is B-27 with a schema slot. My `Row, Squat` example is superseded. |
+| **2** | **Sign off with a change.** Pre-fill 4 in a visible, editable picker; never apply it invisibly. Absent value → the block does not run and the app says so. |
+| **3** | **Change it.** Count distinct dates with ≥ 1 completed set. Keep the word `sessions`. It must share TW1's definition or the line contradicts itself. |
+| **4** | **Confirmed**, and the string replaced: **name the lifts, never count them.** |
+| **5** | **Approved**, conditional on PE1 — that field is where the epoch caveat lives. Ship as-is today. |
+| **6** | **Confirmed.** Plus a one-time restatement after 21 days that names the avoidance, declines to assess, and points at a person. Never an all-clear. |
+| **7** | **Zero case given.** Never print `Week 0`. |
+| **undo** | Fewer than 4 key lifts is a **valid** plan — do not "fix" the validator. Disclosure copy given for the editor and the Trend tab. |
+
+Nothing in §9 changes an `id`, `s`, `lo`, `hi`, `cut` or `k` value, and nothing orphans a logged set.
+PE1 asks for one additive field on the entry and is otherwise pure copy and gating. Three items (9.4,
+9.5-conditional, 9.8) change strings that are shipping; the rest are additive.
