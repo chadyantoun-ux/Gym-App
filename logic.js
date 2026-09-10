@@ -14,7 +14,30 @@
 (function () {
   "use strict";
 
-  var SCHEMA_VERSION = 2;
+  /* Stored shape version. History:
+       1  the original store: no version key at all.
+       2  WO-001 — dateBasis:"utc" markers on every pre-existing row, and one
+          bodyweight row per date. No date value was rewritten, ever.
+       3  WO-003 — four additive state keys on the LOG store, with defaults:
+          reintro:{}, lastReintroDate:{}, calChangedAt:null, deload:null.
+          Nothing existing is rewritten and nothing is removed. In particular
+          `includeCut` STAYS ON DISK: a later item stops reading it, and
+          deleting a key his data already contains is data loss with a tidy
+          justification (WO-003 Decision 6).
+     A store written by any earlier version must still load, forever. */
+  var SCHEMA_VERSION = 3;
+  /* The version that introduced the dateBasis marking pass. A store at or past
+     this has already been marked; running the pass again would relabel rows
+     written AFTER WO-001 (which are local-dated) as "utc". Gate on this, never
+     on SCHEMA_VERSION. */
+  var V_DATEBASIS = 2;
+  /* The keys schema 3 adds to the log store, and their defaults. Built fresh
+     on every call — a shared {} default would be handed to two stores. */
+  var V3_KEYS = ["reintro", "lastReintroDate", "calChangedAt", "deload"];
+  function v3Default(k) {
+    if (k === "reintro" || k === "lastReintroDate") return {};
+    return null;                                 // calChangedAt, deload
+  }
 
   /* Limits. Weight in kg, reps whole. w === 0 is legal: bodyweight rack chins
      and unweighted dips are real sets (B-21). */
@@ -318,7 +341,12 @@
     var v = validateDraft(draft);
     if (!v.ok) return null;
 
-    var day = str(dayId).trim();
+    /* B-38: type-check before trimming. str() coerces, so `0` used to become
+       the dayId "0" and `{}` the dayId "[object Object]" — a session built for
+       a day that is not in PROGRAM, which is exactly what the doc comment
+       above promises cannot happen. A dayId is a string or it is a refusal. */
+    if (typeof dayId !== "string") return null;
+    var day = dayId.trim();
     if (day === "") return null;
 
     var sid;
@@ -334,6 +362,134 @@
     /* Key order is the draft's insertion order, so JSON.stringify is stable
        and QA can assert on the string. */
     return { id: sid, date: date, dayId: day, entries: v.entries };
+  }
+
+  /* --------------------------------------------------- session history */
+
+  /* A session's date, or "" when it has none this code can trust. "" is not a
+     reason to drop the session anywhere below — it is a reason not to let it
+     drive a date-gated rule. */
+  function sessionDate(s) {
+    if (!isObj(s) || typeof s.date !== "string") return "";
+    var d = s.date.trim();
+    return DATE_RE.test(d) ? d : "";
+  }
+
+  /* A logged set counts as COMPLETED when the reps parse to a whole number
+     >= 1 and the weight parses to a number in range. Note what is NOT here:
+     `w > 0`. A rack chin at 0 kg for 10 reps is a completed set, and every
+     rule that reads history must see it (B-21, and B-32 one layer up).
+     Numbers and numeric strings both pass — sets are strings while drafting
+     and numbers once saved, and this has to read both. */
+  function isDoneSet(x) {
+    if (!isObj(x)) return false;
+    return parseWeight(x.w).ok && parseReps(x.r).ok;
+  }
+
+  /* sortSessions(sessions) → a NEW array, ascending by local date.
+     - Never mutates the input, and never copies the session objects: the
+       elements are the same references, so nothing inside a session can be
+       altered or dropped by sorting.
+     - STABLE: two sessions on the same date keep the order they were logged
+       in, which is the order they happened in. The index tiebreak is explicit
+       rather than trusting the engine's sort stability.
+     - Nothing is ever filtered. A session with no usable date sorts FIRST,
+       keeping its relative order: it cannot be placed in time, and treating an
+       undateable row as the most recent one would let it drive the verdict,
+       the stall check and every week gate. It is still in the array.
+     - A non-array in gives an empty array out, never a throw. */
+  function sortSessions(sessions) {
+    if (!Array.isArray(sessions)) return [];
+    var wrapped = sessions.map(function (s, i) {
+      return { s: s, i: i, d: sessionDate(s) };
+    });
+    wrapped.sort(function (a, b) {
+      if (a.d !== b.d) return a.d < b.d ? -1 : 1;
+      return a.i - b.i;
+    });
+    return wrapped.map(function (x) { return x.s; });
+  }
+
+  /* The local Monday that starts the week containing dateStr, as YYYY-MM-DD.
+     Anchored at local noon so a DST shift moves the clock by an hour and never
+     the calendar day. Returns null for an unusable date. */
+  function weekStart(dateStr) {
+    if (typeof dateStr !== "string" || !DATE_RE.test(dateStr.trim())) return null;
+    var t = Date.parse(dateStr.trim() + "T12:00:00");
+    if (isNaN(t)) return null;
+    var back = (new Date(t).getDay() + 6) % 7;      // Mon 0 … Sun 6
+    return localDate(new Date(t - back * 86400000));
+  }
+
+  /* trainingWeeks(sessions, todayStr) → integer.
+
+     The number of local Monday-start weeks that hold at least
+     TRAINING_WEEK_MIN (3) logged sessions, up to and including todayStr.
+
+     This is deliberately NOT weeksIn(). weeksIn() measures elapsed time since
+     the first session, so a fortnight off the gym still buys two weeks. Every
+     rule in this batch that says "week 5" means five weeks of actual training,
+     and unlocking accessories or a deload on the strength of a calendar is the
+     failure this function exists to prevent. The two numbers are different on
+     purpose and must be labelled differently wherever both are shown.
+
+     Rules:
+     - Weeks need not be consecutive; they are counted, not spanned.
+     - Sessions dated after todayStr are not counted. A future-dated row cannot
+       be evidence of training already done. It is not touched or removed.
+     - Sessions with no usable date are not counted, for the same reason.
+     - Two sessions on one date are two sessions. That is what was logged.
+     - Empty log, or one session ever, → 0. One session is not a week. */
+  var TRAINING_WEEK_MIN = 3;
+  function trainingWeeks(sessions, todayStr) {
+    if (!Array.isArray(sessions) || sessions.length === 0) return 0;
+    var today = (typeof todayStr === "string" && DATE_RE.test(todayStr.trim()))
+      ? todayStr.trim() : localDate();
+    var byWeek = {}, n = 0;
+    for (var i = 0; i < sessions.length; i++) {
+      var d = sessionDate(sessions[i]);
+      if (d === "" || d > today) continue;
+      var wk = weekStart(d);
+      if (wk === null) continue;
+      byWeek[wk] = (byWeek[wk] || 0) + 1;
+    }
+    Object.keys(byWeek).forEach(function (k) {
+      if (byWeek[k] >= TRAINING_WEEK_MIN) n++;
+    });
+    return n;
+  }
+
+  /* lastFor(sessions, exId) → the most recent entry for that exercise that has
+     at least one COMPLETED set, or null.
+
+     Scans backwards, so pass a sorted array — boot sorts once and every save
+     keeps it sorted. It does not sort internally: that would hide an unsorted
+     caller, and re-sorting on every card render is work the caller already did.
+
+     The completeness test is isDoneSet: r >= 1 and w a number in range.
+     index.html's old lastFor required `+x.w > 0`, so a 0 kg rack chin was
+     never anybody's last session and the card read `First time logged` for as
+     long as he trained it. That is B-21 surviving one layer up, and the
+     backlog forbids reintroducing it.
+
+     Returns the stored entry BY REFERENCE, for the same reason `sortSessions`
+     does not copy: callers read it. Nothing in PHAT writes through it, and
+     nothing else may either. */
+  function lastFor(sessions, exId) {
+    if (!Array.isArray(sessions)) return null;
+    if (typeof exId !== "string" || exId.trim() === "") return null;
+    var id = exId.trim();
+    for (var i = sessions.length - 1; i >= 0; i--) {
+      var s = sessions[i];
+      if (!isObj(s) || !isObj(s.entries)) continue;
+      if (!Object.prototype.hasOwnProperty.call(s.entries, id)) continue;
+      var e = s.entries[id];
+      if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      for (var j = 0; j < e.sets.length; j++) {
+        if (isDoneSet(e.sets[j])) return e;
+      }
+    }
+    return null;
   }
 
   /* --------------------------------------------------------- migration */
@@ -379,7 +535,7 @@
 
       /* ---- sessions ---- */
       var nlog = null, markedSessions = 0;
-      if (logIsObj && logVer < SCHEMA_VERSION) {
+      if (logIsObj && logVer < V_DATEBASIS) {
         nlog = {};
         Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
         nlog.schemaVersion = SCHEMA_VERSION;
@@ -399,7 +555,7 @@
 
       /* ---- bodyweight ---- */
       var nbw = null, markedBw = 0, dropped = [];
-      if (bwIsObj && bwVer < SCHEMA_VERSION) {
+      if (bwIsObj && bwVer < V_DATEBASIS) {
         nbw = {};
         Object.keys(bw).forEach(function (k) { nbw[k] = bw[k]; });
         nbw.schemaVersion = SCHEMA_VERSION;
@@ -459,10 +615,46 @@
         });
       }
 
+      /* ---- schema 3: additive state keys on the log store (WO-003 D6) ----
+         Adds only what is missing, rewrites nothing, removes nothing. Gated on
+         the ORIGINAL version, not on nlog's — the v1 pass above has already
+         stamped nlog to 3, and reading the version back off it would skip the
+         keys for exactly the oldest stores that need them.
+         `includeCut` is deliberately untouched: it stops being READ later in
+         this batch and stays on disk forever (Decision 6).
+         Nothing is invented from nothing: an absent log store stays absent, so
+         an empty install still boots with zero writes. */
+      var v3Added = [], v3Bumped = false;
+      if (logVer < SCHEMA_VERSION && (nlog || logIsObj)) {
+        if (!nlog) {
+          nlog = {};
+          Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
+        }
+        V3_KEYS.forEach(function (k) {
+          if (!Object.prototype.hasOwnProperty.call(nlog, k)) {
+            nlog[k] = v3Default(k);
+            v3Added.push(k);
+          }
+        });
+        v3Bumped = nlog.schemaVersion !== SCHEMA_VERSION;
+        nlog.schemaVersion = SCHEMA_VERSION;
+        if (v3Added.length || v3Bumped) {
+          notes.push({
+            level: "info", key: "log",
+            msg: "Schema " + SCHEMA_VERSION + ": added " +
+                 (v3Added.length ? v3Added.join(", ") : "no new key") +
+                 ". No existing value was changed."
+          });
+        }
+      }
+
       if (nlog) out.log = nlog;
       if (nbw) out.bw = nbw;
-      /* changed drives the boot write. An empty store must not trigger one. */
-      out.logChanged = hadLegacy;
+      /* changed drives the boot write. An empty store must not trigger one.
+         The bodyweight store carries no schema-3 key, so a v2 bw store is not
+         rewritten just to restamp its version — bwPayload() stamps it on the
+         next real bodyweight entry. One less boot write, no content at stake. */
+      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped;
       out.bwChanged = markedBw > 0 || dropped.length > 0;
       out.changed = out.logChanged || out.bwChanged;
       return out;
@@ -491,6 +683,12 @@
     validateDraft: validateDraft,
     classifyDraftPayload: classifyDraftPayload,
     buildSession: buildSession,
+    isDoneSet: isDoneSet,
+    sortSessions: sortSessions,
+    weekStart: weekStart,
+    TRAINING_WEEK_MIN: TRAINING_WEEK_MIN,
+    trainingWeeks: trainingWeeks,
+    lastFor: lastFor,
     migrateStore: migrateStore
   };
 })();

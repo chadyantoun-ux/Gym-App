@@ -1509,7 +1509,10 @@ async function finish(){
   }
   /* Build the next log without mutating S.sessions: a failed save used to
      leave a phantom session in memory that a retry would duplicate. */
-  const next=S.sessions.concat([sess]);
+  /* Sorted on the way to disk: a draft started yesterday and saved today must
+     land in date order, not at the end. sortSessions returns a new array and
+     never touches S.sessions, so a failed save still leaves memory untouched. */
+  const next=PHAT.sortSessions(S.sessions.concat([sess]));
   const ok=await save(LOG,Object.assign(logPayload(),{sessions:next}));
   /* Keep the scroll: the failure line renders where Save is, and throwing him
      to the top of a ten-exercise page to hide it would be its own bug. */
@@ -1577,8 +1580,15 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
     S.bwMeta={}; Object.keys(m.bw).forEach(k=>{ if(k!=="entries") S.bwMeta[k]=m.bw[k]; });
     S.bw=Array.isArray(m.bw.entries)?m.bw.entries:[];
   }
-  /* Only writes when the migration actually marked something. An empty store
-     boots with zero writes; the version lands on the first real save. */
+  /* Sorted once, here, after the migration and before the first render, and
+     kept sorted by every save. lastFor and every week gate scan this array in
+     order; an array in insertion order gives the wrong "last session" the
+     first time a draft started yesterday is saved today (audit D-9). Sorting
+     reorders references — it copies nothing, drops nothing, edits nothing. */
+  S.sessions=PHAT.sortSessions(S.sessions);
+  /* Only writes when the migration actually marked or added something. An
+     empty store boots with zero writes; the version lands on the first real
+     save. Sorting alone does not trigger a write — order is not data. */
   if(m.logChanged) await save(LOG,logPayload());
   if(m.bwChanged) await save(BWK,bwPayload());
   if(m.notes&&m.notes.length) console.info("[phat] migration:",m.notes);
