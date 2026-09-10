@@ -2734,7 +2734,7 @@
 
   /* ---------------------------------------------------------- verdict */
 
-  /* verdict(ctx) -> {t, x, x2, rule} | null
+  /* verdict(ctx) -> {t, x, x2, rule, absent, absentLines, absentLine} | null
 
      ctx = { ex, sets, prev, note, painFlag }
        ex        {id, n, s, lo, hi, k, inc?, implement?}          required
@@ -2788,6 +2788,13 @@
      cannot read. An ABSENT-SHAPED OBJECT (addendum §9.12) means "no verdict,
      and here is why" — only ever for an unrecognised `k`. A caller must test
      `.absent`, never truthiness, to tell a verdict from an explanation.
+
+     `absent` IS ALWAYS PRESENT ON AN OBJECT RETURN: `false` on a real
+     verdict, with `absentLines` `[]` and `absentLine` `""`; `true` on the
+     explanation, with the copy. It used to be missing entirely from a real
+     verdict, so `if (v.absent)` and `hasOwnProperty("absent")` disagreed
+     about the same object. `null` is the third state and is unchanged — no
+     fields at all, because there is nothing to render and nothing to explain.
 
      PURITY: returns a new object built from new numbers. `ctx`, `ctx.sets` and
      `ctx.prev` are never written to, and nothing here reads or writes storage.
@@ -2865,12 +2872,26 @@
 
     /* Rule DL1. Above verdictPower and verdictHyp, which are not exported and
        are called from nowhere else — so during an active deload no P1 case and
-       no H1 case is reachable by any path. */
-    if (dl) return verdictDeload(ex, C);
+       no H1 case is reachable by any path.
+
+       EVERY SUCCESS PATH BELOW GOES THROUGH notAbsent(), for the same reason
+       volumeTier, stallReport, speedLoad and cycleLine do: a real verdict
+       carried NO `absent` property at all, so the flag existed on one branch
+       and not the other. `if (v.absent)` cannot tell the difference;
+       `hasOwnProperty("absent")`, a key walk, `JSON.stringify` and a diff of
+       two verdicts all can, and a caller that reaches for one of those is
+       reaching for it because truthiness was not enough. The asymmetry is not
+       wanted - it is just what markAbsent-only normalisation leaves behind -
+       so both branches now ship the same three fields, `false` / `[]` / `""`
+       against `true` / lines / line. Rendering is unchanged: an empty
+       `absentLine` prints nothing, and nothing reads `absentLines` without
+       checking `absent` first. mk() is left alone deliberately; the shape
+       belongs to what verdict() RETURNS, not to every intermediate. */
+    if (dl) return notAbsent(verdictDeload(ex, C));
 
     var pain = (typeof ctx.painFlag === "boolean") ? ctx.painFlag : painFlag(ctx.note);
 
-    if (ex.k === "power") return verdictPower(ex, C, pain);
+    if (ex.k === "power") return notAbsent(verdictPower(ex, C, pain));
 
     /* Rule PE1. Computed HERE from the entry rather than trusted from the
        caller, so a view that forgets to pass anything still cannot compare
@@ -2887,7 +2908,7 @@
     var praw = ctx.prev;
     if (isObj(praw) && Array.isArray(praw.sets)) praw = praw.sets;
     var Cprev = Array.isArray(praw) ? completedSets(praw).slice(0, s) : null;
-    return verdictHyp(ex, C, Cprev, pain, epoch);
+    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch));
   }
 
   /* ==================================================== Rule W1 - W7
@@ -4452,12 +4473,58 @@
      STRICTLY days[0]. It does NOT scan forward for the first day that happens
      to carry a name: naming day two while day one exists sends him to the
      wrong session, which is worse than saying nothing. An unnamed first day
-     falls back to "" and the caller drops the clause. */
+     falls back to "" and the caller drops the clause.
+
+     THE NAME MUST ALREADY BE A STRING. `str(d.name)` used to coerce, so a
+     stored `name: 42` printed `Start with 42.` - and validatePlan requires
+     `typeof d.name === "string"`, so the stored shape and the validator's
+     claim disagreed, the same gap as the `lift: 42` contract note. It is
+     unreachable from the plan editor and reachable from a corrupt store or an
+     import (WO-002), which is exactly where a coerced guess is worst: the
+     value is not a name, and the honest output is no name at all. Nothing
+     else in this file coerces to build a sentence that points at a session. */
   function planFirstDayName(plan) {
     var p = isPlanDoc(plan) ? plan : null;
     if (!p || !Array.isArray(p.days) || !p.days.length) return "";
     var d = p.days[0];
-    return isObj(d) ? str(d.name).trim() : "";
+    if (!isObj(d) || typeof d.name !== "string") return "";
+    return d.name.trim();
+  }
+
+  /* The day-one name for a CALLER'S plan argument, which is not the same
+     question planFirstDayName answers.
+
+     Every engine in this file resolves `isPlanDoc(c.plan) ? c.plan :
+     PHAT_PLAN`, and that default is right for an engine: a rule that must not
+     fail confident falls back to the shipped programme's block length, cut
+     tier and reintroduction order, and the worst case is advice calibrated to
+     PHAT. It is WRONG for a line that NAMES A SESSION BY NAME. A plan whose
+     `days` is not an array fails isPlanDoc, the default takes over, and the
+     first sentence the app speaks becomes `Start with Upper power.` - naming
+     a session out of a plan he is not running.
+
+     THE RULE: absent means PHAT, unreadable means silence.
+       - no plan argument at all (undefined/null) -> the shipped plan, exactly
+         as documented; an absent plan MEANS the PHAT plan everywhere else in
+         this file and this is not the place to invent a second meaning
+       - a plan document -> its own days[0]
+       - anything else the caller supplied -> "" , and the caller drops the
+         clause to the plain no-history line
+
+     It NAMES NOTHING rather than refusing in words. A refusal ("your plan
+     cannot be read") is new user-facing copy, which is the coach's to write,
+     and it would put a diagnostic about the data model in the slot that is
+     supposed to point him at a barbell. `No sessions logged yet.` is already
+     the signed-off line for "the plan cannot name a first day" (§9.8, and the
+     unnamed-day fallback above), it is true of an unreadable plan, and it
+     costs one branch. The invented session name is the defect; nothing else
+     about this line was wrong.
+
+     Reachable when the plan editor (WO-004 W15) or the WO-002 importer lands,
+     not before - fixed now, while it is one branch. */
+  function dayOneName(raw) {
+    if (raw === undefined || raw === null) return planFirstDayName(PHAT_PLAN);
+    return isPlanDoc(raw) ? planFirstDayName(raw) : "";
   }
 
   /* Small-number English, so the weeks-1-4 sentence can carry a plan's own
@@ -4524,8 +4591,22 @@
       out.count = firstDay ? "No sessions logged. Start with " + firstDay + "."
                            : "No sessions logged yet.";
     } else if (tw === 0) {
-      out.count = nSess + (nSess === 1 ? " session" : " sessions") + " logged. A training week is " +
-                  TRAINING_WEEK_MIN + ", so week 1 starts when you get there.";
+      /* §9.13 ruling 3 (2026-09-10), superseding the middle line of §9.8 and
+         the second line of §9.12. The struck clause - "A training week is 3,
+         so week 1 starts when you get there" - states the rule as a COUNT
+         where the rule is about CONCENTRATION. It was never right; three
+         logged sessions is only where it becomes obviously wrong, because he
+         has done three and is being told a training week is three. The
+         replacement reads correctly at every count, needs no branch, and
+         names what is actually missing from his log: he has the sessions,
+         they are spread out, concentration is the gap.
+
+         "three" IS SPELLED, NOT INTERPOLATED, and that is deliberate: the
+         sentence is one sentence about one week, and TRAINING_WEEK_MIN is a
+         constant this copy does not parameterise. If the minimum ever moves,
+         the sentence is rewritten by the coach, not re-interpolated here. */
+      out.count = nSess + (nSess === 1 ? " session" : " sessions") +
+                  " logged. Week 1 starts when three land in one week.";
     }
 
     if (hasSessions && cw !== tw && tw > 0) {
@@ -4643,9 +4724,11 @@
     var declared = planReducedDeclared(plan);
     var runs = tier && declared !== null;
     var tot = accessoryTotals(program, state);
+    /* `c.plan`, NOT the resolved `plan`: an unreadable plan may set this
+       engine's defaults, but it may not name a session. See dayOneName. */
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
                           rw, runs, loggedSessions(sessions, today),
-                          planFirstDayName(plan));
+                          dayOneName(c.plan));
 
     var order = runs ? orderFor(dayId, exList, declaredOrder(plan, dayId)) : [];
     /* Inside the reduced-volume block: zero, and there is no override anywhere
@@ -5561,7 +5644,10 @@
      printing both is the app repeating itself to a man trying to pick a day).
 
        no sessions          No sessions logged. Start with Upper power.
-       tw 0, sessions       n sessions logged. A training week is 3, ...
+                            (the PLAN's first day; a plan that cannot name one
+                            - or that the engine cannot read at all - drops
+                            the clause to "No sessions logged yet.")
+       tw 0, sessions       n sessions logged. Week 1 starts when three ...
        tw 1-4               Week n of 4 at reduced volume ...
        tw 5                 Week 5 - n of 9 accessories back in.
        tw 5, all back       Full volume. All 9 accessories are in.
@@ -5596,8 +5682,11 @@
       back: (typeof c.back === "number" && isFinite(c.back)) ? c.back : 0,
       cuts: (typeof c.cuts === "number" && isFinite(c.cuts)) ? c.cuts : 0
     };
+    /* `c.plan`, NOT the resolved `plan` - see dayOneName. This is the slot
+       where the invented session name would have rendered: top of Home, first
+       sentence, day one. */
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
-                          rw, runs, nSess, planFirstDayName(plan));
+                          rw, runs, nSess, dayOneName(c.plan));
     /* PRECEDENCE AT ZERO AND AT ONE TO TWO SESSIONS (§9.12 ruling 3): the
        count line WINS over the reduced-volume line. Both are true, but at
        trainingWeeks 0 the number that looks broken is the week count, and the
