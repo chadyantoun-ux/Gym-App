@@ -1748,6 +1748,1125 @@
     return out;
   }
 
+  /* --------------------------------------------------- shared plumbing
+     Used by SP1, V1 and D1 below. Nothing here is exported. */
+
+  /* Own-property test. `reintro["constructor"]` is a function on every object
+     literal, and a day id is a string that arrives from stored JSON. */
+  function own(o, k) {
+    return isObj(o) && typeof k === "string" &&
+           Object.prototype.hasOwnProperty.call(o, k);
+  }
+
+  /* Shallow copy, the setCalChanged shape. Never a deep clone: the state's
+     sessions array comes out BY REFERENCE and untouched, which is the point -
+     a state setter may not rewrite a logged set even by accident. */
+  function copyObj(o) {
+    var out = {};
+    if (isObj(o)) Object.keys(o).forEach(function (k) { out[k] = o[k]; });
+    return out;
+  }
+
+  /* A stored value that is a usable local date, or null. */
+  function dateOrNull(v) {
+    return (typeof v === "string" && DATE_RE.test(v.trim())) ? v.trim() : null;
+  }
+
+  /* "Row and DB press" / "Row, Bench and Squat". Comma-joined with a final
+     `and`, matching ST1's warning style (audit section 4). */
+  function andList(names) {
+    var a = [];
+    for (var i = 0; i < names.length; i++) {
+      var s = str(names[i]).trim();
+      if (s !== "") a.push(s);
+    }
+    if (!a.length) return "";
+    if (a.length === 1) return a[0];
+    return a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+  }
+
+  /* ==================================================== Rule SP1 - W12
+     Speed-work load. audit section 7, with addendum S2a.
+
+     WHAT THIS REPLACES. The speed card prints `65-70% of your power-day top
+     set. Rest 60-90 seconds.` and leaves him doing arithmetic between sets
+     with chalky hands. "Top set" is also not a 3-5RM: his top set could be a
+     3-rep grinder or an easy 5.
+
+     R is the heaviest COMPLETED set on the mapped power lift with reps in
+     [3,5], inside the window. A 90x8 is excluded even though it implies a
+     3-5RM near 105: inferring that and printing 71 kg dresses an estimate up
+     as a measurement (audit section 7, worked example 3).
+
+     NEVER CACHED. Recomputed from history every session, which is also why
+     Rule S2 leaves it alone (addendum S2a): P1 holds the source lift's load
+     while a pain flag is live and R is a historical maximum, so this number
+     cannot climb during a flagged period. Shaving a load off a keyword match
+     would be re-prescribing, which audit section 10 forbids. The target, the
+     band and speedTooHeavy all print unchanged under a pain flag.
+
+     PURITY AND DATA. Nothing here mutates `sessions`, writes storage, or
+     touches a logged value. speedTooHeavy is ADVICE: a true return may never
+     block a save, alter a stored set or change what is on screen in the
+     weight field. */
+
+  var SPEED_SRC = { d3a: "d1a", d4a: "d2a", d5a: "d1d" };
+  var SP1_MID = 0.675;       /* the printed target                        */
+  var SP1_BAND_LO = 0.65;
+  var SP1_BAND_HI = 0.70;
+  var SP1_CAP = 0.75;        /* above this it is not speed work           */
+  var SP1_REP_LO = 3, SP1_REP_HI = 5;
+  var SP1_WINDOW = 28;       /* [today-28 .. today]                       */
+  var SP1_WIDE = 56;
+  var SP1_INSTRUCTION = "If a rep slows down, the set is over. Cut the weight, not the sets.";
+
+  /* The heaviest qualifying set on `srcId` inside [today-days .. today], or
+     null. Heaviest wins on weight; the LATER date wins a tie, so the source
+     quoted on the card is the most recent time he lifted it.
+
+     w > 0 is required. R = 0 would make every load above 0 "too heavy" - the
+     coach's ruling on SP1: the rule requires R > 0 or speedTooHeavy(w, 0)
+     flags every set ever logged. A 0 kg source set is also not a 3-5RM. */
+  function sp1Source(sessions, srcId, todayStr, days) {
+    if (!Array.isArray(sessions)) return null;
+    var today = safeToday(todayStr);
+    var from = dateAdd(today, -days);
+    if (from === null) return null;
+    var best = null, i, j, s, d, e, n;
+    for (i = 0; i < sessions.length; i++) {
+      s = sessions[i];
+      d = sessionDate(s);
+      if (d === "" || d < from || d > today) continue;
+      if (!isObj(s) || !isObj(s.entries) || !own(s.entries, srcId)) continue;
+      e = s.entries[srcId];
+      if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      for (j = 0; j < e.sets.length; j++) {
+        n = numSet(e.sets[j]);
+        if (!n) continue;
+        if (n.r < SP1_REP_LO || n.r > SP1_REP_HI) continue;
+        if (!(n.w > 0)) continue;
+        if (best === null || n.w > best.w || (n.w === best.w && d > best.date)) {
+          best = { w: n.w, r: n.r, date: d };
+        }
+      }
+    }
+    return best;
+  }
+
+  /* speedLoad(sessions, exId, todayStr, srcName)
+       -> { exId, srcId, target, lo, hi, source:{w,r,date}|null, srcWindow,
+            reason, text, instruction }
+
+     `target` is null whenever there is no number to print, and `reason` says
+     why: "unknown" (not a speed slot), "no-source" (nothing in 56 days).
+     `srcName` is the source exercise's CURRENT name from PROGRAM - the
+     fallback copy interpolates it (WO-003 Decision 5), so B-28's rename
+     reaches this string without touching this file. Omit it and the fallback
+     names the id, which is visibly wrong rather than quietly stale.
+
+     `srcWindow` is 28 or 56 - which window produced R - or null. The card does
+     not have to say, but a test does, and so does anyone reading a number
+     that came from seven weeks ago.
+
+     Never throws, never mutates, never caches. */
+  function speedLoad(sessions, exId, todayStr, srcName) {
+    var id = str(exId).trim();
+    var out = {
+      exId: id, srcId: null, target: null, lo: null, hi: null,
+      source: null, srcWindow: null, reason: null, text: "",
+      instruction: SP1_INSTRUCTION
+    };
+    if (!own(SPEED_SRC, id)) {
+      out.reason = "unknown";
+      return out;
+    }
+    out.srcId = SPEED_SRC[id];
+    var name = (typeof srcName === "string" && srcName.trim() !== "")
+      ? srcName.trim() : out.srcId;
+
+    var src = sp1Source(sessions, out.srcId, todayStr, SP1_WINDOW);
+    var win = SP1_WINDOW;
+    if (src === null) { src = sp1Source(sessions, out.srcId, todayStr, SP1_WIDE); win = SP1_WIDE; }
+    if (src === null) {
+      out.reason = "no-source";
+      out.text = "Log a heavy triple on " + name +
+                 " and this becomes a number. Until then: 65–70% of a weight you could triple.";
+      return out;
+    }
+
+    out.source = { w: src.w, r: src.r, date: src.date };
+    out.srcWindow = win;
+    out.target = round2p5(src.w * SP1_MID);
+    out.lo = round2p5(src.w * SP1_BAND_LO);
+    out.hi = round2p5(src.w * SP1_BAND_HI);
+    out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
+               " kg triple. Rest 60–90 s. Fast, never grinding.";
+    return out;
+  }
+
+  /* speedTooHeavy(w, R) -> Boolean. R is the source max, NOT the target.
+     False on anything unreadable and false when R is not above zero: the
+     coach's ruling, because `w > 0 * 0.75` is true for every set ever logged
+     and a flag that fires always is a flag he learns to ignore.
+
+     ADVICE ONLY. The caller renders a line; it does not touch the field, the
+     draft or the saved session (W13's data-loss criterion). */
+  function speedTooHeavy(w, R) {
+    var pw = parseWeight(w);
+    if (!pw.ok) return false;
+    if (typeof R !== "number" || !isFinite(R) || !(R > 0)) return false;
+    return pw.value > R * SP1_CAP;
+  }
+
+  /* The flag's copy: `110 kg is not speed work. Drop to 95 kg.`
+     "" when there is no target to drop to - the app never says `Drop to 0 kg`
+     (Rule Z2), and it never flags a load it cannot name an alternative to. */
+  function speedFlagText(w, target) {
+    var pw = parseWeight(w);
+    if (!pw.ok) return "";
+    if (typeof target !== "number" || !isFinite(target) || !(target > 0)) return "";
+    return kg(pw.value) + " kg is not speed work. Drop to " + kg(target) + " kg.";
+  }
+
+  /* =============================================== Rule S2 - painWindow
+     Landed here, ahead of W16, because Rule V1's offer gate cannot be built
+     without it (addendum S2b). W16 owns the rest of S1/S2: the per-exercise
+     notice, the commit-time flag and ST1's appended line. It should CALL this,
+     not write a second copy of the window.
+
+     painWindow(sessions, todayStr, days, program)
+       -> {active, exIds, names, lastDate}
+
+     Scans every entry note in sessions dated [today-(days-1) .. today] for a
+     painFlag match. `days` defaults to 7. `program` is optional and is only
+     used to turn ids into names; without it `names` mirrors `exIds`.
+
+     Minimum data: none. No sessions in the window -> active false. Absence is
+     never read as a signal, the same principle as D1's "absence is not
+     fatigue" - a man who writes no notes is not a man in pain. */
+  var PAIN_DAYS = 7;
+  function painWindow(sessions, todayStr, days, program) {
+    var out = { active: false, exIds: [], names: [], lastDate: null };
+    if (!Array.isArray(sessions)) return out;
+    var n = (typeof days === "number" && isFinite(days) && days >= 1) ? Math.floor(days) : PAIN_DAYS;
+    var today = safeToday(todayStr);
+    var from = dateAdd(today, -(n - 1));
+    if (from === null) return out;
+    var seen = {}, i, k, s, d, ids, e;
+    for (i = 0; i < sessions.length; i++) {
+      s = sessions[i];
+      d = sessionDate(s);
+      if (d === "" || d < from || d > today) continue;
+      if (!isObj(s.entries)) continue;
+      ids = Object.keys(s.entries);
+      for (k = 0; k < ids.length; k++) {
+        e = s.entries[ids[k]];
+        if (!isObj(e) || !painFlag(e.note)) continue;
+        out.active = true;
+        if (!own(seen, ids[k])) { seen[ids[k]] = true; out.exIds.push(ids[k]); }
+        if (out.lastDate === null || d > out.lastDate) out.lastDate = d;
+      }
+    }
+    out.exIds.sort();
+    out.names = out.exIds.map(function (id) { return exName(program, id); });
+    return out;
+  }
+
+  /* ===================================================== Rule V1 - W14
+     The volume tier and accessory reintroduction. audit section 5, with
+     addendum S2b (pain suppresses the OFFER and nothing else) and 6a/6c
+     (weeks are counted in distinct training DAYS).
+
+     WHAT THIS REPLACES. One global boolean, S.includeCut, that adds all nine
+     cut exercises back in a single tap, under copy that says "leave this off
+     for the first four weeks" and then never mentions it again. Two failure
+     modes and he is one tap from either: tick it in week 2 and bury himself -
+     the exact outcome the brief's warning exists to prevent - or never tick it
+     and train reduced volume forever.
+
+     THE GATE IS trainingWeeks, NEVER THE CALENDAR. Five calendar weeks with
+     two sessions in two of them is week 3 of real training, and the tier line
+     says so out loud. Gating this on elapsed time is how a checkbox becomes
+     nine accessories in week 2 by another route.
+
+     WHAT THIS FUNCTION MAY AND MAY NOT DO. It changes what he is ASKED to do.
+     It may never change what he has already logged: an exercise the tier hides
+     that carries anything in the current draft comes back in `exerciseIds`
+     and is named in `kept`, so the card renders and the sets save. Nothing
+     here reads or writes storage, and the stored `includeCut` key is never
+     touched or read (WO-003 Decision 6). */
+
+  /* Per-day reintroduction order (audit section 5). Rule data from the coach,
+     not programme data - which is why it lives here as ids and why the NAMES
+     come from the caller's PROGRAM. Note d4 and d5 are NOT in programme
+     order; that is the coach's ordering and it ships as written. */
+  var REINTRO_ORDER = {
+    d1: ["d1c"],
+    d2: ["d2c"],
+    d3: ["d3d", "d3g"],
+    d4: ["d4g", "d4c"],
+    d5: ["d5d", "d5j", "d5g"]
+  };
+  var V1_WEEK = 5;           /* trainingWeeks before any offer            */
+  var V1_COOLDOWN = 7;       /* days between offers, per day id           */
+
+  function findDay(program, dayId) {
+    if (!Array.isArray(program)) return null;
+    var id = str(dayId).trim();
+    for (var i = 0; i < program.length; i++) {
+      if (isObj(program[i]) && str(program[i].id).trim() === id) return program[i];
+    }
+    return null;
+  }
+
+  /* An exercise's display name from the caller's PROGRAM, or the id. The id is
+     a visibly wrong name rather than a blank or a stale one. */
+  function exName(program, exId) {
+    var id = str(exId).trim();
+    if (id === "") return "";
+    var list = Array.isArray(program) ? program : [];
+    for (var i = 0; i < list.length; i++) {
+      var d = list[i];
+      if (!isObj(d)) continue;
+      var ex = Array.isArray(d.ex) ? d.ex : (Array.isArray(d) ? d : null);
+      if (!ex) continue;
+      for (var j = 0; j < ex.length; j++) {
+        if (isObj(ex[j]) && str(ex[j].id).trim() === id) {
+          return (typeof ex[j].n === "string" && ex[j].n.trim() !== "") ? ex[j].n : id;
+        }
+      }
+    }
+    return id;
+  }
+
+  function exNameIn(exList, exId) {
+    var id = str(exId).trim();
+    if (!Array.isArray(exList)) return id;
+    for (var i = 0; i < exList.length; i++) {
+      if (isObj(exList[i]) && str(exList[i].id).trim() === id) {
+        return (typeof exList[i].n === "string" && exList[i].n.trim() !== "") ? exList[i].n : id;
+      }
+    }
+    return id;
+  }
+
+  function cutIdsOf(exList) {
+    var out = [];
+    if (!Array.isArray(exList)) return out;
+    for (var i = 0; i < exList.length; i++) {
+      var e = exList[i];
+      if (isObj(e) && e.cut && str(e.id).trim() !== "") out.push(str(e.id).trim());
+    }
+    return out;
+  }
+
+  /* The day's reintroduction order, reconciled with the day it is applied to.
+     Ids the coach listed that this build's PROGRAM does not mark cut:1 are
+     dropped; cut:1 ids the coach did not list are APPENDED in programme order.
+     Neither should ever happen - but the failure mode of the alternative is an
+     accessory that can never be reintroduced, or a counter that points past
+     the end of the list, and neither is worth a throw. */
+  function orderFor(dayId, exList) {
+    var cuts = cutIdsOf(exList);
+    var id = str(dayId).trim();
+    var listed = own(REINTRO_ORDER, id) ? REINTRO_ORDER[id] : [];
+    var out = [], i;
+    for (i = 0; i < listed.length; i++) {
+      if (cuts.indexOf(listed[i]) >= 0 && out.indexOf(listed[i]) < 0) out.push(listed[i]);
+    }
+    for (i = 0; i < cuts.length; i++) {
+      if (out.indexOf(cuts[i]) < 0) out.push(cuts[i]);
+    }
+    return out;
+  }
+
+  function counterOf(state, dayId) {
+    var r = (isObj(state) && isObj(state.reintro)) ? state.reintro : null;
+    var v = own(r, str(dayId).trim()) ? r[str(dayId).trim()] : 0;
+    return (typeof v === "number" && isFinite(v) && v > 0) ? Math.floor(v) : 0;
+  }
+
+  function stampOf(state, dayId) {
+    var m = (isObj(state) && isObj(state.lastReintroDate)) ? state.lastReintroDate : null;
+    return own(m, str(dayId).trim()) ? dateOrNull(m[str(dayId).trim()]) : null;
+  }
+
+  /* {back, cuts} across the WHOLE programme, for the status and cycle lines.
+     Each day's counter is clamped to that day's cut count on the way out, so
+     a counter that somehow ran past its list can never print "10 of 9". */
+  function accessoryTotals(program, state) {
+    var out = { back: 0, cuts: 0 };
+    if (!Array.isArray(program)) return out;
+    for (var i = 0; i < program.length; i++) {
+      var d = program[i];
+      if (!isObj(d)) continue;
+      var c = cutIdsOf(d.ex).length;
+      out.cuts += c;
+      out.back += Math.min(counterOf(state, d.id), c);
+    }
+    return out;
+  }
+
+  /* calendarWeeks(sessions, todayStr) -> integer.
+     Monday-start weeks from the first TRAINING day's week to todayStr's week,
+     inclusive. This is {cw} in the UX spec: the number he gets by counting on
+     a calendar, and the one that diverges from trainingWeeks. Both are shown
+     together or neither is - a week number he cannot reproduce is a number he
+     stops trusting (UX spec 1.3). */
+  function calendarWeeks(sessions, todayStr) {
+    var days = trainingDays(sessions, todayStr);
+    if (!days.length) return 0;
+    var a = weekStart(days[0]), b = weekStart(safeToday(todayStr));
+    if (a === null || b === null) return 0;
+    var g = dayGap(a, b);
+    if (g === null || g < 0) return 0;
+    return Math.floor(g / 7) + 1;
+  }
+
+  /* Does the draft hold anything at all for this exercise? A non-blank weight,
+     a non-blank rep count, or a note. All three are his, and the tier hides
+     none of them (UX spec 0.1 rule 2, WO-003 W14's data-loss criterion). */
+  function draftHas(draft, exId) {
+    if (!isObj(draft)) return false;
+    var entries = isObj(draft.entries) ? draft.entries : draft;
+    if (!own(entries, exId)) return false;
+    var e = entries[exId];
+    if (!isObj(e)) return false;
+    if (typeof e.note === "string" && e.note.trim() !== "") return true;
+    if (!Array.isArray(e.sets)) return false;
+    for (var i = 0; i < e.sets.length; i++) {
+      var s = e.sets[i];
+      if (!isObj(s)) continue;
+      if (str(s.w).trim() !== "" || str(s.r).trim() !== "") return true;
+    }
+    return false;
+  }
+
+  /* The programme-state lines, in one place, because two functions print them
+     and the copy may not drift between them (audit section 5, section 8, UX
+     spec 1.2/1.3). Returns every candidate; the callers choose by precedence.
+       row         the "where am I" line for this week
+       status      the accessory count line, weeks 5+
+       divergence  calendar week vs training week, when they differ
+       explain     the one sentence that answers the divergence */
+  function tierLines(tw, cw, back, cuts, hasSessions, dl) {
+    var out = { row: "", status: "", divergence: "", explain: "" };
+    if (isObj(dl) && dl.active) {
+      out.row = dl.text;
+      return out;
+    }
+    if (!hasSessions) return out;
+
+    if (cw !== tw && tw > 0) {
+      out.divergence = "Week " + cw + " by the calendar, week " + tw + " of real training." +
+                       (tw < V1_WEEK ? " Reduced volume holds." : "");
+      out.explain = "A training week is a week with three or more logged sessions.";
+    }
+
+    if (back >= cuts && cuts > 0 && tw >= V1_WEEK) {
+      out.status = "Full volume. All " + cuts + " accessories are in.";
+    } else if (tw >= V1_WEEK) {
+      out.status = "Week " + tw + " · " + back + " of " + cuts + " accessories back in.";
+    }
+
+    if (tw === 0) {
+      out.row = "Reduced volume until you have logged four weeks of three or more sessions.";
+    } else if (tw <= 4) {
+      out.row = "Week " + tw + " of 4 at reduced volume. The cut exercises come back from week 5.";
+    } else if (tw === V1_WEEK) {
+      out.row = out.status;
+    } else {
+      out.row = "Week " + tw + " · full volume phase · " + back + " of " + cuts +
+                " accessories back · last deload: " +
+                (isObj(dl) && dl.last ? dayMon(dl.last) : "none");
+    }
+    return out;
+  }
+
+  /* volumeTier(ctx)
+       -> { dayId, trainingWeeks, calendarWeeks, exerciseIds, prescribed, kept,
+            reintroduced, offer:{exId,name,dayId}|null, offerLine,
+            blocked, blockedLine, back, cuts, dayBack, dayCuts,
+            statusLine, tierLine, tierNote, deload:{active,day} }
+
+     ctx = { dayId, program, exercises, sessions, state, todayStr, stallReport,
+             deload, draft }
+
+     ONE CONTEXT OBJECT, not the positional list in WO-003 W14 - and the
+     deviation is deliberate, so read this before "fixing" it. The work order's
+     signature cannot satisfy its own acceptance criteria: `exerciseIds`
+     needs the day's exercises, `statusLine` needs every day's cut count, the
+     offer needs the exercise's NAME, and the data-loss criterion needs the
+     current draft. That is four inputs it does not carry, and WO-003
+     Decision 3 already ruled that a rule which grows inputs mid-batch takes an
+     object, because three signature changes are three chances to drop an
+     argument silently.
+
+     `program` is the caller's PROGRAM. This file does not hold a copy of it:
+     stallReport takes keyLifts for the same reason. Two copies of his
+     programme is two places a rep range can drift, and the one in index.html
+     is the one he trains from. `exercises` overrides the day lookup for a
+     caller that only has one day.
+
+     `state` is the log store: {reintro, lastReintroDate, ...}. Read only.
+     `deload` overrides state.deload for a caller holding it separately.
+
+     Fails OPEN, never throws (UX spec 1.7): garbage in gives the base
+     exercises, no offer and empty lines. A partial day is never returned and a
+     populated card is never hidden. */
+  function volumeTier(ctx) {
+    var c = isObj(ctx) ? ctx : {};
+    var today = safeToday(c.todayStr);
+    var sessions = Array.isArray(c.sessions) ? c.sessions : [];
+    var program = Array.isArray(c.program) ? c.program : null;
+    var dayId = str(c.dayId).trim();
+    var day = findDay(program, dayId);
+    var exList = Array.isArray(c.exercises) ? c.exercises
+               : (day && Array.isArray(day.ex) ? day.ex : []);
+    var state = isObj(c.state) ? c.state : {};
+    var dl = deloadStatus((c.deload !== undefined) ? { deload: c.deload } : state, today);
+
+    var tw = trainingWeeks(sessions, today);
+    var cw = calendarWeeks(sessions, today);
+    var tot = accessoryTotals(program, state);
+    var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl);
+
+    var order = orderFor(dayId, exList);
+    /* Weeks 1-4: zero, and there is no override anywhere in the app.
+       During a deload: zero, accessories are out (audit section 8). The
+       counter is NOT decremented for a deload here - rollbackReintro is the
+       only thing that moves it, and only on a stall or a trigger. */
+    var n = (tw >= V1_WEEK && !dl.active) ? Math.min(counterOf(state, dayId), order.length) : 0;
+
+    var inTier = {}, i, id;
+    for (i = 0; i < exList.length; i++) {
+      if (isObj(exList[i]) && !exList[i].cut) inTier[str(exList[i].id).trim()] = true;
+    }
+    for (i = 0; i < n; i++) inTier[order[i]] = true;
+
+    var exerciseIds = [], prescribed = [], kept = [];
+    for (i = 0; i < exList.length; i++) {
+      if (!isObj(exList[i])) continue;
+      id = str(exList[i].id).trim();
+      if (id === "") continue;
+      if (own(inTier, id)) { exerciseIds.push(id); prescribed.push(id); continue; }
+      /* Hidden by the tier, but he has typed into it. It renders, it saves,
+         and it is FLAGGED rather than dropped. */
+      if (draftHas(c.draft, id)) { exerciseIds.push(id); kept.push(id); }
+    }
+
+    var out = {
+      dayId: dayId,
+      trainingWeeks: tw,
+      calendarWeeks: cw,
+      exerciseIds: exerciseIds,
+      prescribed: prescribed,
+      kept: kept,
+      reintroduced: order.slice(0, n),
+      offer: null,
+      offerLine: "",
+      blocked: null,
+      blockedLine: "",
+      back: tot.back,
+      cuts: tot.cuts,
+      dayBack: n,
+      dayCuts: order.length,
+      statusLine: lines.status,
+      tierLine: lines.divergence !== "" ? lines.divergence : (tw <= 4 ? lines.row : ""),
+      tierNote: lines.explain,
+      deload: { active: dl.active, day: dl.day }
+    };
+
+    /* ---- the offer gate (audit section 5, addendum S2b) ---- */
+    var stalled = (isObj(c.stallReport) && Array.isArray(c.stallReport.stalled))
+      ? c.stallReport.stalled : [];
+    var stamp = stampOf(state, dayId);
+    var gap = stamp === null ? null : dayGap(stamp, today);
+
+    if (dl.active) out.blocked = "deload";
+    else if (dayId === "" || !order.length) out.blocked = "none";
+    else if (tw < V1_WEEK) out.blocked = "week";
+    else if (counterOf(state, dayId) >= order.length) out.blocked = "complete";
+    else if (stalled.length) out.blocked = "stall";
+    else if (painWindow(sessions, today, PAIN_DAYS).active) out.blocked = "pain";
+    else if (gap !== null && gap < V1_COOLDOWN) out.blocked = "cooldown";
+    else {
+      id = order[n];
+      out.offer = { exId: id, name: exNameIn(exList, id), dayId: dayId };
+      out.offerLine = "Add " + out.offer.name + " back to this session? Only if last week left " +
+                      "you recovered and no lift went backwards.";
+    }
+
+    /* The only thing the app may say about a pain note here, and it says it
+       WITHOUT deciding anything about his body: he wrote it, it is inside 7
+       days, so nothing new is added this week. No severity, no cause, no
+       "rest", no substitute (addendum S2b, audit section 10). Nothing is
+       stamped and nothing is rolled back - stamping would double the delay to
+       14 days, and a rollback would let a keyword shrink his programme. */
+    if (out.blocked === "pain") {
+      out.blockedLine = "No new exercise this week. You logged pain in the last 7 days.";
+    }
+    return out;
+  }
+
+  /* acceptReintro(state, dayId, todayStr, max)
+     declineReintro(state, dayId, todayStr)
+       -> a NEW state object, or null.
+
+     setCalChanged's shape: shallow copy, no mutation, no other key touched,
+     null when `state` is not an object - and the caller MUST NOT write null
+     over the store. `reintro` and `lastReintroDate` are copied one level down
+     too, because those are the two maps being written.
+
+     IDEMPOTENCE. Accept is an increment, so it cannot be idempotent by
+     arithmetic; it is made idempotent by the rule instead. One addition per
+     day id per calendar date is exactly what "one per session" means, so a
+     second accept on a date already stamped only re-stamps. A double tap, a
+     re-render or a replayed event cannot add two accessories.
+
+     `max` is that day's cut count. Pass it and the counter can never run past
+     the end of the list. */
+  function acceptReintro(state, dayId, todayStr, max) {
+    if (!isObj(state)) return null;
+    var id = str(dayId).trim();
+    var out = copyObj(state);
+    if (id === "") return out;
+    var today = safeToday(todayStr);
+    var already = stampOf(state, id) === today;
+    out.reintro = copyObj(state.reintro);
+    out.lastReintroDate = copyObj(state.lastReintroDate);
+    if (!already) {
+      var n = counterOf(state, id) + 1;
+      if (typeof max === "number" && isFinite(max) && max >= 0) n = Math.min(n, Math.floor(max));
+      out.reintro[id] = n;
+    }
+    out.lastReintroDate[id] = today;
+    return out;
+  }
+
+  function declineReintro(state, dayId, todayStr) {
+    if (!isObj(state)) return null;
+    var id = str(dayId).trim();
+    var out = copyObj(state);
+    if (id === "") return out;
+    out.lastReintroDate = copyObj(state.lastReintroDate);
+    out.lastReintroDate[id] = safeToday(todayStr);
+    return out;
+  }
+
+  /* rollbackReintro(state, program, todayStr, sessions) -> a NEW state, or null.
+
+     Audit section 5: when ST1 fires or D1 triggers, every day's counter drops
+     by one, floor zero, AND HE IS TOLD. The telling is why this takes
+     `program`: WO-003 W14 returns nothing, and the UI cannot render
+     `Progress stalled. Pulling {ex} back out for now.` without the name of
+     what was pulled (UX spec 1.6, blocking dependency 1).
+
+     It records state.lastRollback = {exId, name, date, days, items}:
+       exId/name  the FIRST exercise pulled, in programme order - the one the
+                  line names
+       items      every exercise pulled, one per day, so a UI that wants to
+                  name them all can
+       days       the training-day count at the moment of the rollback, so the
+                  notice can disappear after the next session is logged rather
+                  than on a timer
+
+     ONCE PER DAY. A second call on a date already stamped is a no-op copy.
+     A decrement inside a render loop would strip his programme one accessory
+     per paint, and that is a data-shaped bug even though no set is lost.
+
+     Nothing is rolled back when every counter is already zero, and nothing is
+     stamped either: a notice about an exercise that was never added is the app
+     inventing an event.
+
+     `lastRollback` is a new key on the log store. It is ADDITIVE and
+     absence-tolerant - every reader treats a missing key as null - so a
+     schema-2 or schema-3 store loads unchanged and no migration is needed to
+     read it. It is written only when a rollback actually happens. */
+  function rollbackReintro(state, program, todayStr, sessions) {
+    if (!isObj(state)) return null;
+    var today = safeToday(todayStr);
+    var out = copyObj(state);
+    var prev = isObj(state.lastRollback) ? state.lastRollback : null;
+    if (prev && dateOrNull(prev.date) === today) return out;
+
+    var src = isObj(state.reintro) ? state.reintro : {};
+    var next = copyObj(src);
+    var items = [], seen = {}, i, id, n, order, exId;
+    var days = Array.isArray(program) ? program : [];
+    for (i = 0; i < days.length; i++) {
+      if (!isObj(days[i])) continue;
+      id = str(days[i].id).trim();
+      if (id === "" || own(seen, id)) continue;
+      seen[id] = true;
+      n = counterOf(state, id);
+      if (n <= 0) continue;
+      order = orderFor(id, days[i].ex);
+      exId = order[n - 1] || null;
+      next[id] = n - 1;
+      items.push({ dayId: id, exId: exId, name: exId ? exNameIn(days[i].ex, exId) : "" });
+    }
+    /* A counter for a day this build's PROGRAM does not carry still comes
+       down. Leaving it stranded would hold an exercise in a tier nobody can
+       see or roll back. */
+    Object.keys(src).forEach(function (k) {
+      if (own(seen, k)) return;
+      var m = counterOf(state, k);
+      if (m > 0) next[k] = m - 1;
+    });
+
+    if (!items.length) return out;
+    out.reintro = next;
+    out.lastRollback = {
+      exId: items[0].exId,
+      name: items[0].name,
+      date: today,
+      days: Array.isArray(sessions) ? trainingDays(sessions, today).length : null,
+      items: items
+    };
+    return out;
+  }
+
+  function rollbackLine(name) {
+    var s = str(name).trim();
+    return s === "" ? "" : "Progress stalled. Pulling " + s + " back out for now.";
+  }
+
+  /* rollbackNotice(state, sessions, todayStr) -> {show, exId, name, date, text}
+
+     The notice stands until the next session is logged; from then on the lower
+     accessory count in the cycle line carries the fact (UX spec 1.6). With no
+     `days` snapshot recorded it shows until one is - a visible true statement
+     is the safe failure. */
+  function rollbackNotice(state, sessions, todayStr) {
+    var out = { show: false, exId: null, name: "", date: null, text: "" };
+    var r = isObj(state) ? state.lastRollback : null;
+    if (!isObj(r)) return out;
+    out.exId = typeof r.exId === "string" ? r.exId : null;
+    out.name = str(r.name);
+    out.date = dateOrNull(r.date);
+    out.text = rollbackLine(out.name);
+    if (out.text === "") return out;
+    if (typeof r.days === "number" && isFinite(r.days) && Array.isArray(sessions)) {
+      out.show = trainingDays(sessions, safeToday(todayStr)).length <= r.days;
+    } else {
+      out.show = true;
+    }
+    return out;
+  }
+
+  /* ===================================================== Rule D1 - W19
+     The deload. audit section 8, with the counting ruling in addendum 6c.
+
+     THERE IS NO SCHEDULED DELOAD, and this file must never invent one. PHAT as
+     published contains none; the brief already builds the ramp a lifter new to
+     this volume needs, in the 4-week cut block. A deload here is triggered by
+     EVIDENCE and it is always RECOMMENDED, never imposed: nothing in this
+     section starts one. startDeload only runs when he taps.
+
+     Nothing renders at all below trainingWeeks 6 - not a banner, not the word.
+     A deload recommended to a man six sessions in teaches him to ignore the
+     banner, which costs the one that matters later (audit section 8).
+
+     A DELOAD CHANGES THE PRESCRIPTION, NOT THE LOG. deloadCheck reads
+     sessions and mutates nothing. Starting, declining and ending write the
+     `deload` key and nothing else: every session, set, note and bodyweight row
+     is byte-identical before and after. And because a deload renders two set
+     rows, endDeload exists so he is never left unable to log a third set he
+     actually did (UX spec 2.5, blocking dependency 2). */
+
+  var DELOAD_DAYS = 7;       /* a deload week is a week                    */
+  var DELOAD_SETS = 2;       /* same weights, fewer sets                   */
+  var DELOAD_SHORT = 2;      /* stop this many reps short of hi            */
+  var D1_WEEKS = 6;          /* below this: no deload language at all      */
+  var D1_T3_WEEKS = 9;       /* the calendar backstop                      */
+  var D1_RUN = 2;            /* consecutive failing DATES for T1           */
+  var D1_TAIL = "Take a deload week: same weights, 2 sets, stop 2 reps short. Resume where you left off.";
+  var D1_ACTIVE_TAIL = "Same weights, 2 sets, 2 reps short. Do not chase numbers this week.";
+  var D1_ENDED = "Deload done. Back to full sets at your last working loads.";
+  var D1_DECLINED = "Noted. Asked again after the next session.";
+
+  /* deloadStatus(state, todayStr)
+       -> {active, day, startDate, endDate, ended, last, trigger, declinedAt,
+           declinedDays, text, endedLine}
+
+     `state.deload` is null until he starts or declines one. Shape:
+       { startDate, endDate, trigger, declinedAt, declinedDays, past:[...] }
+
+     A deload that ran its seven days is over whether or not anything stamped
+     it - the phone may have been closed all week - so the end date is implied
+     from the start when no explicit one was written. `last` is the date the
+     most recent deload finished and is what the cycle line prints. */
+  function deloadStatus(state, todayStr) {
+    var today = safeToday(todayStr);
+    var out = {
+      active: false, day: null, startDate: null, endDate: null, ended: false,
+      last: null, trigger: null, declinedAt: null, declinedDays: null,
+      text: "", endedLine: ""
+    };
+    var d = isObj(state) ? state.deload : null;
+    if (!isObj(d)) return out;
+    out.trigger = typeof d.trigger === "string" ? d.trigger : null;
+    out.declinedAt = dateOrNull(d.declinedAt);
+    out.declinedDays = (typeof d.declinedDays === "number" && isFinite(d.declinedDays))
+      ? d.declinedDays : null;
+
+    var s = dateOrNull(d.startDate);
+    if (s === null) return out;
+    out.startDate = s;
+    var lastDay = dateAdd(s, DELOAD_DAYS - 1);
+    var e = dateOrNull(d.endDate);
+    if (e === null && lastDay !== null && today > lastDay) e = lastDay;
+    out.endDate = e;
+
+    if (e === null) {
+      if (today < s) return out;                 /* stamped ahead of itself */
+      out.active = true;
+      var g = dayGap(s, today);
+      out.day = Math.min(DELOAD_DAYS, (g === null ? 0 : g) + 1);
+      out.text = "Deload week, day " + out.day + ". " + D1_ACTIVE_TAIL;
+      return out;
+    }
+    out.ended = true;
+    out.last = e;
+    out.endedLine = D1_ENDED;
+    return out;
+  }
+
+  /* Weeks of >= 3 training days AFTER `sinceStr` (exclusive), or all of them
+     when it is null. T3's "9 CONSECUTIVE trainingWeeks with no deload taken"
+     is this count: the clock restarts when a deload finishes. TW1 unchanged
+     otherwise (addendum 6d). */
+  function weeksSince(sessions, todayStr, sinceStr) {
+    var days = trainingDays(sessions, todayStr);
+    var by = {}, n = 0, i, w;
+    for (i = 0; i < days.length; i++) {
+      if (sinceStr !== null && days[i] <= sinceStr) continue;
+      w = weekStart(days[i]);
+      if (w === null) continue;
+      by[w] = (by[w] || 0) + 1;
+    }
+    Object.keys(by).forEach(function (k) { if (by[k] >= TRAINING_WEEK_MIN) n++; });
+    return n;
+  }
+
+  /* T1's evidence, one row per DISTINCT DATE, ascending (addendum 6c).
+
+     A date is evidence only when an entry on it holds at least `s` completed
+     sets: workingLoadStrict's rule, because a load read off a session he
+     abandoned after one set is a confident wrong number with no tell (B-24).
+     Half-finished dates are SKIPPED, not counted as failures - the app does
+     not read a short session as weakness.
+
+     Two saves on one date are ONE row. A correction saved beside its original
+     must not read as two consecutive failures, so a date counts as completed
+     if ANY entry on it completed the prescription, and as a failure only when
+     every evaluable entry on it failed. */
+  function d1Rows(sessions, exId, s, lo, todayStr, sinceStr) {
+    var out = [];
+    if (!Array.isArray(sessions)) return out;
+    var today = safeToday(todayStr);
+    var by = {}, i, j, ses, d, e, C, load, full, rec;
+    for (i = 0; i < sessions.length; i++) {
+      ses = sessions[i];
+      d = sessionDate(ses);
+      if (d === "" || d > today) continue;
+      if (sinceStr !== null && d <= sinceStr) continue;
+      if (!isObj(ses) || !isObj(ses.entries) || !own(ses.entries, exId)) continue;
+      e = ses.entries[exId];
+      if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      C = completedSets(e.sets);
+      if (C.length < s) continue;                /* not evaluable evidence */
+      C = C.slice(0, s);
+      load = C[0].w; full = true;
+      for (j = 0; j < C.length; j++) {
+        if (C[j].w < load) load = C[j].w;
+        if (C[j].r < lo) full = false;
+      }
+      if (!own(by, d)) by[d] = { date: d, full: false, fullLoad: null, failLoad: null };
+      rec = by[d];
+      if (full) {
+        rec.full = true;
+        if (rec.fullLoad === null || load > rec.fullLoad) rec.fullLoad = load;
+      } else if (rec.failLoad === null || load > rec.failLoad) {
+        rec.failLoad = load;
+      }
+    }
+    Object.keys(by).sort().forEach(function (k) { out.push(by[k]); });
+    return out;
+  }
+
+  /* T1: two consecutive failing DATES on one key lift, at a load he has
+     already completed for the full prescription. The load clause is what
+     keeps normal progression out of it: failing 3 sets at a new heavier
+     weight is a Tuesday, not a deload. */
+  function d1T1(sessions, lift, todayStr, sinceStr) {
+    if (!isObj(lift)) return null;
+    var id = str(lift.id).trim();
+    var s = lift.s, lo = lift.lo;
+    if (id === "") return null;
+    if (typeof s !== "number" || !isFinite(s) || s < 1) return null;
+    if (typeof lo !== "number" || !isFinite(lo) || lo < 1) return null;
+    var rows = d1Rows(sessions, id, Math.floor(s), lo, todayStr, sinceStr);
+    var best = null, run = 0, at = null, i, r;
+    for (i = 0; i < rows.length; i++) {
+      r = rows[i];
+      if (r.full) {
+        run = 0;
+      } else if (best !== null && r.failLoad !== null && r.failLoad <= best + 1e-9) {
+        run++; at = r.date;
+        if (run >= D1_RUN) return { date: at };
+      } else {
+        run = 0;
+      }
+      if (r.full && (best === null || r.fullLoad > best)) best = r.fullLoad;
+    }
+    return null;
+  }
+
+  /* deloadCheck(ctx) -> {trigger:"T1"|"T2"|"T3"|null, text, x2, lifts,
+                          rollback, reason}
+
+     ctx = { sessions, todayStr, stallReport, keyLifts, state, deload }
+
+     A context object, for the same reason volumeTier takes one: WO-003 W19's
+     positional signature cannot evaluate T1 without each key lift's `s` and
+     `lo`, and those live in PROGRAM. `keyLifts` is [{id, n, s, lo}] - the
+     caller's KEY_LIFTS joined to its PROGRAM. WHICH lifts are key is settled
+     (audit section 12) and is not decided here.
+
+     `rollback` is true for T2 and tells the caller to pair this with V1's
+     rollback line: audit section 8 example 3 says both are correct and both
+     should be stated. This function does not write that line, because the
+     exercise being pulled is rollbackReintro's to name.
+
+     `reason` says why nothing fired when nothing did: "early" (below week 6),
+     "active", "declined", or null for "no trigger". Never throws; a thrown
+     banner is a spurious recommendation and those cost trust (UX spec 2.6). */
+  function deloadCheck(ctx) {
+    var c = isObj(ctx) ? ctx : {};
+    var out = { trigger: null, text: "", x2: "", lifts: [], rollback: false, reason: null };
+    var sessions = Array.isArray(c.sessions) ? c.sessions : [];
+    var today = safeToday(c.todayStr);
+    var state = isObj(c.state) ? c.state : {};
+    var dl = deloadStatus((c.deload !== undefined) ? { deload: c.deload } : state, today);
+
+    if (trainingWeeks(sessions, today) < D1_WEEKS) { out.reason = "early"; return out; }
+    if (dl.active) { out.reason = "active"; return out; }
+
+    /* Declined: the check re-runs after the NEXT session, not on the next
+       render. Re-asking immediately is how a recommendation becomes noise. */
+    if (dl.declinedAt !== null && dl.declinedDays !== null &&
+        trainingDays(sessions, today).length <= dl.declinedDays) {
+      out.reason = "declined";
+      return out;
+    }
+
+    var since = dl.last;
+    var lifts = Array.isArray(c.keyLifts) ? c.keyLifts : [];
+    var i, l, name;
+
+    /* T1 - the most specific trigger, so it is checked first. */
+    for (i = 0; i < lifts.length; i++) {
+      l = lifts[i];
+      if (!isObj(l)) continue;
+      if (d1T1(sessions, l, today, since) === null) continue;
+      name = (typeof l.n === "string" && l.n.trim() !== "") ? l.n : str(l.id);
+      out.trigger = "T1";
+      out.lifts = [name];
+      out.text = "Two sessions where " + name + " went backwards. " + D1_TAIL;
+      return out;
+    }
+
+    /* T2 - ST1 stalled on >= 2 of the 4 key lifts. Suppressed until ST1's own
+       recent block sits entirely after the last deload: before that the report
+       is still reading the weeks that produced the last recommendation, and it
+       would re-fire the day the deload ended. The window is ST1's own, not a
+       new number. */
+    var stalled = (isObj(c.stallReport) && Array.isArray(c.stallReport.stalled))
+      ? c.stallReport.stalled : [];
+    var rFrom = dateAdd(today, -ST1_RECENT);
+    var t2Fresh = (since === null) || (rFrom !== null && rFrom > since);
+    if (stalled.length >= 2 && t2Fresh) {
+      out.trigger = "T2";
+      out.lifts = stalled.slice(0);
+      out.rollback = true;
+      out.text = andList(stalled) + " have " + (stalled.length === 2 ? "both" : "all") +
+                 " stalled. " + D1_TAIL;
+      return out;
+    }
+
+    /* T3 - the calendar backstop, in TRAINING weeks. */
+    if (weeksSince(sessions, today, since) >= D1_T3_WEEKS) {
+      out.trigger = "T3";
+      out.text = "Nine weeks straight. Take a deload week before something makes you.";
+      return out;
+    }
+    return out;
+  }
+
+  /* startDeload(state, todayStr, trigger)
+     declineDeload(state, todayStr, sessions)
+     endDeload(state, todayStr)
+       -> a NEW state object, or null.
+
+     setCalChanged's shape throughout: shallow copy, no mutation, idempotent,
+     null when `state` is not an object, and the ONLY key any of them writes is
+     `deload`. Sessions, notes, bodyweight and the stored `includeCut` come out
+     byte-identical - W19's data-loss criterion, asserted on the serialized log.
+
+     A finished deload is pushed onto `past` before a new one starts, so the
+     record of a week he actually took is never overwritten.
+
+     declineDeload snapshots the training-day count rather than a date: the
+     check re-runs when a NEW session exists, which is what "asked again after
+     the next session" means, and it cannot be defeated by the clock.
+
+     endDeload is the way out (UX spec 2.5). Without it a deload renders two
+     set rows for seven days and he has nowhere to put a third set he actually
+     did - the app being wrong about his numbers, which is the thing this batch
+     exists to stop. Idempotent: with no deload active it returns an unchanged
+     copy, so a double tap cannot stamp an end over a completed one. */
+  function startDeload(state, todayStr, trigger) {
+    if (!isObj(state)) return null;
+    var today = safeToday(todayStr);
+    var out = copyObj(state);
+    var cur = deloadStatus(state, today);
+    if (cur.active && cur.startDate === today) return out;   /* already started today */
+    var d = isObj(state.deload) ? state.deload : null;
+    var past = (d && Array.isArray(d.past)) ? d.past.slice(0) : [];
+    if (d && dateOrNull(d.startDate) !== null && !cur.active) {
+      past.push({ startDate: cur.startDate, endDate: cur.endDate, trigger: cur.trigger });
+    }
+    out.deload = {
+      startDate: today,
+      endDate: null,
+      trigger: (typeof trigger === "string" && trigger.trim() !== "") ? trigger.trim() : null,
+      declinedAt: null,
+      declinedDays: null,
+      past: past
+    };
+    return out;
+  }
+
+  function declineDeload(state, todayStr, sessions) {
+    if (!isObj(state)) return null;
+    var today = safeToday(todayStr);
+    var out = copyObj(state);
+    var d = isObj(state.deload) ? state.deload : null;
+    var n = Array.isArray(sessions) ? trainingDays(sessions, today).length
+          : ((typeof sessions === "number" && isFinite(sessions) && sessions >= 0)
+              ? Math.floor(sessions) : 0);
+    out.deload = {
+      startDate: d ? (dateOrNull(d.startDate)) : null,
+      endDate: d ? (dateOrNull(d.endDate)) : null,
+      trigger: (d && typeof d.trigger === "string") ? d.trigger : null,
+      declinedAt: today,
+      declinedDays: n,
+      past: (d && Array.isArray(d.past)) ? d.past.slice(0) : []
+    };
+    return out;
+  }
+
+  function endDeload(state, todayStr) {
+    if (!isObj(state)) return null;
+    var today = safeToday(todayStr);
+    var out = copyObj(state);
+    var cur = deloadStatus(state, today);
+    if (!cur.active) return out;                 /* nothing to end */
+    var d = isObj(state.deload) ? state.deload : {};
+    out.deload = {
+      startDate: cur.startDate,
+      endDate: today,
+      trigger: cur.trigger,
+      declinedAt: null,
+      declinedDays: null,
+      past: Array.isArray(d.past) ? d.past.slice(0) : []
+    };
+    return out;
+  }
+
+  /* deloadEx(ex, active) -> the exercise as PRESCRIBED this week.
+
+     A NEW object; `ex` is never mutated. Content, audit section 8: same
+     weights, 2 sets, stop 2 reps short of hi. Speed work is returned
+     unchanged - it is already submaximal and low-fatigue - and cut:1
+     accessories are dropped by volumeTier, not here.
+
+     `hi` is only pulled in on POWER slots, which is the only place the audit
+     names a rep change. Never below `lo`.
+
+     THE VERDICT GATE. verdict(ctx) gates on ex.s, so the caller must pass the
+     SAME exercise object to the card and to the verdict: the deloaded one.
+     Gating on 3 while prescribing 2 withholds his verdict for the whole week.
+     Sets he logs beyond the prescription still render and still save - the
+     deload changes what he is asked for, never what he did. */
+  function deloadEx(ex, active) {
+    if (!isObj(ex) || active !== true || ex.k === "speed") return ex;
+    var out = copyObj(ex);
+    if (typeof ex.s === "number" && isFinite(ex.s) && ex.s > DELOAD_SETS) out.s = DELOAD_SETS;
+    if (ex.k === "power" && typeof ex.hi === "number" && isFinite(ex.hi) &&
+        typeof ex.lo === "number" && isFinite(ex.lo)) {
+      out.hi = Math.max(ex.lo, ex.hi - DELOAD_SHORT);
+    }
+    return out;
+  }
+
+  /* cycleLine(ctx) -> {text, row, divergence, explain, trainingWeeks,
+                        calendarWeeks, back, cuts, deload}
+
+     ctx = { sessions, todayStr, state, program, deload }
+
+     The one programme-state line on the Train screen, chosen by precedence
+     (UX spec 1.2, which resolves audit section 5's status line against
+     section 8's cycle line - at week 7 the second contains the first and
+     printing both is the app repeating itself to a man trying to pick a day).
+
+       no sessions          ""                    (the first-run copy stands)
+       tw 0, sessions       reduced volume until ...
+       tw 1-4               Week n of 4 at reduced volume ...
+       tw 5                 Week 5 - n of 9 accessories back in.
+       tw 5, all back       Full volume. All 9 accessories are in.
+       tw 6+                Week n - full volume phase - ... - last deload: ...
+       deload active        Deload week, day n. ...
+
+     An object, not a bare string: `divergence` and `explain` render beneath
+     it whenever the calendar week and the training week differ, and the
+     caller needs the numbers for its own layout. Render `.text`.
+
+     The word "deload" cannot appear below trainingWeeks 6 - no row under that
+     contains it, and a deload cannot be active because nothing could have
+     recommended one (UX spec 2.1 rule 3).
+
+     `last deload:` prints through dayMon, never Intl: en-GB short month is
+     "Sept" on current ICU and the signed-off copy says "Sep" (B-44). */
+  function cycleLine(ctx) {
+    var c = isObj(ctx) ? ctx : {};
+    var today = safeToday(c.todayStr);
+    var sessions = Array.isArray(c.sessions) ? c.sessions : [];
+    var state = isObj(c.state) ? c.state : {};
+    var program = Array.isArray(c.program) ? c.program : null;
+    var dl = deloadStatus((c.deload !== undefined) ? { deload: c.deload } : state, today);
+    var tw = trainingWeeks(sessions, today);
+    var cw = calendarWeeks(sessions, today);
+    var tot = program ? accessoryTotals(program, state) : {
+      back: (typeof c.back === "number" && isFinite(c.back)) ? c.back : 0,
+      cuts: (typeof c.cuts === "number" && isFinite(c.cuts)) ? c.cuts : 0
+    };
+    var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl);
+    return {
+      text: lines.row,
+      row: lines.row,
+      divergence: lines.divergence,
+      explain: lines.explain,
+      trainingWeeks: tw,
+      calendarWeeks: cw,
+      back: tot.back,
+      cuts: tot.cuts,
+      deload: { active: dl.active, day: dl.day, last: dl.last, ended: dl.ended }
+    };
+  }
+
   /* ------------------------------------------------------------- exports */
 
   window.PHAT = {
@@ -1807,6 +2926,41 @@
            recent: ST1_RECENT, priorFrom: ST1_PRIOR_FROM, priorTo: ST1_PRIOR_TO },
     e1rmByDate: e1rmByDate,
     stallReport: stallReport,
+    /* Rule SP1 - W12. Speed load. Never cached; the pain flag does not
+       touch it (addendum S2a). speedTooHeavy is advice and blocks nothing. */
+    SPEED_SRC: SPEED_SRC,
+    SP1: { mid: SP1_MID, bandLo: SP1_BAND_LO, bandHi: SP1_BAND_HI, cap: SP1_CAP,
+           repLo: SP1_REP_LO, repHi: SP1_REP_HI, window: SP1_WINDOW, wide: SP1_WIDE },
+    speedLoad: speedLoad,
+    speedTooHeavy: speedTooHeavy,
+    speedFlagText: speedFlagText,
+    /* Rule S2 - landed with W14 because V1's gate needs it. W16 owns the rest
+       of S1/S2 and should call this rather than write a second window. */
+    PAIN_DAYS: PAIN_DAYS,
+    painWindow: painWindow,
+    /* Rule V1 - W14. The volume tier. The setters return a new state; the
+       caller persists it. Nothing here reads or writes storage, and nothing
+       reads the stored includeCut key (Decision 6). */
+    REINTRO_ORDER: REINTRO_ORDER,
+    V1: { week: V1_WEEK, cooldown: V1_COOLDOWN },
+    calendarWeeks: calendarWeeks,
+    volumeTier: volumeTier,
+    acceptReintro: acceptReintro,
+    declineReintro: declineReintro,
+    rollbackReintro: rollbackReintro,
+    rollbackNotice: rollbackNotice,
+    rollbackLine: rollbackLine,
+    /* Rule D1 - W19. Recommended, never imposed. Nothing here starts a
+       deload; deloadCheck only reads. */
+    DELOAD: { days: DELOAD_DAYS, sets: DELOAD_SETS, short: DELOAD_SHORT,
+              weeks: D1_WEEKS, backstop: D1_T3_WEEKS, run: D1_RUN },
+    deloadCheck: deloadCheck,
+    deloadStatus: deloadStatus,
+    deloadEx: deloadEx,
+    startDeload: startDeload,
+    declineDeload: declineDeload,
+    endDeload: endDeload,
+    cycleLine: cycleLine,
     migrateStore: migrateStore
   };
 })();
