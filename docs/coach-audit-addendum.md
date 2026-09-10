@@ -1367,3 +1367,67 @@ corrupt record must never report `active`.
 direction each must fail in: refuse loudly rather than answer off a redefined prescription; do not
 claim a session was short when nothing was recorded; and when a stored date is impossible, discard one
 day of evidence rather than weeks of it.
+
+---
+
+## 7.12 Does a deload reset T1's streak? — **yes. Confirm reset.**
+
+**Added 2026-09-10, from QA's pass.** Genuinely unruled and correctly raised.
+
+Both framings offered miss the point that settles it. **T1's only output is "take a deload week."**
+So the question is not whether a pre-deload failure is still meaningful evidence — it is whether the
+right prescription for *failing after a deload* is **another deload**. It is not. `[Certain]`
+repeating an intervention that has just demonstrably failed is not coaching, and firing the same
+banner nine days after he took the last one is the fastest way to teach him the banner means nothing —
+which is the cost audit §8 already named and which I have now ruled on three times.
+
+The "reset is wrong" argument is the better of the two and it is still wrong, because it assumes the
+app goes quiet. It does not:
+
+- **The session card already speaks, that day, with a number.** He is below `lo` at a load he owns, so
+  P1 case 1 fires: `2 reps at 120 kg. Below the range. Drop to 115 kg next session.` That is the
+  correct instruction for this state and it is more actionable than a deload banner.
+- **ST1 is not gated on `since`.** The Trend tab still reports the stall throughout.
+- **T2 and T3 still run**, T2 on a window that is entirely post-deload (§7.2) and therefore on genuinely
+  new evidence. A second deload three weeks later, off three weeks of fresh stalling, is defensible.
+  A second deload nine days later, off the weeks that caused the first, is not.
+
+**So the whole cost of reset is that T1 surfaces one session later.** The cost of no-reset is a wrong
+prescription delivered with confidence. One session against wrong advice is not a close call.
+
+```
+Rule: E1 clause (d) — a finished deload restarts the streak
+Applies to:   Rule D1 trigger T1 only.
+Logic:        T1's ladder reads only dates strictly after the most recent
+              deload's effective end (`since` = deloadStatus().last, clamped
+              per the §7.11 rider). A failure on or before that date is not a
+              row and cannot pair with a failure after it.
+              Distinct from E2, which removes deload dates themselves. Both
+              stand: E2 is the guard that survives any future change to `since`,
+              and it is the only one that acts when a window sits in
+              `state.deload.past` with no current record.
+Output copy:  none. Nothing new renders.
+Not enough data: unchanged — T1 needs two post-deload FAIL dates.
+```
+
+**Worked example — `fail → deload → fail`.** Squat `{s:3, lo:3, hi:5}`.
+
+- `05-04` 120×5/5/5 → COMPLETE, best 120.
+- `05-11` 120×2/2/2 → FAIL, run 1.
+- `05-18` 120×3/2/2 → FAIL, run 2 → **T1 fires.** He starts the deload `05-19`; it ends `05-25`.
+- `06-01` 120×2/2/2 → the ladder starts after `05-25`, so this is row one → run 1 → **no trigger.**
+  The card still reads `2 reps at 120 kg. Below the range. Drop to 115 kg next session.`
+- `06-08` 120×2/2/2 → run 2 → **T1 fires again**, on two failures that both postdate the deload. That
+  is the real finding, and it arrives one session after the no-reset reading would have claimed it.
+
+**Confirm the pinned test** `D1 - a FINISHED deload also restarts T1's evidence`. No change.
+
+**The gap this exposes, named and deliberately not filled in this batch.** `fail → deload → fail` is a
+distinct state — *the deload did not take* — and the honest sentence for it is neither "take a deload
+week" nor silence. It is closer to: stop adding, drop the working load, and if it persists this stopped
+being a programming problem. **I am not writing that rule now.** It is a new user-facing claim, the
+suite is green at 347, the frontend is mid-redesign, and it touches the edge of what the app may say —
+repeated unexplained strength loss is not something this app assesses, and any copy for it must point
+at a person rather than guess, per audit §10. Raise it as a backlog item for after there is real
+history to calibrate against. `[Opinion]`, and the conservative side of it: the card's `Drop to 115 kg`
+is already the correct action, so what is missing is acknowledgement, not instruction.

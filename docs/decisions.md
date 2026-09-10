@@ -496,3 +496,25 @@ Seeding a stale date into the D1 background can complete a third distinct date i
 backend once each. The background now uses one-day weeks for the old range, and every T1 recency test
 asserts `trainingWeeks < DELOAD.backstop` before asserting `null`.
 **Rules out:** debugging a T1 red without first checking the seed against T3's backstop.
+
+### 2026-09-10 — A deload resets T1's evidence. Confirmed, and the question was framed wrong
+I asked whether a failure before a deload and one after it are a pair — i.e. whether the earlier
+failure is still evidence. `strength-coach` `[Certain]`: that is not the question. **T1's only output
+is "take a deload week."** So what matters is whether the right prescription for failing *after* a
+deload is **another deload**. It is not. Repeating an intervention that has just demonstrably failed is
+not coaching, and firing the same banner nine days after he took the last one teaches him the banner
+means nothing.
+**My stronger argument — that the app goes quiet when the problem is most real — was wrong on the
+facts.** It does not go quiet: P1 case 1 fires on the card that day with a number
+(`2 reps at 120 kg. Below the range. Drop to 115 kg next session.`), ST1 is not gated on `since` so the
+Trend tab still reports the stall, and T2/T3 still run — T2 on a window entirely post-deload, so a
+second deload three weeks later off three weeks of fresh stalling is defensible where nine days later
+off the weeks that caused the first is not.
+**The whole cost of reset is that T1 surfaces one session later. The cost of no-reset is a wrong
+prescription delivered with confidence.**
+**Keep E2 anyway**, even though `since` cuts those dates first and makes E2-inside-T1 near-unreachable:
+it is the guard that survives any future change to `since`, and the only one that acts when a window
+sits in `state.deload.past` with no current record. Belt to `since`'s braces, at no cost.
+**Gap named and deliberately left open — B-45.** `fail → deload → fail` is a distinct state with no
+honest sentence yet. Not written now: it is a new user-facing claim at the edge of what this app may
+say, and it wants real history behind it first.
