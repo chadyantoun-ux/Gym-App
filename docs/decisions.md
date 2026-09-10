@@ -1239,3 +1239,29 @@ set is not a 3–5RM), still sitting in a shipped string; `never ground` duplica
 They could not go empty — §4.13 hides the disclosure when a cue is absent, taking the **figure** with
 it, and SP1/R1 say nothing about *position*. **Two rules about one set is only a problem when they are
 about the same thing.** Position matters more at 6 × 3 fast, because he is not thinking about it.
+
+### 2026-09-10 — A suite can go green on data the screen never reads
+Backend transcribed the 42 signed-off cues into `PHAT_PLAN` and then flagged the thing that would have
+made it worthless: **`index.html` renders `PAT[pattern].cue` — the 15 per-pattern strings** — and those
+are the prototype's copy, never reviewed. Several fail Rule Q1 outright (a tempo prescription plus an
+assessment in one; a bare assessment in another; a digit outside the single exemption in a third).
+**So every assertion QA is about to add would pass against `PHAT_PLAN` while the phone showed
+unsigned-off copy.** Same family as the deload feature being engine-only and invisible, and as
+`buildSession` being called with four arguments so PE1 could never fire.
+**The standing lesson, now three times over:** a rule that is correct in the engine and unwired is not
+a shipped rule, and a green suite is evidence about the engine, not about the screen. When a batch
+lands data, the next question is always *what reads it* — and the answer must be checked, not assumed.
+**Also ruled:** the 15 `PAT[...].cue` strings get **deleted**, not orphaned. An unreviewed copy source
+left in the file is how it gets picked up again by the next thing that needs a cue. `PAT` itself stays;
+mapping slots to figures is a different job — and one that B-64 says it currently does wrong for three
+slots.
+
+### 2026-09-10 — Three transcription discrepancies, all resolved toward the shipped string
+- The coach's table gives `d2e`/`d4f` as 42 characters; the string is **43** (it counted
+  `machines pivot` without the apostrophe). The string governs. Both are far under 90.
+- **§10.1's rule text and §10.2's table give `d5b` two different strings** — `30-35 degrees` versus
+  `30–35°`. The table shipped, per the coach's own transcription note naming the en dash and degree
+  sign. Worth the coach knowing its prose and its table disagree.
+- `d3d`'s name is still the slash-name `DB row or shrug`, which §8.2 says the app must never display.
+  Renaming is Rule A1's call and a programme change, so it was deliberately **not** done under a
+  cue-only scope. It settles when Chady answers.
