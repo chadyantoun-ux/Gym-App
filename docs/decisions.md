@@ -909,3 +909,36 @@ fail-silent-never-fail-confident, and it closes a hole the plan editor could oth
 clinical, but the app already uses "hypertrophy" in three of five day names, and a warmer synonym would
 give one concept two names — the defect in B-27 and the reason a `short` field was rejected.
 Consistency beats register when the alternative is a second vocabulary.
+
+### 2026-09-10 — A ruling that post-dates its implementation is an open item, not a regression
+The coach's §9.11 arrived after `bd9ad1a` shipped. Two of its rulings are therefore not yet true of the
+code, and QA pinned them **green against the observed wrong behaviour** with the ruling quoted in the
+test name, rather than carrying a red.
+That is the right call and worth stating as policy: **carrying a deliberate red would put both
+meta-tests at risk** — the ones that fail on any `known bad` / `xfail` name — and re-create exactly the
+"expect one failure" failure mode that ruling was written to prevent. Pin the truth, name the ruling,
+invert the assertion when the fix lands.
+
+### 2026-09-10 — Three defects, and the one that matters is reachable only by import
+- **P1: an unrecognised `k` still fires a hypertrophy verdict.** `verdict()` returns null for `speed`,
+  routes `power` to P1, and **falls through to H1 for everything else** — so a `k:"tempo"` exercise gets
+  a confident tonnage comparison. The coach's rider: *an app that cannot tell which rule applies must
+  not run one.* Unreachable from the plan editor, which constrains `k` — **reachable from imported or
+  corrupt data, which is exactly what WO-002 produces.**
+- **P2: the schema-3 migration pass labels its own note `Schema 5`.** It interpolates
+  `SCHEMA_VERSION`; v4 and v5 correctly interpolate their own gate constants, which is why only this
+  one drifted. It has been wrong since the 3 → 4 bump. No data impact — but `decisions.md` already
+  rules that a migration's account of itself **is** its evidence, and this account names the wrong
+  version.
+- **P2: X1's extra-set line counts where the ruling prefers the ordinal** at a single extra set.
+
+### 2026-09-10 — Two mutants found real holes; one survivor is equivalent until the next bump
+QA injected 20, killed 19. **Two exposed genuine gaps and were closed**: a tie-break to latest rather
+than earliest, and `keyLiftDisclosure` naming a PHAT exercise to a plan that never came from PHAT —
+uncovered because *every fixture happened to declare only ids its own plan contained*. QA's note on
+that one is the useful part: **the uncovered case is one careless paste, and it is what an importer
+will produce.**
+The survivor (`logVer < V_RX` → `logVer < SCHEMA_VERSION`) is **equivalent today** — both constants are
+5, and the note interpolates `V_RX`, also 5, so no input distinguishes them. It carries a test written
+against the constant that goes red at the 5 → 6 bump, which is when it stops being equivalent. Same
+family as the `V_STATEKEYS` trap, one version later.
