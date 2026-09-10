@@ -150,3 +150,17 @@ number, and the caller still holds the draft, so refusing loses nothing.
 **Consequence for the rewiring:** `finish()` must guard the null and fail loudly. It must never call
 `save(LOG, null)`.
 **Rules out:** any "sensible default" date anywhere in the write path.
+
+### 2026-09-09 — WO-001 merged and deployed
+QA's W8 verdict: safe to put a real workout into. All four P0 loss paths (B-01, B-02, B-03, B-21)
+closed and unreopenable; the same attack script still reproduces all four on the pre-fix build.
+Merged to `main` and deployed by API — `index.html`, `logic.js` and `tests.html`, verified by fetching
+`/logic.js` and requiring a 200 with `application/javascript` and real content.
+**Two criteria were restated rather than met**, and this is the honest record: W5 said at most one
+in-flight *keystroke* is at risk — it is one *field* (B-41); and W6 said `750` is unreachable from
+`7.5.0` by any route — two deliberate backspaces reach it, though it can never be saved (B-42). Both
+were overreach in the work order, not defects in the code.
+**Two criteria remain genuinely unverified**: a real browser relaunch after a force-kill, and screen
+reader announcement. Both are on the 17-item manual checklist, which is the thing that actually
+settles this batch.
+**Rules out:** treating WO-001 as proven before that checklist is run on the phone.

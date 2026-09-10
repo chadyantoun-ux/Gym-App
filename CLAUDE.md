@@ -57,10 +57,19 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 - `index.html` — the entire app today. ~700 lines: vanilla JS in one IIFE, inline CSS, no dependencies,
   no build step. Data lives in `localStorage` under `phat:v1:log` and `phat:v1:bw`.
 - **Repo:** `https://github.com/chadyantoun-ux/Gym-App` (`main`).
+- `logic.js` — pure logic behind `window.PHAT`: local dates, set validation, migration, and the draft
+  and session builders. A **classic script**, not a module, so `tests.html` can load it from `file://`.
+  No DOM, no `S`. `index.html` will not run without it and says so rather than showing a black screen.
+- `tests.html` — 148 assertions, opens from `file://`, no Node. One is **deliberately failing** (B-38);
+  the expected shape is **148 / 147 / 1**, and a different count means something broke. Ends with a
+  17-item manual checklist that covers what no browser page can.
+- **Repo:** `https://github.com/chadyantoun-ux/Gym-App` (`main`).
 - **Live:** `https://gym-app-psi-eight.vercel.app` — Vercel project `gym-app`, static, no build.
-  Deployed via API on 2026-09-09. **Not yet git-linked**: the Vercel GitHub App has to be installed on
-  the repo before pushes auto-deploy. Until then a deploy is a manual API call, so `main` and the live
-  site can drift — check before assuming what's deployed.
+  `/tests.html` is deployed too, so the checklist can be run from the phone.
+  **Not yet git-linked**: the Vercel GitHub App has to be installed on the repo before pushes
+  auto-deploy. Until then a deploy is a manual API call covering **all three files**, and a partial
+  upload is the black-screen failure mode — verify by fetching `/logic.js` and requiring a 200 with
+  `application/javascript` and real content, never a build status.
 - There is **no backend yet.** `backend-engineer`'s near-term scope is the data layer inside the app
   (schema, validation, migrations, pure progression/analytics functions) plus standing up Supabase.
 - Known defects and planned work are in `docs/backlog.md`. Read it before proposing work.
