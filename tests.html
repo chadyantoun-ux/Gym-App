@@ -59,7 +59,10 @@ Every test is named after the backlog ID and the work-order acceptance criterion
 through (WO-003 &sect;Decision 1). Two meta-tests at the end enforce it: one fails on any test NAME
 that labels itself a carried-forward failure, one fails on a skip with no stated reason.<br>
 <b>Coverage.</b> S0-S15 are WO-001 plus W1's ordering and training-week counting. S16-S17 are the
-verdict seam and the P1/H1/Z1-Z3/G1/I2 rules. <b>S18-S24</b> are the five advice engines
+verdict seam and the P1/H1/Z1-Z3/G1/I2 rules. <b>S25</b> is WO-004 W2: the plan document, opaque
+identity (B-46), the un-renumbered storage ids (B-47) and the schema-4 migration, with the
+byte-identity, rename round-trip, copy-never-orphans and no-untyped-exercise criteria asserted on
+serialized JSON. <b>S18-S24</b> are the five advice engines
 (<b>W7</b> Rule W1 calories, <b>W9</b> Rule ST1 stalls, <b>W12</b> Rule SP1 speed load,
 <b>W14</b> Rule V1 volume tier, <b>W19</b> Rule D1 deload) together with the
 <code>docs/coach-audit-addendum.md</code> &sect;7 rulings: <b>E1</b> (an abandoned date breaks a
@@ -463,11 +466,29 @@ T("WO-003 W1 - window.PHAT exposes the session-ordering and training-week surfac
   a.eq(missing.join(",") || "none", "none", "missing PHAT functions from WO-003 W1");
 });
 
-T("WO-003 W1 - PHAT.SCHEMA_VERSION is 3, TRAINING_WEEK_MIN is 3, LIMITS matches Decision 4", function(a){
-  /* Was 2 through WO-001. W1 bumped it to 3 when the four V1/D1/W1 keys
-     (reintro, lastReintroDate, calChangedAt, deload) joined the log store.
-     WO-002's importer must accept BOTH 2 and 3 (backlog B-04). */
-  a.eq(P.SCHEMA_VERSION, 3, "index.html writes this into every payload");
+T("WO-004 W2 - PHAT.SCHEMA_VERSION is 4, TRAINING_WEEK_MIN is 3, LIMITS matches Decision 4", function(a){
+  /* THE ONE PLACE THE LITERAL IS KEPT ON PURPOSE, and the reason is written
+     down so the next bump does not have to rediscover it.
+
+     History: 1 (unversioned) -> 2 (WO-001, dateBasis) -> 3 (WO-003 W1, the
+     four V1/D1/W1 state keys) -> 4 (WO-004 W2, the plan document; sessions may
+     carry planId).
+
+     A schema bump is not an internal detail. It creates an OBLIGATION on code
+     that is not written yet: WO-002's importer branches on the stored version
+     and must accept 2, 3 AND 4 (backlog B-04), and any sync layer reads it to
+     decide what shape it is looking at. So the bump must be impossible to make
+     quietly. Asserting against P.SCHEMA_VERSION here would assert
+     P.SCHEMA_VERSION === P.SCHEMA_VERSION and prove nothing; the literal is a
+     tripwire that fires exactly once per bump and forces the person bumping it
+     to come here, read this, and go update B-04.
+
+     Every OTHER test in this file asserts against the constant, because their
+     subject is a behaviour (does the migration stamp the current version?) and
+     not the value. Three literals were three tripwires on one fact; two of them
+     were maintenance cost pretending to be coverage. See the two migration
+     tests in S14. */
+  a.eq(P.SCHEMA_VERSION, 4, "index.html writes this into every payload; WO-002's importer owes 2, 3 and 4");
   a.eq(P.TRAINING_WEEK_MIN, 3, "a training week is 3 distinct training DAYS (coach ruling TW1)");
   a.ok(P.LIMITS && typeof P.LIMITS === "object", "LIMITS must be exported so the UI cannot drift from the parser");
   a.eq(P.LIMITS.wMin, 0, "0 kg is a legal weight (B-21)");
@@ -780,19 +801,44 @@ T("B-03 / W1-AC5 - DATA LOSS: logged set values and notes are untouched by the m
   a.eq(bwRows(r.bw)[3].kg, 85.6, "bodyweight value must survive");
 });
 
-T("B-03 / W1 - populated store gets schemaVersion 3 and a utcDatedBefore marker", function(a){
+T("B-03 / W1 - populated store gets the current schemaVersion and a utcDatedBefore marker", function(a){
+  /* The literal `3` that used to sit under the next line is GONE, deliberately.
+     This test's subject is "the migration stamps a version and a marker", not
+     "the version is 3". Pinning the number here was a second tripwire on a fact
+     the constant test already guards, and a duplicated tripwire is not double
+     coverage - it is one more file to edit per bump, which is how a bump starts
+     getting done mechanically. One tripwire, in the test whose NAME is the
+     constant. */
   var r = mig(seedLog(), seedBw());
   a.eq(r.log.schemaVersion, P.SCHEMA_VERSION, "schemaVersion must be the current one");
-  a.eq(r.log.schemaVersion, 3, "and the current one is 3 after WO-003 W1");
   a.match(r.log.utcDatedBefore, /^\d{4}-\d{2}-\d{2}$/, "utcDatedBefore must be a local YYYY-MM-DD");
   a.eq(r.log.utcDatedBefore, P.localDate(), "utcDatedBefore must be the migration's LOCAL date");
 });
 
-T("WO-003 W1 - a v1 store reaches schema 3 in ONE pass and gains exactly the four new keys", function(a){
-  /* One pass, not v1 -> v2 -> v3 on two boots: the second boot would be a
-     second write of the same data for no gain. */
+T("WO-003 W1 / WO-004 W2 - a v1 store reaches the current schema in ONE pass and gains exactly six keys", function(a){
+  /* One pass, not v1 -> v2 -> v3 -> v4 across three boots: each extra boot
+     would be another write of the same data for no gain.
+
+     The literal `3` that used to be asserted here is gone, and NOT because
+     literals are bad. It is gone because it never carried this test's weight.
+     Every migration pass in logic.js ends with `nlog.schemaVersion =
+     SCHEMA_VERSION`, so a v5 pass that is gated but never reached from a v1
+     store would still leave the number equal to the constant AND equal to the
+     new literal - the version assertion cannot detect the bug this test exists
+     to detect. Two things can, and both are asserted below instead:
+
+       (1) the ADDED-KEY SET, which says what each pass actually contributed;
+       (2) a SECOND migration reporting changed:false, which is what "in one
+           pass" means when you test it rather than infer it from a number.
+
+     Six keys, and the sixth-and-no-seventh is the whole schema-4 story: v2
+     contributes schemaVersion + utcDatedBefore, v3 the four state keys, and
+     **v4 contributes nothing to the log store at all** - the plan document
+     lives in its own store and planId is resolved at read time by planIdOf, so
+     the v4 pass writes the version and touches nothing else. Verified against
+     a v3 -> v4 migration too, which must add zero keys. */
   var r = mig(seedLog(), seedBw());
-  a.eq(r.log.schemaVersion, 3);
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION);
   a.deep(r.log.reintro, {}, "reintro (V1)");
   a.deep(r.log.lastReintroDate, {}, "lastReintroDate (V1)");
   a.eq(r.log.calChangedAt, null, "calChangedAt (Rule W1)");
@@ -805,6 +851,48 @@ T("WO-003 W1 - a v1 store reaches schema 3 in ONE pass and gains exactly the fou
   }
   a.deep(added.sort(), ["calChangedAt","deload","lastReintroDate","reintro","schemaVersion","utcDatedBefore"].sort(),
     "exactly these keys are added and nothing else");
+  a.eq(added.length, 6, "six, and the seventh is the one that would mean v4 grew the log store");
+  /* An added-key set says nothing about a REMOVED key, and a removed key is
+     data loss with a tidy justification (WO-003 Decision 6). Assert both ends. */
+  var gone = [];
+  for (i = 0; i < before.length; i++) if (Object.keys(r.log).indexOf(before[i]) < 0) gone.push(before[i]);
+  a.deep(gone, [], "the migration removed a key it found on disk");
+  /* "In ONE pass", tested rather than inferred from a version number. */
+  var second = P.migrateStore(r.log, r.bw);
+  a.eq(second.changed, false, "a second boot must have nothing left to do - that is what ONE pass means");
+  a.deep(second.notes, [], "and nothing left to say");
+});
+
+T("WO-004 W2 - the v4 pass adds NO key to the log store: a v3 store gains only the version", function(a){
+  /* The other end of the six-keys assertion above, and the acceptance criterion
+     in its own right. Schema 4 is the plan document; the plan document lives in
+     phat:v1:plans. If this ever fails, the log store has grown a key it does not
+     own and WO-002's importer is reading a shape nobody documented. */
+  var v3 = { schemaVersion: 3, includeCut: false,
+             sessions: [{ id: 1, date: "2026-01-10", dayId: "d1", dateBasis: "local",
+                          entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" } } }],
+             reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null };
+  var before = Object.keys(v3), beforeJSON = JSON.stringify(v3.sessions);
+  var r = P.migrateStore(clone(v3), null);
+  var added = [], i, ks = Object.keys(r.log);
+  for (i = 0; i < ks.length; i++) if (before.indexOf(ks[i]) < 0) added.push(ks[i]);
+  a.deep(added, [], "schema 4 must add nothing to the log store");
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION, "only the version moves");
+  a.eq(JSON.stringify(r.log.sessions), beforeJSON, "and not one session is touched");
+  a.eq(r.logChanged, true, "the version on disk must stop understating the shape - one write");
+  a.eq(P.migrateStore(r.log, null).changed, false, "ONE write, not one per boot");
+  /* THE NOTE IS THE EVIDENCE, and it is what distinguishes the correct gate
+     from the wrong one. If the v3 pass were gated on SCHEMA_VERSION it would
+     re-fire here, find all four keys already present, and report "added no new
+     key" - while the v4 pass, seeing the version already stamped, would say
+     nothing at all. Same bytes on disk, wrong account of what happened, and a
+     latent bug that stops being harmless at v5. Exactly one note, and it says
+     what schema 4 actually did. */
+  var infos = r.notes.filter(function(n){ return n.key === "log"; });
+  a.eq(infos.length, 1, "exactly one note about the log store: " + JSON.stringify(r.notes));
+  a.eq(infos[0].level, "info");
+  a.eq(infos[0].msg, "Schema 4: sessions may now carry planId. No session was touched and no key was added.",
+    "the note must describe the v4 pass, not a re-fired v3 pass");
 });
 
 T("WO-003 W1 - the four v3 defaults are fresh objects, never one shared reference", function(a){
@@ -4707,6 +4795,1241 @@ T("contract - no engine prints a raw e1RM: e1rm(100,1) is 103.3 and no user ever
   a.eq(joined.indexOf("e1rm"), -1);
 });
 
+/* ============================================================ S25 - WO-004 W2
+   THE PLAN DOCUMENT, IDENTITY AND THE SCHEMA-4 MIGRATION.
+   B-46 (name-derived keys), B-47 (renumbered day ids), C-5, C-6, C-7.
+
+   Why this section is written the way it is. The log is empty today, which is
+   the only reason identity was cheap to fix. Everything below guards a store
+   that does not exist yet, so the assertions are on SERIALIZED JSON and on
+   object identity, never on a summary count - a summary can agree while a key
+   order, a "0", a "7.5" or an apostrophe has moved. */
+group("S25 plan document / WO-004 W2 / B-46 / B-47");
+
+/* A populated schema-3 store, spanning all five days, carrying the three
+   things a careless migration is most likely to mangle:
+     - a note with an APOSTROPHE (JSON quoting, and esc() downstream),
+     - a 0 x 10 set (B-21: the set that used to be deleted for being 0 kg),
+     - a 7.5 weight (the half-kilo "7.5.0" was born from, B-02).
+   dateBasis is deliberately MIXED: two sessions "local", one "utc", three with
+   no dateBasis at all. The last group is the important one - those are the
+   sessions index.html writes today, post-WO-001: correctly local-dated and
+   unmarked. If the v2 pass ever re-fires they get stamped "utc" and the
+   provenance every date window reads is silently wrong. */
+function V3POP(){
+  return {
+    schemaVersion: 3, includeCut: false,
+    reintro: { d1: 1 }, lastReintroDate: { d1: "2026-09-01" },
+    calChangedAt: null, deload: null,
+    sessions: [
+      { id: 1, date: "2026-08-31", dayId: "d1", dateBasis: "local", entries: {
+        d1a: { sets: [{ w: "100", r: "5" }, { w: "100", r: "5" }, { w: "95", r: "4" }],
+               note: "Chady's belt on, bar path drifted" },
+        d1c: { sets: [{ w: "0", r: "10" }, { w: "0", r: "9" }], note: "" },
+        d1h: { sets: [{ w: "30", r: "8" }], note: "" } } },
+      { id: 2, date: "2026-09-01", dayId: "d2", entries: {
+        d2a: { sets: [{ w: "140", r: "3" }, { w: "140", r: "3" }, { w: "140", r: "3" }], note: "" },
+        d2d: { sets: [{ w: "7.5", r: "8" }], note: "" } } },
+      { id: 3, date: "2026-09-03", dayId: "d3", dateBasis: "utc", entries: {
+        d3a: { sets: [{ w: "70", r: "3" }, { w: "70", r: "3" }], note: "" },
+        d3b: { sets: [{ w: "0", r: "10" }], note: "don't grip it that wide" } } },
+      { id: 4, date: "2026-09-04", dayId: "d4", entries: {
+        d4a: { sets: [{ w: "95", r: "3" }], note: "" } } },
+      { id: 5, date: "2026-09-05", dayId: "d5", entries: {
+        d5a: { sets: [{ w: "27.5", r: "3" }], note: "" },
+        d5i: { sets: [{ w: "22.5", r: "12" }], note: "" } } },
+      { id: 6, date: "2026-09-08", dayId: "d1", dateBasis: "local", entries: {
+        d1a: { sets: [{ w: "102.5", r: "5" }, { w: "102.5", r: "5" }, { w: "102.5", r: "5" }], note: "" },
+        d1h: { sets: [{ w: "32.5", r: "7" }], note: "" } } }
+    ]
+  };
+}
+/* A v3 bodyweight store, same mixed-provenance trap. */
+function V3BW(){
+  return { schemaVersion: 3, entries: [
+    { date: "2026-08-30", kg: 85.0, dateBasis: "utc" },
+    { date: "2026-09-02", kg: 85.2 },
+    { date: "2026-09-06", kg: 85.4, dateBasis: "local" }
+  ] };
+}
+
+/* Every JSON path at which two structures differ, as ".a.b[0].c" strings. Used
+   instead of "the rename changed something": the acceptance criterion is that
+   it changed EXACTLY ONE FIELD, which needs the list, not a boolean. */
+function diffPaths(a, b, at){
+  var out = [], k, i, ka, kb, seen = {};
+  at = at || "";
+  if (a === b) return out;
+  var ta = (a === null) ? "null" : (Array.isArray(a) ? "array" : typeof a);
+  var tb = (b === null) ? "null" : (Array.isArray(b) ? "array" : typeof b);
+  if (ta !== tb) { out.push(at || "(root)"); return out; }
+  if (ta === "array"){
+    for (i = 0; i < Math.max(a.length, b.length); i++){
+      if (i >= a.length || i >= b.length) out.push(at + "[" + i + "]");
+      else out = out.concat(diffPaths(a[i], b[i], at + "[" + i + "]"));
+    }
+    return out;
+  }
+  if (ta === "object"){
+    ka = Object.keys(a); kb = Object.keys(b);
+    for (i = 0; i < ka.length; i++) seen[ka[i]] = true;
+    for (i = 0; i < kb.length; i++) seen[kb[i]] = true;
+    for (k in seen) if (Object.prototype.hasOwnProperty.call(seen, k)){
+      var ha = Object.prototype.hasOwnProperty.call(a, k);
+      var hb = Object.prototype.hasOwnProperty.call(b, k);
+      if (!ha || !hb) out.push(at + "." + k);
+      else out = out.concat(diffPaths(a[k], b[k], at + "." + k));
+    }
+    return out;
+  }
+  if (a !== b) out.push(at || "(root)");
+  return out;
+}
+/* Test-local deep freeze. logic.js has one but does not export it, and the
+   point is to freeze inputs logic.js did NOT make. */
+function frz(o){
+  if (o === null || typeof o !== "object" || Object.isFrozen(o)) return o;
+  Object.freeze(o);
+  Object.keys(o).forEach(function(k){ frz(o[k]); });
+  return o;
+}
+/* A MUTABLE plan carrying PHAT's ids, which is what every editor test needs:
+   PHAT_PLAN is readOnly and deep-frozen, so an editor refuses it by design. */
+function MYPHAT(){
+  var r = P.copyPlan(P.PHAT_PLAN, "My PHAT", TODAY);
+  if (!r || !r.ok) throw new Error("copyPlan(PHAT_PLAN) failed - every editor test below depends on it");
+  return r.plan;
+}
+function MINIPLAN(){
+  return { planId: "p_mini", name: "Mini", readOnly: false, days: [
+    { id: "y_a", name: "Day A", ex: [
+      { id: "x_1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_sq" },
+      { id: "x_2", n: "Squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_sq" }
+    ] }
+  ] };
+}
+function allEx(plan){
+  var out = [], days = (plan && plan.days) || [], i, j;
+  for (i = 0; i < days.length; i++)
+    for (j = 0; j < ((days[i] && days[i].ex) || []).length; j++) out.push(days[i].ex[j]);
+  return out;
+}
+
+/* ------------------------------------------------------------ the surface */
+
+T("W2 - PHAT exposes the whole plan-document surface, callable from file:// with no DOM", function(a){
+  var need = ["mintId","takenIds","newExId","newDayId","newLiftId","planIdOf","exById","dayIdOfEx",
+              "liftOf","exIdsForLift","liftName","planLifts","validatePlan","renameExercise",
+              "renameDay","addExercise","addDay","moveExercise","removeExercise","copyPlan",
+              "clonePlan","normalisePlanStore"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none", "a plan function that needs a browser is a B-20 failure");
+  a.ok(P.PHAT_PLAN && typeof P.PHAT_PLAN === "object", "PHAT_PLAN must be exported");
+  a.eq(P.PHAT_PLAN_ID, "phat");
+  a.deep(P.PLAN_KINDS, ["power","hyp","speed"], "exported so an add form cannot drift from the validator");
+  a.deep(P.PLAN_IMPLEMENTS, ["bb","db","machine","cable","bodyweight"]);
+});
+
+/* ------------------------------------------- 1. BYTE-IDENTITY (W2 AC1) */
+
+T("W2-AC1 / B-46 - DATA LOSS: a populated v3 store crosses the v4 migration BYTE-IDENTICAL", function(a){
+  /* The headline criterion, and the only one that matters if it fails. */
+  var before = JSON.stringify(V3POP().sessions);
+  var r = P.migrateStore(V3POP(), V3BW());
+  a.eq(JSON.stringify(r.log.sessions), before, "a stored session changed across the schema-4 migration");
+  a.eq(JSON.stringify(r.bw.entries), JSON.stringify(V3BW().entries), "a bodyweight row changed");
+  /* The three values chosen because they are the ones a careless pass eats. */
+  a.eq(r.log.sessions[0].entries.d1a.note, "Chady's belt on, bar path drifted", "the apostrophe note");
+  a.eq(r.log.sessions[0].entries.d1c.sets[0].w, "0", "the 0 kg rack chin is a STRING zero, not dropped (B-21)");
+  a.eq(r.log.sessions[1].entries.d2d.sets[0].w, "7.5", "7.5 must stay the string it was, never coerced");
+  a.eq(r.log.sessions[2].entries.d3b.note, "don't grip it that wide");
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION, "only the version moves");
+});
+
+T("W2-AC1 - the four history readers return IDENTICAL values before and after the migration", function(a){
+  /* A migration that keeps the bytes but breaks a reader is the same defect
+     one layer up. These four are how every rule reads history. */
+  var pre = V3POP().sessions, r = P.migrateStore(V3POP(), null), post = r.log.sessions;
+  var ids = ["d1a","d1c","d1h","d2a","d2d","d3a","d3b","d4a","d5a","d5i"], i, id;
+  for (i = 0; i < ids.length; i++){
+    id = ids[i];
+    a.eq(JSON.stringify(P.lastFor(post, id)), JSON.stringify(P.lastFor(pre, id)), "lastFor(" + id + ")");
+    a.eq(JSON.stringify(P.liftDays(post, id, TODAY)), JSON.stringify(P.liftDays(pre, id, TODAY)),
+      "liftDays(" + id + ")");
+    a.eq(JSON.stringify(P.e1rmByDate(post, id, "2026-08-01", TODAY)),
+         JSON.stringify(P.e1rmByDate(pre, id, "2026-08-01", TODAY)), "e1rmByDate(" + id + ")");
+  }
+  a.eq(JSON.stringify(P.speedLoad(post, "d3a", TODAY, "Bent-over row")),
+       JSON.stringify(P.speedLoad(pre, "d3a", TODAY, "Bent-over row")), "speedLoad(d3a)");
+  a.eq(JSON.stringify(P.speedLoad(post, "d4a", TODAY, "Squat")),
+       JSON.stringify(P.speedLoad(pre, "d4a", TODAY, "Squat")), "speedLoad(d4a)");
+  a.eq(JSON.stringify(P.speedLoad(post, "d5a", TODAY, "Flat DB press")),
+       JSON.stringify(P.speedLoad(pre, "d5a", TODAY, "Flat DB press")), "speedLoad(d5a)");
+});
+
+T("W2-AC3 - the v4 migration is idempotent: byte-identical after run 1, 2 and 3", function(a){
+  var r1 = P.migrateStore(V3POP(), V3BW());
+  var s1 = JSON.stringify({ log: r1.log, bw: r1.bw });
+  var r2 = P.migrateStore(r1.log, r1.bw);
+  a.eq(JSON.stringify({ log: r2.log, bw: r2.bw }), s1, "run 2 changed the store");
+  a.eq(r2.changed, false, "run 2 must not trigger a boot write");
+  a.deep(r2.notes, [], "run 2 must say nothing");
+  var r3 = P.migrateStore(r2.log, r2.bw);
+  a.eq(JSON.stringify({ log: r3.log, bw: r3.bw }), s1, "run 3 changed the store");
+  a.eq(r3.changed, false);
+  a.deep(r3.notes, []);
+});
+
+/* --------------------------------------- 2. THE V_STATEKEYS / V_PLAN SPLIT */
+
+T("W2 / decisions.md 'Schema 3' - THE TRAP: bumping to 4 does not re-fire the dateBasis pass", function(a){
+  /* The constant's whole reason for existing, and the highest-value test in
+     this section.
+
+     Every pass in migrateStore gates on its OWN version constant. If the v2
+     dateBasis pass were gated on `logVer < SCHEMA_VERSION` - which is how it
+     was originally written - then moving the constant 3 -> 4 would re-run it
+     over every v3 store and stamp dateBasis:"utc" on sessions written AFTER
+     WO-001, which are correctly local-dated. Nothing would look broken. Every
+     date window that reads provenance would quietly be wrong.
+
+     The three UNMARKED sessions in V3POP are the ones at risk: that is exactly
+     what index.html writes today, because buildSession does not emit
+     dateBasis. Post-migration they must still have NO dateBasis field - not
+     "local", not "utc", ABSENT. */
+  var r = P.migrateStore(V3POP(), V3BW());
+  var s = r.log.sessions;
+  a.eq(s[0].dateBasis, "local", "an explicitly local session must stay local");
+  a.eq(s[5].dateBasis, "local");
+  a.eq(s[2].dateBasis, "utc", "an explicitly utc session must stay utc - the marker is not cleared either");
+  a.eq(Object.prototype.hasOwnProperty.call(s[1], "dateBasis"), false,
+    "an UNMARKED post-WO-001 session must not be stamped 'utc' by a version bump");
+  a.eq(Object.prototype.hasOwnProperty.call(s[3], "dateBasis"), false);
+  a.eq(Object.prototype.hasOwnProperty.call(s[4], "dateBasis"), false);
+  a.eq(Object.prototype.hasOwnProperty.call(r.log, "utcDatedBefore"), false,
+    "and no utcDatedBefore marker is invented for a store that never needed one");
+  var rows = r.bw.entries;
+  a.eq(rows[0].dateBasis, "utc");
+  a.eq(Object.prototype.hasOwnProperty.call(rows[1], "dateBasis"), false, "same trap on the bodyweight store");
+  a.eq(rows[2].dateBasis, "local");
+  a.eq(r.bwChanged, false, "and the bodyweight store is not rewritten at all by schema 4");
+});
+
+T("W2 - the v3 state-key pass does not re-fire either: a v3 store keeps its own reintro state", function(a){
+  /* The sibling of the trap above, one pass down. V3POP already carries the
+     four schema-3 keys with REAL values. */
+  var seed = V3POP(), before = Object.keys(seed);
+  var r = P.migrateStore(seed, null);
+  a.deep(r.log.reintro, { d1: 1 }, "an existing reintro counter must not be reset to {}");
+  a.eq(r.log.lastReintroDate.d1, "2026-09-01");
+  a.eq(r.log.includeCut, false, "and includeCut is still on disk (WO-003 Decision 6)");
+  var added = [], ks = Object.keys(r.log), i;
+  for (i = 0; i < ks.length; i++) if (before.indexOf(ks[i]) < 0) added.push(ks[i]);
+  a.deep(added, [], "schema 4 adds no key to a v3 log store");
+});
+
+T("W2 - a v1 store still reaches the current version, marks its dates, and keeps every value", function(a){
+  /* Forwards compatibility is not the only direction that matters. A store
+     written before there was a version at all must still load, forever. */
+  var r = mig(seedLog(), seedBw());
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION);
+  a.eq(r.log.sessions[0].dateBasis, "utc", "a genuinely pre-WO-001 session IS marked");
+  a.eq(r.log.sessions[0].entries.d1a.sets[2].w, "95", "and not one value is rewritten");
+  a.eq(r.log.sessions[0].entries.d1a.note, "belt on");
+});
+
+/* ------------------------------------------- 3. THE RENAME ROUND TRIP (AC2) */
+
+T("W2-AC2 / B-46 - a rename changes EXACTLY ONE FIELD, and a whole-plan diff proves it", function(a){
+  var base = MYPHAT();
+  var baseJSON = JSON.stringify(base);
+  var r = P.renameExercise(base, "d1a", "Pendlay row");
+  a.eq(r.ok, true, r.problems && JSON.stringify(r.problems));
+  a.deep(diffPaths(base, r.plan), [".days[0].ex[0].n"],
+    "a rename that touches anything but `n` is B-46 coming back through the editor");
+  a.eq(JSON.stringify(base), baseJSON, "and the input plan is not mutated");
+  a.eq(P.exById(r.plan, "d1a").n, "Pendlay row");
+  a.eq(P.exById(r.plan, "d1a").id, "d1a", "the id does not move - it is not derived from the name");
+  a.eq(P.liftOf(r.plan, "d1a"), "l_row", "and the lift token does not move either");
+});
+
+T("W2-AC2 / B-46 - after a rename the history is still reachable by id and the trend still groups", function(a){
+  var base = MYPHAT(), sessions = V3POP().sessions;
+  var logJSON = JSON.stringify(sessions);
+  var lastBefore = JSON.stringify(P.lastFor(sessions, "d1a"));
+  var groupBefore = JSON.stringify(P.exIdsForLift(base, "l_row"));
+  var e1rmBefore = JSON.stringify(P.e1rmByDate(sessions, "d1a", "2026-08-01", TODAY));
+
+  var r = P.renameExercise(base, "d1a", "Pendlay row");
+  a.eq(JSON.stringify(P.lastFor(sessions, "d1a")), lastBefore, "lastFor(d1a) must be unchanged by a rename");
+  a.eq(JSON.stringify(P.e1rmByDate(sessions, "d1a", "2026-08-01", TODAY)), e1rmBefore, "and so must the trend series");
+  a.eq(JSON.stringify(P.exIdsForLift(r.plan, "l_row")), groupBefore,
+    "the lift group is by token, so the two row slots still group together");
+  a.deep(P.exIdsForLift(r.plan, "l_row"), ["d1a","d3a"], "power row + speed row, still one lift");
+  a.eq(P.liftName(r.plan, "l_row"), "Pendlay row",
+    "and the trend LINE is renamed with it - the display name is resolved at read time, which is the point");
+  a.eq(JSON.stringify(sessions), logJSON, "a rename must not reach a stored session at all");
+  /* B-28 in one line: the whole reason d1a gets renamed is that its shipped
+     name is wrong, and the design's answer was to re-key history off the name. */
+  a.eq(P.exById(base, "d1a").n, "Bent-over row", "the source plan is untouched");
+});
+
+T("W2-AC2 - rename there and back leaves the plan byte-identical", function(a){
+  var base = MYPHAT(), baseJSON = JSON.stringify(base);
+  var there = P.renameExercise(base, "d1a", "Pendlay row");
+  var back = P.renameExercise(there.plan, "d1a", "Bent-over row");
+  a.eq(back.ok, true);
+  a.eq(JSON.stringify(back.plan), baseJSON, "a round-tripped rename is not byte-identical");
+  a.deep(diffPaths(base, back.plan), [], "and nothing at all differs");
+});
+
+T("W2 - the shipped PHAT plan REFUSES a rename: readOnly is enforced, not documented", function(a){
+  var before = JSON.stringify(P.PHAT_PLAN);
+  var r = P.renameExercise(P.PHAT_PLAN, "d1a", "Nope");
+  a.eq(r.ok, false);
+  a.eq(r.plan, P.PHAT_PLAN, "the ORIGINAL plan comes back, by reference");
+  a.eq(r.problems[0].reason, "locked");
+  a.eq(r.problems[0].field, "readOnly");
+  a.eq(P.exById(P.PHAT_PLAN, "d1a").n, "Bent-over row");
+  a.eq(JSON.stringify(P.PHAT_PLAN), before, "nothing half-applied");
+  a.eq(P.renameDay(P.PHAT_PLAN, "d1", "Nope").ok, false, "renameDay too");
+  a.eq(P.addDay(P.PHAT_PLAN, "Nope").ok, false, "addDay too");
+  a.eq(P.addExercise(P.PHAT_PLAN, "d1", { n: "X", s: 3, lo: 3, hi: 5, k: "hyp", implement: "bb" }).ok, false);
+  a.eq(P.moveExercise(P.PHAT_PLAN, "d1", 0, 1).ok, false, "moveExercise too");
+  a.eq(P.removeExercise(P.PHAT_PLAN, "d1a").ok, false, "removeExercise too");
+  a.eq(JSON.stringify(P.PHAT_PLAN), before, "after all six refusals, still byte-identical");
+});
+
+T("W2 - renameExercise refuses an unknown id, an empty name and a non-string, and half-applies nothing", function(a){
+  var base = MYPHAT(), baseJSON = JSON.stringify(base);
+  var bad = [["nope","X"], ["","X"], ["d1a",""], ["d1a","   "], ["d1a",null], ["d1a",42], ["d1a",undefined]], i, r;
+  for (i = 0; i < bad.length; i++){
+    r = P.renameExercise(base, bad[i][0], bad[i][1]);
+    a.eq(r.ok, false, "renameExercise(" + show(bad[i][0]) + ", " + show(bad[i][1]) + ") must refuse");
+    a.eq(r.plan, base, "and hand back the original by reference");
+    a.ok(r.problems.length > 0, "a refusal states a reason");
+  }
+  a.eq(JSON.stringify(base), baseJSON);
+  /* A name is trimmed, not rejected, when it has content. */
+  a.eq(P.renameExercise(base, "d1a", "  Pendlay row  ").plan.days[0].ex[0].n, "Pendlay row");
+});
+
+/* ---------------------------------- 4. copyPlan MUST NEVER ORPHAN HISTORY */
+
+T("W2-AC / B-46 - copyPlan PRESERVES ids, so a session logged under the copy is still found by lastFor", function(a){
+  var copy = MYPHAT();
+  a.ne(copy.planId, P.PHAT_PLAN_ID, "the copy gets its own planId");
+  a.eq(copy.readOnly, false, "and is editable");
+  a.eq(copy.derivedFrom, "phat", "and still declares its provenance, which is ST1's gate");
+  a.eq(copy.createdAt, TODAY);
+  /* THE POINT: every exercise id survives the copy. Re-minting them here is
+     exactly how the redesign would have orphaned six weeks of logging. */
+  var mine = allEx(copy).map(function(e){ return e.id; });
+  var ship = allEx(P.PHAT_PLAN).map(function(e){ return e.id; });
+  a.deep(mine, ship, "copyPlan re-minted an exercise id - every logged set under it is now orphaned");
+  a.eq(mine.length, 42, "the 42 coach-verified slots");
+
+  /* Log against d1a under the copy, and confirm the history reader finds it. */
+  var s = P.buildSession(draft(entry("d1a", sets("105:5", "105:5", "105:5")), "2026-09-09"),
+                         "d1", "2026-09-09", 99, copy.planId);
+  a.ok(s !== null, "buildSession must accept a planId as its fifth argument");
+  a.eq(s.planId, copy.planId);
+  var sessions = P.sortSessions(V3POP().sessions.concat([s]));
+  var last = P.lastFor(sessions, "d1a");
+  a.ok(last !== null, "lastFor lost the entry logged under the copied plan - copyPlan orphaned history");
+  a.eq(last.sets[0].w, 105, "and it is the newest one");
+  a.eq(P.planIdOf(s), copy.planId);
+  a.eq(P.planIdOf(V3POP().sessions[0]), "phat", "a session written before schema 4 MEANS the shipped plan");
+});
+
+T("W2 - planIdOf resolves absence, blankness and junk to the shipped plan, never to undefined", function(a){
+  a.eq(P.planIdOf({ id: 1 }), "phat", "absent means PHAT");
+  a.eq(P.planIdOf({ planId: "" }), "phat");
+  a.eq(P.planIdOf({ planId: "   " }), "phat");
+  a.eq(P.planIdOf({ planId: 42 }), "phat", "a non-string is not a plan id");
+  a.eq(P.planIdOf({ planId: null }), "phat");
+  a.eq(P.planIdOf(null), "phat");
+  a.eq(P.planIdOf(undefined), "phat");
+  a.eq(P.planIdOf({ planId: "  p_x9  " }), "p_x9", "and a real one is trimmed");
+});
+
+T("W2 - buildSession's fifth argument is OPTIONAL: the four-argument call is byte-for-byte unchanged", function(a){
+  /* Backwards compatibility of the one function whose job is to refuse rather
+     than guess. Every existing caller passes four arguments. */
+  var d = draft(entry("d1a", sets("100:5")), "2026-01-15");
+  a.eq(JSON.stringify(P.buildSession(d, "d1", "2026-01-15", 7)),
+    '{"id":7,"date":"2026-01-15","dayId":"d1","entries":{"d1a":{"sets":[{"w":100,"r":5}],"note":""}}}',
+    "the four-argument session must be exactly what it always was");
+  a.eq(JSON.stringify(P.buildSession(d, "d1", "2026-01-15", 7, "p_abc")),
+    '{"id":7,"date":"2026-01-15","dayId":"d1","planId":"p_abc",' +
+    '"entries":{"d1a":{"sets":[{"w":100,"r":5}],"note":""}}}',
+    "and planId sits between dayId and entries, so the serialization stays stable");
+  /* A planId that is not a usable string is OMITTED, not stored as junk and
+     not a refusal - unlike a missing date, a missing planId is recoverable. */
+  var junk = ["", "   ", null, undefined, 0, 42, {}, [], NaN], i, s;
+  for (i = 0; i < junk.length; i++){
+    s = P.buildSession(d, "d1", "2026-01-15", 7, junk[i]);
+    a.ok(s !== null, "a junk planId must not refuse the save: " + show(junk[i]));
+    a.eq(Object.prototype.hasOwnProperty.call(s, "planId"), false,
+      "a junk planId must be omitted entirely, never stored: " + show(junk[i]));
+    a.eq(P.planIdOf(s), "phat");
+  }
+  a.eq(P.buildSession(d, "d1", "2026-01-15", 7, "  p_abc  ").planId, "p_abc", "and a real one is trimmed");
+});
+
+/* ------------------------- 7. TWO SKULL CRUSHERS, TWO HISTORIES (C-6) */
+
+T("W2-AC / B-46 - d1h and d5i are both 'Skull crusher' and keep SEPARATE histories", function(a){
+  /* The concrete case the design's slug(name)+':'+kind key collapses:
+     d1h is 3 x 6-10 power, d5i is 3 x 12-15 hyp. Same name, same implement,
+     different prescription, different day. A name-derived key merges them and
+     the verdict on one starts reading the other's load. */
+  var d1h = P.exById(P.PHAT_PLAN, "d1h"), d5i = P.exById(P.PHAT_PLAN, "d5i");
+  a.eq(d1h.n, "Skull crusher");
+  a.eq(d5i.n, "Skull crusher", "same name, on purpose");
+  a.ne(d1h.id, d5i.id, "different id");
+  a.eq(P.dayIdOfEx(P.PHAT_PLAN, "d1h"), "d1");
+  a.eq(P.dayIdOfEx(P.PHAT_PLAN, "d5i"), "d5");
+  var sessions = V3POP().sessions;
+  var l1 = P.lastFor(sessions, "d1h"), l5 = P.lastFor(sessions, "d5i");
+  a.ok(l1 !== null && l5 !== null, "both slots must have history in the fixture");
+  a.ne(JSON.stringify(l1), JSON.stringify(l5),
+    "lastFor(d1h) and lastFor(d5i) returned the SAME entry - the two slots have been collapsed");
+  a.eq(l1.sets[0].w, "32.5", "d1h's own last entry");
+  a.eq(l5.sets[0].w, "22.5", "d5i's own last entry");
+  /* They DO share a lift token, which is the C-6 split working as designed:
+     one trend line for 'skull crusher the movement', two histories for the two
+     slots. Grouping is a display decision; identity is not. */
+  a.eq(P.liftOf(P.PHAT_PLAN, "d1h"), "l_skull");
+  a.eq(P.liftOf(P.PHAT_PLAN, "d5i"), "l_skull");
+  a.deep(P.exIdsForLift(P.PHAT_PLAN, "l_skull"), ["d1h","d5i"]);
+});
+
+T("W2 / C-5 / B-47 - the shipped plan's storage ids do not move: d1..d5 and d1a..d5j, in order", function(a){
+  /* The design renumbered the days to show the rest day. Storage ids carry
+     history and are compiled into SPEED_SRC, REINTRO_ORDER and KEY_LIFTS, so
+     the renumbering is a display artefact and belongs in `wd` (B-31). */
+  var days = P.PHAT_PLAN.days;
+  a.deep(days.map(function(d){ return d.id; }), ["d1","d2","d3","d4","d5"]);
+  a.deep(days.map(function(d){ return d.name; }),
+    ["Upper power","Lower power","Back & shoulders","Lower hypertrophy","Chest & arms"]);
+  a.deep(days.map(function(d){ return d.wd; }), ["Mon","Tue","Thu","Fri","Sat"],
+    "the weekday label is where the design's renumbering belongs (B-31)");
+  a.deep(days.map(function(d){ return d.ex.length; }), [8,7,8,9,10], "42 slots, 8+7+8+9+10");
+  var i, j, d, ex, expect;
+  for (i = 0; i < days.length; i++){
+    d = days[i]; ex = d.ex;
+    for (j = 0; j < ex.length; j++){
+      expect = "d" + (i + 1) + "abcdefghij".charAt(j);
+      a.eq(ex[j].id, expect, "day " + d.id + " slot " + j + " must still be " + expect);
+    }
+  }
+  /* And the three ids the speed engine has compiled in still resolve. */
+  a.deep(Object.keys(P.SPEED_SRC).sort(), ["d3a","d4a","d5a"]);
+  var k, src;
+  for (k in P.SPEED_SRC) if (Object.prototype.hasOwnProperty.call(P.SPEED_SRC, k)){
+    src = P.SPEED_SRC[k];
+    a.ok(!!P.exById(P.PHAT_PLAN, k), "SPEED_SRC key " + k + " is not a slot in the shipped plan");
+    a.ok(!!P.exById(P.PHAT_PLAN, src), "SPEED_SRC source " + src + " is not a slot in the shipped plan");
+    a.eq(P.liftOf(P.PHAT_PLAN, k), P.liftOf(P.PHAT_PLAN, src),
+      "a speed slot must share its source lift's group: " + k + " vs " + src);
+  }
+});
+
+/* --------------------- 5. NO PATH TO AN UNTYPED EXERCISE (C-7 / B-57) */
+
+T("W2-AC / C-7 - every slot in the SHIPPED plan has k, implement and lift, and validatePlan says ok", function(a){
+  /* `k` selects P1 vs H1 vs the speed branch AND R1's rest row. `implement`
+     drives Z2's load word and I2's increment line. An untyped exercise is one
+     the app would guess about, out loud, in kilograms. */
+  var v = P.validatePlan(P.PHAT_PLAN);
+  a.eq(v.ok, true, "shipped plan problems: " + JSON.stringify(v.problems));
+  a.deep(v.problems, []);
+  var ex = allEx(P.PHAT_PLAN), i, e, bad = [];
+  a.eq(ex.length, 42);
+  for (i = 0; i < ex.length; i++){
+    e = ex[i];
+    if (P.PLAN_KINDS.indexOf(e.k) < 0) bad.push(e.id + ".k=" + show(e.k));
+    if (P.PLAN_IMPLEMENTS.indexOf(e.implement) < 0) bad.push(e.id + ".implement=" + show(e.implement));
+    if (typeof e.lift !== "string" || e.lift.trim() === "") bad.push(e.id + ".lift=" + show(e.lift));
+    if (typeof e.n !== "string" || e.n.trim() === "") bad.push(e.id + ".n");
+    if (!(e.s >= 1 && e.lo >= 1 && e.hi >= e.lo)) bad.push(e.id + ".s/lo/hi");
+    if (e.cut !== undefined && e.cut !== 1) bad.push(e.id + ".cut=" + show(e.cut));
+  }
+  a.eq(bad.join(" | ") || "none", "none", "an untyped or malformed slot in the shipped plan");
+});
+
+T("W2-AC / C-7 - a plan built ENTIRELY from addDay + addExercise cannot contain an untyped exercise", function(a){
+  /* The other half of the criterion: the editor's own add path. `k` and
+     `implement` are required at creation - there is no default to guess with,
+     which is what the prototype's addEx("New exercise", 3, 8, 12, "hyp") did. */
+  var p = { planId: "p_scratch", name: "From scratch", readOnly: false, days: [] };
+  var d = P.addDay(p, "Push");
+  a.eq(d.ok, true);
+  a.ok(!!d.dayId, "addDay returns the minted day id");
+  var good = { n: "Overhead press", s: 3, lo: 5, hi: 8, k: "power", implement: "bb" };
+  var refuse = [
+    ["k missing",           { n:"X", s:3, lo:5, hi:8, implement:"bb" },                    "k"],
+    ["k null",              { n:"X", s:3, lo:5, hi:8, k:null, implement:"bb" },            "k"],
+    ["k empty",             { n:"X", s:3, lo:5, hi:8, k:"", implement:"bb" },              "k"],
+    ["k wrong case",        { n:"X", s:3, lo:5, hi:8, k:"POWER", implement:"bb" },         "k"],
+    ["k out of enum",       { n:"X", s:3, lo:5, hi:8, k:"hypertrophy", implement:"bb" },   "k"],
+    ["k padded",            { n:"X", s:3, lo:5, hi:8, k:" hyp ", implement:"bb" },         "k"],
+    ["implement missing",   { n:"X", s:3, lo:5, hi:8, k:"hyp" },                           "implement"],
+    ["implement null",      { n:"X", s:3, lo:5, hi:8, k:"hyp", implement:null },           "implement"],
+    ["implement out of enum",{ n:"X", s:3, lo:5, hi:8, k:"hyp", implement:"barbell" },     "implement"],
+    ["name missing",        { s:3, lo:5, hi:8, k:"hyp", implement:"bb" },                  "n"],
+    ["name blank",          { n:"   ", s:3, lo:5, hi:8, k:"hyp", implement:"bb" },         "n"],
+    ["sets 0",              { n:"X", s:0, lo:5, hi:8, k:"hyp", implement:"bb" },           "s"],
+    ["sets fractional",     { n:"X", s:2.5, lo:5, hi:8, k:"hyp", implement:"bb" },         "s"],
+    ["lo > hi",             { n:"X", s:3, lo:9, hi:8, k:"hyp", implement:"bb" },           "hi"],
+    ["lo 0",                { n:"X", s:3, lo:0, hi:8, k:"hyp", implement:"bb" },           "lo"],
+    ["cut junk",            { n:"X", s:3, lo:5, hi:8, k:"hyp", implement:"bb", cut:true }, "cut"],
+    ["cue junk",            { n:"X", s:3, lo:5, hi:8, k:"hyp", implement:"bb", cue:42 },   "cue"]
+  ], i, r, fields, planJSON = JSON.stringify(d.plan);
+  for (i = 0; i < refuse.length; i++){
+    r = P.addExercise(d.plan, d.dayId, refuse[i][1]);
+    a.eq(r.ok, false, refuse[i][0] + " must be refused, never defaulted");
+    a.eq(r.exId, null, refuse[i][0] + " must not mint an id for a refused exercise");
+    fields = r.problems.map(function(x){ return x.field; });
+    a.ok(fields.indexOf(refuse[i][2]) >= 0,
+      refuse[i][0] + ": expected a problem on `" + refuse[i][2] + "`, got " + JSON.stringify(r.problems));
+    a.eq(JSON.stringify(r.plan), planJSON, refuse[i][0] + " half-applied");
+  }
+  a.eq(P.addExercise(d.plan, d.dayId, null).ok, false, "no spec at all is a refusal, not a default exercise");
+  a.eq(P.addExercise(d.plan, "nope", good).ok, false, "an unknown day is a refusal");
+
+  var ok = P.addExercise(d.plan, d.dayId, good);
+  a.eq(ok.ok, true, JSON.stringify(ok.problems));
+  a.eq(P.validatePlan(ok.plan).ok, true, JSON.stringify(P.validatePlan(ok.plan).problems));
+  var e = P.exById(ok.plan, ok.exId);
+  a.eq(e.k, "power"); a.eq(e.implement, "bb"); a.eq(e.n, "Overhead press");
+  a.ok(typeof e.lift === "string" && e.lift !== "", "a lift group is minted when none is supplied");
+  a.eq(Object.prototype.hasOwnProperty.call(e, "cut"), false, "cut is absent, not cut:0 or cut:undefined");
+  a.eq(Object.prototype.hasOwnProperty.call(e, "cue"), false);
+  /* Supplying a lift joins an existing group instead of minting a new one. */
+  var joined = P.addExercise(ok.plan, d.dayId,
+    { n: "Seated OHP", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: e.lift });
+  a.eq(joined.ok, true);
+  a.eq(joined.lift, e.lift);
+  a.deep(P.exIdsForLift(joined.plan, e.lift), [ok.exId, joined.exId]);
+});
+
+T("W2-AC / C-7 - validatePlan refuses an untyped exercise wherever it came from, and never repairs", function(a){
+  var p = MINIPLAN();
+  delete p.days[0].ex[0].k;
+  var v = P.validatePlan(p);
+  a.eq(v.ok, false);
+  a.eq(v.problems.length, 1);
+  a.deep(v.problems[0], { scope: "ex", id: "x_1", field: "k", reason: "enum" });
+  a.eq(Object.prototype.hasOwnProperty.call(p.days[0].ex[0], "k"), false,
+    "validatePlan must not repair - it reports, it never writes a default k");
+  /* A reason is a developer signal, never copy. */
+  var reasons = ["missing","type","range","enum","duplicate"], i;
+  p = MINIPLAN();
+  p.days[0].ex[0].implement = "kettlebell";
+  p.days[0].ex[1].s = 99;
+  p.days.push({ id: "y_a", name: "", ex: [] });
+  v = P.validatePlan(p);
+  a.eq(v.ok, false);
+  for (i = 0; i < v.problems.length; i++){
+    a.ok(reasons.indexOf(v.problems[i].reason) >= 0,
+      "unknown reason token " + show(v.problems[i].reason) + " - the set must stay closed and machine-readable");
+    a.ok(!/[.!]$/.test(v.problems[i].reason), "a reason is not a sentence");
+  }
+  a.ok(v.problems.length >= 3, "every problem is reported, not just the first: " + JSON.stringify(v.problems));
+});
+
+/* ------------------------------- 6. EDITORS NEVER MUTATE (frozen inputs) */
+
+T("W2 - every editor is PURE: a deep-frozen plan survives ten calls, valid and rejected alike", function(a){
+  /* Frozen under "use strict", so a mutation is a thrown TypeError rather than
+     a silent write. That is the whole reason to freeze rather than diff. */
+  var p = frz(MYPHAT());
+  var before = JSON.stringify(p);
+  a.noThrow(function(){
+    P.renameExercise(p, "d1a", "Pendlay row");
+    P.renameExercise(p, "nope", "X");
+    P.renameDay(p, "d1", "Upper");
+    P.renameDay(p, "nope", "X");
+    P.addExercise(p, "d1", { n: "X", s: 3, lo: 5, hi: 8, k: "hyp", implement: "db" });
+    P.addExercise(p, "d1", { n: "X", s: 3, lo: 5, hi: 8 });
+    P.addDay(p, "Day 6");
+    P.moveExercise(p, "d1", 0, 3);
+    P.moveExercise(p, "d1", 0, 99);
+    P.removeExercise(p, "d1a");
+    P.removeExercise(p, "nope");
+    P.copyPlan(p, "Another", TODAY);
+    P.validatePlan(p);
+    P.planLifts(p);
+    P.exIdsForLift(p, "l_row");
+    P.liftName(p, "l_row");
+    P.dayIdOfEx(p, "d1a");
+    P.takenIds(p);
+  }, "an editor wrote to its input plan");
+  a.eq(JSON.stringify(p), before, "the input plan changed");
+});
+
+T("W2 - a REJECTED edit hands back the original by reference and does not half-apply", function(a){
+  var p = MYPHAT(), before = JSON.stringify(p);
+  var cases = [
+    ["renameExercise unknown id", P.renameExercise(p, "nope", "X")],
+    ["renameExercise blank name", P.renameExercise(p, "d1a", "")],
+    ["renameDay unknown id",      P.renameDay(p, "nope", "X")],
+    ["renameDay blank name",      P.renameDay(p, "d1", "")],
+    ["addDay blank name",         P.addDay(p, "  ")],
+    ["addExercise unknown day",   P.addExercise(p, "nope", { n:"X", s:3, lo:5, hi:8, k:"hyp", implement:"db" })],
+    ["addExercise untyped",       P.addExercise(p, "d1", { n:"X", s:3, lo:5, hi:8 })],
+    ["moveExercise bad index",    P.moveExercise(p, "d1", 0, 99)],
+    ["moveExercise negative",     P.moveExercise(p, "d1", -1, 0)],
+    ["moveExercise unknown day",  P.moveExercise(p, "nope", 0, 1)],
+    ["removeExercise unknown id", P.removeExercise(p, "nope")]
+  ], i;
+  for (i = 0; i < cases.length; i++){
+    a.eq(cases[i][1].ok, false, cases[i][0] + " must refuse");
+    a.eq(cases[i][1].plan, p, cases[i][0] + ": the ORIGINAL plan must come back, by reference");
+    a.ok(cases[i][1].problems.length > 0, cases[i][0] + ": a refusal states a reason");
+  }
+  a.eq(JSON.stringify(p), before, "a rejected edit half-applied");
+});
+
+T("W2 - removeExercise takes the SLOT, never the history, and returns the object an undo needs", function(a){
+  var p = MYPHAT(), sessions = V3POP().sessions, logJSON = JSON.stringify(sessions);
+  var original = JSON.stringify(P.exById(p, "d1a"));
+  var lastBefore = JSON.stringify(P.lastFor(sessions, "d1a"));
+  var r = P.removeExercise(p, "d1a");
+  a.eq(r.ok, true);
+  a.eq(P.exById(r.plan, "d1a"), null, "the slot is gone from the plan");
+  a.eq(allEx(r.plan).length, 41);
+  a.eq(JSON.stringify(r.removed), original, "the removed object comes back byte-for-byte, so an undo is exact");
+  a.eq(JSON.stringify(sessions), logJSON, "removing a slot must not touch one logged set");
+  a.eq(JSON.stringify(P.lastFor(sessions, "d1a")), lastBefore, "the history is still there and still reachable");
+  /* Putting it back at the same id restores the whole DAYS structure - that is
+     the promise the id-keyed design makes and it is worth asserting, not
+     assuming. The plan-scoped tables are a separate matter; see the very next
+     test, which is a finding, not a footnote. */
+  r.plan.days[0].ex.unshift(JSON.parse(JSON.stringify(r.removed)));
+  a.deep(diffPaths(p.days, r.plan.days), [],
+    "removed then re-inserted at the same id must be byte-identical in the days structure");
+});
+
+T("W2/W3 FINDING - removeExercise's undo is NOT complete: the scrubbed plan-scoped refs never come back", function(a){
+  /* FOUND BY THE W2 UNDO TEST, ROUTED TO PM/BACKEND. Pinned here as observed
+     behaviour rather than left as a red test, per WO-003 Decision 1 and the
+     B-32 precedent; the open question is in the contract list below.
+
+     W3 added edit-time reconciliation: deleting an exercise drops every
+     plan-scoped reference to it (keyLifts, speedSource, reintroOrder). That
+     rule is right - a dangling id is worse. But removeExercise returns ONLY
+     the exercise object in `removed`, so a caller holding it has no way to
+     restore what was scrubbed. Splice the slot back and d1a is a plan
+     exercise again while being silently absent from keyLifts (the stall test
+     loses a key lift) and from speedSource (d3a's speed target goes silent).
+     No message, no second undo. It is the C-12 / B-48 class one layer up, and
+     the Plan Editor (W15) is where a user meets it.
+
+     Not a W3 defect against its own acceptance criterion, which asks only for
+     the drop. It is a gap in what an undo needs, and W15 cannot be built
+     correctly without closing it. */
+  var p = MYPHAT();
+  a.deep(p.keyLifts, ["d1a","d1d","d2a","d2d"], "the copy inherits the plan-scoped tables");
+  a.eq(p.speedSource.d3a, "d1a");
+  var r = P.removeExercise(p, "d1a");
+  a.eq(r.ok, true);
+  a.deep(r.plan.keyLifts, ["d1d","d2a","d2d"], "the reference is dropped, correctly - no dangling id");
+  a.eq(Object.prototype.hasOwnProperty.call(r.plan.speedSource, "d3a"), false);
+  a.deep(Object.keys(r.removed).sort(), ["cue","hi","id","implement","k","lift","lo","n","s"],
+    "`removed` carries the exercise and nothing else - no record of what was scrubbed");
+  /* The naive undo a UI would write, and what it leaves behind. */
+  r.plan.days[0].ex.unshift(JSON.parse(JSON.stringify(r.removed)));
+  a.ok(P.exById(r.plan, "d1a") !== null, "the slot is back");
+  a.deep(r.plan.keyLifts, ["d1d","d2a","d2d"], "but it is no longer a key lift, and nothing says so");
+  a.eq(Object.prototype.hasOwnProperty.call(r.plan.speedSource, "d3a"), false,
+    "and d3a has lost its speed source permanently");
+  a.eq(P.validatePlan(r.plan).ok, true, "the plan still VALIDATES, which is why this is silent");
+});
+
+T("W2 - moveExercise reorders and moves no id", function(a){
+  var p = MYPHAT();
+  var idsBefore = p.days[0].ex.map(function(e){ return e.id; });
+  var r = P.moveExercise(p, "d1", 0, 3);
+  a.eq(r.ok, true);
+  a.deep(r.plan.days[0].ex.map(function(e){ return e.id; }),
+    ["d1b","d1c","d1d","d1a","d1e","d1f","d1g","d1h"], "d1a moved to index 3, everything else shifted");
+  a.deep(p.days[0].ex.map(function(e){ return e.id; }), idsBefore, "and the input is untouched");
+  var sorted = r.plan.days[0].ex.map(function(e){ return e.id; }).slice().sort();
+  a.deep(sorted, idsBefore.slice().sort(), "the same set of ids, reordered - none minted, none lost");
+  a.eq(JSON.stringify(P.exById(r.plan, "d1a")), JSON.stringify(P.exById(p, "d1a")), "and d1a itself is unchanged");
+});
+
+/* ============ ADVERSARIAL: the three things backend was least sure of ============ */
+
+/* Did fn throw, and with what? Returns "" when it did not throw. */
+function threw(fn){
+  try { fn(); return ""; }
+  catch (e){ return (e && e.name ? e.name : "Error") + ": " + (e && e.message ? e.message : String(e)); }
+}
+
+T("W2 ADVERSARIAL - PHAT_PLAN is deep-frozen at every level, including the arrays", function(a){
+  a.ok(Object.isFrozen(P.PHAT_PLAN), "the plan object");
+  a.ok(Object.isFrozen(P.PHAT_PLAN.days), "the days ARRAY, not just the days");
+  var i, j, d;
+  for (i = 0; i < P.PHAT_PLAN.days.length; i++){
+    d = P.PHAT_PLAN.days[i];
+    a.ok(Object.isFrozen(d), "day " + d.id);
+    a.ok(Object.isFrozen(d.ex), "day " + d.id + " ex array");
+    for (j = 0; j < d.ex.length; j++) a.ok(Object.isFrozen(d.ex[j]), "exercise " + d.ex[j].id);
+  }
+});
+
+T("W2 ADVERSARIAL - rendering a session card off PHAT_PLAN.days writes nothing through", function(a){
+  /* The frontend's real pattern: iterate the day, read every field a card
+     shows, build strings. Nothing here may write, and the deep freeze means a
+     write that slips in is a thrown TypeError rather than a silent corruption
+     of the shipped programme for the rest of the session. */
+  var before = JSON.stringify(P.PHAT_PLAN);
+  var day = P.PHAT_PLAN.days[0];
+  var card = "";
+  a.noThrow(function(){
+    var i, e, lines = [day.wd + " - " + day.name];
+    for (i = 0; i < day.ex.length; i++){
+      e = day.ex[i];
+      lines.push(e.id + " " + e.n + " " + e.s + " x " + e.lo + "-" + e.hi +
+                 " [" + e.k + "/" + e.implement + "/" + e.lift + "]" +
+                 (e.cut === 1 ? " CUT" : "") + (e.cue ? " " + e.cue : ""));
+    }
+    card = lines.join("\n");
+  }, "a read-only render threw");
+  a.ok(card.indexOf("Mon - Upper power") === 0, "the card rendered");
+  a.ok(card.indexOf("d1a Bent-over row 3 x 3-5 [power/bb/l_row]") > 0);
+  a.ok(card.indexOf("d1c Rack chin 2 x 6-10 [power/bodyweight/l_rackchin] CUT") > 0);
+  a.eq(JSON.stringify(P.PHAT_PLAN), before, "the render wrote through to the shipped plan");
+});
+
+T("W2 ADVERSARIAL - the deep freeze is a BEHAVIOUR CHANGE: a caller that decorates an exercise now THROWS", function(a){
+  /* Named, deliberately, as a contract for the frontend rather than a passing
+     footnote. Under "use strict" every one of these is a TypeError, not a
+     silent no-op. The common render idiom `ex.rest = restTarget(ex)` - decorate
+     the plan object in place, then render off it - is now a hard failure, and a
+     thrown render costs a card (WO-004 W5's data criterion). Any view code that
+     wants a derived field must build its own object.
+
+     Judged better than a silent no-op, and this test is why: a no-op would let
+     a decorated field read back as undefined at render time and print an empty
+     rest target next to a real weight. A throw is loud, local, and caught in
+     one test rather than in the gym. */
+  var before = JSON.stringify(P.PHAT_PLAN);
+  var ex = P.PHAT_PLAN.days[0].ex[0];
+  a.match(threw(function(){ ex.n = "Pendlay row"; }), /TypeError/, "overwriting a name must throw");
+  a.match(threw(function(){ ex.rest = { ready: 150, cap: 180 }; }), /TypeError/,
+    "DECORATING a plan exercise with a derived field must throw - this is the idiom to avoid");
+  a.match(threw(function(){ delete ex.cue; }), /TypeError/, "deleting a field must throw");
+  a.match(threw(function(){ P.PHAT_PLAN.name = "Not PHAT"; }), /TypeError/);
+  a.match(threw(function(){ P.PHAT_PLAN.readOnly = false; }), /TypeError/, "readOnly cannot be switched off");
+  a.match(threw(function(){ P.PHAT_PLAN.days.push({ id: "d6", name: "X", ex: [] }); }), /TypeError/);
+  a.match(threw(function(){ P.PHAT_PLAN.days[0].ex.splice(0, 1); }), /TypeError/);
+  a.match(threw(function(){ P.PHAT_PLAN.days[0].ex.sort(function(){ return -1; }); }), /TypeError/);
+  a.eq(JSON.stringify(P.PHAT_PLAN), before, "after eight attempted writes the shipped plan is byte-identical");
+  /* The sanctioned route: clone, then edit. */
+  var mine = P.clonePlan(P.PHAT_PLAN);
+  a.ok(!Object.isFrozen(mine), "clonePlan hands back a mutable copy");
+  a.eq(threw(function(){ mine.days[0].ex[0].n = "Pendlay row"; }), "", "which is where a caller writes");
+  a.eq(JSON.stringify(P.PHAT_PLAN), before);
+});
+
+T("W2 ADVERSARIAL - mintId's deterministic fallback terminates and returns an untaken id", function(a){
+  /* 64 random draws, then a z0, z1, z2... walk. The walk is the guarantee -
+     the entropy is not - so it has to be exercised, and the only way to force
+     it is to make every random draw collide.
+
+     Math.random is stubbed to a constant, which makes tok36() constant, so the
+     ONLY thing varying across the 64 draws is the internal counter. One probe
+     call reveals the counter's current value; the next 64 draws are then
+     arithmetic, and seeding them all as taken drives mintId into the walk. */
+  var real = Math.random, pre, s0, i, taken = {}, id;
+  try {
+    Math.random = function(){ return 0.5; };
+    var tok = Math.floor(0.5 * 1679616).toString(36);          /* "i000" */
+    pre = "x_" + tok + tok;
+    var probe = P.mintId({}, "ex");
+    a.eq(probe.indexOf(pre), 0,
+      "the id format changed (expected prefix " + show(pre) + ", got " + show(probe) + "); " +
+      "this test predicts the next 64 draws from it and must be rewritten alongside mintId");
+    s0 = parseInt(probe.slice(pre.length), 36);
+    a.ok(s0 === s0, "the counter suffix must parse as base 36");
+    for (i = 1; i <= 64; i++) taken[pre + ((s0 + i) % 1679616).toString(36)] = true;
+    /* Every random draw now collides. Nothing on the z-walk is taken yet. */
+    id = P.mintId(taken, "ex");
+    a.eq(id, "x_z0", "the walk must start at z0 and return the first free id");
+    a.eq(Object.prototype.hasOwnProperty.call(taken, id), false, "and it must not be a taken id");
+  } finally { Math.random = real; }
+});
+
+T("W2 ADVERSARIAL - the fallback walk steps past taken z-ids and still terminates", function(a){
+  var real = Math.random, i, taken = {}, id;
+  try {
+    Math.random = function(){ return 0.5; };
+    var tok = Math.floor(0.5 * 1679616).toString(36);
+    var pre = "x_" + tok + tok;
+    var probe = P.mintId({}, "ex");
+    a.eq(probe.indexOf(pre), 0, "id format changed - see the test above");
+    var s0 = parseInt(probe.slice(pre.length), 36);
+    for (i = 1; i <= 64; i++) taken[pre + ((s0 + i) % 1679616).toString(36)] = true;
+    for (i = 0; i < 100; i++) taken["x_z" + i.toString(36)] = true;   /* z0 .. z2r */
+    id = P.mintId(taken, "ex");
+    a.eq(id, "x_z2s", "100 in base 36 is 2s - the walk must be base-36 and must not stop early");
+    a.eq(Object.prototype.hasOwnProperty.call(taken, id), false);
+    /* And it terminates for every kind prefix, not just "ex". */
+    a.eq(P.mintId(taken, "day").indexOf("y_"), 0);
+    a.eq(P.mintId(taken, "lift").indexOf("l_"), 0);
+    a.eq(P.mintId(taken, "plan").indexOf("p_"), 0);
+    a.eq(P.mintId(taken, "nonsense").indexOf("x_"), 0, "an unknown kind falls back to the exercise prefix");
+  } finally { Math.random = real; }
+});
+
+T("W2-AC - 1000 generated ids collide with nothing in the plan and nothing with each other", function(a){
+  /* The acceptance criterion, over a COPY of PHAT - which already holds 42
+     exercise ids, 42 lift tokens, 5 day ids and a plan id in one namespace. */
+  var plan = MYPHAT(), taken = P.takenIds(plan), i, id, seen = {}, n = 0;
+  var base = Object.keys(taken).length;
+  a.ok(base >= 42 + 5 + 1, "takenIds must cover plan, day, exercise AND lift tokens; got " + base);
+  a.eq(Object.prototype.hasOwnProperty.call(taken, "d1a"), true);
+  a.eq(Object.prototype.hasOwnProperty.call(taken, "l_skull"), true, "a lift token is in the same namespace");
+  a.eq(Object.prototype.hasOwnProperty.call(taken, "d1"), true);
+  for (i = 0; i < 1000; i++){
+    id = P.mintId(taken, i % 3 === 0 ? "ex" : (i % 3 === 1 ? "day" : "lift"));
+    if (Object.prototype.hasOwnProperty.call(taken, id)) { a.eq("collision at draw " + i + ": " + id, "none"); }
+    if (Object.prototype.hasOwnProperty.call(seen, id)) { a.eq("duplicate at draw " + i + ": " + id, "none"); }
+    seen[id] = true; taken[id] = true; n++;
+  }
+  a.eq(n, 1000);
+  a.eq(Object.keys(taken).length, base + 1000, "every one of the 1000 was distinct");
+});
+
+T("W2-AC - addExercise mints through the real path 60 times with no collision, exId or lift", function(a){
+  /* The criterion again, but through the shipped call rather than mintId
+     directly: addExercise mints an exId, marks it taken, THEN mints the lift.
+     Dropping that one line lets an exercise and its own lift share a token. */
+  var plan = MYPHAT(), i, r, ids = {}, before = P.takenIds(plan);
+  for (i = 0; i < 60; i++){
+    r = P.addExercise(plan, "d1", { n: "Accessory " + i, s: 3, lo: 8, hi: 12, k: "hyp", implement: "db" });
+    a.eq(r.ok, true, "add " + i + ": " + JSON.stringify(r.problems));
+    a.ne(r.exId, r.lift, "add " + i + ": an exercise and its own lift token collided");
+    a.eq(Object.prototype.hasOwnProperty.call(ids, r.exId), false, "add " + i + ": duplicate exId " + r.exId);
+    a.eq(Object.prototype.hasOwnProperty.call(ids, r.lift), false, "add " + i + ": lift reused an id " + r.lift);
+    a.eq(Object.prototype.hasOwnProperty.call(before, r.exId), false, "add " + i + ": exId hit a shipped id");
+    a.eq(Object.prototype.hasOwnProperty.call(before, r.lift), false, "add " + i + ": lift hit a shipped id");
+    ids[r.exId] = true; ids[r.lift] = true;
+    plan = r.plan;
+  }
+  a.eq(allEx(plan).length, 42 + 60);
+  a.eq(P.validatePlan(plan).ok, true, JSON.stringify(P.validatePlan(plan).problems));
+});
+
+T("W2 - minted id prefixes are DISJOINT by kind, which is what makes an exercise/lift collision impossible", function(a){
+  /* Recorded because of a SURVIVING MUTANT. Deleting `taken[exId] = true;` from
+     addExercise - the line that reserves the exercise id before the lift is
+     minted - changes no test result, and cannot: an exercise id is always
+     "x_..." and a minted lift is always "l_...", so the probe could never have
+     hit it. That makes it an EQUIVALENT MUTANT, not a coverage hole, and the
+     line is still right to keep: it becomes load-bearing the moment two kinds
+     share a prefix. This test guards the invariant that makes the argument
+     hold, so the mutant does not quietly stop being equivalent. */
+  var kinds = [["ex","x_"],["day","y_"],["lift","l_"],["plan","p_"]], i, j, id, seen = {};
+  for (j = 0; j < kinds.length; j++){
+    for (i = 0; i < 40; i++){
+      id = P.mintId(seen, kinds[j][0]);
+      a.eq(id.indexOf(kinds[j][1]), 0, kinds[j][0] + " ids must start " + kinds[j][1] + ", got " + id);
+      seen[id] = true;
+    }
+  }
+  var pre = {}, k;
+  for (j = 0; j < kinds.length; j++){
+    a.eq(Object.prototype.hasOwnProperty.call(pre, kinds[j][1]), false,
+      "two kinds share the prefix " + kinds[j][1] + " - an exercise and a lift can now collide, " +
+      "and addExercise's `taken[exId] = true` line is suddenly load-bearing");
+    pre[kinds[j][1]] = kinds[j][0];
+  }
+  for (k in seen) if (Object.prototype.hasOwnProperty.call(seen, k))
+    a.ok(/^[xylp]_/.test(k), "an id with an unrecognised prefix: " + k);
+});
+
+T("W2 ADVERSARIAL - validatePlan's namespace pass: a SHARED lift is fine, a COLLIDING one is not", function(a){
+  /* Backend calls this the rule most likely to be wrong. It is right, and here
+     is the reason in one assertion: the tokens live in ONE namespace, so if a
+     lift token equals an exercise id then exById and exIdsForLift both answer
+     for the same string and the token means two things. That is the ambiguity,
+     demonstrated below, not asserted by assumption. */
+  var p = MINIPLAN();
+  a.eq(P.validatePlan(p).ok, true, "two exercises SHARING l_sq is the design, not a duplicate");
+  a.deep(P.exIdsForLift(p, "l_sq"), ["x_1","x_2"]);
+
+  function liftProblems(lift){
+    var q = MINIPLAN();
+    q.days[0].ex[0].lift = lift;
+    return P.validatePlan(q).problems.filter(function(x){ return x.field === "lift"; });
+  }
+  a.eq(liftProblems("y_a").length, 1, "a lift token equal to a DAY id must be flagged");
+  a.eq(liftProblems("y_a")[0].reason, "duplicate");
+  a.eq(liftProblems("x_1").length, 1, "a lift token equal to its OWN exercise's id must be flagged");
+  a.eq(liftProblems("x_2").length, 1, "and one equal to a sibling's id");
+  a.eq(liftProblems("p_mini").length, 1, "and one equal to the plan id");
+  a.eq(liftProblems("l_other").length, 0, "a fresh token is fine");
+
+  /* The ambiguity itself, so the rule is justified by behaviour and not by
+     taste: with lift === "x_1", both readers answer for "x_1". */
+  var q = MINIPLAN();
+  q.days[0].ex[0].lift = "x_1";
+  a.ok(P.exById(q, "x_1") !== null, "x_1 resolves as an EXERCISE");
+  a.deep(P.exIdsForLift(q, "x_1"), ["x_1"], "and the same string ALSO resolves as a lift group");
+  a.eq(P.liftName(q, "x_1"), "Squat", "one token, two meanings - which is what the duplicate flag prevents");
+
+  /* Second-pass ordering: the check runs after every id is known, so a lift
+     that collides with an id declared LATER in the plan is still caught. */
+  var r = MINIPLAN();
+  r.days[0].ex[0].lift = "x_2";                       /* x_2 is declared after x_1 */
+  a.eq(P.validatePlan(r).problems.filter(function(x){ return x.field === "lift"; }).length, 1,
+    "a forward reference must be caught too - that is what the second pass buys");
+});
+
+T("W2-AC / B-46 - two exercises with the SAME NAME get different ids, and no id carries the name", function(a){
+  /* B-46 at its source. The redesign keyed exercises `slug(name)+":"+kind`, so
+     two slots called "Skull crusher" became one history and a typo in a rename
+     orphaned the lot. This is that case, built through the editor's own path. */
+  var p = { planId: "p_dup", name: "Dup", readOnly: false, days: [] };
+  var d1 = P.addDay(p, "Day one"), d2 = P.addDay(d1.plan, "Day two");
+  var power = { n: "Skull crusher", s: 3, lo: 6, hi: 10, k: "power", implement: "bb" };
+  var hyp   = { n: "Skull crusher", s: 3, lo: 12, hi: 15, k: "hyp", implement: "bb" };
+  var a1 = P.addExercise(d2.plan, d1.dayId, power);
+  var a2 = P.addExercise(a1.plan, d2.dayId, hyp);
+  var a3 = P.addExercise(a2.plan, d1.dayId, power);        /* same name, same day */
+  a.eq(a1.ok && a2.ok && a3.ok, true);
+  a.ne(a1.exId, a2.exId, "the same name on two days must not collapse to one id - that IS B-46");
+  a.ne(a1.exId, a3.exId, "and the same name twice on ONE day must not collide either");
+  a.ne(a2.exId, a3.exId);
+  a.ne(a1.lift, a2.lift, "an unsupplied lift is minted fresh, never derived from the name");
+  a.ne(a1.lift, a3.lift);
+  var tokens = [a1.exId, a2.exId, a3.exId, a1.lift, a2.lift, a3.lift], i, t;
+  for (i = 0; i < tokens.length; i++){
+    t = String(tokens[i]).toLowerCase();
+    a.eq(t.indexOf("skull"), -1, "an id built from the name is renamed by a rename: " + tokens[i]);
+    a.eq(t.indexOf("crusher"), -1, tokens[i]);
+  }
+  a.eq(P.validatePlan(a3.plan).ok, true, JSON.stringify(P.validatePlan(a3.plan).problems));
+  a.eq(allEx(a3.plan).length, 3);
+  /* And a rename leaves both id and lift exactly where they were. */
+  var rn = P.renameExercise(a3.plan, a1.exId, "Lying triceps extension");
+  a.eq(rn.ok, true);
+  a.eq(P.exById(rn.plan, a1.exId).id, a1.exId, "the id survives the rename");
+  a.eq(P.exById(rn.plan, a1.exId).lift, a1.lift, "and so does the lift token");
+  a.eq(P.exById(rn.plan, a1.exId).n, "Lying triceps extension");
+  a.eq(P.exById(rn.plan, a3.exId).n, "Skull crusher", "renaming one did not rename its namesake");
+});
+
+T("W2 - exIdsForLift matches the LIFT TOKEN only, never a name that happens to look like one", function(a){
+  /* If the lift lookup ever fell back to the name, B-46 would be back through
+     the trend tab: every exercise called "Squat" on any plan would merge. */
+  a.deep(P.exIdsForLift(P.PHAT_PLAN, "Squat"), [], "a display NAME is not a lift token");
+  a.deep(P.exIdsForLift(P.PHAT_PLAN, "Skull crusher"), []);
+  a.deep(P.exIdsForLift(P.PHAT_PLAN, "Rack chin"), []);
+  a.deep(P.exIdsForLift(P.PHAT_PLAN, "l_squat"), ["d2a","d4a"], "the token, and only the token");
+  /* And a plan where a name equals another slot's token must not cross over. */
+  var p = MINIPLAN();
+  p.days[0].ex[1].n = "l_sq";
+  a.deep(P.exIdsForLift(p, "l_sq"), ["x_1","x_2"], "both carry the token, so both are in the group");
+  p.days[0].ex[1].lift = "l_other";
+  a.deep(P.exIdsForLift(p, "l_sq"), ["x_1"],
+    "and the slot NAMED l_sq but carrying l_other is not in the l_sq group");
+});
+
+T("W2-AC / C-7 - validatePlan requires a lift on every exercise", function(a){
+  var p = MINIPLAN();
+  delete p.days[0].ex[0].lift;
+  var v = P.validatePlan(p);
+  a.eq(v.ok, false, "an exercise with no lift group has no trend line and no way to get one");
+  a.deep(v.problems, [{ scope: "ex", id: "x_1", field: "lift", reason: "missing" }]);
+  p = MINIPLAN(); p.days[0].ex[0].lift = "   ";
+  a.eq(P.validatePlan(p).ok, false, "whitespace is not a lift token");
+  p = MINIPLAN(); p.days[0].ex[0].lift = null;
+  a.eq(P.validatePlan(p).ok, false, "and neither is null");
+  /* NIT, pinned rather than filed as a defect: `lift` is the one identity
+     field validated by COERCION (str(e.lift).trim() !== "") rather than by
+     type, so lift:42 passes where n:42 and k:42 are refused. Harmless today -
+     every reader coerces the same way, the token is still unique, and the
+     namespace pass still sees it as "42" - but it is the only field in the
+     document where the shape is not what the validator claims. Reported to
+     backend as a P2 tidy-up; asserted here so a change to it is deliberate. */
+  p = MINIPLAN(); p.days[0].ex[0].lift = 42;
+  a.eq(P.validatePlan(p).ok, true, "a numeric lift is coerced, not refused - pinned, see the comment");
+  a.deep(P.exIdsForLift(p, "42"), ["x_1"], "and it behaves as the token \"42\" everywhere downstream");
+  a.eq(Object.prototype.hasOwnProperty.call(P.takenIds(p), "42"), false,
+    "though takenIds does NOT register it, so it is outside the collision guard");
+});
+
+T("W2 - validatePlan catches duplicate day and exercise ids across the whole plan", function(a){
+  var p = MINIPLAN();
+  p.days.push({ id: "y_a", name: "Day B", ex: [] });
+  a.eq(P.validatePlan(p).problems.filter(function(x){ return x.field === "id"; }).length, 1);
+  p = MINIPLAN();
+  p.days.push({ id: "y_b", name: "Day B", ex: [
+    { id: "x_1", n: "Dup", s: 3, lo: 3, hi: 5, k: "hyp", implement: "bb", lift: "l_dup" }] });
+  var probs = P.validatePlan(p).problems;
+  a.eq(probs.length, 1, JSON.stringify(probs));
+  a.deep(probs[0], { scope: "ex", id: "x_1", field: "id", reason: "duplicate" },
+    "the same exercise id on two days is two histories pretending to be one");
+  p = MINIPLAN();
+  p.days[0].id = "p_mini";
+  a.eq(P.validatePlan(p).problems.filter(function(x){ return x.field === "id"; }).length, 1,
+    "a day id equal to the plan id is a collision too");
+});
+
+T("W2 - validatePlan refuses junk shapes without throwing", function(a){
+  var junk = [null, undefined, 42, "plan", [], { planId: "p", name: "n" },
+              { planId: "p", name: "n", days: "nope" },
+              { planId: "", name: "", days: [] },
+              { planId: "p", name: "n", days: [null] },
+              { planId: "p", name: "n", days: [{ id: "y", name: "d", ex: "nope" }] },
+              { planId: "p", name: "n", days: [{ id: "y", name: "d", ex: [null] }] }], i, v;
+  for (i = 0; i < junk.length; i++){
+    v = a.noThrow(function(){ return P.validatePlan(junk[i]); }, "validatePlan threw on " + show(junk[i]));
+    a.eq(v.ok, false, "validatePlan must refuse " + show(junk[i]));
+    a.ok(v.problems.length > 0);
+  }
+  /* An EMPTY plan with a name and an id is valid: it has no untyped exercise
+     because it has no exercise. C-7's off-plan silence is W3's job, not this
+     function's - refusing an empty plan here would refuse the first step of
+     building one. */
+  a.eq(P.validatePlan({ planId: "p_x", name: "Empty", days: [] }).ok, true);
+});
+
+/* ---------------------------------------------- the plan store, and the migration's third argument */
+
+function PLANOK(id){
+  return { planId: id, name: "Plan " + id, readOnly: false, days: [
+    { id: id + "_y1", name: "Day", ex: [
+      { id: id + "_x1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: id + "_l1" }
+    ] } ] };
+}
+
+T("W2 - normalisePlanStore repairs a plan ADDITIVELY: mints missing ids and lifts, rewrites no value", function(a){
+  var p = { planId: "p_a", name: "A", days: [
+    { name: "No id day", ex: [
+      { n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb" },
+      { id: "x_keep", n: "Bench", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l_keep" }
+    ] } ] };
+  var input = JSON.stringify(p);
+  var r = P.normalisePlanStore({ schemaVersion: 3, plans: [p] });
+  a.eq(r.changed, true);
+  var np = r.store.plans[0];
+  a.ok(typeof np.days[0].id === "string" && np.days[0].id !== "", "a day with no id gets one");
+  a.ok(typeof np.days[0].ex[0].id === "string" && np.days[0].ex[0].id !== "", "an exercise with no id gets one");
+  a.ok(typeof np.days[0].ex[0].lift === "string" && np.days[0].ex[0].lift !== "", "and a lift group");
+  a.eq(np.days[0].ex[1].id, "x_keep", "an EXISTING id is never re-minted - that would orphan its history");
+  a.eq(np.days[0].ex[1].lift, "l_keep");
+  a.eq(np.days[0].ex[0].n, "Squat", "and no other value is rewritten");
+  a.eq(np.planId, "p_a");
+  a.eq(r.store.schemaVersion, P.SCHEMA_VERSION);
+  a.eq(r.store.activePlanId, "phat", "an absent active plan defaults to the shipped one");
+  a.eq(JSON.stringify(p), input, "the INPUT plan must not be mutated");
+  /* Idempotent: a second pass finds nothing to do. */
+  var again = P.normalisePlanStore(r.store);
+  a.eq(again.changed, false, "normalisePlanStore must settle after one pass");
+  a.eq(again.store, r.store, "and hand the same object straight back");
+});
+
+T("W2 ADVERSARIAL - a plan with a CYCLE passes through UNCHANGED and is never dropped", function(a){
+  /* clonePlan is JSON, so a cycle makes it return null. The rule that matters
+     is what happens next: the plan is handed back BY REFERENCE, not replaced
+     with null and not filtered out of the array. Dropping it would delete a
+     whole programme to tidy up a structure the store can never actually hold -
+     JSON.parse cannot produce a cycle, so this can only arrive from in-memory
+     code, and losing it would be data loss caused by defensiveness. */
+  var cyc = PLANOK("p_cyc");
+  cyc.self = cyc;
+  var repairable = PLANOK("p_fix");
+  delete repairable.days[0].ex[0].lift;                 /* needs a mint, so it is cloned */
+  var store = { schemaVersion: 3, plans: [repairable, cyc, null, 42], activePlanId: "p_fix" };
+  var r = a.noThrow(function(){ return P.normalisePlanStore(store); }, "a cycle must not throw");
+  a.eq(r.changed, true);
+  a.eq(r.store.plans.length, 4, "nothing may be dropped from the plans array");
+  a.eq(r.store.plans[1], cyc, "the cyclic plan comes back by reference");
+  a.eq(r.store.plans[1].self, r.store.plans[1], "with its cycle intact");
+  a.eq(r.store.plans[1].days[0].ex[0].id, "p_cyc_x1", "and its content untouched");
+  a.eq(r.store.plans[2], null, "a null entry is passed through, not dropped");
+  a.eq(r.store.plans[3], 42, "and so is junk");
+  a.ok(r.store.plans[0] !== repairable, "the repairable plan is replaced by a repaired clone");
+  a.ok(typeof r.store.plans[0].days[0].ex[0].lift === "string", "which now has its lift");
+  a.eq(Object.prototype.hasOwnProperty.call(repairable.days[0].ex[0], "lift"), false,
+    "and the input plan is still not mutated");
+  a.eq(store.schemaVersion, 3, "nor the input store");
+  a.eq(store.plans.length, 4);
+});
+
+T("W2 OBSERVATION - clonePlan drops a function, so a repaired plan loses any non-JSON value", function(a){
+  /* Pinned rather than filed. A plan document is JSON by definition: it comes
+     from JSON.parse, from PHAT_PLAN (code, frozen) or from an editor, and every
+     editor round-trips through clonePlan. So this is a property of the whole
+     plan layer, not a normalisePlanStore quirk, and it is unreachable from
+     storage - JSON.parse cannot produce a function.
+     The contract it creates for the frontend: DO NOT hang a callback, a Date or
+     a DOM node off a plan object. It will survive right up until something
+     repairs or edits that plan, and then it will not. */
+  var p = PLANOK("p_fn");
+  p.onLoad = function(){ return 1; };
+  p.when = new Date(0);
+  delete p.days[0].ex[0].lift;                          /* forces the clone path */
+  var r = P.normalisePlanStore({ schemaVersion: 4, plans: [p], activePlanId: "p_fn" });
+  a.eq(r.changed, true);
+  a.eq(typeof r.store.plans[0].onLoad, "undefined", "the function is gone");
+  a.eq(typeof r.store.plans[0].when, "string", "and a Date has become a string");
+  a.eq(typeof p.onLoad, "function", "the input, at least, still has it");
+  a.eq(P.clonePlan(p).onLoad, undefined, "clonePlan itself is where it goes");
+  a.eq(P.clonePlan(function(){}), null,
+    "an unclonable root returns null, never a throw: JSON.stringify(fn) is undefined and JSON.parse then throws");
+  var c = {}; c.c = c;
+  a.eq(P.clonePlan(c), null, "a cycle returns null, which is the signal every editor checks");
+});
+
+T("W2 - normalisePlanStore REFUSES a wrong-typed plans key rather than replacing it", function(a){
+  var store = { schemaVersion: 3, plans: { nope: true } };
+  var r = P.normalisePlanStore(store);
+  a.eq(r.changed, false, "a present-but-wrong-type plans key is refused, not overwritten with []");
+  a.eq(r.store, store, "and handed straight back");
+  a.deep(r.store.plans, { nope: true }, "whatever it is, it is still there to be recovered by hand");
+  /* Absent is different from wrong: absent is safe to create. */
+  var r2 = P.normalisePlanStore({ schemaVersion: 3 });
+  a.eq(r2.changed, true);
+  a.deep(r2.store.plans, []);
+  a.eq(r2.store.activePlanId, "phat");
+  /* And a non-object store is inert. */
+  a.eq(P.normalisePlanStore(null).changed, false);
+  a.eq(P.normalisePlanStore("garbage").store, "garbage");
+  a.eq(P.normalisePlanStore(undefined).changed, false);
+});
+
+T("W2 - migrateStore's THIRD argument is optional, and every existing two-argument call is unchanged", function(a){
+  var r = P.migrateStore(V3POP(), V3BW());
+  a.eq(r.plans, undefined, "no plan store in, no plan store out");
+  a.eq(r.plansChanged, false);
+  a.eq(r.changed, r.logChanged || r.bwChanged, "plansChanged must not leak into changed");
+  var withNull = P.migrateStore(V3POP(), null, null);
+  a.eq(withNull.plans, null, "an explicit null stays null - nothing is invented from nothing");
+  a.eq(withNull.plansChanged, false);
+});
+
+T("W2 - migrateStore normalises a plan store handed to it, and says so, without touching the log", function(a){
+  var p = PLANOK("p_a");
+  delete p.days[0].ex[0].lift;
+  var plans = { schemaVersion: 3, plans: [p] };
+  var logIn = V3POP(), sessionsJSON = JSON.stringify(logIn.sessions);
+  var r = P.migrateStore(logIn, null, plans);
+  a.eq(r.plansChanged, true);
+  a.eq(r.changed, true);
+  a.eq(r.plans.schemaVersion, P.SCHEMA_VERSION);
+  a.ok(typeof r.plans.plans[0].days[0].ex[0].lift === "string");
+  a.eq(JSON.stringify(r.log.sessions), sessionsJSON, "normalising a PLAN must not touch a stored SESSION");
+  var note = r.notes.filter(function(n){ return n.key === "plans"; });
+  a.eq(note.length, 1, "a repair is reported, never silent: " + JSON.stringify(r.notes));
+  a.eq(note[0].level, "info");
+  /* Idempotent through migrateStore too. */
+  var second = P.migrateStore(r.log, r.bw, r.plans);
+  a.eq(second.plansChanged, false, "ONE write, not one per boot");
+  a.eq(second.changed, false);
+  a.deep(second.notes, []);
+});
+
+T("W2 - migrateStore hands back an unreadable plan store untouched, with an error note, and never throws", function(a){
+  var junk = ["garbage", 42, [], true], i, r;
+  for (i = 0; i < junk.length; i++){
+    r = a.noThrow(function(){ return P.migrateStore(V3POP(), null, junk[i]); },
+      "migrateStore threw on plans=" + show(junk[i]));
+    a.eq(r.plans, junk[i], "an unreadable plan store is handed back, never replaced: " + show(junk[i]));
+    a.eq(r.plansChanged, false);
+    a.ok(r.notes.filter(function(n){ return n.key === "plans" && n.level === "error"; }).length === 1,
+      "and it is reported: " + JSON.stringify(r.notes));
+  }
+});
+
+/* ----------------------------------------------------- the readers, on junk */
+
+T("W2 - exById / dayIdOfEx / liftOf / exIdsForLift / liftName / planLifts refuse junk without throwing", function(a){
+  var junk = [null, undefined, 42, "plan", {}, { days: null }, { days: [null] },
+              { days: [{ ex: null }] }, { days: [{ ex: [null] }] }], i;
+  for (i = 0; i < junk.length; i++){
+    a.eq(a.noThrow(function(){ return P.exById(junk[i], "d1a"); }, "exById " + show(junk[i])), null);
+    a.eq(a.noThrow(function(){ return P.dayIdOfEx(junk[i], "d1a"); }, "dayIdOfEx"), null);
+    a.eq(a.noThrow(function(){ return P.liftOf(junk[i], "d1a"); }, "liftOf"), null);
+    a.deep(a.noThrow(function(){ return P.exIdsForLift(junk[i], "l_row"); }, "exIdsForLift"), []);
+    a.deep(a.noThrow(function(){ return P.planLifts(junk[i]); }, "planLifts"), []);
+    a.deep(a.noThrow(function(){ return P.takenIds(junk[i]); }, "takenIds"), {});
+  }
+  var bad = ["", "   ", null, undefined, 0, {}, []];
+  for (i = 0; i < bad.length; i++){
+    a.eq(P.exById(P.PHAT_PLAN, bad[i]), null, "a blank or non-string exId resolves to nothing: " + show(bad[i]));
+    a.deep(P.exIdsForLift(P.PHAT_PLAN, bad[i]), []);
+    a.eq(typeof P.liftName(P.PHAT_PLAN, bad[i]), "string",
+      "liftName always returns a string, so no screen can print undefined: " + show(bad[i]));
+  }
+  /* Blank-ish tokens give "". A junk token that coerces to a non-empty string
+     (0, {}) comes back as that string - the documented unknown-lift fallback,
+     not a lookup, so nothing on screen is invented. */
+  a.eq(P.liftName(P.PHAT_PLAN, ""), "");
+  a.eq(P.liftName(P.PHAT_PLAN, "   "), "");
+  a.eq(P.liftName(P.PHAT_PLAN, null), "");
+  a.eq(P.liftName(P.PHAT_PLAN, []), "");
+  a.eq(P.liftName(P.PHAT_PLAN, 0), "0", "a coercible token is echoed back, never resolved to a real lift");
+  a.eq(P.liftName(P.PHAT_PLAN, "l_nosuch"), "l_nosuch",
+    "an unknown lift falls back to its own token, never to undefined on screen");
+  /* A bare days array is accepted, because index.html's PROGRAM is one. */
+  a.eq(P.exById(P.PHAT_PLAN.days, "d1a").n, "Bent-over row", "PHAT_PLAN.days is a drop-in for PROGRAM");
+  a.eq(P.dayIdOfEx(P.PHAT_PLAN.days, "d5j"), "d5");
+});
+
+T("W2 - planLifts indexes every lift group in plan order, with names resolved at read time", function(a){
+  var lifts = P.planLifts(P.PHAT_PLAN);
+  a.eq(lifts[0].lift, "l_row");
+  a.eq(lifts[0].name, "Bent-over row", "the name comes from the FIRST slot in plan order");
+  a.deep(lifts[0].exIds, ["d1a","d3a"]);
+  var ids = lifts.map(function(l){ return l.lift; }), seen = {}, i;
+  for (i = 0; i < ids.length; i++){
+    a.eq(Object.prototype.hasOwnProperty.call(seen, ids[i]), false, "a lift group is listed once: " + ids[i]);
+    seen[ids[i]] = true;
+  }
+  var total = 0;
+  for (i = 0; i < lifts.length; i++) total += lifts[i].exIds.length;
+  a.eq(total, 42, "every slot belongs to exactly one lift group");
+  var shared = lifts.filter(function(l){ return l.exIds.length > 1; })
+                    .map(function(l){ return l.lift; }).sort();
+  a.deep(shared, ["l_calfseat","l_dbbench","l_hack","l_legext","l_rackchin","l_row","l_skull","l_squat"],
+    "the eight groups that legitimately span two slots - a ninth means two lifts got merged into one trend line");
+});
+
+/* ------------------------------------------------------------- observations */
+
+T("W2 OBSERVATION - history is keyed by exercise id ALONE, so a copied plan SHARES the original's history", function(a){
+  /* Pinned, not filed as a defect: copyPlan preserving ids is the ruling (a
+     copy is "my version of PHAT", not a new programme), and re-minting is what
+     orphans history. But the consequence is worth stating out loud, because no
+     engine takes a planId: lastFor, e1rmByDate, stallReport and speedLoad all
+     read sessions by exercise id and ignore session.planId entirely.
+
+     So if he copies PHAT and changes d1a from 3 x 3-5 to 3 x 8-12, the verdict
+     on the copy reads sets logged under the ORIGINAL prescription. That is
+     correct while a copy is a light edit of PHAT. It stops being obviously
+     correct once a copy diverges, and it is a coaching question, not a code
+     one. Routed to PM/strength-coach; this test documents today's behaviour so
+     a future change to it is deliberate. */
+  var copy = MYPHAT();
+  var underPhat = V3POP().sessions;
+  var underCopy = P.buildSession(draft(entry("d1a", sets("105:5")), "2026-09-09"),
+                                 "d1", "2026-09-09", 99, copy.planId);
+  var all = P.sortSessions(underPhat.concat([underCopy]));
+  a.eq(P.lastFor(all, "d1a").sets[0].w, 105, "the newest entry wins regardless of which plan wrote it");
+  a.ne(P.planIdOf(all[all.length - 1]), P.planIdOf(all[0]), "and the two sessions are on different plans");
+  a.eq(P.e1rmByDate(all, "d1a", "2026-08-01", TODAY).length, 3,
+    "the trend series merges both plans' entries for d1a");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -4861,6 +6184,47 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
   "(<code>Emulation.setTimezoneOverride</code>) and driving the shipping <code>index.html</code>. That " +
   "closes the old manual item; the evidence is under \"Already proven\".");
 
+/* ---------------------------------------------------- WO-004 W2 (S25) --- */
+contract("<b>WO-004 W2 &mdash; <code>removeExercise</code>'s undo is not complete, and the Plan Editor " +
+  "cannot ship until it is.</b> W3 added edit-time reconciliation: deleting an exercise drops every " +
+  "plan-scoped reference to it (<code>keyLifts</code>, <code>speedSource</code>, " +
+  "<code>reintroOrder</code>). That rule is right &mdash; a dangling id is worse. But " +
+  "<code>removed</code> carries only the exercise object, so splicing it back restores the slot while " +
+  "leaving <code>d1a</code> silently absent from <code>keyLifts</code> (the stall test loses a key lift) " +
+  "and <code>speedSource.d3a</code> gone (the speed target goes quiet). The plan still validates, so " +
+  "nothing anywhere says so. Not a W3 defect against its own criterion, which asks only for the drop. It " +
+  "is a gap in what an undo needs, it is the C-12 / B-48 class one layer up, and <b>W15</b> is where a " +
+  "user meets it. Pinned in S25 as observed behaviour; routed to PM.");
+contract("<b>WO-004 W2 &mdash; history is keyed by exercise id ALONE, so a copied plan shares the " +
+  "original's history.</b> <code>copyPlan</code> preserving ids is the ruling and re-minting is what " +
+  "orphans data, so this follows correctly. But no engine takes a <code>planId</code>: " +
+  "<code>lastFor</code>, <code>e1rmByDate</code>, <code>stallReport</code> and <code>speedLoad</code> all " +
+  "read by exercise id and ignore <code>session.planId</code>. Copy PHAT, change <code>d1a</code> from " +
+  "3&times;3&ndash;5 to 3&times;8&ndash;12, and the verdict on the copy reads sets logged under the old " +
+  "prescription. Correct while a copy is a light edit; not obviously correct once a copy diverges. A " +
+  "coaching question, not a code one &mdash; <b>strength-coach</b>. Pinned in S25 so a change to it is " +
+  "deliberate.");
+contract("<b>WO-004 W2 &mdash; the deep freeze on <code>PHAT_PLAN</code> is a behaviour change the " +
+  "frontend has not met yet.</b> Under <code>\"use strict\"</code> any write to a plan exercise now " +
+  "throws a <code>TypeError</code>, including the common render idiom <code>ex.rest = " +
+  "restTarget(ex)</code> &mdash; decorate the plan object, then render off it. A thrown render costs a " +
+  "card (WO-004 W5's data criterion), which is why loud beats a silent no-op: a no-op would print an " +
+  "empty rest target next to a real weight. Asserted in S25 against eight attempted writes. <b>W6/W7 " +
+  "must build derived objects, never decorate the plan.</b>");
+contract("<b>WO-004 W2 &mdash; <code>lift</code> is the one identity field validated by coercion.</b> " +
+  "<code>validatePlan</code> checks <code>str(e.lift).trim() !== \"\"</code>, so <code>lift:42</code> " +
+  "passes where <code>n:42</code> and <code>k:42</code> are refused, and <code>takenIds</code> does not " +
+  "register it because that reads <code>typeof e.lift === \"string\"</code> &mdash; so a numeric lift " +
+  "sits outside the collision guard. Harmless today (every reader coerces the same way, minted ids are " +
+  "never bare digits) but it is the only field whose stored shape is not what the validator claims. P2, " +
+  "backend. Pinned in S25.");
+contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Deleting " +
+  "<code>taken[exId] = true;</code> from <code>addExercise</code> &mdash; the line reserving the " +
+  "exercise id before the lift is minted &mdash; changes no test result and cannot, because an exercise " +
+  "id is always <code>x_</code> and a minted lift always <code>l_</code>. The line stays (it becomes " +
+  "load-bearing the moment two kinds share a prefix) and S25 now pins the disjoint-prefix invariant, so " +
+  "the mutant cannot quietly stop being equivalent. 23 of 24 injected mutants killed.");
+
 /* ============================================================ render */
 (function render(){
   var i, r, pass = 0, fail = 0, skip = 0, ms = Date.now() - T0, rows = "";
@@ -4940,6 +6304,15 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
     "missing. <b>W7, W9, W12, W14 and W19 landed on 2026-09-10 and are covered in S18 to S24</b>, together " +
     "with the addendum &sect;7 rulings (E1, E2, DL1, N3) - all of them pure, all callable from " +
     "<code>file://</code>, none of them needing a browser.</p>" +
+    "<p><b>WO-004 W2 is fully reachable from here, and one thing about it is not.</b> The plan document, " +
+    "every editor, <code>validatePlan</code>, <code>mintId</code> and the schema-4 migration are pure and " +
+    "are asserted in <b>S25</b> over <code>file://</code>. What this page cannot reach is the <b>plan " +
+    "store on disk</b>: <code>phat:v1:plans</code> has no writer yet - <code>index.html</code> neither " +
+    "reads nor writes it, and <code>migrateStore</code>'s third argument is unused by every caller today. " +
+    "So <code>normalisePlanStore</code> is asserted on objects, never on a stored payload, and the " +
+    "read/write round trip inherits every caveat in the list below the moment W14/W15 add one. <b>Flag " +
+    "for whoever writes that caller:</b> the shipped PHAT plan is CODE and must never be written to the " +
+    "store, or it goes stale against <code>logic.js</code> the next time a slot changes.</p>" +
     "<p><b>Where the engine coverage stops: the render boundary.</b> Every rule below is asserted as a " +
     "STRING and a shape coming out of <code>PHAT</code>. Whether that string reaches the screen - the " +
     "Weight tab (W8), the Trend tab (W10), the speed card (W13), the volume-tier UI (W15), the pain notice " +
