@@ -67,7 +67,12 @@ serialized JSON. <b>S18-S24</b> are the five advice engines
 <b>W14</b> Rule V1 volume tier, <b>W19</b> Rule D1 deload) together with the
 <code>docs/coach-audit-addendum.md</code> &sect;7 rulings: <b>E1</b> (an abandoned date breaks a
 failure streak), <b>E2</b> (a deload date is not evidence), <b>DL1</b> (a deload week never
-recommends more weight) and <b>N3</b> (a short previous entry is not a first session).</p>
+recommends more weight) and <b>N3</b> (a short previous entry is not a first session).
+<b>S26</b> is WO-004 W5, Rule PE1 &mdash; the prescription epoch. The hazard it exists for (a 3&ndash;5RM
+prefilled into an 8&ndash;12 slot), the deliberate strict key with no tolerance band, <em>a deload is not
+an epoch</em> in both directions, the schema-5 migration and the deliberate asymmetry between the v4 and
+v5 version gates, plus V1a, <code>keyLiftDisclosure</code>, distinct-date session counting, SP1's
+<code>source-not-heavy</code> fallback, X1's extra-set ordinal and S1a's 21-day restatement.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -466,18 +471,24 @@ T("WO-003 W1 - window.PHAT exposes the session-ordering and training-week surfac
   a.eq(missing.join(",") || "none", "none", "missing PHAT functions from WO-003 W1");
 });
 
-T("WO-004 W2 - PHAT.SCHEMA_VERSION is 4, TRAINING_WEEK_MIN is 3, LIMITS matches Decision 4", function(a){
+T("WO-004 W5 - PHAT.SCHEMA_VERSION is 5, TRAINING_WEEK_MIN is 3, LIMITS matches Decision 4", function(a){
   /* THE ONE PLACE THE LITERAL IS KEPT ON PURPOSE, and the reason is written
      down so the next bump does not have to rediscover it.
 
      History: 1 (unversioned) -> 2 (WO-001, dateBasis) -> 3 (WO-003 W1, the
      four V1/D1/W1 state keys) -> 4 (WO-004 W2, the plan document; sessions may
-     carry planId).
+     carry planId) -> 5 (WO-004 W5, Rule PE1; entries may carry rx, the
+     prescription in force when they were logged).
+
+     THE TRIPWIRE FIRED ON 4 -> 5, AND THAT IS THE WHOLE POINT OF IT. It was
+     red for exactly one commit, someone had to come here and read this
+     paragraph, and the obligation below got RESTATED rather than carried
+     forward silently. The literal moves; the reasoning does not.
 
      A schema bump is not an internal detail. It creates an OBLIGATION on code
      that is not written yet: WO-002's importer branches on the stored version
-     and must accept 2, 3 AND 4 (backlog B-04), and any sync layer reads it to
-     decide what shape it is looking at. So the bump must be impossible to make
+     and must accept 2, 3, 4 AND 5 (backlog B-04), and any sync layer reads it
+     to decide what shape it is looking at. So the bump must be impossible to make
      quietly. Asserting against P.SCHEMA_VERSION here would assert
      P.SCHEMA_VERSION === P.SCHEMA_VERSION and prove nothing; the literal is a
      tripwire that fires exactly once per bump and forces the person bumping it
@@ -488,7 +499,7 @@ T("WO-004 W2 - PHAT.SCHEMA_VERSION is 4, TRAINING_WEEK_MIN is 3, LIMITS matches 
      not the value. Three literals were three tripwires on one fact; two of them
      were maintenance cost pretending to be coverage. See the two migration
      tests in S14. */
-  a.eq(P.SCHEMA_VERSION, 4, "index.html writes this into every payload; WO-002's importer owes 2, 3 and 4");
+  a.eq(P.SCHEMA_VERSION, 5, "index.html writes this into every payload; WO-002's importer owes 2, 3, 4 and 5");
   a.eq(P.TRAINING_WEEK_MIN, 3, "a training week is 3 distinct training DAYS (coach ruling TW1)");
   a.ok(P.LIMITS && typeof P.LIMITS === "object", "LIMITS must be exported so the UI cannot drift from the parser");
   a.eq(P.LIMITS.wMin, 0, "0 kg is a legal weight (B-21)");
@@ -863,11 +874,20 @@ T("WO-003 W1 / WO-004 W2 - a v1 store reaches the current schema in ONE pass and
   a.deep(second.notes, [], "and nothing left to say");
 });
 
-T("WO-004 W2 - the v4 pass adds NO key to the log store: a v3 store gains only the version", function(a){
+T("WO-004 W2/W5 - a v3 store crosses TWO passes and gains no key: schema 4 then schema 5", function(a){
   /* The other end of the six-keys assertion above, and the acceptance criterion
-     in its own right. Schema 4 is the plan document; the plan document lives in
-     phat:v1:plans. If this ever fails, the log store has grown a key it does not
-     own and WO-002's importer is reading a shape nobody documented. */
+     in its own right. Schema 4 is the plan document, which lives in its own
+     store; schema 5 is Rule PE1's `rx`, which lives on an ENTRY and is never
+     stamped retroactively. Neither adds a key to the log store. If this ever
+     fails, the log store has grown a key it does not own and WO-002's importer
+     is reading a shape nobody documented.
+
+     THE NOTE COUNT MOVED 1 -> 2 ON THE v5 BUMP, CORRECTLY, and that is a
+     tripwire firing rather than a test going stale: a v3 store is below V_PLAN
+     AND below V_RX, so it genuinely crosses two migrations and owes two
+     accounts of itself. Raising the number is not loosening the assertion -
+     both messages are pinned verbatim, in pass order, below. A pass that goes
+     quiet and a pass that re-fires both still fail here. */
   var v3 = { schemaVersion: 3, includeCut: false,
              sessions: [{ id: 1, date: "2026-01-10", dayId: "d1", dateBasis: "local",
                           entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" } } }],
@@ -876,7 +896,7 @@ T("WO-004 W2 - the v4 pass adds NO key to the log store: a v3 store gains only t
   var r = P.migrateStore(clone(v3), null);
   var added = [], i, ks = Object.keys(r.log);
   for (i = 0; i < ks.length; i++) if (before.indexOf(ks[i]) < 0) added.push(ks[i]);
-  a.deep(added, [], "schema 4 must add nothing to the log store");
+  a.deep(added, [], "schema 4 and schema 5 must both add nothing to the log store");
   a.eq(r.log.schemaVersion, P.SCHEMA_VERSION, "only the version moves");
   a.eq(JSON.stringify(r.log.sessions), beforeJSON, "and not one session is touched");
   a.eq(r.logChanged, true, "the version on disk must stop understating the shape - one write");
@@ -886,13 +906,18 @@ T("WO-004 W2 - the v4 pass adds NO key to the log store: a v3 store gains only t
      re-fire here, find all four keys already present, and report "added no new
      key" - while the v4 pass, seeing the version already stamped, would say
      nothing at all. Same bytes on disk, wrong account of what happened, and a
-     latent bug that stops being harmless at v5. Exactly one note, and it says
-     what schema 4 actually did. */
+     latent bug that stopped being harmless at v5 - see S26's idiom test,
+     which pins why the v4 and v5 gates are deliberately NOT written the same
+     way. Two notes, in pass order, each saying what its own pass did. */
   var infos = r.notes.filter(function(n){ return n.key === "log"; });
-  a.eq(infos.length, 1, "exactly one note about the log store: " + JSON.stringify(r.notes));
+  a.eq(infos.length, 2, "a v3 store crosses v4 AND v5, so it owes two notes: " + JSON.stringify(r.notes));
   a.eq(infos[0].level, "info");
   a.eq(infos[0].msg, "Schema 4: sessions may now carry planId. No session was touched and no key was added.",
-    "the note must describe the v4 pass, not a re-fired v3 pass");
+    "the first note must describe the v4 pass, not a re-fired v3 pass");
+  a.eq(infos[1].level, "info");
+  a.eq(infos[1].msg, "Schema 5: entries may now carry rx, the prescription in force when they were logged. " +
+    "No entry was touched and no key was added.",
+    "the second note must describe the v5 pass - if it is gone, the v5 gate has been tidied into v4's idiom");
 });
 
 T("WO-003 W1 - the four v3 defaults are fresh objects, never one shared reference", function(a){
@@ -6061,6 +6086,1014 @@ T("W2 OBSERVATION - history is keyed by exercise id ALONE, so a copied plan SHAR
     "the trend series merges both plans' entries for d1a");
 });
 
+/* ============================================================ S26 - Rule PE1 (WO-004 W5)
+   docs/coach-audit-addendum.md sections 9.1-9.11. THE PRESCRIPTION EPOCH.
+
+   The rule in one line: MEASUREMENTS CROSS A PRESCRIPTION CHANGE, AND
+   PRESCRIPTION-RELATIVE COMPARISONS DO NOT. History is always kept, always
+   charted, never hidden and never re-keyed; what changes is whether a rule may
+   compare ACROSS the change.
+
+   THE HAZARD THIS EXISTS FOR, and it is the only one in this project with
+   physical stakes. Move d1a from 3 x 3-5 to 3 x 8-12 and the design's weight
+   prefill types his 3-5RM into an 8-12 slot: the box says 100 and the target
+   line says 8-12. The coach called that a failed rep under a loaded bar, not a
+   wrong percentage. The adversarial test below asserts that `prefill` AND
+   `seed` are both false across an epoch change - `seed` too, because the UX
+   spec's "first + adopts last session's weight" rule is the same prefill one
+   tap later, into the same slot, with the same weight.
+
+   Also here, because they landed with W5 and nothing else covers them: the
+   schema-5 migration and the deliberate asymmetry between the v4 and v5
+   version gates, V1a's block length, keyLiftDisclosure, loggedSessions
+   counting distinct dates, SP1's source-not-heavy fallback, X1's extra-set
+   ordinal, S1a's 21-day restatement, and the seven areas backend named as its
+   least confident - three of which section 9.11 has since settled.
+   --------------------------------------------------------------------------- */
+group("S26 Rule PE1 / W5 / prescription epochs");
+
+/* The same exercise, before and after one plan edit. `PE_ROW` is what PHAT
+   ships; `PE_ROW8` is what it becomes after he changes the range. */
+var PE_ROW  = { id: "d1a", n: "Bent-over row", s: 3, lo: 3, hi: 5,  k: "power", implement: "bb" };
+var PE_ROW8 = { id: "d1a", n: "Bent-over row", s: 3, lo: 8, hi: 12, k: "hyp",   implement: "bb" };
+var PE_RX35 = { s: 3, lo: 3, hi: 5, k: "power" };
+
+/* A previous ENTRY in the shape PHAT.lastFor hands back, optionally carrying
+   the prescription it was logged under. No rx means "absent", which PE1 reads
+   as "the plan's current one" - true of every entry logged before schema 5. */
+function PENT(setList, rx, note){
+  var e = { sets: setList, note: note || "" };
+  if (rx) e.rx = rx;
+  return e;
+}
+/* A MUTABLE copy of PHAT with one exercise's prescription edited - exactly the
+   thing PE1 is about. PHAT_PLAN itself is readOnly and deep-frozen. */
+function PEPLAN(exId, over){
+  var r = P.copyPlan(P.PHAT_PLAN, "My PHAT", TODAY);
+  if (!r || !r.ok) throw new Error("copyPlan(PHAT_PLAN) failed - every PE1 plan test depends on it");
+  var e = P.exById(r.plan, exId), k;
+  if (!e) throw new Error("no such exercise in the copy: " + exId);
+  if (over) for (k in over) if (Object.prototype.hasOwnProperty.call(over, k)) e[k] = over[k];
+  return r.plan;
+}
+/* A log store at schema version `ver`, carrying one dated session with one
+   completed set. `ver === 1` is the unversioned shape WO-001 found on disk. */
+function PESTORE(ver){
+  var s = { includeCut: false,
+            sessions: [{ id: 1, date: "2026-01-10", dayId: "d1", dateBasis: "local",
+                         entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" } } }],
+            reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null };
+  if (ver === 1) { delete s.reintro; delete s.lastReintroDate; delete s.calChangedAt;
+                   delete s.deload; delete s.sessions[0].dateBasis; return s; }
+  s.schemaVersion = ver;
+  if (ver < 3) { delete s.reintro; delete s.lastReintroDate; delete s.calChangedAt; delete s.deload; }
+  return s;
+}
+function logNotes(r){
+  return (r.notes || []).filter(function(n){ return n.key === "log"; }).map(function(n){ return n.msg; });
+}
+
+/* ------------------------------------------------------------ the surface */
+
+T("W5 / PE1 - PHAT exposes the whole epoch surface, callable from file:// with no DOM (B-20)", function(a){
+  var need = ["prescriptionEpoch", "epochKey", "entryRx", "sameEpoch", "rxOf", "extraSets",
+              "planReducedDeclared", "keyLiftDisclosure", "painState", "buildSession"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none", "an epoch function that needs a browser is a B-20 failure");
+  a.eq(P.buildSession.length, 6, "buildSession grew planId and plan; a 4-argument signature means W5 is not wired");
+  a.eq(P.painState.length, 3, "painState grew todayStr for Rule S1a");
+  a.eq(P.S1A_DAYS, 21, "the coach's [Opinion], and the constant exists so a revision is one number");
+});
+
+T("W5 / PE1 - nothing in the epoch surface reads storage, the bridge or S", function(a){
+  var ls;
+  try { ls = window.localStorage; } catch (e) { ls = null; }
+  a.skipUnless(!!ls, "localStorage is unavailable in this context (private window or blocked site data), " +
+    "so the spy cannot be installed. Re-run in a normal window.");
+  var calls = 0, realSet = ls.setItem, realGet = ls.getItem, realDel = ls.removeItem;
+  ls.setItem = function(){ calls++; return realSet.apply(ls, arguments); };
+  ls.getItem = function(){ calls++; return realGet.apply(ls, arguments); };
+  ls.removeItem = function(){ calls++; return realDel.apply(ls, arguments); };
+  var stashed = window.storage, hits = 0, stashedS = window.S;
+  window.storage = { get: function(){ hits++; }, set: function(){ hits++; } };
+  try {
+    delete window.S;
+    P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35) });
+    P.epochKey(PE_ROW); P.entryRx(PENT(SETS(100, 5), PE_RX35)); P.rxOf(PE_ROW);
+    P.sameEpoch(PE_ROW, PE_ROW8); P.extraSets(SETS(100, 5, 100, 5), PE_ROW);
+    P.keyLiftDisclosure(P.PHAT_PLAN); P.planReducedDeclared(P.PHAT_PLAN);
+    P.painState([TSESS(DA(-30), 1, "d1a", SETS(100, 5), "shoulder pain")], "d1a", TODAY);
+    P.buildSession(draft(entry("d1a", sets("100:5"))), "d1", "2026-09-10", 1, "phat", P.PHAT_PLAN);
+  } finally {
+    ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel;
+    if (stashed === undefined) { try { delete window.storage; } catch (e) { window.storage = undefined; } }
+    else window.storage = stashed;
+    if (stashedS !== undefined) window.S = stashedS;
+  }
+  a.eq(calls, 0, "an epoch function read or wrote localStorage");
+  a.eq(hits, 0, "an epoch function reached the window.storage bridge");
+});
+
+/* ----------------------------------------------------------------- rxOf */
+
+T("W5 / PE1 - rxOf reads exactly s, lo, hi, k and carries nothing else across", function(a){
+  a.deep(P.rxOf({ id: "d1a", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power",
+                  implement: "bb", cut: 1, lift: "l_row", cue: "..." }),
+    { s: 3, lo: 3, hi: 5, k: "power" },
+    "an epoch is the prescription, not the whole exercise - a renamed cue is not a new epoch");
+});
+
+T("W5 / PE1 - rxOf refuses every unreadable shape rather than building a key from holes", function(a){
+  a.eq(P.rxOf(null), null);
+  a.eq(P.rxOf(undefined), null);
+  a.eq(P.rxOf("3x3-5"), null);
+  a.eq(P.rxOf({ s: 3, lo: 3, hi: 5 }), null, "no k");
+  a.eq(P.rxOf({ s: 3, lo: 3, hi: 5, k: "   " }), null, "blank k");
+  a.eq(P.rxOf({ s: "3", lo: 3, hi: 5, k: "power" }), null, "a stringy s is not a number");
+  a.eq(P.rxOf({ s: NaN, lo: 3, hi: 5, k: "power" }), null);
+  a.eq(P.rxOf({ s: 3, lo: Infinity, hi: 5, k: "power" }), null);
+});
+
+T("W5 / PE1 - A DELOAD IS NOT AN EPOCH: rxOf returns null for anything carrying dl:1", function(a){
+  /* Addendum 9.11: "A deload is a temporary instruction INSIDE a prescription,
+     not a change to it: the plan still says 3 x 3-5, and DL1 says do two of
+     them this week." Announcing `Prescription changed to 2 x 3-3` would be
+     false on its face - 3-3 was never prescribed - and emptying his weight box
+     during a deload removes the one thing a deload week guarantees, which is
+     that the loads stay put. Same principle as E2, one layer down. */
+  var dl = P.deloadEx(PE_ROW, true);
+  a.eq(dl.dl, 1, "deloadEx must keep stamping dl:1 - rxOf's guard reads it");
+  a.eq(dl.s, 2, "and it really is a different prescription: 2 x 3-3 against 3 x 3-5");
+  a.eq(dl.lo, 3); a.eq(dl.hi, 3);
+  a.eq(P.rxOf(dl), null,
+    "without this guard every deload week fakes an epoch change, empties his weight box and prints " +
+    "'Prescription changed to 2 x 3-3' - and the week after fakes another one");
+  a.eq(P.epochKey(dl), null, "and no key is built from a deloaded prescription either");
+});
+
+T("W5 / PE1 - a deload changes nothing, in BOTH directions: as the current ex and as the logged rx", function(a){
+  var prev = PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35);
+  /* Direction 1: the DELOADED exercise is what the view holds this week. */
+  var d1 = P.prescriptionEpoch({ ex: P.deloadEx(PE_ROW, true), prev: prev });
+  a.eq(d1.changed, false, "a deload week must not read as a prescription change");
+  a.eq(d1.prefill, true, "and the weight box keeps working during a deload - loads stay put");
+  a.eq(d1.line, "From your last session on this.");
+  /* Direction 2: the week AFTER, comparing against a set logged during it. */
+  var d2 = P.prescriptionEpoch({ ex: PE_ROW, prev: PENT(SETS(100, 3, 100, 3), P.deloadEx(PE_ROW, true)) });
+  a.eq(d2.changed, false, "the week after a deload must not fake a second change");
+  a.eq(d2.prefill, true);
+  /* And the verdict agrees: DL1 owns the deload week outright. */
+  var v = P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10), prev: prev, deload: true, todayStr: TODAY });
+  a.eq(v.rule, "DL1", "DL1 sits above H1, so no epoch copy is reachable during a deload");
+  a.ok(vtext(v).indexOf("Prescription changed") < 0, "and the epoch sentence must not appear inside a deload week");
+});
+
+/* ------------------------------------------------------------- epochKey */
+
+T("W5 / PE1 - epochKey is strict (s, lo, hi, k) and every one of the four moves it", function(a){
+  a.eq(P.epochKey(PE_ROW), "3|3|5|power");
+  a.ne(P.epochKey({ s: 4, lo: 3, hi: 5, k: "power" }), "3|3|5|power", "s");
+  a.ne(P.epochKey({ s: 3, lo: 4, hi: 5, k: "power" }), "3|3|5|power", "lo");
+  a.ne(P.epochKey({ s: 3, lo: 3, hi: 6, k: "power" }), "3|3|5|power", "hi");
+  a.ne(P.epochKey({ s: 3, lo: 3, hi: 5, k: "hyp" }),   "3|3|5|power", "k");
+  a.eq(P.epochKey({}), null, "null, never a key with holes in it");
+  a.deep(P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5), PE_RX35) }).fields,
+    ["lo", "hi", "k"], "and it reports WHICH fields moved, in s/lo/hi/k order");
+});
+
+T("W5 / PE1 - NO TOLERANCE BAND, and the over-trigger is WANTED, not a false positive to fix later", function(a){
+  /* Addendum section 9.1, worked example 2. 8-12 -> 10-12 is a trivial edit
+     and PE1 fires anyway, costing one session of reset copy and one empty
+     weight box.
+
+     THE COACH TOOK THAT COST ON PURPOSE and said so: "A tolerance band that
+     decides 8-12 -> 10-12 is 'close enough' but 8-12 -> 8-15 is not would be a
+     number I cannot defend, and getting it wrong prints a confident percentage
+     comparing two different qualities of work. One session of 'prescription
+     changed' is cheap; a wrong 'Volume up 50%' is the class of defect B-25
+     exists for."
+
+     SO THIS TEST IS NOT PINNING AN IMPLEMENTATION DETAIL. It is here so that
+     the next person who reads 8-12 -> 10-12 firing and calls it a false
+     positive has to delete a test whose comment tells them it is a ruling. If
+     a band is ever wanted it needs a NEW coach ruling and real data on how
+     often he edits ranges - which is zero plan edits, today. */
+  var cable   = { s: 3, lo: 8,  hi: 12, k: "hyp" };
+  var cable10 = { s: 3, lo: 10, hi: 12, k: "hyp" };
+  a.ne(P.epochKey(cable10), P.epochKey(cable), "8-12 and 10-12 are different epochs. Deliberately.");
+  a.eq(P.sameEpoch(cable, cable10), false);
+  var e = P.prescriptionEpoch({ ex: cable10, prev: PENT(SETS(60, 12, 60, 11, 60, 10), cable) });
+  a.eq(e.changed, true, "a two-rep tightening fires PE1 - this is the intended over-trigger");
+  a.eq(e.prefill, false, "and the box is emptied for one session, which is the price the coach accepted");
+  a.deep(e.fields, ["lo"], "one field is enough");
+  a.eq(P.sameEpoch(cable, { s: 3, lo: 8, hi: 12, k: "hyp" }), true,
+    "and an edit that moves none of the four is not an epoch change - it does not fire on everything");
+});
+
+/* ---------------------------------------------------- entryRx / sameEpoch */
+
+T("W5 / PE1 - ABSENCE MEANS 'the plan's current prescription', true of every set logged to date", function(a){
+  a.eq(P.entryRx({ sets: SETS(100, 5), note: "" }), null, "an entry with no rx is absent, not unknown");
+  a.eq(P.entryRx(SETS(100, 5)), null, "a bare array of sets carries no rx and is the same answer");
+  a.eq(P.entryRx(null), null);
+  a.deep(P.entryRx(PENT(SETS(100, 5), PE_RX35)), PE_RX35);
+  /* Absence can never produce a reset, from either side. Fail quiet. */
+  a.eq(P.sameEpoch(null, PE_ROW), true, "an unreadable previous prescription is not a change");
+  a.eq(P.sameEpoch(PE_ROW, null), true, "an unreadable current prescription is not a change either");
+  a.eq(P.sameEpoch(null, null), true);
+  var e = P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5)) });
+  a.eq(e.changed, false, "every entry in the store today has no rx, and none of them may reset anything");
+  a.eq(e.prefill, true);
+});
+
+/* -------------------------------------------- prescriptionEpoch: the hazard */
+
+T("W5 / PE1 - THE HAZARD: across a 3-5 -> 8-12 change, prefill AND seed are both false", function(a){
+  /* The one defect in this project with physical stakes. The design prefills
+     the weight box from last session; across this edit that types his 3-5RM
+     into an 8-12 slot. Chalk on his hands, box says 100, target line says
+     8-12. A failed rep under a loaded bar, not a wrong percentage.
+
+     BOTH FLAGS, AND THEY ARE NOT REDUNDANT. `prefill` is the box being filled
+     when the card opens. `seed` is the UX spec's "the first + adopts last
+     session's weight" rule, which is the same 100 kg reaching the same slot
+     one tap later. Killing one and leaving the other ships the hazard with an
+     extra tap in front of it. */
+  var e = P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35) });
+  a.eq(e.changed, true);
+  a.eq(e.prefill, false, "THE WEIGHT BOX MUST BE EMPTY. This is the whole rule.");
+  a.eq(e.seed,    false, "AND the first + must not adopt 100 kg either - same weight, same slot, one tap later");
+  /* Both are true when nothing changed, so the assertions above are not
+     passing off a function that always answers false. */
+  var same = P.prescriptionEpoch({ ex: PE_ROW, prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35) });
+  a.eq(same.prefill, true, "and it still prefills when the prescription held");
+  a.eq(same.seed, true);
+  /* Crossing the other way costs the same one session (section 9.1 example 4). */
+  var back = P.prescriptionEpoch({ ex: PE_ROW, prev: PENT(SETS(70, 10, 70, 10, 70, 10),
+                                                          { s: 3, lo: 8, hi: 12, k: "hyp" }) });
+  a.eq(back.prefill, false, "8-12 back to 3-5 resets too");
+  a.eq(back.seed, false);
+});
+
+T("W5 / PE1 - the ghost row across an epoch boundary is history, never a target", function(a){
+  var e = P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35) });
+  a.eq(e.line, "100 \u00d7 5, under the old 3 \u00d7 3\u20135. Pick a weight for 8\u201312.",
+    "addendum section 9.1's copy, verbatim");
+  a.eq(e.oldLabel, "3 \u00d7 3\u20135");
+  a.eq(e.newRange, "8\u201312");
+  a.deep(e.prevSet, { w: 100, r: 5 }, "the number is still SHOWN - PE1 hides nothing, it relabels");
+  a.ok(e.line.indexOf("Pick a weight for 8\u201312.") > 0,
+    "SECTION 9.11 MAKES THIS CLAUSE LOAD-BEARING: it is what turns the leading number from a target " +
+    "into history, and the heaviest-set ruling was confirmed only on condition that it stays");
+});
+
+T("W5 / PE1 - same epoch keeps the provenance line, and it is its own field (section 9.6)", function(a){
+  var e = P.prescriptionEpoch({ ex: PE_ROW, prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35) });
+  a.eq(e.line, "From your last session on this.");
+  a.eq(e.same, true);
+  a.eq(e.changed, false);
+  a.deep(e.fields, []);
+});
+
+T("W5 / PE1 - the ghost names the HEAVIEST completed set, ties to the earliest (section 9.11 ruling 1)", function(a){
+  /* CONFIRMED [Certain], and not for consistency with topSet. "Last set" is a
+     row-order artefact and X1 makes it wrong outright: on
+     100x5, 100x5, 100x5, 80x8 [EXTRA] the last set is the back-off, which X1
+     already rules cannot describe the prescription. Naming it in the one
+     sentence he reads while deciding what to load hands him the least
+     representative number in the entry. */
+  var backoff = P.prescriptionEpoch({ ex: PE_ROW8,
+    prev: PENT(SETS(100, 5, 100, 5, 100, 5, 80, 8), PE_RX35) });
+  a.deep(backoff.prevSet, { w: 100, r: 5 }, "the X1 case: the ghost must not name the 80x8 back-off");
+  var pair = P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5, 80, 8), PE_RX35) });
+  a.deep(pair.prevSet, { w: 100, r: 5 }, "100x5, 80x8 reads '100 x 5' - heaviest, not last, not first");
+  a.ok(pair.line.indexOf("100 \u00d7 5,") === 0);
+  var tie = P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5, 100, 8), PE_RX35) });
+  a.deep(tie.prevSet, { w: 100, r: 5 }, "equal weights tie to the EARLIEST set");
+  var partial = P.prescriptionEpoch({ ex: PE_ROW8,
+    prev: PENT([{ w: "200", r: "" }, { w: 100, r: 5 }], PE_RX35) });
+  a.deep(partial.prevSet, { w: 100, r: 5 }, "an incomplete row is not a set and cannot be quoted as one");
+  /* The direction test the coach applied: going up in reps the heaviest
+     anchors him HIGH, which is the dangerous direction - and that is only
+     acceptable because the second clause carries the instruction. */
+  a.ok(partial.line.indexOf("Pick a weight for 8\u201312.") > 0,
+    "the heaviest-set choice is conditional on this clause surviving");
+});
+
+T("W5 / PE1 - kWord: all four strings are approved as written (section 9.11 ruling 2)", function(a){
+  /* Approved [Certain], including hyp -> "hypertrophy work", deliberately:
+     the app already uses "hypertrophy" as its own word in three of five day
+     names, and a warmer synonym here would be one concept with two names -
+     the defect in B-27 and the reason a `short` field was rejected in 9.2.
+     "speed work" is the app's own term; "power work" stands; the unmapped
+     fallback is approved with a rider, tested separately below. */
+  var mk = function(k){
+    return P.prescriptionEpoch({ ex: { id: "x", s: 3, lo: 3, hi: 5, k: "power" },
+                                 prev: PENT(SETS(100, 5), { s: 3, lo: 3, hi: 5, k: k }) }).line;
+  };
+  a.eq(mk("hyp"),   "100 \u00d7 5, logged as hypertrophy work. Pick a weight for the new range.");
+  a.eq(mk("speed"), "100 \u00d7 5, logged as speed work. Pick a weight for the new range.");
+  a.eq(mk("zzz"),   "100 \u00d7 5, logged under a different role. Pick a weight for the new range.",
+    "an unmapped k must never be printed raw into a sentence");
+  var pw = P.prescriptionEpoch({ ex: { id: "x", s: 3, lo: 3, hi: 5, k: "hyp" },
+                                 prev: PENT(SETS(100, 5), PE_RX35) }).line;
+  a.eq(pw, "100 \u00d7 5, logged as power work. Pick a weight for the new range.");
+  var kOnly = P.prescriptionEpoch({ ex: { id: "d1a", s: 3, lo: 3, hi: 5, k: "hyp" },
+                                    prev: PENT(SETS(100, 5), PE_RX35) });
+  a.eq(kOnly.kOnly, true, "the k-only branch, and only k moved");
+  a.deep(kOnly.fields, ["k"]);
+  a.eq(kOnly.prefill, false, "a role change is still an epoch change");
+});
+
+T("W5 / section 9.11 - an unrecognised k still fires a hypertrophy verdict (OBSERVED; the ruling says it must not)", function(a){
+  /* SECTION 9.11 RULING 2's RIDER, ADDED AFTER W5 WAS BUILT:
+       "if k is unrecognised, no verdict may fire for that exercise. An app
+        that cannot tell which rule applies must not run one."
+     That is not true today. verdict() returns null for k:"speed", routes
+     k:"power" to P1, and falls THROUGH to H1 for everything else - so a
+     corrupt or imported k:"tempo" gets a hypertrophy tonnage comparison it was
+     never assessed under, and a MISSING k gets one too.
+
+     Unreachable from the editor (C-7 constrains k to PLAN_KINDS), so it only
+     appears on corrupt or imported data - which, as the coach says, is exactly
+     when guessing is worst. WO-002's importer is the path that makes it real.
+
+     PINNED AS OBSERVED, NOT AS CORRECT. Backend owns the fix: gate on
+     PLAN_KINDS and return null. When it lands, invert the two `ne` assertions
+     and keep this comment. It is not carried as a red because the ruling
+     post-dates the build - it is an open work item, not a regression in
+     delivered scope - but it IS a defect and it is reported as one. */
+  a.deep(P.PLAN_KINDS, ["power", "hyp", "speed"], "the three the validator allows");
+  var unknown = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "bb" },
+                            sets: SETS(60, 10, 60, 10, 60, 10),
+                            prev: PREV(SETS(60, 9, 60, 9, 60, 9)) });
+  a.ne(unknown, null, "OBSERVED: a verdict fires. Section 9.11 says it must be null.");
+  a.eq(unknown.rule, "H1.4d", "and it is H1's tonnage comparison, on an exercise nobody classified");
+  var missing = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
+                            sets: SETS(60, 10, 60, 10, 60, 10) });
+  a.ne(missing, null, "OBSERVED: an ABSENT k does the same");
+  a.eq(missing.rule, "H1.3a");
+  /* The two that are right today, so the fix cannot break them. */
+  a.eq(P.verdict({ ex: { id: "x", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb" },
+                   sets: SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3) }), null,
+    "speed is silent by design - speedLoad owns that card");
+  a.eq(P.verdict({ ex: PE_ROW, sets: SETS(100, 5, 100, 5, 100, 5) }).rule, "P1.4");
+});
+
+T("W5 / section 9.11 - the PER-ROW ghost is DELETED across an epoch, not captioned", function(a){
+  /* Section 9.11 ruling 3, [Certain]: "Not captioned - gone. The provenance
+     line alone carries it." `Last 100 x 5` sitting beside a deliberately
+     emptied weight box IS a target, whatever caption is attached, and PE1's
+     entire purpose is that those numbers stop reading as targets. Repeating
+     the old prescription on three or four rows also re-inflates the hint
+     B-37 measured at 6.9 px wide at 400 px.
+
+     WHAT LOGIC CAN ASSERT is that it offers the view exactly ONE place to say
+     this and nothing per-row: a single `prevSet`, a single `line`, and no
+     array of previous sets. The deletion itself is the VIEW's, and it is
+     stated as an acceptance criterion in the untestable list rather than
+     guessed at here. */
+  var e = P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT(SETS(100, 5, 100, 5, 95, 5), PE_RX35) });
+  a.eq(e.changed, true);
+  a.ok(!Array.isArray(e.prevSet), "one set, not a row-indexed list");
+  a.deep(e.prevSet, { w: 100, r: 5 });
+  a.eq(typeof e.line, "string", "one sentence, said once, full width");
+  var arrays = Object.keys(e).filter(function(k){ return Array.isArray(e[k]); });
+  a.deep(arrays, ["fields"], "the only array it returns is which fields moved - there is no per-row surface");
+});
+
+T("W5 / PE1 - no previous entry: nothing to prefill, nothing to say, and no epoch claim", function(a){
+  var e = P.prescriptionEpoch({ ex: PE_ROW8, prev: null });
+  a.eq(e.hasPrev, false);
+  a.eq(e.prevSet, null);
+  a.eq(e.prefill, false, "there is no number to put in the box");
+  a.eq(e.seed, false);
+  a.eq(e.line, "", "and no ghost row at all - never an empty-looking one");
+  a.eq(e.changed, false, "an absent history is not a prescription change");
+  var blank = P.prescriptionEpoch({ ex: PE_ROW8, prev: PENT([{ w: "", r: "" }], PE_RX35) });
+  a.eq(blank.hasPrev, false);
+  a.eq(blank.line, "", "a changed prescription with nothing to quote says nothing, not half a sentence");
+});
+
+T("W5 / PE1 - garbage in returns the same shape, never a throw and never a partial object", function(a){
+  var keys = ["exId","rx","prevRx","hasPrev","same","changed","fields","kOnly",
+              "prefill","seed","prevSet","oldLabel","newRange","line"].sort();
+  var bad = [undefined, null, 0, "d1a", [], { ex: 42 }, { prev: "yesterday" }, { plan: {}, exId: "nope" }];
+  for (var i = 0; i < bad.length; i++) {
+    var e = a.noThrow((function(x){ return function(){ return P.prescriptionEpoch(x); }; })(bad[i]),
+      "threw on " + show(bad[i]));
+    a.deep(Object.keys(e).sort(), keys, "shape changed on " + show(bad[i]));
+    a.eq(e.changed, false, "garbage must never claim a prescription change: " + show(bad[i]));
+    a.eq(e.line, "", "and must never print a sentence: " + show(bad[i]));
+  }
+});
+
+T("W5 / PE1 - it resolves the exercise from plan + exId, and mutates neither argument", function(a){
+  var prev = PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35);
+  var byPlan = P.prescriptionEpoch({ plan: P.PHAT_PLAN, exId: "d1a", prev: prev });
+  a.deep(byPlan.rx, PE_RX35, "PHAT_PLAN is deep-frozen, so this also proves it reads without writing");
+  a.eq(byPlan.exId, "d1a");
+  a.eq(byPlan.changed, false);
+  var gone = P.prescriptionEpoch({ plan: P.PHAT_PLAN, exId: "zzz", prev: prev });
+  a.eq(gone.rx, null);
+  a.eq(gone.changed, false, "a dangling id must never empty his weight box");
+  var fex = frz(clone(PE_ROW8)), fprev = frz(clone(prev));
+  var e = a.noThrow(function(){ return P.prescriptionEpoch({ ex: fex, prev: fprev }); },
+    "wrote to a frozen argument");
+  a.eq(e.changed, true);
+  a.deep(fprev.sets, SETS(100, 5, 100, 5, 100, 5), "the stored entry came out untouched");
+});
+
+/* --------------------------------------------------------- verdict + PE1 */
+
+T("W5 / PE1 - H1 case 3c: the first session in a new epoch is a baseline, and says nothing was lost", function(a){
+  var v = P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10),
+                      prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35), todayStr: TODAY });
+  a.eq(v.rule, "H1.3c");
+  a.eq(v.x, "Prescription changed to 3 \u00d7 8\u201312. This is the new baseline. " +
+            "Your earlier sets are still in the history and on the chart.",
+    "addendum section 9.1's verdict copy, verbatim");
+  a.eq(v.t, "", "a baseline is not an up or a down");
+  a.ok(vtext(v).indexOf("Volume up") < 0, "2,100 against 1,500 is a plan edit, not 40% better at anything");
+  a.ok(vtext(v).indexOf("First time logged") < 0,
+    "he has months of history on this lift - N3's split applies here too");
+});
+
+T("W5 / PE1 - the failing case from section 9.1 example 3 cannot be produced by the shipping call", function(a){
+  /* Copy the plan, change d1a to 8-12, log 70x10/10/10 against 100x5/5/5.
+     Before PE1 this printed `Volume up 40% - 2,100 kg against 1,500 kg.`
+     The caller passes NO epochChanged, so this also proves the fact is derived
+     inside verdict() rather than trusted from a view that might forget. */
+  var v = P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10),
+                      prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35) });
+  a.eq(v.rule, "H1.3c", "computed from the entry, with nothing passed in");
+  a.ok(vtext(v).indexOf("40%") < 0, "the exact wrong number the rule exists to prevent");
+  a.ok(vtext(v).indexOf("2,100") < 0);
+});
+
+T("W5 / PE1 - H1 cases 1 and 2 read THIS session only, so an epoch change does not touch them", function(a){
+  var prev = PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35);
+  var tooHeavy = P.verdict({ ex: PE_ROW8, sets: SETS(100, 5, 100, 5, 100, 5), prev: prev });
+  a.eq(tooHeavy.rule, "H1.1", "below the new range is a fact about today, and it must still be said");
+  a.ok(vtext(tooHeavy).indexOf("Drop to 95 kg") >= 0, "with the number, not a baseline sentence");
+  var tooLight = P.verdict({ ex: PE_ROW8, sets: SETS(70, 14, 70, 14, 70, 14), prev: prev });
+  a.eq(tooLight.rule, "H1.2", "above the new range is also about today");
+  a.eq(P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10), prev: prev }).rule, "H1.3c",
+    "3c sits between case 2 and case 3a, which is what makes both of the above true");
+});
+
+T("W5 / PE1 - an epoch change with nothing on the previous side falls through to 3a, not 3c", function(a){
+  var noSets = P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10),
+                           prev: PENT([], PE_RX35), epochChanged: true });
+  a.eq(noSets.rule, "H1.3a", "with nothing to compare there is no epoch claim worth making");
+  var short = P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10),
+                          prev: PENT(SETS(100, 5), PE_RX35) });
+  a.eq(short.rule, "H1.3c", "one completed set on the previous side IS something to relabel");
+});
+
+T("W5 / PE1 - P1 is history-free, so a power slot is unaffected by any epoch (section 9.1's table)", function(a){
+  var v = P.verdict({ ex: PE_ROW, sets: SETS(100, 5, 100, 5, 100, 5),
+                      prev: PENT(SETS(70, 10, 70, 10, 70, 10), { s: 3, lo: 8, hi: 12, k: "hyp" }) });
+  a.eq(v.rule, "P1.4", "P1 reads ex {s,lo,hi} and this session's sets, and nothing else");
+  a.ok(vtext(v).indexOf("102.5 kg") >= 0, "so the progression still lands");
+  a.ok(vtext(v).indexOf("Prescription changed") < 0, "and no epoch sentence reaches a power card");
+});
+
+T("W5 / PE1 - epochChanged:false is an override for a caller that already knows, and it CAN lie", function(a){
+  /* Pinned as documented behaviour, not endorsed. An explicit Boolean wins,
+     which is what makes prescriptionEpoch().changed usable at the call site
+     without computing the same thing twice. It also means a view that passes
+     `false` out of habit resurrects section 9.1 example 3 in full. The safe
+     default is to pass nothing; this test exists so that a view which does
+     pass it is doing so on purpose. */
+  var v = P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10),
+                      prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35), epochChanged: false });
+  a.eq(v.rule, "H1.4d", "the override is honoured");
+  a.ok(vtext(v).indexOf("Volume up 40%") >= 0, "and this is exactly the sentence PE1 exists to prevent");
+  /* Anything that is not a Boolean is ignored, which is the important half. */
+  a.eq(P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10),
+                   prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35), epochChanged: "no" }).rule,
+    "H1.3c", "a truthy-or-falsy non-Boolean must not be able to switch the rule off");
+  a.eq(P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10),
+                   prev: PENT(SETS(100, 5, 100, 5, 100, 5), PE_RX35), epochChanged: 0 }).rule, "H1.3c");
+});
+
+/* ------------------------------------------------------- buildSession + rx */
+
+T("W5 / PE1 - buildSession's 6th argument stamps rx per ENTRY, from the plan, at save time", function(a){
+  var d = draft({ d1a: { sets: sets("100:5"), note: "" },
+                  d1b: { sets: sets("20:8"),  note: "" } }, "2026-09-10");
+  var s = P.buildSession(d, "d1", "2026-09-10", 1, "phat", P.PHAT_PLAN);
+  a.ok(!!s, "buildSession refused a valid draft");
+  a.deep(s.entries.d1a.rx, { s: 3, lo: 3, hi: 5, k: "power" }, "d1a's prescription as PHAT ships it");
+  a.deep(s.entries.d1b.rx, { s: 2, lo: 6, hi: 10, k: "power" },
+    "per ENTRY, not per session - d1b differs from d1a");
+  a.eq(s.planId, "phat");
+  a.deep(s.entries.d1a.sets, SETS(100, 5), "and the sets are the numbers they always were");
+  a.eq(s.entries.d1a.note, "");
+});
+
+T("W5 / PE1 - buildSession never guesses an rx: an entry the plan does not contain gets none", function(a){
+  var d = draft({ zzz: { sets: sets("100:5"), note: "" } }, "2026-09-10");
+  var s = P.buildSession(d, "d1", "2026-09-10", 1, "phat", P.PHAT_PLAN);
+  a.ok(!!s);
+  a.eq(s.entries.zzz.rx, undefined,
+    "no rx beats a guessed one - absent reads as 'same epoch', which is the safe answer");
+  a.deep(s.entries.zzz.sets, SETS(100, 5),
+    "and the set is still saved. A missing prescription never costs a number.");
+});
+
+T("W5 / PE1 - a draft entry that already carries an rx keeps it; the plan does not overwrite it", function(a){
+  var d = draft({ d1a: { sets: sets("100:5"), note: "", rx: { s: 9, lo: 9, hi: 9, k: "hyp" } } },
+                "2026-09-10");
+  var s = P.buildSession(d, "d1", "2026-09-10", 1, "phat", P.PHAT_PLAN);
+  a.deep(s.entries.d1a.rx, { s: 9, lo: 9, hi: 9, k: "hyp" },
+    "the prescription in force when the SET was typed beats the one in force when Save was tapped - " +
+    "he can edit the plan mid-session");
+});
+
+T("W5 / PE1 - a deloaded prescription is never stamped onto an entry", function(a){
+  var p = PEPLAN("d1a", { dl: 1 });
+  var s = P.buildSession(draft(entry("d1a", sets("100:3"))), "d1", "2026-09-10", 1, p.planId, p);
+  a.eq(s.entries.d1a.rx, undefined,
+    "rxOf refuses dl:1, so a reduced prescription cannot launder itself into the history and " +
+    "fake an epoch change the week after");
+  a.deep(s.entries.d1a.sets, SETS(100, 3), "and the set is saved either way");
+});
+
+T("W5 / PE1 - INERT TODAY: index.html calls buildSession with four arguments, so no entry gets an rx", function(a){
+  /* index.html:1504 is
+       const sess = PHAT.buildSession(S.draft, S.dayId, S.draft.date, Date.now());
+     Four arguments. No planId, no plan, therefore no rx on any entry,
+     therefore PE1 cannot fire on anything the app saves as it ships today.
+
+     THAT IS SAFE, AND IT IS ONLY SAFE BECAUSE THERE IS NO PLAN EDITOR YET. An
+     absent rx means "the plan's current prescription", which is true of every
+     set ever logged precisely because no prescription has ever been edited.
+     The moment the plan editor ships, that sentence stops being true and every
+     entry saved without an rx becomes a set whose epoch nobody can recover -
+     and unlike most gaps this one cannot be backfilled, because no code can
+     know what the plan said in June.
+
+     SO: THE 6-ARGUMENT CALL MUST LAND WITH THE PLAN EDITOR, NOT AFTER IT.
+     This test pins the property so that the day the call site changes, someone
+     is reading this paragraph. The harness cannot read index.html from file://
+     (no fetch on an opaque origin), so the source line itself is a one-line
+     check in the manual list; what is asserted here is the consequence. */
+  var d = draft({ d1a: { sets: sets("100:5", "100:5", "100:5"), note: "" } }, "2026-09-10");
+  var s = P.buildSession(d, "d1", "2026-09-10", Date.now());
+  a.ok(!!s, "the 4-argument call must keep working - it is the one that ships");
+  a.eq(s.planId, undefined, "no planId today");
+  a.eq(hasKeyDeep(s, "rx"), false, "and not one rx anywhere in the saved session");
+  /* The consequence, end to end: change the plan under it and PE1 stays quiet. */
+  var e = P.prescriptionEpoch({ ex: PE_ROW8, prev: s.entries.d1a });
+  a.eq(e.changed, false, "an entry with no rx can never trigger a reset");
+  a.eq(e.prefill, true,
+    "which is also to say the 100 kg prefill hazard is STILL LIVE until the call site grows two arguments");
+  a.eq(P.verdict({ ex: PE_ROW8, sets: SETS(70, 10, 70, 10, 70, 10), prev: s.entries.d1a }).rule, "H1.4d",
+    "and the tonnage comparison still crosses the edit, which is section 9.1 example 3 exactly");
+});
+
+/* ------------------------------------------------------- schema 5 migration */
+
+T("W5 / PE1 - the v5 pass writes the version and NOTHING else: no key, no entry, no set", function(a){
+  var v4 = PESTORE(4);
+  var before = JSON.stringify(v4.sessions), keys = Object.keys(v4).slice(0);
+  var r = P.migrateStore(clone(v4), null);
+  a.eq(JSON.stringify(r.log.sessions), before, "not one session, entry, set or note is touched");
+  a.deep(Object.keys(r.log).sort(), keys.sort(), "and not one key is added to the log store");
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION, "only the version moves");
+  a.deep(logNotes(r), ["Schema 5: entries may now carry rx, the prescription in force when they were " +
+                       "logged. No entry was touched and no key was added."]);
+  a.eq(r.logChanged, true, "one write, so the store stops understating its shape to WO-002's importer");
+  a.eq(P.migrateStore(r.log, null).changed, false, "ONE write, not one per boot");
+});
+
+T("W5 / PE1 - the migration never invents an rx, and never touches one it finds", function(a){
+  var store = { schemaVersion: 3, includeCut: false, reintro: {}, lastReintroDate: {},
+                calChangedAt: null, deload: null,
+                sessions: [
+                  { id: 1, date: "2026-01-10", dayId: "d1",
+                    entries: { d1a: { sets: [{ w: 100, r: 5 }], note: "" } } },
+                  { id: 2, date: "2026-01-12", dayId: "d1",
+                    entries: { d1a: { sets: [{ w: 100, r: 5 }], note: "",
+                                      rx: { s: 3, lo: 3, hi: 5, k: "power" } } } }
+                ] };
+  var before = JSON.stringify(store.sessions);
+  var r = P.migrateStore(clone(store), null);
+  a.eq(JSON.stringify(r.log.sessions), before, "byte for byte");
+  a.eq(r.log.sessions[0].entries.d1a.rx, undefined,
+    "stamping a guessed rx onto a June set would be inventing a fact this code cannot know - " +
+    "absence is the honest reading and PE1's whole design rests on it");
+  a.deep(r.log.sessions[1].entries.d1a.rx, { s: 3, lo: 3, hi: 5, k: "power" });
+});
+
+T("W5 / PE1 - the v4 and v5 version gates are DELIBERATELY different idioms, and this pins the difference", function(a){
+  /* THE BUG BACKEND FIXED IN THE v5 COPY. Every pass ends with
+     `nlog.schemaVersion = SCHEMA_VERSION`, so
+     `vNBumped = nlog.schemaVersion !== SCHEMA_VERSION` can only read true for
+     the FIRST pass that runs on a given store. v4 uses that idiom. On a v1 or
+     v2 store the earlier passes have already stamped the number to 5 by the
+     time v4 is reached, so v4Bumped reads false and the v4 pass RUNS BUT SAYS
+     NOTHING: same bytes on disk, wrong account of what happened. That is the
+     exact failure S2's harness comment warns about, and decisions.md rules
+     that where a migration's only observable difference is its own account of
+     itself, the account is the thing to assert.
+
+     v5's copy is gated on `logVer < V_RX`, which already IS the question, so
+     it reports unconditionally. V4'S COPY WAS DELIBERATELY LEFT ALONE, so
+     this test pins the ASYMMETRY rather than either half of it. Do not tidy
+     them into agreement in one direction without checking the other: making
+     v5 look like v4 loses the v5 note on every store below v4, which is every
+     store that exists today. Making v4 look like v5 is the real fix, and it
+     is WO-002's business because it changes what the importer reads. */
+  var v1 = logNotes(P.migrateStore(PESTORE(1), null));
+  var v2 = logNotes(P.migrateStore(PESTORE(2), null));
+  var v3 = logNotes(P.migrateStore(PESTORE(3), null));
+  var v4 = logNotes(P.migrateStore(PESTORE(4), null));
+  var v5 = logNotes(P.migrateStore(PESTORE(5), null));
+  function has(list, frag){
+    for (var i = 0; i < list.length; i++) if (list[i].indexOf(frag) >= 0) return true;
+    return false;
+  }
+  /* v5's fact is reported from every store below 5. This is the FIXED idiom. */
+  a.eq(has(v1, "may now carry rx"), true, "v1 store must report the v5 pass");
+  a.eq(has(v2, "may now carry rx"), true, "v2 store must report the v5 pass");
+  a.eq(has(v3, "may now carry rx"), true, "v3 store must report the v5 pass");
+  a.eq(has(v4, "may now carry rx"), true, "v4 store must report the v5 pass");
+  a.deep(v5, [], "a v5 store has nothing to do and nothing to say");
+  /* v4's fact is reported ONLY when v4 happens to be the first pass to stamp.
+     This is the UN-fixed idiom, left alone on purpose. It is a REPORTING
+     defect: the pass still runs and the bytes are still right. */
+  a.eq(has(v3, "may now carry planId"), true, "a v3 store is the case where v4's idiom happens to work");
+  a.eq(has(v1, "may now carry planId"), false,
+    "a v1 store silently swallows the v4 fact: an earlier pass already stamped 5, so v4Bumped reads false");
+  a.eq(has(v2, "may now carry planId"), false, "same on a v2 store");
+  a.eq(P.migrateStore(PESTORE(1), null).logChanged, true, "and none of this costs a write or a byte");
+});
+
+T("W5 / PE1 - a v3 store's two notes are in pass order, and each names its own version", function(a){
+  var n = logNotes(P.migrateStore(PESTORE(3), null));
+  a.eq(n.length, 2, "v3 is below V_PLAN and below V_RX, so it genuinely crosses two migrations");
+  a.ok(n[0].indexOf("Schema 4:") === 0, "v4 first: " + JSON.stringify(n));
+  a.ok(n[1].indexOf("Schema 5:") === 0, "v5 second: " + JSON.stringify(n));
+});
+
+T("W5 / PE1 - the v3 pass labels its own note with SCHEMA_VERSION, not with its gate (OBSERVED, P2)", function(a){
+  /* PINNED AS A DEFECT, NOT AS CORRECT. On a v1 store the schema-3 pass reports
+       "Schema 5: added reintro, lastReintroDate, calChangedAt, deload."
+     Those four keys are schema THREE's. v4 and v5 each interpolate their own
+     gate constant (V_PLAN, V_RX) and read correctly; the v3 pass interpolates
+     SCHEMA_VERSION and has been mislabelling itself since the 3 -> 4 bump.
+
+     No data is at risk - it is a developer-facing note - but decisions.md
+     rules that the account IS the evidence for a migration, and this account
+     names the wrong version. One-token fix, backend's, out of scope for W5,
+     so it is pinned here rather than quietly corrected. */
+  var n = logNotes(P.migrateStore(PESTORE(1), null));
+  var added = null, i;
+  for (i = 0; i < n.length; i++) if (n[i].indexOf("added reintro") >= 0) added = n[i];
+  a.ok(added !== null, "the v3 pass must still report the four keys it adds: " + JSON.stringify(n));
+  a.eq(added, "Schema 5: added reintro, lastReintroDate, calChangedAt, deload. No existing value was changed.",
+    "observed today. The '5' is wrong - these are schema 3's keys. Fix it to 'Schema 3:' and update this line.");
+});
+
+/* -------------------------------------------- section 9.4: loggedSessions */
+
+T("W5 / section 9.4 - the session count is DISTINCT DATES, so three saves on one date is one session", function(a){
+  var three = [TSESS(TODAY, 1, "d1a", SETS(100, 5)),
+               TSESS(TODAY, 2, "d1a", SETS(100, 5)),
+               TSESS(TODAY, 3, "d1a", SETS(100, 5))];
+  var noTier = PEPLAN("d1a");
+  delete noTier.reducedWeeks;
+  function n(sess){ return P.cycleLine({ sessions: sess, todayStr: TODAY, plan: noTier }).sessions; }
+  a.eq(n(three), 1, "a session is a gym visit, and two saves on one date is one visit (TW1, section 6a)");
+  a.eq(n(three.concat([{ id: 9, dayId: "dX", entries: { d1a: { sets: SETS(100, 5), note: "" } } }])), 1,
+    "an undated save is data worth keeping and is not a training day");
+  a.eq(n(three.concat([TSESS(DA(3), 10, "d1a", SETS(100, 5))])), 1,
+    "a future-dated save does not count either");
+  a.eq(n(three.concat([TSESS(DA(-1), 11, "d1a", [], "felt flat, went home")])), 1,
+    "a save carrying only a note is kept, shown, and is not a training day (B-33)");
+  a.eq(n(three.concat([TSESS(DA(-1), 12, "d1a", SETS(100, 5))])), 2, "two dates is two");
+});
+
+T("W5 / section 9.8 - cycleLine never prints Week 0, and states what unlocks week 1", function(a){
+  var noTier = PEPLAN("d1a");
+  delete noTier.reducedWeeks;
+  var zero = P.cycleLine({ sessions: [], todayStr: TODAY, plan: noTier });
+  a.eq(zero.text, "No sessions logged yet.");
+  var two = P.cycleLine({ sessions: [TSESS(DA(-1), 1, "d1a", SETS(100, 5)),
+                                     TSESS(DA(-2), 2, "d1a", SETS(100, 5))],
+                          todayStr: TODAY, plan: noTier });
+  a.eq(two.text, "2 sessions logged. A training week is 3, so week 1 starts when you get there.");
+  a.eq(two.trainingWeeks, 0);
+  var one = P.cycleLine({ sessions: [TSESS(DA(-1), 1, "d1a", SETS(100, 5))],
+                          todayStr: TODAY, plan: noTier });
+  a.ok(one.text.indexOf("1 session logged.") === 0, "singular: " + JSON.stringify(one.text));
+  a.ok([zero.text, one.text, two.text].join(" ").indexOf("Week 0") < 0, "there is no week 0");
+});
+
+/* ------------------------------------------------- section 9.3: Rule V1a */
+
+T("W5 / V1a - a plan with cut flags and NO block length renders everything and offers nothing", function(a){
+  var p = PEPLAN("d1a");
+  delete p.reducedWeeks;
+  a.eq(P.planHasCutTier(p), true, "he marked accessories to cut and he meant something by it");
+  a.eq(P.planReducedDeclared(p), null, "but the plan never said for how long");
+  var vt = P.volumeTier({ sessions: [], todayStr: TODAY, dayId: "d1", plan: p,
+                          exercises: p.days[0].ex, state: {} });
+  a.eq(vt.reason, "no-block-length", "its own reason, never told apart from no-cut-tier by string matching");
+  a.eq(vt.absent, true);
+  a.eq(vt.exerciseIds.length, p.days[0].ex.length,
+    "EVERY exercise renders from week 1 - the app must not hide work on the strength of a block " +
+    "length nobody declared");
+  a.deep(vt.reintroduced, [], "and there is no reintroduction ramp");
+  a.eq(vt.offer, null, "and nothing is offered");
+  a.eq(vt.reducedWeeks, null);
+  a.eq(vt.absentLine, "This plan marks accessories to cut but does not say for how long. " +
+                      "Set a block length in the plan, or they all run from week 1.",
+    "and it SAYS which of the two it is, rather than silently assuming 4");
+  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY, plan: p }).reason, "no-block-length",
+    "the two lines must agree about why the block is not running");
+});
+
+T("W5 / V1a - PHAT declares 4, so NOTHING about PHAT changed", function(a){
+  a.eq(P.planReducedDeclared(P.PHAT_PLAN), 4, "declared on the plan, visibly, not inferred");
+  a.eq(P.PLAN_REDUCED_SUGGESTED, 4, "the editor's picker pre-fills it - a suggestion he can see and change");
+  a.eq(P.V1A_PROMPT, "How many weeks at reduced volume before these come back?");
+  a.eq(P.V1A_PROMPT_SUGGEST, "Suggested: 4");
+  var vt = P.volumeTier({ sessions: [], todayStr: TODAY, dayId: "d1", plan: P.PHAT_PLAN,
+                          exercises: P.PHAT_PLAN.days[0].ex, state: {} });
+  a.eq(vt.reason, null, "no absent state on PHAT");
+  a.eq(vt.absent, false);
+  a.eq(vt.exerciseIds.length, P.PHAT_PLAN.days[0].ex.length - 1, "d1c is cut in weeks 1-4, exactly as before");
+  a.eq(vt.exerciseIds.indexOf("d1c"), -1);
+  a.eq(vt.reducedWeeks, 4);
+  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY, plan: P.PHAT_PLAN }).reason, null);
+});
+
+T("W5 / V1a - zero is a DECLARED block length, not an absent one", function(a){
+  var p = PEPLAN("d1a");
+  p.reducedWeeks = 0;
+  a.eq(P.planReducedDeclared(p), 0, "0 means 'no block', which is a choice; null means 'never said'");
+  a.eq(P.planReducedWeeks(p), 0, "and the counting function must not fall back to 4 over a legal 0");
+  a.eq(P.volumeTier({ sessions: [], todayStr: TODAY, dayId: "d1", plan: p,
+                      exercises: p.days[0].ex, state: {} }).reason, null,
+    "a declared 0 is not the V1a absent state");
+  /* planReducedWeeks falls back only when nothing was declared, and the CALLER
+     is required to ask planReducedDeclared first. Do not merge these two -
+     that merge is the invisible default the coach rejected. */
+  var none = PEPLAN("d1a");
+  delete none.reducedWeeks;
+  a.eq(P.planReducedDeclared(none), null);
+  a.eq(P.planReducedWeeks(none), 4, "the arithmetic still has a number; the caller decides not to run the block");
+});
+
+/* --------------------------------------------- section 9.9: key lifts */
+
+T("W5 / section 9.9 - a from-scratch plan naming 3 lifts prints the count and no second sentence", function(a){
+  /* Nothing was removed and there is no name to give, so a sentence naming a
+     missing lift would be the app inventing one. Count clause only. */
+  var scratch = { planId: "p_s", name: "Mine", readOnly: false, keyLifts: ["x_1", "x_2", "x_3"],
+    days: [{ id: "y_a", name: "A", ex: [
+      { id: "x_1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_1" },
+      { id: "x_2", n: "Bench", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_2" },
+      { id: "x_3", n: "Row",   s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_3" }]}]};
+  var d = P.keyLiftDisclosure(scratch);
+  a.eq(d.n, 3);
+  a.eq(d.max, 4);
+  a.deep(d.missing, [], "nothing was removed, so there is nothing to name");
+  a.eq(d.line, "Reading 3 of 4 key lifts.", "one sentence, and it stops there");
+  a.eq(P.validatePlan(scratch).ok, true,
+    "a three-day full-body plan naming three lifts is legitimate; a validator that rejected it " +
+    "would block a plan to protect a test (section 9.9)");
+});
+
+T("W5 / section 9.9 - on a PHAT-derived plan the missing lift IS named, and four lifts say nothing", function(a){
+  a.eq(P.keyLiftDisclosure(P.PHAT_PLAN).line, "", "four declared lifts is the normal case and is silent");
+  a.eq(P.keyLiftDisclosure(P.PHAT_PLAN).n, 4);
+  var r = P.removeExercise(PEPLAN("d1a"), "d1a");
+  a.eq(r.ok, true, "removing a key lift leaves a VALID plan - disclosure, not prevention");
+  a.eq(P.validatePlan(r.plan).ok, true);
+  a.deep(r.notices, ["Bent-over row is one of the lifts the six-week check reads. Removing it leaves 3."],
+    "the editor is told at the moment it happens");
+  a.deep(r.problems, [], "and a notice is not a problem");
+  var d = P.keyLiftDisclosure(r.plan);
+  a.eq(d.n, 3);
+  a.deep(d.missing, ["Bent-over row"], "here there IS a name, because the copy came from PHAT");
+  a.eq(d.line, "Reading 3 of 4 key lifts. Bent-over row is not in this plan.");
+});
+
+T("W5 / section 9.9 - the disclosure renders only once ST1 actually runs", function(a){
+  var thin = P.removeExercise(PEPLAN("d1a"), "d1a").plan;
+  var early = P.stallAdvice({ sessions: [], todayStr: TODAY, plan: thin });
+  a.eq(early.state, "early");
+  a.eq(early.disclosureLine, "",
+    "before week 6 nothing renders at all, so a narrowed evidence base is not yet a claim about anything");
+  a.eq(early.disclosure.n, 3, "the fact is still available to the plan screen, which asks directly");
+  var run = P.stallAdvice({ sessions: TFILL(8, MON), todayStr: TODAY, plan: thin });
+  a.ne(run.state, "early");
+  a.eq(run.disclosureLine, "Reading 3 of 4 key lifts. Bent-over row is not in this plan.");
+  a.ok(String(run.text).indexOf("Reading 3 of 4") < 0,
+    "its own field, never joined into the finding - it is a disclosure about the CHECK, not about a lift");
+});
+
+T("W5 / section 9.1 - a key lift prescribed above 8 reps is UNREADABLE, not thin", function(a){
+  var p = PEPLAN("d2a", { lo: 10, hi: 15 });
+  var r = P.stallAdvice({ sessions: TFILL(8, MON), todayStr: TODAY, plan: p });
+  a.deep(r.unreadable, ["Squat"]);
+  a.ok(r.lines.join(" ").indexOf("Squat is prescribed above 8 reps, so the six-week check cannot read it. " +
+    "It needs sets at 8 reps or fewer.") >= 0, "addendum section 9.1's ST1 copy: " + JSON.stringify(r.lines));
+  a.ok(r.lines.join(" ").indexOf("Log Squat weekly") < 0,
+    "'log it weekly' is false advice here - he could log it every day and the check still could not read it");
+});
+
+/* ----------------------------------------- section 9.1: SP1's fallback copy */
+
+T("W5 / SP1 - source-not-heavy fires ONLY when the fallback fires: old triples still produce a number", function(a){
+  /* SP1 self-limits. Its filter is reps in [3,5], so a source lift moved to
+     8-12 stops producing candidates and ages out to the fallback within 28-56
+     days. The triples logged in the meantime are genuine heavy triples and
+     remain valid evidence - only the COPY at the end is wrong. This test is
+     the "in the meantime" half, which is the part that is easy to break. */
+  var moved = PEPLAN("d1a", { lo: 8, hi: 12, k: "hyp" });
+  var at10 = P.speedLoad([TSESS(DA(-10), 1, "d1a", SETS(100, 3))], "d3a", TODAY, "Bent-over row", moved);
+  a.eq(at10.reason, null, "a 10-day-old triple is still evidence after the range moved");
+  a.eq(at10.target, 67.5);
+  a.eq(at10.srcWindow, 28);
+  var at40 = P.speedLoad([TSESS(DA(-40), 1, "d1a", SETS(100, 3))], "d3a", TODAY, "Bent-over row", moved);
+  a.eq(at40.reason, null, "and so is a 40-day-old one, through the wide window");
+  a.eq(at40.target, 67.5);
+  a.eq(at40.srcWindow, 56);
+  /* Past 56 days there is no candidate, and only THEN does the copy change. */
+  var aged = P.speedLoad([TSESS(DA(-70), 1, "d1a", SETS(100, 3))], "d3a", TODAY, "Bent-over row", moved);
+  a.eq(aged.reason, "source-not-heavy");
+  a.eq(aged.target, null);
+  a.eq(aged.text, "Bent-over row is no longer prescribed at 3\u20135 reps, so there is no triple to work " +
+    "from. Point this speed work at a lift you train heavy, or set the load yourself. " +
+    "Until then: 65\u201370% of a weight you could triple.", "addendum section 9.1's SP1 copy");
+  a.eq(aged.absent, false, "PRESENT-THIN, not ABSENT: a source lift IS set, it just cannot produce a triple");
+  a.ok(String(aged.text).indexOf("Log a heavy triple") < 0,
+    "and it must not ask him to do something the plan no longer prescribes");
+});
+
+T("W5 / SP1 - a source still prescribed heavy keeps the old copy, and the boundary is overlap with [3,5]", function(a){
+  var heavy = P.speedLoad([], "d3a", TODAY, "Bent-over row", P.PHAT_PLAN);
+  a.eq(heavy.reason, "no-source", "3-5 with no triple logged is the ordinary thin case, unchanged");
+  a.eq(heavy.text, "Log a heavy triple on Bent-over row and this becomes a number. " +
+                   "Until then: 65\u201370% of a weight you could triple.");
+  a.eq(P.speedLoad([], "d3a", TODAY, "Row", PEPLAN("d1a", { lo: 5, hi: 7 })).reason, "no-source",
+    "5-7 still touches 5, so a triple is still reachable");
+  a.eq(P.speedLoad([], "d3a", TODAY, "Row", PEPLAN("d1a", { lo: 6, hi: 8 })).reason, "source-not-heavy",
+    "6-8 does not touch [3,5], so it cannot");
+  a.eq(P.speedLoad([], "d3a", TODAY, "Row", PEPLAN("d1a", { lo: 1, hi: 3 })).reason, "no-source",
+    "1-3 touches 3");
+});
+
+/* --------------------------------------------------- Rule X1: extra sets */
+
+T("W5 / X1 - the EXTRA badge keys off completed-set ORDINAL, never the row index", function(a){
+  var ex = { id: "d3c", s: 3, lo: 8, hi: 12, k: "hyp" };
+  /* Leave row 2 blank and fill rows 1, 3, 4: row 4 IS the third completed set,
+     so it drives the verdict and must carry no badge. `i >= ex.s` would badge
+     it, which is the prototype's bug - it badges the rows driving the verdict. */
+  var gap = P.extraSets([{ w: 60, r: 10 }, { w: "", r: "" }, { w: 60, r: 10 }, { w: 60, r: 10 }], ex);
+  a.deep(gap.flags, [false, false, false, false], "row 4 is the third completed set, not an extra");
+  a.eq(gap.count, 0);
+  a.eq(gap.line, "");
+  var gap5 = P.extraSets([{ w: 60, r: 10 }, { w: "", r: "" }, { w: 60, r: 10 }, { w: 60, r: 10 },
+                          { w: 60, r: 10 }], ex);
+  a.deep(gap5.flags, [false, false, false, false, true], "row 5 is the fourth completed set, and IS an extra");
+  a.eq(gap5.count, 1);
+  /* Role-specific copy, and the standing invitation is hyp-only (X1 ii). */
+  a.eq(P.extraSets(SETS(60, 10, 60, 10, 60, 10, 60, 10, 60, 10), ex).line,
+    "2 sets past the prescription. Counted in today's volume, not in the verdict.");
+  a.eq(P.extraSets(SETS(100, 5, 100, 5, 100, 5, 90, 5), { s: 3, k: "power" }).idle, false,
+    "on a power slot the app does not suggest a fourth hard set");
+  a.eq(P.extraSets(SETS(60, 10), ex).idle, true, "on hyp it does");
+  a.eq(P.extraSets(SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3), { s: 6, k: "speed" }).line,
+    "1 set past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.");
+  /* And none of it touches the verdict, which truncates on both sides anyway. */
+  a.eq(P.verdict({ ex: { id: "d3c", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable" },
+                   sets: SETS(60, 10, 60, 10, 60, 10, 60, 10),
+                   prev: PREV(SETS(60, 10, 60, 10, 60, 10)) }).rule, "H1.4d");
+});
+
+T("W5 / X1 - at n === 1 the line still counts where section 9.11 prefers the ordinal (OBSERVED, P2 copy)", function(a){
+  /* Section 9.11's conflict ruling: X1's line ships and the UX 4.5 line is
+     withdrawn - backend read the precedence right. The one thing carried over
+     from the withdrawn line is its CONCRETENESS: where n === 1, prefer
+       "Set 4 is past the prescription. The verdict reads the first 3."
+     over
+       "1 set past the prescription. The verdict reads the first 3."
+     Plural rows keep X1's counted form, which is what ships and is correct.
+
+     The ruling post-dates the build. Pinned as observed so the change is
+     deliberate; reported to backend as a one-branch copy fix. It needs the
+     ROW NUMBER of the first extra, which extraSets already knows from `flags`. */
+  var one = P.extraSets(SETS(100, 5, 100, 5, 100, 5, 90, 5), { s: 3, k: "power" });
+  a.eq(one.count, 1);
+  a.deep(one.flags, [false, false, false, true], "and it already knows the extra is row 4");
+  a.eq(one.line, "1 set past the prescription. The verdict reads the first 3.",
+    "OBSERVED. Section 9.11 prefers 'Set 4 is past the prescription.' at n === 1; plural is unchanged.");
+  var two = P.extraSets(SETS(100, 5, 100, 5, 100, 5, 90, 5, 90, 5), { s: 3, k: "power" });
+  a.eq(two.line, "2 sets past the prescription. The verdict reads the first 3.",
+    "the plural form is X1's and is not in question");
+});
+
+/* ------------------------------------------------ Rule S1a: the 21-day line */
+
+T("W5 / S1a - a pain notice with no entry for 21 days restates itself ONCE, and never clears", function(a){
+  var s = [TSESS(DA(-21), 1, "d1a", SETS(100, 5), "shoulder pain on the last set")];
+  var r = P.painState(s, "d1a", TODAY);
+  a.eq(r.active, true, "the notice never clears itself");
+  a.eq(r.stale, true);
+  a.eq(r.days, 21);
+  a.eq(r.text, "You noted pain on this on 20 Aug and have not logged it since. " +
+               "The app cannot tell you whether it has settled. If it still hurts, " +
+               "see someone qualified to look at it.",
+    "the wording is fixed (section 10); only the date varies, and it goes through dayMon, never Intl");
+  a.ok(r.text.indexOf("try it") < 0, "'try it and see' is medical advice and is not the app's to give");
+  a.ok(r.text.indexOf("cannot tell you") > 0,
+    "it states what the log says, declines to assess, and points at a person - never an all-clear");
+});
+
+T("W5 / S1a - 20 days is not 21, and with no todayStr nothing changes and no clock is read", function(a){
+  var r20 = P.painState([TSESS(DA(-20), 1, "d1a", SETS(100, 5), "shoulder pain")], "d1a", TODAY);
+  a.eq(r20.stale, false, "the boundary is >= 21");
+  a.eq(r20.days, 20);
+  a.ok(r20.text.indexOf("see a physio or a doctor") >= 0, "Rule S1's referral line, unchanged");
+  var noToday = P.painState([TSESS(DA(-90), 1, "d1a", SETS(100, 5), "shoulder pain")], "d1a");
+  a.eq(noToday.stale, false, "omit the date and the restatement simply does not fire");
+  a.eq(noToday.days, null);
+  a.eq(noToday.active, true, "and the original notice still renders");
+  var undated = P.painState([{ id: 1, dayId: "dX",
+    entries: { d1a: { sets: SETS(100, 5), note: "shoulder pain" } } }], "d1a", TODAY);
+  a.eq(undated.stale, false,
+    "an undated session cannot age - the copy names a date and the app does not name one it is guessing");
+  a.eq(undated.active, true);
+  /* The clearing rule itself is unchanged and confirmed as built (section 9.7). */
+  var cleared = P.painState([TSESS(DA(-30), 1, "d1a", SETS(100, 5), "shoulder pain"),
+                             TSESS(DA(-2), 2, "d1a", SETS(100, 5), "")], "d1a", TODAY);
+  a.eq(cleared.active, false, "a LATER session logging that exercise with no matching note clears it");
+});
+
+T("W5 / section 9.9 - a plan that never came from PHAT is never told a PHAT exercise's name", function(a){
+  /* THE MUTANT THAT FOUND THIS. Dropping the `derivedFrom === "phat"` guard
+     from keyLiftDisclosure's first loop survived every test above, because
+     every from-scratch fixture declared key lifts that its own plan contains -
+     so the loop never reached the push. The uncovered case is a user plan that
+     declares an id it does NOT contain and that happens to collide with a PHAT
+     id, which is one careless paste away and is exactly what an importer will
+     produce.
+
+     Without the guard the app prints `Bent-over row is not in this plan.` to a
+     man who has never had a Bent-over row in this plan. Naming a lift from a
+     programme he did not derive from is the app inventing evidence about his
+     training, which is the same failure class as the invisible reducedWeeks 4. */
+  var scratch = { planId: "p_s", name: "Mine", readOnly: false, keyLifts: ["x_1", "x_2", "d1a"],
+    days: [{ id: "y_a", name: "A", ex: [
+      { id: "x_1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_1" },
+      { id: "x_2", n: "Bench", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_2" }]}]};
+  a.eq(scratch.derivedFrom, undefined, "built from empty, and it never acquires a derivedFrom");
+  a.eq(P.exById(scratch, "d1a"), null, "the declared id is not in this plan");
+  a.ok(!!P.exById(P.PHAT_PLAN, "d1a"), "but it IS a PHAT id, which is the whole trap");
+  var d = P.keyLiftDisclosure(scratch);
+  a.eq(d.n, 2, "two readable key lifts");
+  a.deep(d.missing, [], "and NO name - nothing here guesses a name from an id");
+  a.eq(d.line, "Reading 2 of 4 key lifts.", "the count clause, and it stops there");
+  /* The same shape on a PHAT-derived copy DOES name it, so the guard is not
+     just switching the feature off. */
+  var derived = P.removeExercise(PEPLAN("d1a"), "d1a").plan;
+  a.eq(String(derived.derivedFrom), "phat");
+  a.deep(P.keyLiftDisclosure(derived).missing, ["Bent-over row"]);
+});
+
+T("W5 / PE1 - the v5 gate names V_RX, and here is what makes that observable at the NEXT bump", function(a){
+  /* AN EQUIVALENT MUTANT, PROVED RATHER THAN ASSUMED. Reverting
+     `logVer < V_RX` to `logVer < SCHEMA_VERSION` changes nothing today and
+     CANNOT: V_RX and SCHEMA_VERSION are both 5, so no input distinguishes
+     them, and the note text interpolates V_RX, which is also 5. There is no
+     test that can kill it and it is not a coverage hole.
+
+     It stops being equivalent the moment SCHEMA_VERSION becomes 6. Then the
+     reverted gate re-fires the v5 pass on a store that is already at 5, and
+     the assertion below - a store at the CURRENT version has nothing to do and
+     nothing to say - goes red. That is the same trap V_STATEKEYS was created
+     for after the 2 -> 3 bump, one version later, and this is where it will be
+     caught. Written against the constant on purpose, so it keeps working when
+     the literal moves. */
+  var cur = PESTORE(P.SCHEMA_VERSION);
+  var r = P.migrateStore(cur, null);
+  a.eq(r.changed, false, "a store already at the current version is inert");
+  a.deep(logNotes(r), [], "and says nothing - if this ever reports a pass, a gate is reading the wrong constant");
+  a.eq(r.logChanged, false);
+  /* And the note that DOES fire names its own version, not the store's. */
+  var n = logNotes(P.migrateStore(PESTORE(4), null));
+  a.eq(n.length, 1);
+  a.ok(n[0].indexOf("Schema 5:") === 0, "the v5 note names V_RX: " + JSON.stringify(n));
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -6256,6 +7289,46 @@ contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Dele
   "load-bearing the moment two kinds share a prefix) and S25 now pins the disjoint-prefix invariant, so " +
   "the mutant cannot quietly stop being equivalent. 23 of 24 injected mutants killed.");
 
+/* ---------------------------------------------------- WO-004 W5 (S26) --- */
+contract("<b>WO-004 W5 &mdash; an unrecognised <code>k</code> still fires a hypertrophy verdict, and " +
+  "&sect;9.11 says it must fire none.</b> The ruling's rider is <em>\"if <code>k</code> is unrecognised, " +
+  "no verdict may fire for that exercise. An app that cannot tell which rule applies must not run one.\"</em> " +
+  "<code>verdict()</code> returns null for <code>speed</code>, routes <code>power</code> to P1, and falls " +
+  "THROUGH to H1 for everything else &mdash; so <code>k:\"tempo\"</code> and a MISSING <code>k</code> both " +
+  "get H1's tonnage comparison. Unreachable from the editor (C-7 constrains <code>k</code> to " +
+  "<code>PLAN_KINDS</code>), so it needs corrupt or imported data, which is what <b>WO-002</b> is. " +
+  "<b>Backend: gate on <code>PLAN_KINDS</code> and return null.</b> Pinned as observed in S26; the ruling " +
+  "post-dates the build, so it is an open item rather than a regression.");
+contract("<b>WO-004 W5 &mdash; X1's line at <code>n === 1</code>.</b> &sect;9.11 ships X1's line and " +
+  "withdraws the UX &sect;4.5 one, which backend read correctly. The one thing to carry over is its " +
+  "concreteness: at <code>n === 1</code> prefer <code>Set 4 is past the prescription. The verdict reads " +
+  "the first 3.</code> over <code>1 set past the prescription. &hellip;</code> Plural rows keep X1's " +
+  "counted form. <code>extraSets</code> already knows the row from <code>flags</code>, so it is a " +
+  "one-branch change. <b>Backend, P2 copy.</b> Pinned as observed in S26.");
+contract("<b>WO-004 W5 &mdash; the schema-3 migration pass labels its own note with the wrong version.</b> " +
+  "On a v1 store it reports <code>Schema 5: added reintro, lastReintroDate, calChangedAt, deload.</code> " +
+  "Those four keys are schema <b>3</b>'s. The v4 and v5 passes each interpolate their own gate constant " +
+  "(<code>V_PLAN</code>, <code>V_RX</code>) and read correctly; the v3 pass interpolates " +
+  "<code>SCHEMA_VERSION</code> and has been mislabelling itself since the 3 &rarr; 4 bump. No data is at " +
+  "risk, but <code>decisions.md</code> rules that a migration's account of itself IS its evidence, and " +
+  "this account names the wrong version. <b>Backend, P2, one token.</b> Pinned as observed in S26.");
+contract("<b>WO-004 W5 &mdash; <code>verdict({epochChanged:false})</code> can reinstate the exact defect " +
+  "PE1 exists to prevent.</b> An explicit Boolean wins over the value derived from the entry, which is " +
+  "what lets a view reuse <code>prescriptionEpoch().changed</code> instead of computing it twice. It also " +
+  "means a caller that passes <code>false</code> out of habit gets <code>Volume up 40% &mdash; 2,100 kg " +
+  "against 1,500 kg.</code> back. Non-Booleans are correctly ignored. <b>The safe call is to pass " +
+  "nothing.</b> Pinned in S26 so that a view which does pass it is doing so on purpose; W6/W7 " +
+  "verification item.");
+contract("<b>WO-004 W5 &mdash; &sect;9.8's zero-session line only exists on a plan with no volume " +
+  "tier.</b> <code>cycleLine</code> renders <code>No sessions logged yet.</code> and <code>2 sessions " +
+  "logged. A training week is 3&hellip;</code> through the <code>!tier</code> branch. On PHAT, which HAS " +
+  "a tier, zero sessions still yields an empty <code>text</code> and one-to-two sessions yield " +
+  "<code>Reduced volume until you have logged four weeks of three or more sessions.</code> Neither prints " +
+  "<code>Week 0</code>, so the hard constraint holds and nothing is wrong on screen &mdash; but &sect;9.8 " +
+  "reads as unconditional and the copy he will actually see on day one is the reduced-volume line, not " +
+  "the count. <b>One line from <code>strength-coach</code> confirming that is intended.</b> Pinned in S26 " +
+  "on the branch where the copy lives.");
+
 /* ============================================================ render */
 (function render(){
   var i, r, pass = 0, fail = 0, skip = 0, ms = Date.now() - T0, rows = "";
@@ -6344,6 +7417,31 @@ contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Dele
     "read/write round trip inherits every caveat in the list below the moment W14/W15 add one. <b>Flag " +
     "for whoever writes that caller:</b> the shipped PHAT plan is CODE and must never be written to the " +
     "store, or it goes stale against <code>logic.js</code> the next time a slot changes.</p>" +
+    "<p><b>WO-004 W5 / Rule PE1 &mdash; three things this page can never reach, and they are the three " +
+    "that carry the hazard.</b> The rule is fully asserted as logic in <b>S26</b>; what is left is all " +
+    "call-site.<br>" +
+    "<b>(1) <code>index.html:1504</code> passes FOUR arguments to <code>buildSession</code>:</b> " +
+    "<code>PHAT.buildSession(S.draft, S.dayId, S.draft.date, Date.now())</code>. No <code>planId</code>, " +
+    "no <code>plan</code>, so no entry gets an <code>rx</code> and PE1 cannot fire on anything the app " +
+    "saves today. That is SAFE, and it is only safe because there is no plan editor: an absent " +
+    "<code>rx</code> means \"the plan's current prescription\", which is true of every set ever logged " +
+    "precisely because no prescription has ever been edited. <b>The 6-argument call must land WITH the " +
+    "plan editor, not after it</b> &mdash; a set logged without an <code>rx</code> after the first plan " +
+    "edit has an epoch nobody can recover, because no code can know what the plan said in June. " +
+    "S26's <em>INERT TODAY</em> test pins the consequence; the harness cannot read " +
+    "<code>index.html</code> from <code>file://</code> (no fetch on an opaque origin), so the argument " +
+    "count itself is a one-line source check, listed here rather than pretended at.<br>" +
+    "<b>(2) The weight box and the first <code>+</code>.</b> <code>prescriptionEpoch().prefill</code> and " +
+    "<code>.seed</code> both go false across an epoch change and both are asserted. Whether the view " +
+    "OBEYS them &mdash; whether the input renders empty, and whether the add-set button declines to adopt " +
+    "last session's weight &mdash; is W6/W7 render behaviour. Honouring one and not the other ships the " +
+    "hazard with an extra tap in front of it.<br>" +
+    "<b>(3) The per-row ghost must be DELETED across an epoch, not captioned</b> (addendum &sect;9.11 " +
+    "ruling 3). <code>Last 100 &times; 5</code> beside a deliberately emptied weight box IS a target " +
+    "whatever caption is attached. <code>prescriptionEpoch</code> deliberately returns no per-row " +
+    "surface at all &mdash; one <code>prevSet</code>, one <code>line</code>, asserted in S26 &mdash; but " +
+    "the design's ghost reads <code>prev.sets[i]</code> directly, so suppressing it is the view's job and " +
+    "is a W6/W7 acceptance criterion.</p>" +
     "<p><b>Where the engine coverage stops: the render boundary.</b> Every rule below is asserted as a " +
     "STRING and a shape coming out of <code>PHAT</code>. Whether that string reaches the screen - the " +
     "Weight tab (W8), the Trend tab (W10), the speed card (W13), the volume-tier UI (W15), the pain notice " +
