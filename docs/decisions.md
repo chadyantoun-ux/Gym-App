@@ -336,3 +336,31 @@ since ruled against and would have failed the moment W6 produced the *correct* o
 - **G1's 20% cap is loosely worded.** Taken literally it yields an off-grid load; `logic.js` rounds the
   cap to the 2.5 grid first and lands on 35, which is correct and conservative but a resolution the
   ruling's text does not state. Code is right; the wording wants one confirming line.
+
+### 2026-09-10 — W7/W9: the two rules that were actively misadvising him are now correct
+`calorieAdvice` replaces entry-count windows with **7 local calendar dates each**, minimum 5 dated
+entries per window, and the audit's real bands. The shipping code contradicted the protocol in three
+separate places at once: it cut 200 kcal above +0.35 where the brief says do nothing below +0.5,
+triggered "add" below +0.2 where the brief says *flat*, and printed `Gaining too slowly` when he was
+**losing weight**. `stallReport` replaces weight-only comparison with Epley over two rolling blocks,
+counting **distinct dates** per lift per the coach's ruling.
+**Three judgement calls worth keeping:**
+- Gate order is history → window B → window A. It is reachable to hold 5 entries in each window on
+  only 12 days of history, and the brief says weigh daily, run 14 days, *then* decide.
+- Bands compare integer hundredths of the **rounded** rate, so the number he reads and the band he
+  lands in can never disagree — `+0.5049` must not print `+0.50` and cut his food.
+- A future-dated `calChangedAt` counts as an active cooldown. Clock skew must not open a window for a
+  second calorie change; suppressing advice is the safe direction.
+**Also:** `workingLoadStrict` added for the trap QA named — anything reading stored sessions uses it,
+so a confident load can never come off a half-finished session. `workingLoad` is unchanged and now
+carries a comment saying why.
+
+### 2026-09-10 — B-35 was not as closed as I ruled it
+I pinned `en-GB` to fix `Monday, Sep 7` → `Tuesday, 7 Sep`. That fixed the day/month **order** and I
+recorded it as done. It does not fix the month **spelling**: on current ICU, `en-GB` short month is
+**`Sept`**, so shipped `fmt()`/`dstr()` already render `7 Sept` on a modern device while the
+coach-approved copy reads `Hold until 16 Sep`. W7's `dayMon` uses a fixed month table to match the
+signed-off string, so the app now has two month formats in it.
+**Filed as B-44.** One source of truth for month names, both formatters routed through it.
+**Lesson worth keeping:** a locale is not a format. Pinning one fixes ordering and leaves spelling,
+width and separators to the platform's ICU version, which changes under you.
