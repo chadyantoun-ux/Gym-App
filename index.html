@@ -363,8 +363,14 @@ const topSet=sets=>{const d=sets.filter(s=>+s.w>0&&+s.r>0);return d.length?Math.
 /* Complete sets only, coerced to numbers. 0 kg is a real set (B-21); a
    malformed one is reported by validateEntry, never silently binned (B-02). */
 const done=sets=>PHAT.validateEntry(sets).sets;
-function toast(m){const t=document.getElementById("toast");t.querySelector("span").textContent=m;
-  t.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("on"),2100);}
+/* {quiet} — hide this toast from assistive tech, for the one case where the
+   same sentence is already going out through #bs-live and would otherwise be
+   read twice (B-39). {ms} — a failure gets longer on screen than a receipt. */
+function toast(m,quiet,ms){const t=document.getElementById("toast");
+  t.setAttribute("aria-hidden",quiet?"true":"false");
+  t.querySelector("span").textContent=m;
+  t.classList.add("on");clearTimeout(toast._t);
+  toast._t=setTimeout(()=>t.classList.remove("on"),ms||2100);}
 function lastFor(exId){
   for(let i=S.sessions.length-1;i>=0;i--){const e=S.sessions[i].entries[exId];
     if(e&&e.sets.some(x=>+x.w>0))return e;} return null;}
@@ -643,7 +649,7 @@ function vTrend(){
     const n=Object.keys(s.entries).length;
     const v=Object.values(s.entries).reduce((a,e)=>a+vol(e.sets),0);
     h+=`<div class="sess"><div><div style="font-size:14.5px">${esc(d?d.name:"Session")}</div>
-      <div style="color:var(--faint);font-size:12.5px;margin-top:2px">${fmt(s.date)} · ${n} exercises</div></div>
+      <div style="color:var(--faint);font-size:12.5px;margin-top:2px">${fmt(s.date)} · ${plural(n,"exercise")}</div></div>
       <div style="color:var(--dim);font-family:var(--mono);font-size:13px">${Math.round(v).toLocaleString()} kg</div></div>`;});
   h+=`</div>`;
   return h;
@@ -919,9 +925,14 @@ function normaliseNum(v,f){
   if(out===".") out="";
   return out;
 }
-function announce(msg){
+/* {assertive} — a write that stopped landing interrupts; a running count waits
+   its turn. The attribute is set BEFORE the text so the politeness in force is
+   the one the mutation is announced under. */
+function announce(msg,assertive){
   const el=document.getElementById("bs-live");
-  if(el) el.textContent=msg;
+  if(!el) return;
+  el.setAttribute("aria-live",assertive?"assertive":"polite");
+  el.textContent=msg;
 }
 
 /* ============================================================ blocked save (W4 §2)
@@ -1143,6 +1154,29 @@ function focusBlocked(){
 }
 
 /* ============================================================ draft store */
+/* B-39. A failed autosave has nowhere to paint: this path must never call
+   render() (B-19), so S.err sat there unread until he tapped Save, and
+   everything typed after the disk filled was one phone-death from gone.
+   #bs-live and #toast both live OUTSIDE #view, so both carry the message
+   without touching a single node inside the view — no re-render, no lost
+   caret. This is NOT the autosave indicator W4 ruled out: nothing is said
+   while writes land, only when they stop and when they resume.
+   Keyed on the draft OBJECT so a failure state belongs to one session — a new
+   or resumed draft announces again instead of inheriting an old silence. */
+const DRAFT_STOPPED="Your session is not being saved. Tap Save to keep it.";
+const DRAFT_RESUMED="Saving again.";
+let draftFailFor=null;
+function noteDraftWrite(ok,draft){
+  if(!draft) return ok;
+  if(!ok&&draftFailFor!==draft){
+    draftFailFor=draft;
+    announce(DRAFT_STOPPED,true); toast(DRAFT_STOPPED,true,4200);
+  }else if(ok&&draftFailFor===draft){
+    draftFailFor=null;         // released, so a discarded draft is not held
+    announce(DRAFT_RESUMED); toast(DRAFT_RESUMED,true);
+  }
+  return ok;
+}
 /* phat:v1:draft, through save()/load() only — never localStorage directly and
    never both stores. Sets are kept as the RAW TYPED STRINGS, so a malformed
    "7.5.0" survives a reload and can be corrected instead of lost. */
@@ -1157,11 +1191,11 @@ async function saveDraft(draft,dayId){
         note:e.note==null?"":String(e.note)
       };
     });
-    return await save(DRAFT,{schemaVersion:PHAT.SCHEMA_VERSION,
-      dayId:dayId!=null?dayId:S.dayId, date:draft.date, entries, savedAt:Date.now()});
+    return noteDraftWrite(await save(DRAFT,{schemaVersion:PHAT.SCHEMA_VERSION,
+      dayId:dayId!=null?dayId:S.dayId, date:draft.date, entries, savedAt:Date.now()}),draft);
   }catch(e){
     S.err="Could not save your draft. Your entries are still on screen.";
-    return false;   // never throws into the caller; the next write retries
+    return noteDraftWrite(false,draft);   // never throws into the caller; the next write retries
   }
 }
 /* loadDraft() → {status:"none"|"ok"|"error", draft, reason}
@@ -1516,10 +1550,21 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   const slow=setTimeout(()=>{
     document.getElementById("view").innerHTML='<p class="loading">Loading.</p>';
   },600);
-  let notice=null;
+  /* B-40: the worst fact wins. One slot, several possible truths, so rank them
+     by what each one STOPS him doing and let the highest hold it:
+       2  a store that could not be read and could not be copied aside — every
+          write to it is blocked, and "close the app and reopen it" cannot help
+          when storage is blocked at the browser level;
+       1  the draft could not be read — startDay() fails closed, so this one
+          blocks the next thing he will try to do;
+       0  a store could not be read but a copy was kept — nothing is stopped.
+     Ties go to the first setter, which is why the log is read before
+     bodyweight: the log is the training history. */
+  let notice=null, rank=-1;
+  const setNotice=(msg,r)=>{ if(msg&&r>rank){ notice=msg; rank=r; } };
   const rl=await readRaw(LOG), rb=await readRaw(BWK);
-  if(rl.status==="error") notice=await preserveUnreadable(LOG,rl);
-  if(rb.status==="error") notice=await preserveUnreadable(BWK,rb);
+  if(rl.status==="error") setNotice(await preserveUnreadable(LOG,rl),S.blockWrites[LOG]?2:0);
+  if(rb.status==="error") setNotice(await preserveUnreadable(BWK,rb),S.blockWrites[BWK]?2:0);
   const rawLog=rl.value, rawBw=rb.value;
   /* Non-destructive, idempotent, never throws. No date value is rewritten. */
   const m=PHAT.migrateStore(rawLog,rawBw);
@@ -1542,7 +1587,7 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      restore offer; "error" already makes startDay() fail closed. */
   S.draftRead=await loadDraft();
   if(S.draftRead.status==="error"){
-    notice="Could not read your saved session. Close the app and reopen it before starting a new day.";
+    setNotice("Could not read your saved session. Close the app and reopen it before starting a new day.",1);
     console.warn("[phat] draft unreadable:",S.draftRead.reason);
   }
   /* "ok" becomes the restore offer. "error" keeps State 1I's notice and
