@@ -1074,3 +1074,35 @@ amber badge with no line beside it is noise shaped like information.**
   what was specified*: `null` keeps its meaning ("nothing to say"), the object means "no verdict, and
   here is why", and it enforces `wo-003-session-screen.md` §0.1 #6 (advice and refusal must be
   distinguishable) **in the data** rather than leaving it to a template.
+
+### 2026-09-10 — Absent means PHAT; unreadable means silence; only the naming line refuses
+The fix that separates them is one distinction, and it is easy to "tidy" away in either direction:
+**the engine defaults — block length, cut tier, reintroduction order — still fall back to PHAT**,
+which is right for a rule that must not fail confident. **Only the sentence that names a session
+refuses to guess.** `plan: undefined` and `plan: null` still name PHAT's first day, because an absent
+plan means PHAT everywhere else in the file.
+The bug was one level above where I pointed it: `planFirstDayName` was fine, and both call sites
+resolved the plan to PHAT *before* asking it for a day name.
+Backend also declined to write a worded refusal, correctly — that would be new user-facing copy (the
+coach's) and would put a data-model diagnostic in the slot meant to point him at a barbell. The
+existing signed-off fallback is already true of an unreadable plan.
+Pinned by a test that asserts **both halves in one place**, so unifying them fails.
+
+### 2026-09-10 — QA withdrew its own position by finding the case that killed it
+QA had argued that `plan: "nonsense"` differs from `{days:"nope"}` — a bare string is closer to passing
+nothing than to passing a broken document. It then found **`plan: "p_user1"`**: a plan *ID* passed
+where the document was wanted. That is the realistic way a bare string reaches this seam, it is
+indistinguishable from `"nonsense"` there, and **it means he is running a plan that is not PHAT** — so
+naming PHAT's day one is exactly the defect just fixed, preserved in the likeliest case.
+One class, three shapes. The argument and its outcome are written into the test, not just the verdict.
+**Worth keeping as a standard:** withdraw by finding the counter-example, not by deferring.
+
+### 2026-09-10 — A shared test helper needs literal anchors
+`TW0RULED()` spells the ruled sentence once in the whole file, which is right — but a helper alone
+means editing it drags every assertion green with it. QA's M10 mutant proves the hazard: mutate
+`logic.js` **and** the helper together and a helper-only suite passes.
+Four hard literals plus a digit-check on the clause catch it. **The helper prevents drift; the literals
+prevent the helper from lying.**
+Also now an assertion rather than a comment: `"three"` is **spelled, not interpolated** from
+`TRAINING_WEEK_MIN` — checked on the clause that states the minimum, not the whole sentence, since
+`3 sessions` and `Week 1` are digits that belong there.
