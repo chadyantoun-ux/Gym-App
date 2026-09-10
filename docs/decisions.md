@@ -769,3 +769,34 @@ where "play it safe" means two opposite things.
 **`k` unrecognised → `null`**, and `restText` renders its idle line. Fail silent, never fail confident.
 `restText(ex, elapsedSeconds)` takes **elapsed seconds**, so the caller owns one absolute timestamp and
 nothing in this file reads a clock. State 5 reports `stopped` so the caller can stop ticking.
+
+### 2026-09-10 — MY ERROR: a test pass and an edit pass on the same file at once
+I ran `qa-engineer` against `logic.js` while `backend-engineer` was landing W3 into it. `logic.js` moved
+four times mid-run (200 KB → 238 KB), and twice that produced red in tests QA had not touched —
+`speedLoad` gained a fifth argument, `REINTRO_ORDER` moved onto the plan document. Both cleared on
+their own, and QA only knew because it re-ran.
+**The cost is not the red, it is the meaning of green.** W3's own acceptance criterion is "the whole
+suite passes unchanged before a single new test is added" — that criterion was transiently false and
+nobody could have told from the final number.
+**Rule:** never run a verification pass against a file another agent is actively editing. Sequence
+them, or point QA at a commit rather than the working tree. Same family as the `git add -A` error:
+three agents, one worktree, and me treating them as if they were isolated.
+
+### 2026-09-10 — The schema-gate mutant is killed only by the note text
+Reverting `V_STATEKEYS` to `SCHEMA_VERSION` leaves the stored bytes **identical**. What changes is the
+account: the v3 pass re-fires, reports "added no new key", and the v4 pass then says nothing. Same
+store, wrong story — and a latent bug that stops being harmless at v5.
+So the kill is an assertion on `notes`, not on data. **Worth generalising:** where a migration's only
+observable difference is its own account of what it did, the account is the thing to assert.
+
+### 2026-09-10 — A version literal is a tripwire, and it belongs in exactly one place
+QA decided the three failing assertions per test rather than bumping them together:
+- **The constant test keeps its literal**, because a schema bump creates an obligation on code that
+  does not exist yet — WO-002's importer owes 2, 3 and 4 — and that must be impossible to do quietly.
+  Asserting the constant against itself would prove nothing.
+- **The other two drop it.** Three tripwires on one fact is one test plus two maintenance costs, and a
+  bump done mechanically in three places is a bump nobody read.
+- The third was **replaced, not fixed**: every pass ends by stamping `SCHEMA_VERSION`, so a future
+  gated-but-unreached pass would still leave the number correct. **The version assertion could not
+  detect the bug that test existed for.** The added-key set and a second run reporting `changed:false`
+  can, and now do — which is what "migrates in one pass" means when you test it rather than infer it.
