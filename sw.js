@@ -1,0 +1,261 @@
+/* PHAT Log - service worker.  E-4.
+   ---------------------------------------------------------------------------
+   WHAT THIS IS FOR: the gym has no signal. Without this file an offline reload
+   works only on HTTP-cache luck. With it, the app shell is in Cache Storage and
+   opens with the radio off.
+
+   WHAT IT CACHES: the app shell - index.html, logic.js, the manifest, the
+   icons, the inlined typeface. NOTHING ELSE. It never touches localStorage,
+   never sees phat:v1:log, phat:v1:bw or phat:v1:draft, and never handles a
+   request that is not a same-origin GET for one of the files named in SHELL
+   below. It caches the app. It does not cache the data, and it cannot reach the
+   data: localStorage is not exposed to a worker scope at all.
+
+   STRATEGY: cache-first, then one atomic background refresh per launch.
+     - Cache-first, so opening the app never waits on a network that is not
+       there. One bar of signal must not cost him a 30 s stare at a blank
+       screen.
+     - The refresh re-fetches the WHOLE core shell and commits nothing unless
+       EVERY core file came back a real 200. A half-succeeded refresh leaves the
+       previous, consistent pair in place. index.html and logic.js are one unit;
+       a new index.html over a stale logic.js is the black-screen failure mode.
+     - Worst case staleness: ONE launch. A deploy lands in the cache while he is
+       using the old copy, and is what he gets the next time he opens the app.
+       There is no path where a bad cache serves a stale app forever, because
+       the refresh runs every launch and is not gated on the version below.
+
+   NEVER CACHE A FAILURE: usable() requires status exactly 200 (so a 404 body, a
+   206 partial and a 30x are all rejected), a non-opaque response, and a
+   content-type that matches the extension. A cached 404 of logic.js is exactly
+   the black screen index.html already has a guard for; it cannot get in here.
+
+   VERSION: bump VERSION to force every installed app to rebuild its shell from
+   the network on the next launch and delete the old cache. Only needed if the
+   shell FILE LIST changes or a cached entry must be discarded - routine content
+   deploys are handled by the per-launch refresh and need no bump.           */
+
+'use strict';
+
+var VERSION = 'v1';
+var PREFIX  = 'phat-shell-';
+var CACHE   = PREFIX + VERSION;
+
+/* Resolved against this file's URL, so the same worker is correct at the domain
+   root (Vercel production and every preview URL) and under a sub-path. */
+function abs(p){ return new URL(p, self.location).href; }
+
+/* CORE: the app does not exist without these. Install fails if either is
+   missing, rather than activating a worker that serves half an app. */
+var CORE = [ abs('./index.html'), abs('./logic.js') ];
+
+/* OPTIONAL: wanted offline, but their absence is not a broken app. The icons do
+   not exist in the repo yet (Chady is drawing them) and archivo-inline.css is
+   only fetched if index.html links it - if it is ever inlined into index.html
+   and deleted, this entry simply stops resolving. Neither can fail an install.
+   IF YOU ADD A FILE THE APP NEEDS, ADD IT HERE. Anything not on this list is
+   not available offline, by design. */
+var OPTIONAL = [
+  abs('./manifest.webmanifest'),
+  abs('./assets/archivo-inline.css'),
+  abs('./assets/icon-192.png'),
+  abs('./assets/icon-512.png'),
+  abs('./assets/icon-maskable-512.png'),
+  abs('./assets/apple-touch-icon-180.png')
+];
+
+var SHELL_HTML = CORE[0];
+var SHELL = CORE.concat(OPTIONAL);
+
+/* pathname -> cache key. Requests match on pathname so a launch at "/" and a
+   launch at "/index.html" hit one cached copy, not two. */
+var BY_PATH = (function(){
+  var m = Object.create(null), i, u;
+  for (i = 0; i < SHELL.length; i++){ u = new URL(SHELL[i]); m[u.pathname] = SHELL[i]; }
+  m[new URL('./', self.location).pathname] = SHELL_HTML;   /* "/" serves index.html */
+  return m;
+})();
+
+var NAV_PATHS = [ new URL('./', self.location).pathname,
+                  new URL('./index.html', self.location).pathname ];
+
+/* ----------------------------------------------------------------- guards */
+
+/* A response is cacheable only if it is a complete, successful, same-origin
+   answer of the type the URL claims. Anything else is dropped on the floor. */
+function usable(res, url){
+  if (!res) return false;
+  if (res.status !== 200) return false;                 /* 404, 500, 30x, 206 */
+  if (res.type === 'opaque' || res.type === 'opaqueredirect' || res.type === 'error') return false;
+  var ct = (res.headers.get('content-type') || '').toLowerCase();
+  var p  = String(url).split('?')[0].toLowerCase();
+  if (!ct) return true;                                 /* no claim, no contradiction */
+  if (/\.js$/.test(p))          return ct.indexOf('javascript') >= 0 || ct.indexOf('ecmascript') >= 0;
+  if (/\.html$/.test(p))        return ct.indexOf('html') >= 0;
+  if (/\.css$/.test(p))         return ct.indexOf('css') >= 0;
+  if (/\.png$/.test(p))         return ct.indexOf('image/') >= 0;
+  if (/\.webmanifest$/.test(p)) return ct.indexOf('json') >= 0 || ct.indexOf('manifest') >= 0;
+  return true;
+}
+
+/* Bypasses the HTTP cache, so a refresh cannot be answered by the same stale
+   bytes we are trying to replace. Times out rather than holding the worker
+   alive on a gym connection that is technically up. */
+function fetchFresh(url){
+  var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctl ? setTimeout(function(){ ctl.abort(); }, 20000) : 0;
+  var init = { cache: 'reload', credentials: 'same-origin' };
+  if (ctl) init.signal = ctl.signal;
+  return fetch(new Request(url, init)).then(function(res){
+    if (timer) clearTimeout(timer);
+    if (!usable(res, url)) throw new Error('unusable response for ' + url + ' (' + (res && res.status) + ')');
+    return res;
+  }, function(err){ if (timer) clearTimeout(timer); throw err; });
+}
+
+/* --------------------------------------------------------------- install */
+
+self.addEventListener('install', function(e){
+  e.waitUntil(
+    /* Fetch every core file BEFORE opening the cache, so a failed install
+       leaves nothing behind and never half-writes a shell. */
+    Promise.all(CORE.map(function(u){
+      return fetchFresh(u).then(function(r){ return [u, r]; });
+    })).then(function(pairs){
+      return caches.open(CACHE).then(function(cache){
+        return Promise.all(pairs.map(function(p){ return cache.put(p[0], p[1]); }))
+          .then(function(){
+            /* Best effort. One missing icon must never cost the whole install. */
+            return Promise.all(OPTIONAL.map(function(u){
+              return fetchFresh(u).then(function(r){ return cache.put(u, r); })
+                                  .catch(function(){ /* not fatal */ });
+            }));
+          });
+      });
+    })
+    /* No skipWaiting(). A new worker waits for the old pages to go, so a fresh
+       shell can never activate underneath a page running the old logic.js. */
+  );
+});
+
+/* -------------------------------------------------------------- activate */
+
+self.addEventListener('activate', function(e){
+  e.waitUntil(
+    caches.keys().then(function(names){
+      return Promise.all(names.map(function(n){
+        /* Prefix-scoped and version-filtered. This worker deletes only caches
+           it created. It cannot delete another tool's cache, and there is no
+           cache anywhere that holds his training data - that is localStorage,
+           which this file cannot even name. */
+        if (n.indexOf(PREFIX) !== 0) return null;
+        if (n === CACHE) return null;
+        return caches.delete(n);
+      }));
+    }).then(function(){
+      return self.clients.claim();   /* first visit gets offline without a second load */
+    })
+  );
+});
+
+/* ----------------------------------------------------------------- fetch */
+
+var refreshed = false;   /* once per worker lifetime, i.e. roughly once per launch */
+
+function scheduleRefresh(e){
+  if (refreshed) return;
+  refreshed = true;
+  e.waitUntil(refreshShell());
+}
+
+/* The whole core shell, or nothing. */
+function refreshShell(){
+  return Promise.all(CORE.map(function(u){
+    return fetchFresh(u).then(function(r){ return [u, r]; });
+  })).then(function(pairs){
+    return caches.open(CACHE).then(function(cache){
+      return Promise.all(pairs.map(function(p){ return cache.put(p[0], p[1]); }))
+        .then(function(){
+          return Promise.all(OPTIONAL.map(function(u){
+            return fetchFresh(u).then(function(r){ return cache.put(u, r); })
+                                .catch(function(){});
+          }));
+        })
+        .then(function(){ return notify({ type: 'phat-shell-updated', cache: CACHE }); });
+    });
+  }).catch(function(){
+    /* Offline, or one core file did not come back clean. The previously cached
+       pair stays exactly as it was. Nothing partial is ever committed. */
+  });
+}
+
+function notify(msg){
+  return self.clients.matchAll({ includeUncontrolled: true }).then(function(cs){
+    cs.forEach(function(c){ try { c.postMessage(msg); } catch (_e) {} });
+  });
+}
+
+self.addEventListener('fetch', function(e){
+  var req = e.request, url;
+  if (req.method !== 'GET') return;                    /* never a write, never a POST */
+  try { url = new URL(req.url); } catch (_e) { return; }
+  if (url.origin !== self.location.origin) return;     /* Supabase, CDNs: untouched */
+
+  if (req.mode === 'navigate'){
+    if (NAV_PATHS.indexOf(url.pathname) >= 0) e.respondWith(handleNav(e));
+    return;                                            /* /tests.html etc: untouched */
+  }
+  if (url.search) return;                              /* a cache-buster means bypass me */
+  if (!BY_PATH[url.pathname]) return;                  /* not shell: untouched */
+  e.respondWith(handleShell(e, BY_PATH[url.pathname]));
+});
+
+function handleNav(e){
+  scheduleRefresh(e);
+  return caches.match(SHELL_HTML).then(function(cached){
+    if (cached) return cached;
+    return fetch(e.request).then(function(res){
+      if (!usable(res, SHELL_HTML)) return res;        /* return it, do not keep it */
+      var copy = res.clone();
+      e.waitUntil(caches.open(CACHE).then(function(c){ return c.put(SHELL_HTML, copy); }));
+      return res;
+    }).catch(function(){ return offlineShellMissing(); });
+  });
+}
+
+function handleShell(e, key){
+  return caches.match(key).then(function(cached){
+    if (cached){ scheduleRefresh(e); return cached; }
+    return fetch(e.request).then(function(res){
+      if (!usable(res, key)) return res;
+      var copy = res.clone();
+      e.waitUntil(caches.open(CACHE).then(function(c){ return c.put(key, copy); }));
+      return res;
+    });
+    /* A genuine network failure rejects, the browser reports it, and
+       index.html's own "logic.js did not load" guard says so in words. */
+  });
+}
+
+/* Only reachable if the cache was evicted under storage pressure while offline.
+   Never cached, never written to the shell - it is a message, not the app. */
+function offlineShellMissing(){
+  return new Response(
+    '<!doctype html><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>PHAT Log</title>' +
+    '<body style="margin:0;background:#1c1b1a;color:#f0eeea;font:16px system-ui;padding:26px 16px">' +
+    '<h1 style="font-size:1.25rem;margin:0 0 8px">Offline, and the app is not cached</h1>' +
+    '<p style="opacity:.7;font-size:.875rem;line-height:1.5">Your saved log is untouched - it is on ' +
+    'this phone, not in this cache. Connect once and reload to restore the app.</p>',
+    { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  );
+}
+
+/* --------------------------------------------------------------- message */
+
+self.addEventListener('message', function(e){
+  var d = e.data;
+  if (!d) return;
+  if (d === 'SKIP_WAITING' || d.type === 'SKIP_WAITING'){ self.skipWaiting(); return; }
+  if (d.type === 'PHAT_CHECK_UPDATE'){ e.waitUntil(refreshShell()); }
+});
