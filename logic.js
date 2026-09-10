@@ -1130,9 +1130,13 @@
        against a restored s of 3) and after every abandoned session. The app
        says which of the two it is.
 
-       A previous entry with ZERO completed sets is 3a, not 3b: nothing
-       distinguishes it from no entry at all, and the app may not claim "last
-       session was short" off an entry that recorded nothing.
+       The split is `Cprev.length === 0` -> 3a, `0 < Cprev.length < ex.s` -> 3b.
+       An entry that recorded no completed set is indistinguishable from no
+       entry at all — it may be a NOTES-ONLY entry, which Decision 7 and TW1
+       both already treat as not a training record. 3b's copy asserts `Last
+       logged session was short`, and claiming that would be the app describing
+       a session it cannot see. 3a's `First time logged` is true of the thing
+       being compared: no set has ever been logged for that exercise.
 
        Deliberately NOT "look further back for a comparable entry" — comparing
        this week to a session three weeks old and printing `Volume up 4%` is a
@@ -2576,6 +2580,28 @@
   var D1_ENDED = "Deload done. Back to full sets at your last working loads.";
   var D1_DECLINED = "Noted. Asked again after the next session.";
 
+  /* THE EFFECTIVE END OF A DELOAD WEEK: max(startDate, endDate). One rule, and
+     every consumer reads it (addendum §7.11 rider).
+
+     A stored end earlier than its own start is an impossible record, and the
+     two things that read it fail in opposite directions if they disagree about
+     what it means:
+       - E2's window: a wild window EXCLUDES evidence, so it would silently
+         delete weeks of real training from ST1 and T1 and print `Not enough
+         sessions on Row to judge` for a month with nothing to diagnose;
+       - deloadStatus().last feeds `since`, which is T2's freshness gate and
+         T3's week count. A `last` before the deload's own start makes T2
+         fireable sooner and T3's count longer - both EAGER, and eager is the
+         wrong direction for something the app only ever recommends.
+     Collapsing costs at most one day of evidence, and a corrupt record can
+     never report `active` because it always resolves to an ended one.
+
+     null in (still running) is null out. It is never widened, only narrowed. */
+  function deloadEndOf(startStr, endStr) {
+    if (endStr === null || startStr === null) return endStr;
+    return endStr < startStr ? startStr : endStr;
+  }
+
   /* deloadStatus(state, todayStr)
        -> {active, day, startDate, endDate, ended, last, trigger, declinedAt,
            declinedDays, text, endedLine}
@@ -2607,6 +2633,7 @@
     var lastDay = dateAdd(s, DELOAD_DAYS - 1);
     var e = dateOrNull(d.endDate);
     if (e === null && lastDay !== null && today > lastDay) e = lastDay;
+    e = deloadEndOf(s, e);                       /* corrupt record - addendum §7.11 rider */
     out.endDate = e;
 
     if (e === null) {
@@ -2669,8 +2696,8 @@
     if (s === null) return null;
     var e = dateOrNull(d.endDate);
     if (e === null) e = dateAdd(s, DELOAD_DAYS - 1);
-    if (e === null || e < s) e = s;
-    return { from: s, to: e };
+    e = deloadEndOf(s, e);
+    return { from: s, to: e === null ? s : e };
   }
 
   /* deloadWindows(state) -> [{from, to}] ascending by start. */
@@ -2786,16 +2813,31 @@
     return out;
   }
 
-  /* The heaviest load COMPLETED within `days` of `onDate`, or null. Earlier
-     dates only, because "previously" means previously: a load completed AFTER
-     a failure does not make the failure retroactively count (addendum §7.5).
+  /* E1 clause (c), as restated in addendum §7.10. For the FAIL test on a
+     failing date F, `best` is the maximum working load over that lift's
+     COMPLETE dates that are BOTH strictly earlier than F AND on or after
+     F − ST1_PRIOR_FROM days.
 
-     The window is E1 clause (c) and it is ST1_PRIOR_FROM, not a new number.
-     Without it `best` never decays: six weeks of training, six months off, two
-     hard weeks back, and the app recommends a deload for detraining (N4).
-     Note it is the WINDOWED max, not a recency gate on the all-time max — a
-     125 kg he owned last year must not veto a T1 fired off the 120 kg he
-     completed ten days ago, which is item 5's cleanest regression signature. */
+     IT IS THE WINDOWED MAXIMUM, NOT A RECENCY GATE ON THE ALL-TIME MAXIMUM,
+     and the difference is the whole ruling. A completion outside the window is
+     not consulted IN EITHER DIRECTION: it neither qualifies a failure nor
+     silences one. Gating the all-time max on its own date would mean a lifter
+     who ALSO owns an older, heavier PR is silenced by owning it — two men fail
+     120 kg twice this month, both completed 120 kg ten days ago, and the one
+     who hit 125 kg last year gets nothing while the one who never did gets the
+     trigger. Same present-day evidence, opposite outputs, decided by history
+     with no bearing on whether he can do 120 kg today.
+
+     This is not "more sensitive" as a rule. All-time 140 kg a year ago, only
+     in-window completion 100 kg, now failing 120 kg twice: 120 > 100, so
+     MISS-NEW and no trigger. He has not recently demonstrated 120 kg, so
+     failing it is an attempt.
+
+     Strictly earlier, because "previously" means previously: a load completed
+     ON or AFTER the failing date does not make the failure retroactively count
+     (addendum §7.5). The 41 days are ST1's prior block reused, not a new
+     number; what they encode is "a load he has RECENTLY demonstrated", and a
+     demonstration from a year ago is not one (N4). */
   function bestWithin(done, onDate, days) {
     var m = null, g, i;
     for (i = 0; i < done.length; i++) {
@@ -2889,8 +2931,18 @@
      exercise being pulled is rollbackReintro's to name.
 
      `reason` says why nothing fired when nothing did: "early" (below week 6),
-     "active", "declined", or null for "no trigger". Never throws; a thrown
-     banner is a spurious recommendation and those cost trust (UX spec 2.6). */
+     "active", "declined", "deloaded-lifts", or null for "no trigger". Never
+     throws; a thrown banner is a spurious recommendation and those cost trust
+     (UX spec 2.6).
+
+     A `reason` IS NOT COPY AND MUST NEVER BE RENDERED. `trigger === null` means
+     no banner, full stop, and `text` and `x2` are "" and `lifts` is empty on
+     every one of those paths — this function produces no string it does not
+     intend to be read aloud. "deloaded-lifts" in particular is a developer
+     signal about a bug in the CALLER, not a fact about his training, and there
+     is no honest sentence to print for it (addendum §7.11). It is deliberately
+     distinct from "active", which is the ordinary state during a real deload
+     week and is reached first. */
   function deloadCheck(ctx) {
     var c = isObj(ctx) ? ctx : {};
     var out = { trigger: null, text: "", x2: "", lifts: [], rollback: false, reason: null };

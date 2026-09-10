@@ -1285,3 +1285,85 @@ contains **zero of Chady's sessions.** Every rule in this file is calibrated aga
 empty store, and every one of them would be sharper after twelve weeks of real history than after
 another review. The measure of WO-003 is still one logged Upper Power session with a correct verdict
 under it. It is his call, but the bottleneck has not moved.
+
+---
+
+## 7.10 E1 clause (c), disambiguated — **reading B confirmed**
+
+**Added 2026-09-10, after implementation.** Clause (c) had two readings. Backend implemented **B**.
+**B is correct and it is what the clause meant.** Restating it so it cannot be re-read as A:
+
+```
+E1 clause (c), restated
+Logic:        For the FAIL test on a failing date F, `best` is the maximum
+              working load over that lift's COMPLETE dates that are
+              BOTH strictly earlier than F
+              AND on or after F - 41 days                  [ST1_PRIOR_FROM]
+              A date is FAIL when its working load <= that windowed best.
+              A completion outside the window is not consulted, in either
+              direction: it neither qualifies a failure nor silences one.
+```
+
+**Why B, not A.** `[Certain]` on the direction. A gates the all-time max on its own date, so a lifter
+who *also* owns an older, heavier PR is silenced by owning it. Two men fail 120 kg twice this month;
+both completed 120 kg ten days ago; the one who happened to hit 125 kg last year gets nothing and the
+one who never did gets the trigger. Same present-day evidence, opposite outputs, decided by history
+that has no bearing on whether he can do 120 kg today. That is backwards, and it would make T1 miss
+what §7.5 calls the cleanest regression signature there is.
+
+The 41-day window is `[Convention]` — a reuse of ST1's prior block, chosen so no number is invented.
+What it encodes is "a load he has recently demonstrated", and a demonstration from a year ago is not
+one.
+
+**Worked examples**
+
+1. **The case that separates the readings.** Completed 125 kg twelve months ago; completed 120 kg ten
+   days ago; fails 120 kg on two consecutive evaluable dates. Windowed best = 120. Fails at 120 ≤ 120
+   → **T1 fires.** Reading A: `best` = 125, stale, → silent. B is right.
+2. **B is not uniformly more sensitive.** Completed 140 kg a year ago; the only completion in the
+   window is 100 kg; he now fails at 120 kg twice. Windowed best = 100, and 120 > 100 → **MISS-NEW,
+   run resets, no trigger.** Correct: he has not recently demonstrated 120 kg, so failing it is an
+   attempt, not a regression. Both readings are silent here, for different reasons, and B's reason is
+   the honest one.
+3. **N4 unchanged.** Six weeks of training, six months off, two failing weeks back. No completion
+   inside 41 days of either failing date → no windowed best → no FAIL row → **no trigger.** Both
+   readings agree, as backend says. Detraining is not fatigue and a deload is not the answer to it.
+4. **Ordering preserved.** A completion on the *same* date as the failure, or after it, is never
+   `best`. "Previously" still means strictly earlier (§7.5).
+
+## 7.11 Three implementation calls — all three approved
+
+**1. `deloadCheck` refuses on deloaded lifts: approve.** `{trigger:null, reason:"deloaded-lifts"}` is
+the right answer. A key lift arriving with `s = 2` is a caller wiring bug, and answering off an `s = 2`
+evidence ladder would silently redefine what a completed prescription is — the same class as DL1.
+All-or-nothing refusal is also right: if one lift arrived deloaded the whole call is untrustworthy, not
+that lift.
+
+Two constraints on it. `[Certain]` **this reason must never render user-facing copy.** It is a
+developer signal about a bug in the caller, not a fact about his training, and there is no honest
+sentence to print. The banner is absent, exactly as at `reason:"early"`. And it must stay distinct from
+`reason:"active"`, which is the ordinary state during a real deload week and is reached first. QA
+should carry one named test asserting the banner is absent and no string is produced.
+
+**2. `Cprev.length === 0` routes to H1.3a: approve.** Correct reading of N3. 3b's copy asserts
+`Last logged session was short`, and an entry that recorded no completed set is indistinguishable from
+no entry at all — it may be a notes-only entry, which WO-003 Decision 7 and TW1 both treat as not a
+training record. Claiming it was "short" would be the app describing a session it cannot see. 3a's
+`First time logged` is true of the thing being compared: no set has ever been logged for that exercise.
+The split is `Cprev.length === 0` → 3a; `0 < Cprev.length < ex.s` → 3b.
+
+**3. A corrupt deload record collapses to the start date: approve, with one rider.** The failure
+direction is right — E2 *excludes* evidence, so a wild window silently deletes weeks of real training
+from ST1 and T1, and he would see `Not enough sessions on Row to judge` for a month with nothing to
+diagnose. Collapsing costs at most one day of evidence.
+
+**Rider:** apply the same collapse to `deloadStatus().last`, not only to E2's window. `last` feeds
+`since`, which is T2's freshness gate and T3's week count. A `last` earlier than the deload's own start
+makes T2 fireable sooner and T3's count longer — both eager, both in the wrong direction for a
+recommendation. One rule for both consumers: **effective end = `max(startDate, endDate)`.** And a
+corrupt record must never report `active`.
+
+**Confidence.** All three are `[Opinion]` on the engineering shape and `[Certain]` only on the
+direction each must fail in: refuse loudly rather than answer off a redefined prescription; do not
+claim a session was short when nothing was recorded; and when a stored date is impossible, discard one
+day of evidence rather than weeks of it.

@@ -439,3 +439,32 @@ Two more structural choices worth keeping:
 nothing until the frontend passes `deload: PHAT.deloadStatus(S, today).active` and `stallReport(…, S)`.
 That wiring is a frontend item, held for the redesign.
 **Recorded so nobody reads "ten engines signed off" as "ten features shipped."**
+
+### 2026-09-10 — One effective-end rule for a corrupt deload record
+`deloadEndOf(startStr, endStr)` = `max(startDate, endDate)`, called by **both** consumers so they
+cannot drift: `deloadStatus` (whose `last` feeds `since`, i.e. T2's freshness gate and T3's week count)
+and `deloadWin` (E2's exclusion window). Coach's rider — the original fix protected E2's window but
+left `last` unrepaired, which would make T2 fireable sooner and T3's count longer. Both eager, and
+eager is the wrong direction for something the app only ever *recommends*.
+A corrupt record can never report `active`: it always resolves through the ended branch, asserted
+rather than assumed. The helper only narrows a window, never widens one.
+**This is a read-time repair — it never rewrites `state.deload`**, so the stored bytes are untouched
+and the original stamp stays inspectable. One exception, pre-existing: `startDeload` archives
+`deloadStatus`'s derived dates onto `past`, so a superseded corrupt record is archived repaired. That
+is a deload stamp, not a logged set.
+
+### 2026-09-10 — A `reason` is a developer signal, never copy
+`deloadCheck`'s `reason` (`"deloaded-lifts"`, `"early"`, `"active"`) must **never** be rendered.
+`[Certain]` from the coach: it is a signal about a caller bug, not a fact about his training, and there
+is no honest sentence to print for it. On every non-trigger path `text`, `x2` and `lifts` are empty and
+`rollback` is false, asserted — so the engine emits no string to leak.
+**Therefore this is a frontend constraint, and it belongs in the "what a new visual design must still
+honour" section**: the UI may never render a `reason` field, and no banner appears at `deloaded-lifts`
+any more than at `early`. To be added to the UX specs when the frontend items come off hold.
+
+### 2026-09-10 — A test fixture shape worth watching
+Several E1 tests must seed **below T3's nine-week backstop**, or a stale `fail, fail` pair returns null
+from T1, falls through, and the suite asserts against T3 while believing it is reading T1. The failing
+dates' spacing interacts with that seed. Backend hit exactly this and read the red correctly as a
+fixture precondition rather than a defect.
+**Rules out:** debugging a T1 red without first checking `trainingWeeks` against `DELOAD.backstop`.
