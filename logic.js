@@ -1447,12 +1447,29 @@
      expression of the rest day the design tried to encode by renumbering the
      days; nothing renders it yet.
 
-     CUES ARE TRANSCRIBED FROM THE DESIGN PROTOTYPE AND ARE NOT YET SIGNED OFF
-     (WO-004 C-8 is escalated to Chady). Nothing renders `cue` today. Two slots
-     deliberately carry NO cue - d2e and d3d "DB row or shrug" - because the
-     design dropped the alternate and its cue is wrong for the other half of
-     the pair (B-28 / WO-004 W1). d2e's NAME is now resolved (Rule A1, §8.2);
-     its cue is still unwritten and the coach gave none.
+     CUES - RULE Q1, SIGNED OFF. The 42 are `strength-coach`'s, transcribed
+     character for character from docs/coach-audit-addendum.md §10.2. Of the
+     design prototype's 40, ONE survives verbatim (d5j, marked at the slot),
+     32 are amended, and the 2 slots that had NO cue - d2e, d3d - now have
+     one, each carrying its §10.5 revert string in a comment beside it so
+     answering the open A1 question is a lookup, not a fresh judgement.
+
+     42 slots, 32 DISTINCT STRINGS. Ten pairs run the same movement and take
+     the same cue: d1a/d3a, d1c/d3b, d1d/d5a, d1f/d3f, d1h/d5i, d2a/d4a,
+     d2b/d4b, d2c/d4d, d2e/d4f, d2g/d4i. Each is WRITTEN OUT IN FULL, never
+     referenced - §10.4's explicit instruction. Two slots that agree today
+     are two slots, not one fact stored once: editing d1a's cue must not
+     silently rewrite d3a's. Same principle as the two Skull crusher slots
+     (d1h, d5i) keeping separate histories.
+
+     A cue is authored plan data. Per Q1 no rule reads it, it never reads the
+     log, and it is a function of the exercise only - never of the week, the
+     load or the verdict. One sentence, imperative, <= 90 characters, and no
+     rep range, kilogram figure, percentage, tempo prescription, safety claim
+     or assessment. The only digits in the 42 are d5b's `30-35` setup angle,
+     a deliberate exemption ruled in §10.1 - a setup angle is neither a load
+     nor a tempo. That string also carries an en dash (U+2013) and a degree
+     sign (U+00B0), both intentional. All 42 pass esc() unchanged.
 
      LIFT GROUPS. Two slots share a lift if and only if they name the same
      movement, plus each speed slot sharing its source lift's group (which is
@@ -1501,31 +1518,31 @@
     days: [
       { id: "d1", name: "Upper power", wd: "Mon", ex: [
         { id: "d1a", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_row",
-          cue: "Torso near-parallel, pull to the navel, no hitching." },
+          cue: "Keep the torso at the same angle for every rep." },
         { id: "d1b", n: "Weighted pull-up", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_pullup",
-          cue: "Chest to the bar, control the descent." },
+          cue: "Reach a full dead hang at the bottom of every rep." },
         { id: "d1c", n: "Rack chin", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_rackchin", cut: 1,
-          cue: "Feet on the rack, squeeze at the top." },
+          cue: "Rest the heels on the rack without pushing through them." },
         { id: "d1d", n: "Flat DB press", s: 3, lo: 3, hi: 5, k: "power", implement: "db", lift: "l_dbbench",
-          cue: "Elbows at 45°, dumbbells stacked over the wrists." },
+          cue: "Keep each wrist stacked under the dumbbell." },
         { id: "d1e", n: "Weighted dip", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_dip",
-          cue: "Slight forward lean for chest, upright for triceps." },
+          cue: "Keep the shoulders down, away from the ears." },
         { id: "d1f", n: "Seated DB shoulder press", s: 3, lo: 6, hi: 10, k: "power", implement: "db", lift: "l_dbshoulder",
-          cue: "Ribs down, don't arch the lower back." },
+          cue: "Ribs down, do not arch the lower back." },
         { id: "d1g", n: "Cambered bar curl", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_barcurl",
-          cue: "Elbows pinned at the sides." },
+          cue: "Do not rock the torso to start the rep." },
         { id: "d1h", n: "Skull crusher", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_skull",
-          cue: "Elbows still, lower to the forehead." }
+          cue: "Take the bar to the forehead on every rep." }
       ] },
       { id: "d2", name: "Lower power", wd: "Tue", ex: [
         { id: "d2a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_squat",
-          cue: "Brace hard, knees track over the toes, break at the hip and knee together." },
+          cue: "Drive the hips and shoulders up together." },
         { id: "d2b", n: "Hack squat", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_hack",
-          cue: "Full depth before the knees drift forward." },
+          cue: "Set the feet high enough that the heels stay down." },
         { id: "d2c", n: "Leg extension", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_legext", cut: 1,
-          cue: "Pause a beat at lockout." },
+          cue: "Keep the hips down in the seat, do not swing the pad up." },
         { id: "d2d", n: "Stiff-leg deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l_sldl",
-          cue: "Push the hips back, bar close, neutral spine." },
+          cue: "Keep the lower back flat for the whole rep." },
         /* Rule A1 (addendum §8.2), resolved. The brief's slot reads "Glute-ham
            raise or lying leg curl" — TWO exercises, not two names for one:
            different implement, different load scale, different joint action.
@@ -1538,69 +1555,95 @@
            load word (Z2) and gain an increment line (I2). Done now for that
            reason. `lift` stays `l_ghr`: an id is opaque, minted once and never
            recomputed from a name (WO-004 C-6). */
-        { id: "d2e", n: "Lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_ghr" },
+        { id: "d2e", n: "Lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_ghr",
+          /* Rule Q1 (addendum §10.2) - NEW. This slot carried no cue; nothing had
+             ever written one. Written for the lying leg curl, the design's current
+             default and what Rule A1 (§8.2) resolved this slot to.
+             REVERT (§10.5): if Chady answers glute-ham raise instead, the cue is
+             exactly
+               "Keep the body in one line from knee to shoulder."
+             - a lookup, not a fresh judgement. SECOND-ORDER COST, and it is why
+             this revert is not one string: a glute-ham raise also reverts
+             `implement` to "bodyweight", which flips Rule Z2's load word back to
+             `bodyweight` and switches Rule I2's increment line off. The cue is one
+             string; the slot is not. */
+          cue: "Line the knees up with the machine's pivot." },
         { id: "d2f", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfstand",
-          cue: "Full stretch at the bottom, pause at the top." },
+          cue: "Keep the knees straight on every rep." },
         { id: "d2g", n: "Seated calf raise", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfseat",
-          cue: "Slow, no bouncing off the stretch." }
+          cue: "Do not bounce out of the bottom position." }
       ] },
       { id: "d3", name: "Back & shoulders", wd: "Thu", ex: [
         { id: "d3a", n: "Row — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_row",
-          cue: "65–70% of your power-day top set. Moved fast, never ground." },
+          cue: "Keep the torso at the same angle for every rep." },
         { id: "d3b", n: "Rack chin", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bodyweight", lift: "l_rackchin",
-          cue: "Feet on the rack, squeeze at the top." },
+          cue: "Rest the heels on the rack without pushing through them." },
         { id: "d3c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l_cablerow",
-          cue: "Chest up, drive the elbows back." },
-        { id: "d3d", n: "DB row or shrug", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_dbrow", cut: 1 },
+          cue: "Keep the torso still, do not swing back with the weight." },
+        { id: "d3d", n: "DB row or shrug", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_dbrow", cut: 1,
+          /* Rule Q1 (addendum §10.2) - NEW. This slot carried no cue. Written for
+             the DB row, the design's current default. The slot's NAME is still
+             unresolved - Rule A1 (§8.2) classes DB row and shrug as TWO exercises
+             and requires the app to ask - so `n` still reads "DB row or shrug" and
+             is not this item's to change. The cue is written for the DB row.
+             REVERT (§10.5): if the slot becomes a shrug the cue is exactly
+               "Keep the arms straight, no rolling the shoulders."
+             and nothing else on the slot moves with it. */
+          cue: "Keep the shoulders square, do not twist to finish the rep." },
         { id: "d3e", n: "Close-grip pulldown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pulldown",
-          cue: "Lean back slightly, pull to the collarbone." },
+          cue: "Set the lean once and hold it for every rep." },
         { id: "d3f", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_dbpress",
-          cue: "Ribs down, press in a shallow arc." },
+          cue: "Ribs down, do not arch the lower back." },
         { id: "d3g", n: "Upright row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_uprightrow", cut: 1,
-          cue: "Lead with the elbows, stop at chest height." },
+          cue: "Take a grip wider than shoulder width." },
         { id: "d3h", n: "Lateral raise", s: 3, lo: 12, hi: 20, k: "hyp", implement: "db", lift: "l_lateral",
-          cue: "Little fingers high, no swinging." }
+          cue: "Raise the weight without help from the hips." }
       ] },
       { id: "d4", name: "Lower hypertrophy", wd: "Fri", ex: [
         { id: "d4a", n: "Squat — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_squat",
-          cue: "65–70%. Explosive out of the hole, short rest." },
+          cue: "Drive the hips and shoulders up together." },
         { id: "d4b", n: "Hack squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine", lift: "l_hack",
-          cue: "Depth before load." },
+          cue: "Set the feet high enough that the heels stay down." },
         { id: "d4c", n: "Leg press", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legpress", cut: 1,
-          cue: "Don't let the lower back round off the pad." },
+          cue: "Do not let the lower back round off the pad." },
         { id: "d4d", n: "Leg extension", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legext",
-          cue: "These should burn." },
+          cue: "Keep the hips down in the seat, do not swing the pad up." },
         { id: "d4e", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_rdl",
-          cue: "Hips back, hamstrings loaded, spine neutral." },
+          cue: "Do not add knee bend to reach lower." },
         { id: "d4f", n: "Lying leg curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legcurl",
-          cue: "Hips down, curl to the glutes." },
+          cue: "Line the knees up with the machine's pivot." },
         { id: "d4g", n: "Seated leg curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legcurlseat", cut: 1,
-          cue: "Full range, slow return." },
+          cue: "Set the lap pad tight enough that the hips cannot lift." },
         { id: "d4h", n: "Donkey calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l_calfdonkey",
-          cue: "Deep stretch each rep." },
+          cue: "Keep the hips bent at the same angle for every rep." },
         { id: "d4i", n: "Seated calf raise", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_calfseat",
-          cue: "No bouncing." }
+          cue: "Do not bounce out of the bottom position." }
       ] },
       { id: "d5", name: "Chest & arms", wd: "Sat", ex: [
         { id: "d5a", n: "Flat DB press — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "db", lift: "l_dbbench",
-          cue: "65–70%. Fast off the chest, short rest." },
+          cue: "Keep each wrist stacked under the dumbbell." },
         { id: "d5b", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_inclinedb",
-          cue: "30–35° bench, elbows tucked." },
+          cue: "Set the bench to 30–35°, no steeper." },
         { id: "d5c", n: "Machine chest press", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_machinepress",
-          cue: "Squeeze at the end of the press." },
+          cue: "Set the seat so the handles line up with mid-chest." },
         { id: "d5d", n: "Incline cable fly", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_fly", cut: 1,
-          cue: "Slight elbow bend held throughout." },
+          cue: "Hold the same slight elbow bend throughout." },
         { id: "d5e", n: "Cambered bar preacher curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_preacher",
-          cue: "No swinging off the pad." },
+          cue: "Keep the upper arms flat on the pad." },
         { id: "d5f", n: "DB concentration curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_concurl",
-          cue: "Elbow into the thigh, supinate hard." },
+          cue: "Brace the elbow against the inner thigh." },
         { id: "d5g", n: "Spider curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "bb", lift: "l_spider", cut: 1,
-          cue: "Arms hanging vertical." },
+          cue: "Keep the upper arms vertical throughout." },
         { id: "d5h", n: "Close-grip bench", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_cgbench",
-          cue: "Shoulder-width grip, elbows in." },
+          cue: "Take a shoulder-width grip, no narrower." },
         { id: "d5i", n: "Skull crusher", s: 3, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_skull",
-          cue: "Elbows still." },
+          cue: "Take the bar to the forehead on every rep." },
         { id: "d5j", n: "Rope pressdown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pressdown", cut: 1,
+          /* The ONLY one of the design prototype's 40 cues kept verbatim
+             (§10.2, marked K). One subject, un-drawable - the figure has no
+             rope - and it fixes the real error, incomplete extension. Worth
+             recording as the sole survivor of 40: it is the one place the
+             prototype's copy was already right. */
           cue: "Spread the rope at the bottom." }
       ] }
     ]
