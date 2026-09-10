@@ -15,7 +15,7 @@ Work orders live in `docs/work-orders/`.
 | WO-002 (planned) | B-04 + B-16 — the backup round trip | not written |
 | [WO-003](work-orders/WO-003-advice.md) | B-30, B-17(sort), B-24, B-08, B-25, B-06, B-07, B-22, B-12, B-23, B-26, B-09, B-18 + B-32, B-20, B-33, B-38, B-27, B-28, B-41, B-42 | **specified, not dispatched** |
 
-**Suite tripwire.** `tests.html` is **`213 / 213 / 0`** on `wo-003-advice` (was 148/147/1 on `main`).
+**Suite tripwire.** `tests.html` is **`347 / 347 / 0`** on `wo-003-advice` (was 148/147/1 on `main`). 134 of those cover the nine rule engines; 12 of 13 injected mutants were killed and the survivor was proved an equivalent mutant, not a coverage hole.
 The `N ≥ 236` target assumed W7/W9/W12/W14/W19 were built; they are not yet, and QA correctly refused
 to write tests against unfixed signatures. **Zero expected failures is now enforced by the suite itself**
 — two meta-tests fail on any `known bad` / `xfail` test name or unexplained skip.

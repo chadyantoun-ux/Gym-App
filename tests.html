@@ -56,9 +56,15 @@ Open this file directly from <code>file://</code>. No server, no Node, no networ
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
 <b>Target shape is N / N / 0.</b> No expected failure is carried forward. A failure kept alive as
 "the known one" becomes a rule applied from memory, and that is how a second, real failure gets waved
-through (WO-003 &sect;Decision 1). Sections <b>S16 and S17</b> are scaffolded against signatures W5/W6
-have not landed yet, so they fail until that code exists. That is the scaffold doing its job, not an
-accepted failure - it goes to zero when W6 lands, and nothing else may be red beside it.</p>
+through (WO-003 &sect;Decision 1). Two meta-tests at the end enforce it: one fails on any test NAME
+that labels itself a carried-forward failure, one fails on a skip with no stated reason.<br>
+<b>Coverage.</b> S0-S15 are WO-001 plus W1's ordering and training-week counting. S16-S17 are the
+verdict seam and the P1/H1/Z1-Z3/G1/I2 rules. <b>S18-S24</b> are the five advice engines
+(<b>W7</b> Rule W1 calories, <b>W9</b> Rule ST1 stalls, <b>W12</b> Rule SP1 speed load,
+<b>W14</b> Rule V1 volume tier, <b>W19</b> Rule D1 deload) together with the
+<code>docs/coach-audit-addendum.md</code> &sect;7 rulings: <b>E1</b> (an abandoned date breaks a
+failure streak), <b>E2</b> (a deload date is not evidence), <b>DL1</b> (a deload week never
+recommends more weight) and <b>N3</b> (a short previous entry is not a first session).</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -2766,6 +2772,1941 @@ T("W6 - DATA LOSS: a stored 0 kg session is byte-identical after every verdict a
 });
 
 /* ============================================================ S9 - suite budget (W7) */
+/* ===========================================================================
+   WO-003 W7 / W9 / W12 / W14 / W19 - the five advice engines, plus the
+   addendum section 7 rulings (E1, E2, DL1, N3, and the amended D1 copy).
+
+   Fixtures first. Every seed below is dated relative to ONE fixed today, so a
+   test that means "13 days ago" says so in one place and the suite cannot
+   start failing on a Sunday because a fixture drifted over a Monday boundary.
+   TODAY is a Thursday; 2026-09-07 is the Monday of its week.
+--------------------------------------------------------------------------- */
+var TODAY = "2026-09-10";
+var MON = "2026-09-07";
+function DA(n){ return P.dateAdd(TODAY, n); }
+
+/* One session, one exercise. `dayId` is deliberately not a real day id: no
+   rule under test may infer anything from it. */
+function TSESS(date, id, exId, setList, note){
+  var e = {}; e[exId] = { sets: setList, note: note || "" };
+  return { id: id, date: date, dayId: "dX", entries: e };
+}
+/* nWeeks Monday-start weeks of `daysPerWeek` (default 3) training days,
+   ending with the week that starts at endMonday, logged on d1f - a lift NO
+   rule under test reads. It buys trainingWeeks and nothing else, so a stall, a
+   speed target or a deload trigger can only come from the seed the test itself
+   wrote. */
+function TFILL(nWeeks, endMonday, daysPerWeek){
+  var out = [], i, j, mon, n = (typeof daysPerWeek === "number") ? daysPerWeek : 3;
+  for (i = 0; i < nWeeks; i++){
+    mon = P.dateAdd(endMonday, -7 * i);
+    for (j = 0; j < n; j++) out.push(TSESS(P.dateAdd(mon, j), "f" + i + "-" + j, "d1f", SETS(60, 8)));
+  }
+  return out;
+}
+/* Bodyweight rows at the given whole-day offsets BEFORE today. */
+function BW(offsets, kg){
+  var out = [], i;
+  for (i = 0; i < offsets.length; i++)
+    out.push({ date: DA(-offsets[i]), kg: Array.isArray(kg) ? kg[i] : kg });
+  return out;
+}
+/* The smallest seed that produces an exact rate with BOTH windows full: five
+   daily entries in window A (t-13..t-9) at 85.00 and five in window B
+   (t-4..t) at 85 + r. History spans 14 days, so the history gate passes. */
+function RATE(r){
+  var out = [], i;
+  for (i = 13; i >= 9; i--) out.push({ date: DA(-i), kg: 85 });
+  for (i = 4; i >= 0; i--) out.push({ date: DA(-i), kg: 85 + r });
+  return out;
+}
+/* Every string a returned object would put on screen, joined. Used by the
+   "no raw e1RM" and "no Intl month name" cross-checks, which have to look at
+   whole objects rather than at one field. */
+function strOf(o){
+  var out = [];
+  (function walk(v){
+    if (typeof v === "string") { if (v !== "") out.push(v); return; }
+    if (!v || typeof v !== "object") return;
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    Object.keys(v).forEach(function(k){ walk(v[k]); });
+  })(o);
+  return out.join("\n");
+}
+
+  var PROG = [
+    { id: "d1", name: "Upper power", ex: [
+      { id: "d1a", implement: "bb", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power" },
+      { id: "d1b", implement: "bodyweight", n: "Weighted pull-up", s: 2, lo: 6, hi: 10, k: "power" },
+      { id: "d1c", implement: "bodyweight", n: "Rack chin", s: 2, lo: 6, hi: 10, k: "power", cut: 1 },
+      { id: "d1d", implement: "db", n: "Flat DB press", s: 3, lo: 3, hi: 5, k: "power" },
+      { id: "d1e", implement: "bodyweight", n: "Weighted dip", s: 2, lo: 6, hi: 10, k: "power" },
+      { id: "d1f", implement: "db", n: "Seated DB shoulder press", s: 3, lo: 6, hi: 10, k: "power" },
+      { id: "d1g", implement: "bb", n: "Cambered bar curl", s: 3, lo: 6, hi: 10, k: "power" },
+      { id: "d1h", implement: "bb", n: "Skull crusher", s: 3, lo: 6, hi: 10, k: "power" }
+    ] },
+    { id: "d2", name: "Lower power", ex: [
+      { id: "d2a", implement: "bb", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" },
+      { id: "d2b", implement: "machine", n: "Hack squat", s: 2, lo: 6, hi: 10, k: "power" },
+      { id: "d2c", implement: "machine", n: "Leg extension", s: 2, lo: 6, hi: 10, k: "power", cut: 1 },
+      { id: "d2d", implement: "bb", n: "Stiff-leg deadlift", s: 3, lo: 5, hi: 8, k: "power" },
+      { id: "d2e", implement: "bodyweight", n: "Glute-ham raise or lying leg curl", s: 2, lo: 6, hi: 10, k: "power" },
+      { id: "d2f", implement: "machine", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power" },
+      { id: "d2g", implement: "machine", n: "Seated calf raise", s: 2, lo: 6, hi: 10, k: "power" }
+    ] },
+    { id: "d3", name: "Back & shoulders", ex: [
+      { id: "d3a", implement: "bb", n: "Row \u2014 speed work", s: 6, lo: 3, hi: 3, k: "speed" },
+      { id: "d3b", implement: "bodyweight", n: "Rack chin", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d3c", implement: "cable", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d3d", implement: "db", n: "DB row or shrug", s: 2, lo: 12, hi: 15, k: "hyp", cut: 1 },
+      { id: "d3e", implement: "cable", n: "Close-grip pulldown", s: 2, lo: 15, hi: 20, k: "hyp" },
+      { id: "d3f", implement: "db", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d3g", implement: "bb", n: "Upright row", s: 2, lo: 12, hi: 15, k: "hyp", cut: 1 },
+      { id: "d3h", implement: "db", n: "Lateral raise", s: 3, lo: 12, hi: 20, k: "hyp" }
+    ] },
+    { id: "d4", name: "Lower hypertrophy", ex: [
+      { id: "d4a", implement: "bb", n: "Squat \u2014 speed work", s: 6, lo: 3, hi: 3, k: "speed" },
+      { id: "d4b", implement: "machine", n: "Hack squat", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d4c", implement: "machine", n: "Leg press", s: 2, lo: 12, hi: 15, k: "hyp", cut: 1 },
+      { id: "d4d", implement: "machine", n: "Leg extension", s: 3, lo: 15, hi: 20, k: "hyp" },
+      { id: "d4e", implement: "bb", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d4f", implement: "machine", n: "Lying leg curl", s: 2, lo: 12, hi: 15, k: "hyp" },
+      { id: "d4g", implement: "machine", n: "Seated leg curl", s: 2, lo: 15, hi: 20, k: "hyp", cut: 1 },
+      { id: "d4h", implement: "machine", n: "Donkey calf raise", s: 4, lo: 10, hi: 15, k: "hyp" },
+      { id: "d4i", implement: "machine", n: "Seated calf raise", s: 3, lo: 15, hi: 20, k: "hyp" }
+    ] },
+    { id: "d5", name: "Chest & arms", ex: [
+      { id: "d5a", implement: "db", n: "Flat DB press \u2014 speed work", s: 6, lo: 3, hi: 3, k: "speed" },
+      { id: "d5b", implement: "db", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d5c", implement: "machine", n: "Machine chest press", s: 3, lo: 12, hi: 15, k: "hyp" },
+      { id: "d5d", implement: "cable", n: "Incline cable fly", s: 2, lo: 15, hi: 20, k: "hyp", cut: 1 },
+      { id: "d5e", implement: "bb", n: "Cambered bar preacher curl", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d5f", implement: "db", n: "DB concentration curl", s: 2, lo: 12, hi: 15, k: "hyp" },
+      { id: "d5g", implement: "bb", n: "Spider curl", s: 2, lo: 15, hi: 20, k: "hyp", cut: 1 },
+      { id: "d5h", implement: "bb", n: "Close-grip bench", s: 3, lo: 8, hi: 12, k: "hyp" },
+      { id: "d5i", implement: "bb", n: "Skull crusher", s: 3, lo: 12, hi: 15, k: "hyp" },
+      { id: "d5j", implement: "cable", n: "Rope pressdown", s: 2, lo: 15, hi: 20, k: "hyp", cut: 1 }
+    ] }
+  ];
+
+/* KEY_LIFTS joined to PROGRAM, which is the shape D1 needs: `s` and `lo` live
+   in PROGRAM, not in KEY_LIFTS. WHICH four lifts are key is settled (audit
+   section 12) and the names are the caller's, never logic.js's. These are
+   B-27's corrected labels, which is what W10 will pass. */
+var KLIFTS = [
+  { id: "d1a", n: "Row",      s: 3, lo: 3, hi: 5 },
+  { id: "d1d", n: "DB press", s: 3, lo: 3, hi: 5 },
+  { id: "d2a", n: "Squat",    s: 3, lo: 3, hi: 5 },
+  { id: "d2d", n: "SLDL",     s: 3, lo: 5, hi: 8 }
+];
+/* A log store in the shape schema 3 writes it. */
+function STORE(over){
+  var s = { schemaVersion: 3, includeCut: false, sessions: [], reintro: {},
+            lastReintroDate: {}, calChangedAt: null, deload: null }, k;
+  if (over) for (k in over) if (Object.prototype.hasOwnProperty.call(over, k)) s[k] = over[k];
+  return s;
+}
+/* A store carrying one finished deload week [start..end]. */
+function DELOADED(start, end, past){
+  return STORE({ deload: { startDate: start, endDate: end, trigger: "T1",
+                           declinedAt: null, declinedDays: null, past: past || [] } });
+}
+/* ST1 has to know the deload windows for Rule E2 (addendum 7.7), and the
+   argument that carries them is NOT fixed by WO-003 - W9's signature is
+   stallReport(sessions, todayStr, keyLifts). This adapter is the one place
+   that changes if the implementation takes a context object instead: it hands
+   over the log store and, separately, state.deload, so either choice of the
+   narrower argument is satisfied. Extra arguments are inert to a three-
+   argument implementation, so this is not a test that passes by accident. */
+function ST1CALL(sessions, today, lifts, state){
+  return P.stallReport(sessions, today, lifts, state, state && state.deload);
+}
+/* A verdict context with the deload flag Rule DL1 adds, threaded exactly as
+   ctx.painFlag is. */
+function DCTX(ex, setList, prev, note, deload){
+  var c = VCTX(ex, setList, prev, note, TODAY);
+  c.deload = deload === true;
+  return c;
+}
+
+/* ============================================================ S18 - Rule W1 (W7 / B-06)
+   Bodyweight windows, the calorie decision, the cooldown and its clearer.
+   Worked examples from docs/coach-audit.md section 2. */
+group("S18 Rule W1 / W7 / B-06");
+
+T("W7 / B-06 - PHAT exposes the Rule W1 surface and its two constants", function(a){
+  needFns(a, "bwWindows", "calorieAdvice", "calCooldown", "setCalChanged", "clearCalChanged");
+  a.eq(P.BW_WINDOW_MIN, 5, "five distinct dated entries in EACH window - audit section 2");
+  a.eq(P.CAL_COOLDOWN_DAYS, 7, "a calorie change is held for 7 days");
+});
+
+/* THE HEADLINE of B-06, in the seed the audit actually describes. WHICH
+   not-enough-data state fires depends on the distribution, not on the count:
+   this seed (1 + 2 + 5) fills window B and starves window A. */
+T("W7 / B-06 HEADLINE (audit ex4 seed, 1+2+5) - 8 entries over 24 days: no rate, no advice", function(a){
+  var e = BW([23, 13, 10, 4, 3, 2, 1, 0], 85);
+  var r = P.calorieAdvice(e, TODAY, null);
+  a.eq(e.length, 8, "eight entries");
+  a.eq(P.dayGap(e[0].date, TODAY) + 1, 24, "spread over 24 days");
+  a.eq(r.state, "thin-window-a", "window B is full, window A holds 2");
+  a.eq(r.rate, null, "NO RATE. The shipping app prints a weekly change of +1.2 kg from this seed.");
+  a.eq(r.text, "Not enough daily weights. 2 of those 7 days logged; this needs 5.");
+  a.eq(r.tone, "none");
+  a.eq(r.subline, "", "the target sub-line belongs to the states that show a rate");
+  a.eq(strOf(r).indexOf("kg per week"), -1, "no field may carry a kg-per-week number");
+  a.eq(strOf(r).indexOf("200 kcal"), -1, "and no field may instruct a calorie change");
+});
+
+T("W7 / B-06 HEADLINE (even 3-day spread) - 8 entries over 24 days: thin window B, no rate", function(a){
+  /* The same headline count spread evenly. Window B holds 3, so the earlier
+     gate fires and the sentence is a different one. Both outputs are correct;
+     a test naming only one of them passes on the wrong seed. */
+  var e = BW([21, 18, 15, 12, 9, 6, 3, 0], 85);
+  var r = P.calorieAdvice(e, TODAY, null);
+  a.eq(e.length, 8);
+  a.eq(r.state, "thin-window-b");
+  a.eq(r.rate, null);
+  a.eq(r.text, "Not enough daily weights. 3 of the last 7 days logged; this needs 5.");
+  a.eq(strOf(r).indexOf("kg per week"), -1);
+});
+
+T("W7 - bwWindows: B is [today-6..today] and A is [today-13..today-7], by DATE", function(a){
+  var w = P.bwWindows(BW([13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0], 85), TODAY);
+  a.eq(w.bCount, 7, "seven dates in B");
+  a.eq(w.aCount, 7, "seven dates in A");
+  a.eq(w.b[0].date, DA(-6), "B opens at today-6");
+  a.eq(w.b[w.b.length - 1].date, TODAY, "and closes today");
+  a.eq(w.a[0].date, DA(-13), "A opens at today-13");
+  a.eq(w.a[w.a.length - 1].date, DA(-7), "and closes at today-7");
+});
+
+T("W7 / B-06 - a 7-ENTRY slice is not a 7-DAY window: eight rows over 35 days give no rate", function(a){
+  /* b.slice(-7) is the shipping bug. These rows are the last seven entries by
+     any count, and they span five weeks. */
+  var w = P.bwWindows(BW([35, 30, 25, 20, 15, 10, 5, 0], 85), TODAY);
+  a.eq(w.bCount, 2, "only two of them are inside the last 7 dates");
+  a.eq(w.rate, null, "and a weekly rate off two entries is the thing being deleted");
+});
+
+T("W7 - two rows on one date count once and the LAST wins; a future row is excluded", function(a){
+  var e = BW([13, 12, 11, 10, 9, 4, 3, 2, 1, 0], 85);
+  e.push({ date: DA(0), kg: 90 });          /* a correction saved the same day */
+  e.push({ date: DA(3), kg: 99 });          /* dated ahead of itself */
+  var w = P.bwWindows(e, TODAY);
+  a.eq(w.bCount, 5, "the duplicate is one date, and a future row is not evidence");
+  a.eq(w.b[w.b.length - 1].kg, 90, "the later row on that date is the one that counts");
+});
+
+T("W7 - rate is null unless BOTH windows hold five entries", function(a){
+  function seed(nA, nB){
+    var out = [], i;
+    for (i = 0; i < nA; i++) out.push({ date: DA(-13 + i), kg: 85 });
+    for (i = 0; i < nB; i++) out.push({ date: DA(-6 + i), kg: 85.25 });
+    return out;
+  }
+  a.eq(P.bwWindows(seed(4, 5), TODAY).rate, null, "four in A");
+  a.eq(P.bwWindows(seed(5, 4), TODAY).rate, null, "four in B");
+  a.eq(P.bwWindows(seed(5, 5), TODAY).rate, 0.25, "five and five");
+});
+
+T("W7 - audit ex1: mean A 85.00, mean B 85.25 over 14 daily weights -> on target", function(a){
+  var e = [], i;
+  for (i = 13; i >= 7; i--) e.push({ date: DA(-i), kg: 85 });
+  for (i = 6; i >= 0; i--) e.push({ date: DA(-i), kg: 85.25 });
+  var w = P.bwWindows(e, TODAY), r = P.calorieAdvice(e, TODAY, null);
+  a.eq(w.meanA, 85, "mean A");
+  a.eq(w.meanB, 85.25, "mean B");
+  a.eq(r.state, "on-target");
+  a.eq(r.text, "+0.25 kg per week. On target. Change nothing.");
+  a.eq(r.subline, "Target: +0.2 to +0.3 kg per week. Averages over 14 days.");
+  a.eq(r.tone, "ok");
+});
+
+/* THE BOUNDARY LADDER. Every band edge in one table, and the assertion that
+   matters most: the number PRINTED and the band CHOSEN can never disagree,
+   because the band is decided on integer hundredths of the same rounded rate
+   the copy prints. A rate of +0.5049 must not read "+0.50" and cut his food. */
+T("W7 / B-06 - the boundary ladder: +0.51 +0.50 +0.31 +0.30 +0.20 +0.19 +0.10 +0.09 -0.10 -0.11", function(a){
+  var table = [
+    [ 0.51, "cut",       "act",  "Gaining too fast at +0.51 kg per week. Cut 200 kcal from training days."],
+    [ 0.50, "above",     "hold", "+0.50 kg per week. Above target, inside the margin. Change nothing. Recheck in 7 days."],
+    [ 0.31, "above",     "hold", "+0.31 kg per week. Above target, inside the margin. Change nothing. Recheck in 7 days."],
+    [ 0.30, "on-target", "ok",   "+0.30 kg per week. On target. Change nothing."],
+    [ 0.20, "on-target", "ok",   "+0.20 kg per week. On target. Change nothing."],
+    [ 0.19, "below",     "hold", "+0.19 kg per week. Below target but inside weekly noise. Change nothing. Recheck in 7 days."],
+    [ 0.10, "below",     "hold", "+0.10 kg per week. Below target but inside weekly noise. Change nothing. Recheck in 7 days."],
+    [ 0.09, "flat",      "act",  "Flat at +0.09 kg per week. Add 200 kcal to your training days."],
+    [-0.10, "flat",      "act",  "Flat at -0.10 kg per week. Add 200 kcal to your training days."],
+    [-0.11, "losing",    "act",  "Down 0.11 kg this week. You are not bulking. Add 200 kcal to your training days."]
+  ], i, r, want, printed, hundredths;
+  for (i = 0; i < table.length; i++){
+    want = table[i];
+    r = P.calorieAdvice(RATE(want[0]), TODAY, null);
+    a.eq(r.state, want[1], "band at rate " + want[0]);
+    a.eq(r.tone, want[2], "tone at rate " + want[0]);
+    a.eq(r.text, want[3], "copy at rate " + want[0]);
+    printed = /([+-]?\d+\.\d\d) kg (per week|this week)/.exec(r.text);
+    a.ok(printed, "every band prints a two-decimal rate: " + r.text);
+    hundredths = Math.round(parseFloat(printed[1]) * 100);
+    if (want[1] === "losing") hundredths = -hundredths;   /* "Down 0.11" carries its sign in the word */
+    a.eq(hundredths, Math.round(r.rate * 100),
+      "the number printed and the rate the band was chosen from must be the same number");
+    a.eq(Math.round(want[0] * 100), hundredths, "and both must be the seeded rate");
+  }
+});
+
+T("W7 / B-06 - +0.34 is inside the margin: the app must not say cut, which is what it says today", function(a){
+  var r = P.calorieAdvice(RATE(0.34), TODAY, null);
+  a.eq(r.state, "above");
+  a.eq(r.text, "+0.34 kg per week. Above target, inside the margin. Change nothing. Recheck in 7 days.");
+  a.eq(strOf(r).toLowerCase().indexOf("cut"), -1, "neither Cut nor cut 200 may appear anywhere");
+});
+
+T("W7 - flat 0.00 and losing -0.35 give the same action in different words", function(a){
+  var flat = P.calorieAdvice(RATE(0), TODAY, null);
+  a.eq(flat.state, "flat");
+  a.eq(flat.rate, 0);
+  a.eq(flat.text, "Flat at +0.00 kg per week. Add 200 kcal to your training days.");
+  a.eq(flat.text.indexOf("-0.00"), -1, "never a negative zero");
+  var down = P.calorieAdvice(RATE(-0.35), TODAY, null);
+  a.eq(down.state, "losing");
+  a.eq(down.text, "Down 0.35 kg this week. You are not bulking. Add 200 kcal to your training days.");
+  a.eq(down.text.indexOf("Gaining too slowly"), -1,
+    "B-06: the shipping app prints 'Gaining too slowly' at a man who is LOSING weight");
+});
+
+T("W7 - the sub-line appears in exactly the states that show a rate", function(a){
+  var sub = "Target: +0.2 to +0.3 kg per week. Averages over 14 days.";
+  var withRate = [0.51, 0.30, 0.19, 0, -0.35], i, r;
+  for (i = 0; i < withRate.length; i++){
+    r = P.calorieAdvice(RATE(withRate[i]), TODAY, null);
+    a.eq(r.subline, sub, "rate " + withRate[i]);
+  }
+  a.eq(P.calorieAdvice(RATE(0), TODAY, DA(-3)).subline, sub, "cooldown shows a rate, so it shows the sub-line");
+  a.eq(P.calorieAdvice(BW([23, 13, 10, 4, 3, 2, 1, 0], 85), TODAY, null).subline, "", "thin window A");
+  a.eq(P.calorieAdvice(BW([21, 18, 15, 12, 9, 6, 3, 0], 85), TODAY, null).subline, "", "thin window B");
+  a.eq(P.calorieAdvice(BW([7, 6, 5, 4, 3, 2, 1, 0], 85), TODAY, null).subline, "", "short history");
+  a.eq(P.calorieAdvice([], TODAY, null).subline, "", "empty");
+});
+
+T("W7 - fewer than 14 days of history: weigh daily, and the count is honest", function(a){
+  var r = P.calorieAdvice(BW([7, 6, 5, 4, 3, 2, 1, 0], 85), TODAY, null);
+  a.eq(r.state, "need-history");
+  a.eq(r.text, "Weigh daily. 6 more days before this becomes a calorie decision.");
+  a.eq(r.rate, null);
+  var e = [], i;
+  for (i = 13; i >= 0; i--) e.push({ date: DA(-i), kg: 85 });
+  a.ne(P.calorieAdvice(e, TODAY, null).state, "need-history", "a span of exactly 14 days passes the gate");
+});
+
+T("W7 - the history gate outranks the window gates: 5 in each window inside 12 days still waits", function(a){
+  /* Reachable: t-11..t-7 and t-6..t-2 fill both windows off 12 days of
+     history. The protocol is weigh daily, run 14 days, THEN decide. */
+  var e = [], i;
+  for (i = 11; i >= 7; i--) e.push({ date: DA(-i), kg: 85 });
+  for (i = 6; i >= 2; i--) e.push({ date: DA(-i), kg: 85.4 });
+  var w = P.bwWindows(e, TODAY);
+  a.eq(w.aCount, 5); a.eq(w.bCount, 5);
+  a.ne(w.rate, null, "the windows themselves are full");
+  a.eq(P.calorieAdvice(e, TODAY, null).state, "need-history", "but the advice waits for 14 days");
+  a.eq(P.calorieAdvice(e, TODAY, null).rate, null, "and prints no rate while it waits");
+});
+
+T("W7 - an empty store renders no panel: no text, no rate, no tone", function(a){
+  var r = P.calorieAdvice([], TODAY, null);
+  a.eq(r.state, "empty");
+  a.eq(r.text, "");
+  a.eq(r.rate, null);
+  a.eq(r.tone, "none");
+  a.eq(P.calorieAdvice(null, TODAY, null).state, "empty", "a non-array never throws");
+  a.eq(P.calorieAdvice([{ date: "nope", kg: 85 }, { date: DA(0), kg: 0 }], TODAY, null).state, "empty",
+    "an unreadable date and a 0 kg reading are not measurements");
+});
+
+T("W7 / cooldown - a change 3 days ago holds the three acting bands and instructs nothing", function(a){
+  var r = P.calorieAdvice(RATE(0), TODAY, DA(-3));
+  a.eq(r.state, "cooldown", "the flat band would have said add 200");
+  a.eq(r.tone, "hold");
+  a.eq(r.rate, 0, "the rate is still reported - it is the INSTRUCTION that is held");
+  a.eq(r.daysAgo, 3);
+  a.eq(r.holdUntil, "2026-09-14");
+  a.eq(r.text, "You changed calories 3 days ago. Hold until 14 Sep before changing again.");
+  a.eq(strOf(r).indexOf("200 kcal"), -1, "no add or cut instruction anywhere in the output");
+  a.eq(P.calorieAdvice(RATE(0.62), TODAY, DA(-3)).state, "cooldown", "cut is held too");
+  a.eq(P.calorieAdvice(RATE(-0.35), TODAY, DA(-3)).state, "cooldown", "and so is losing");
+});
+
+T("W7 / cooldown - state 7 does not outrank 2/3/4: at +0.34 the cooldown still prints the +0.34 line", function(a){
+  var r = P.calorieAdvice(RATE(0.34), TODAY, DA(-3));
+  a.eq(r.state, "above", "a band that instructs nothing has nothing to suppress");
+  a.eq(r.text, "+0.34 kg per week. Above target, inside the margin. Change nothing. Recheck in 7 days.");
+  a.eq(P.calorieAdvice(RATE(0.25), TODAY, DA(-3)).state, "on-target");
+  a.eq(P.calorieAdvice(RATE(0.19), TODAY, DA(-3)).state, "below");
+});
+
+T("W7 / calCooldown - 6 days holds, 7 does not, a future stamp holds, junk never holds", function(a){
+  a.eq(P.calCooldown(DA(-6), TODAY).active, true, "day 6 is still inside the hold");
+  a.eq(P.calCooldown(DA(-7), TODAY).active, false, "day 7 is out");
+  a.eq(P.calCooldown(DA(-7), TODAY).daysAgo, 7);
+  a.eq(P.calCooldown(DA(2), TODAY).active, true,
+    "clock skew or a bad import must not open a window for a second calorie change");
+  a.eq(P.calCooldown(null, TODAY).active, false);
+  a.eq(P.calCooldown("", TODAY).active, false);
+  a.eq(P.calCooldown("2026-9-7", TODAY).active, false, "an unpadded date is not a date");
+  a.eq(P.calCooldown("nope", TODAY).active, false);
+  a.eq(P.calCooldown(DA(-3), TODAY).holdUntil, "2026-09-14");
+});
+
+T("W7 - tone act is EXACTLY the set that shows the acknowledgement control", function(a){
+  var act = [], i, seen = {}, r, states = [
+    [RATE(0.62), null], [RATE(0.50), null], [RATE(0.25), null], [RATE(0.14), null],
+    [RATE(0), null], [RATE(-0.35), null], [RATE(0), DA(-3)],
+    [BW([23, 13, 10, 4, 3, 2, 1, 0], 85), null], [BW([21, 18, 15, 12, 9, 6, 3, 0], 85), null],
+    [BW([7, 6, 5, 4, 3, 2, 1, 0], 85), null], [[], null]
+  ];
+  for (i = 0; i < states.length; i++){
+    r = P.calorieAdvice(states[i][0], TODAY, states[i][1]);
+    seen[r.state] = true;
+    a.oneOf(r.tone, ["ok", "hold", "act", "none"], "tone for state " + r.state);
+    if (r.tone === "act") act.push(r.state);
+  }
+  a.deep(act.sort(), ["cut", "flat", "losing"], "only the three states that instruct a change");
+  a.deep(Object.keys(seen).sort(),
+    ["above", "below", "cooldown", "cut", "empty", "flat", "losing", "need-history",
+     "on-target", "thin-window-a", "thin-window-b"],
+    "all eleven states are reachable, and no state outside the documented eleven appears");
+});
+
+T("W7 / B-44 - the cooldown line goes through dayMon, never Intl: Sep, never Sept", function(a){
+  var r = P.calorieAdvice(RATE(0), TODAY, DA(-3));
+  a.ok(r.text.indexOf("14 Sep") >= 0, "the signed-off copy is '14 Sep'");
+  a.eq(r.text.indexOf("Sept"), -1, "en-GB short month on current ICU is 'Sept' - B-44");
+  a.eq(P.dayMon("2026-09-14"), "14 Sep");
+  var intl = "";
+  try { intl = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" })
+                  .format(new Date(2026, 8, 14)); } catch (e) { intl = ""; }
+  if (intl.indexOf("Sept") >= 0)
+    a.ne(P.dayMon("2026-09-14"), intl, "B-44 is live on this engine: Intl renders " + intl);
+});
+
+T("W7 setters - setCalChanged and clearCalChanged copy, never mutate, and touch one key", function(a){
+  var st = STORE({ sessions: [TSESS(DA(-2), 1, "d1a", SETS(100, 5), "belt on")], includeCut: true,
+                   reintro: { d1: 1 } });
+  var before = JSON.stringify(st);
+  var set = P.setCalChanged(st, TODAY);
+  a.ok(set !== st, "a new object, never the one it was handed");
+  a.eq(JSON.stringify(st), before, "the source state is untouched");
+  a.eq(set.calChangedAt, TODAY);
+  var diff = [], k;
+  for (k in set) if (JSON.stringify(set[k]) !== JSON.stringify(st[k])) diff.push(k);
+  a.deep(diff, ["calChangedAt"], "exactly one key differs");
+  a.ok(set.sessions === st.sessions, "the sessions array comes out BY REFERENCE, unrewritten");
+  a.eq(JSON.stringify(set.sessions), JSON.stringify(st.sessions), "byte-identical sessions");
+  a.eq(set.includeCut, true, "includeCut survives (WO-003 Decision 6)");
+  var cleared = P.clearCalChanged(set);
+  a.eq(cleared.calChangedAt, null, "the way back out - one tap, per UX spec 3.5");
+  a.eq(JSON.stringify(cleared.sessions), JSON.stringify(st.sessions));
+  a.eq(P.setCalChanged(null, TODAY), null, "null in, null out - never a fresh store with no sessions in it");
+  a.eq(P.clearCalChanged(null), null);
+  a.eq(P.setCalChanged(undefined, TODAY), null);
+});
+
+T("W7 - calorieAdvice reads the bodyweight store and writes nothing back", function(a){
+  var e = RATE(0.25), before = JSON.stringify(e);
+  P.calorieAdvice(e, TODAY, null);
+  P.bwWindows(e, TODAY);
+  a.eq(JSON.stringify(e), before, "DATA LOSS: reading for advice changed what would be written back");
+  var w = P.bwWindows(e, TODAY);
+  w.b.push({ date: "2026-01-01", kg: 1 });
+  a.eq(P.bwWindows(e, TODAY).bCount, 5, "the rows are a fresh view, never shared with the store");
+});
+
+/* ============================================================ S19 - Rule ST1 (W9 / B-07)
+   Stall detection over two rolling 21-day blocks of estimated 1RM, with the
+   counting ruling in addendum 6c and the deload-exclusion of Rule E2
+   (addendum 7.7 N2). Worked examples from docs/coach-audit.md section 4.
+
+   Every seed here sits on top of TFILL, which buys trainingWeeks on a lift ST1
+   does not read, so a stall can only come from the rows the test wrote. */
+group("S19 Rule ST1 / W9 / B-07 / E2");
+
+/* Eight training weeks of history, ending in TODAY's week. */
+function ST1BG(){ return TFILL(8, MON); }
+function ROW(offset, id, setList){ return TSESS(DA(-offset), id, "d1a", setList); }
+
+T("W9 / B-07 - PHAT exposes the ST1 surface and the constants the audit fixed", function(a){
+  needFns(a, "stallReport", "e1rmByDate", "liftDays", "workingLoadStrict", "e1rm");
+  a.ok(P.ST1 && typeof P.ST1 === "object", "ST1 constants must be exported, not buried");
+  a.eq(P.ST1.weeks, 6, "trainingWeeks >= 6 before anything is judged");
+  a.eq(P.ST1.dates, 2, "two DISTINCT dates per block per lift (addendum 6c)");
+  a.eq(P.ST1.reps, 8, "above 8 reps the estimate is not trustworthy for these lifts");
+  a.eq(P.ST1.ratio, 1.025, "2.5% over six weeks is the bar");
+  a.eq(P.ST1.recent, 20, "recent block = [today-20 .. today]");
+  a.eq(P.ST1.priorFrom, 41, "prior block opens at today-41");
+  a.eq(P.ST1.priorTo, 21, "and closes at today-21");
+});
+
+T("W9 / B-07 HEADLINE - week 1 Row 100x3/3/3 -> week 6 Row 100x5/5/5 gives stalled: []", function(a){
+  /* The false alarm that ships today: topSet is 100 in both, so
+     Math.max(...hits) <= hits[0] and the app tells him the sets are not close
+     enough to failure or he is not eating enough. He added six reps at his top
+     load and is one session from a 2.5 kg jump. */
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 3, 100, 3, 100, 3)),
+    ROW(38, "p2", SETS(100, 3, 100, 3, 100, 3)),
+    ROW(20, "r1", SETS(100, 5, 100, 5, 100, 5)),
+    ROW(17, "r2", SETS(100, 5, 100, 5, 100, 5))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, STORE());
+  a.eq(r.testable, true, "eight training weeks");
+  a.deep(r.stalled, [], "NO WARNING. This is the whole of B-07's surviving half.");
+  a.ok(r.untested.indexOf("Row") < 0, "and Row is tested, not quietly excused as untested");
+  a.eq(P.topSet(SETS(100, 3, 100, 3, 100, 3)), P.topSet(SETS(100, 5, 100, 5, 100, 5)),
+    "the measure the shipping detector uses cannot tell these two sessions apart");
+  a.ok(P.e1rm(100, 5) / P.e1rm(100, 3) >= 1.025, "the measure ST1 uses can: ratio 1.061");
+});
+
+T("W9 - true stall: prior 100x5/5/4, recent 100x5/5/5, ratio 1.000 -> Row stalled", function(a){
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5, 100, 5, 100, 4)),
+    ROW(38, "p2", SETS(100, 5, 100, 5, 100, 4)),
+    ROW(20, "r1", SETS(100, 5, 100, 5, 100, 5)),
+    ROW(17, "r2", SETS(100, 5, 100, 5, 100, 5))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, STORE());
+  a.deep(r.stalled, ["Row"], "the detector still fires when it should - it was not disabled");
+});
+
+T("W9 - THE FLOAT BOUNDARY: 100x5 against 102.5x5 clears 1.025 by 1.4e-14, toward PROGRESS", function(a){
+  /* The residue must run toward silence. A stall verdict manufactured by
+     binary rounding would be an accusation produced by the ULP. */
+  var residue = P.e1rm(102.5, 5) - P.e1rm(100, 5) * P.ST1.ratio;
+  a.ok(residue > 0, "the audit's boundary case must clear the threshold, not miss it");
+  a.ok(residue < 1e-9, "and it clears it only by float residue: " + residue);
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(20, "r1", SETS(102.5, 5)), ROW(17, "r2", SETS(102.5, 5))
+  ]);
+  a.deep(ST1CALL(s, TODAY, KLIFTS, STORE()).stalled, [],
+    "one 2.5 kg jump in three weeks on a 100 kg lift counts as progress");
+  var below = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(20, "r1", SETS(102, 5)), ROW(17, "r2", SETS(102, 5))
+  ]);
+  a.deep(ST1CALL(below, TODAY, KLIFTS, STORE()).stalled, ["Row"],
+    "and just under the bar it still fires: the threshold is real, not decorative");
+});
+
+T("W9 - regression: prior 110x5, recent 100x5 is a stall (the all-time max would call it progress)", function(a){
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(110, 5)), ROW(38, "p2", SETS(110, 5)),
+    ROW(20, "r1", SETS(100, 5)), ROW(17, "r2", SETS(100, 5))
+  ]);
+  a.deep(ST1CALL(s, TODAY, KLIFTS, STORE()).stalled, ["Row"],
+    "Math.max over all history keeps the week-3 peak and scores this as progress forever");
+});
+
+T("W9 - a set above 8 reps contributes no e1RM; a lift with only high-rep work is untested", function(a){
+  a.deep(P.e1rmByDate([ROW(5, "z", SETS(100, 12))], "d1a", DA(-20), TODAY), [],
+    "100x12 is not an estimate this rule trusts");
+  a.deep(P.e1rmByDate([ROW(5, "z", SETS(100, 8))], "d1a", DA(-20), TODAY).length, 1, "8 is inside");
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(20, "r1", SETS(100, 12, 100, 12)), ROW(17, "r2", SETS(100, 12, 100, 12))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, STORE());
+  a.ok(r.untested.indexOf("Row") >= 0, "'I cannot tell' lands in untested");
+  a.deep(r.stalled, [], "and never in stalled: it is not 'you failed'");
+});
+
+T("W9 - trainingWeeks 5: testable is false and both lists are empty, no placeholder", function(a){
+  var s = TFILL(5, MON).concat([
+    ROW(41, "p1", SETS(100, 5, 100, 5, 100, 4)), ROW(38, "p2", SETS(100, 5)),
+    ROW(20, "r1", SETS(100, 5)), ROW(17, "r2", SETS(100, 5))
+  ]);
+  a.eq(P.trainingWeeks(s, TODAY), 5, "five training weeks - the seed must be what the test claims");
+  var r = ST1CALL(s, TODAY, KLIFTS, STORE());
+  a.eq(r.testable, false);
+  a.deep(r.stalled, []);
+  a.deep(r.untested, [], "before week 6 the tab renders nothing at all, not even a lift list");
+});
+
+T("W9 / 6c - two saves of one lift on ONE DATE do not meet the 2-date block minimum", function(a){
+  /* Otherwise a single re-saved session unlocks a stall verdict. */
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(20, "r1", SETS(90, 5)), ROW(20, "r1-again", SETS(90, 5))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, STORE());
+  a.ok(r.untested.indexOf("Row") >= 0, "two rows on one date are one data point");
+  a.deep(r.stalled, [], "and a regression that cannot be counted twice must not be reported");
+  a.deep(P.liftDays(s, "d1a", TODAY), [DA(-41), DA(-38), DA(-20)], "three distinct dates, not four saves");
+});
+
+T("W9 - untested lifts are named separately and never merged into stalled", function(a){
+  var s = ST1BG().concat([
+    TSESS(DA(-41), "s1", "d2a", SETS(140, 5)), TSESS(DA(-38), "s2", "d2a", SETS(140, 5)),
+    TSESS(DA(-20), "s3", "d2a", SETS(150, 5)), TSESS(DA(-17), "s4", "d2a", SETS(150, 5)),
+    TSESS(DA(-19), "d1", "d2d", SETS(100, 5)), TSESS(DA(-16), "d2", "d2d", SETS(100, 5))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, STORE());
+  a.deep(r.stalled, [], "Squat is progressing");
+  a.deep(r.untested, ["Row", "DB press", "SLDL"],
+    "SLDL has two RECENT dates and no prior ones: two points in one block is not a comparison");
+  a.ok(r.untested.indexOf("Squat") < 0, "Squat was testable and passed");
+});
+
+T("W9 - e1rmByDate merges the best score per DATE and hands back fresh objects", function(a){
+  var s = [ROW(5, "a", SETS(100, 5)), ROW(5, "b", SETS(102.5, 5)), ROW(3, "c", SETS(95, 5))];
+  var rows = P.e1rmByDate(s, "d1a", DA(-20), TODAY);
+  a.eq(rows.length, 2, "two dates, three saves");
+  a.eq(rows[0].date, DA(-5));
+  a.eq(rows[0].e, P.e1rm(102.5, 5), "the best score on that date, across every session sharing it");
+  rows.push({ date: "2026-01-01", e: 999 });
+  a.eq(P.e1rmByDate(s, "d1a", DA(-20), TODAY).length, 2, "the view is rebuilt, never shared");
+  a.deep(P.e1rmByDate([], "d1a", DA(-20), TODAY), []);
+  a.deep(P.e1rmByDate(null, "d1a", DA(-20), TODAY), [], "a non-array never throws");
+  a.deep(P.e1rmByDate(s, "", DA(-20), TODAY), []);
+});
+
+T("W9 / Z1 - liftDays counts distinct dates with a completed set, and 0 kg counts", function(a){
+  var s = [TSESS(DA(-4), "a", "d1c", SETS(0, 10, 0, 9)),
+           TSESS(DA(-4), "b", "d1c", SETS(0, 8)),
+           TSESS(DA(-2), "c", "d1c", [{ w: "", r: "" }]),
+           TSESS(DA(2), "d", "d1c", SETS(0, 10))];
+  a.deep(P.liftDays(s, "d1c", TODAY), [DA(-4)],
+    "the rack chin day counts; a blank row is not a set and a future row is not evidence");
+  a.deep(P.liftDays(s, "d9z", TODAY), []);
+  a.deep(P.liftDays(null, "d1c", TODAY), []);
+});
+
+T("W9 - stallReport reports NAMES only: no e1RM, no ratio, no number reaches the caller", function(a){
+  /* e1rm(100,1) is 103.3, and "estimated 1RM 103.3 kg" off a logged 100 kg
+     single reads as a bug to the lifter. The estimator is a comparison device
+     and it must not leak into copy. */
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(20, "r1", SETS(100, 5)), ROW(17, "r2", SETS(100, 5))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, STORE()), joined = strOf(r);
+  a.deep(r.stalled, ["Row"]);
+  a.eq(joined.indexOf("116"), -1, "no e1RM figure in the output");
+  a.eq(joined.indexOf("103"), -1);
+  a.eq(joined.indexOf("1RM"), -1);
+  a.eq(joined.indexOf("%"), -1);
+  a.deep(Object.keys(r).sort(), ["stalled", "testable", "untested"], "three keys, two of them name lists");
+});
+
+T("W9 - workingLoadStrict REQUIRES n completed sets where workingLoad only caps", function(a){
+  /* The trap the contract question named: workingLoad([100x5], 3) answers 100
+     confidently off one set. Every rule that reads HISTORY must use the strict
+     one or it can take a load off a session he abandoned. */
+  a.eq(P.workingLoad(SETS(100, 5), 3), 100, "documented, and safe only behind the verdict's gate");
+  a.eq(P.workingLoadStrict(SETS(100, 5), 3), null, "history readers get null instead of a confident guess");
+  a.eq(P.workingLoadStrict(SETS(100, 5, 100, 5, 95, 5), 3), 95, "the min of the first three");
+  a.eq(P.workingLoadStrict(SETS(0, 10, 0, 9), 2), 0, "0 kg is a real working load, not a missing one");
+  a.eq(P.workingLoadStrict([], 3), null);
+  a.eq(P.workingLoadStrict(null, 3), null);
+});
+
+T("W9 - stallReport mutates nothing and never throws on junk", function(a){
+  var s = ST1BG().concat([ROW(20, "r1", SETS(100, 5)), ROW(17, "r2", SETS(100, 5))]);
+  var before = JSON.stringify(s);
+  ST1CALL(s, TODAY, KLIFTS, STORE());
+  a.eq(JSON.stringify(s), before, "DATA LOSS: reading history for a stall check rewrote it");
+  a.noThrow(function(){ return ST1CALL(null, TODAY, KLIFTS, STORE()); });
+  a.noThrow(function(){ return ST1CALL(s, "junk", KLIFTS, STORE()); });
+  a.noThrow(function(){ return ST1CALL(s, TODAY, null, STORE()); });
+  a.noThrow(function(){ return ST1CALL(s, TODAY, [null, {}, { id: "" }], STORE()); });
+});
+
+/* ---- Rule E2 (addendum 7.7 N2): a deload date is not evidence to ST1 ---- */
+
+T("E2 / W9 HEADLINE - a recent block holding only deload dates reports untested, not stalled", function(a){
+  /* Without E2: the deload's own prescription - same weight, two reps short -
+     is 100x3 against a prior 100x5, e1RM 110.0 against 116.7, ratio 0.943, and
+     the Trend tab says 'no progress ... the sets aren't close enough to
+     failure' about a week the app itself prescribed. */
+  var st = DELOADED(DA(-9), DA(-3));
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(8, "d1", SETS(100, 3, 100, 3)), ROW(5, "d2", SETS(100, 3, 100, 3))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, st);
+  a.deep(r.stalled, [], "no stall may be built out of the deload the app recommended");
+  a.ok(r.untested.indexOf("Row") >= 0, "with the deload dates excluded there are 0 usable recent dates");
+});
+
+T("E2 / W9 - deload dates drop out and the honest comparison still runs on the real weeks", function(a){
+  var st = DELOADED(DA(-9), DA(-3));
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(20, "r1", SETS(105, 5)), ROW(17, "r2", SETS(105, 5)),
+    ROW(8, "d1", SETS(100, 3, 100, 3)), ROW(5, "d2", SETS(100, 3, 100, 3))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, st);
+  a.deep(r.stalled, [], "105x5 against 100x5 is progress");
+  a.ok(r.untested.indexOf("Row") < 0, "two real recent dates remain, so the lift is still tested");
+});
+
+T("E2 / W9 - a PAST deload window is excluded too, not only the current one", function(a){
+  var st = STORE({ deload: { startDate: null, endDate: null, trigger: null,
+                             declinedAt: null, declinedDays: null,
+                             past: [{ startDate: DA(-9), endDate: DA(-3), trigger: "T2" }] } });
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(8, "d1", SETS(100, 3, 100, 3)), ROW(5, "d2", SETS(100, 3, 100, 3))
+  ]);
+  var r = ST1CALL(s, TODAY, KLIFTS, st);
+  a.deep(r.stalled, [], "history of deloads is still history of deloads");
+  a.ok(r.untested.indexOf("Row") >= 0);
+});
+
+T("E2 / W9 - with no deload in the store nothing is excluded and ST1 is unchanged", function(a){
+  var s = ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5)), ROW(38, "p2", SETS(100, 5)),
+    ROW(8, "d1", SETS(100, 3, 100, 3)), ROW(5, "d2", SETS(100, 3, 100, 3))
+  ]);
+  a.deep(ST1CALL(s, TODAY, KLIFTS, STORE()).stalled, ["Row"],
+    "the same rows with no deload recorded ARE a stall - E2 must not silence real evidence");
+  a.deep(ST1CALL(s, TODAY, KLIFTS, null).stalled, ["Row"], "and a missing state is not a deload window");
+});
+
+/* ============================================================ S20 - Rule SP1 (W12 / B-12)
+   Speed-work load: 65-70% of a logged 3-5 rep set on the mapped power lift,
+   computed rather than described. Worked examples from audit section 7, with
+   addendum S2a (a pain note does not touch this number) and the E2 ruling that
+   a deload date IS a valid observation of load. */
+group("S20 Rule SP1 / W12 / B-12");
+
+T("W12 / B-12 - PHAT exposes the SP1 surface, the source map and the constants", function(a){
+  needFns(a, "speedLoad", "speedTooHeavy", "speedFlagText", "painWindow");
+  a.deep(P.SPEED_SRC, { d3a: "d1a", d4a: "d2a", d5a: "d1d" }, "the three speed slots and their sources");
+  a.eq(P.SP1.mid, 0.675, "the printed target");
+  a.eq(P.SP1.bandLo, 0.65);
+  a.eq(P.SP1.bandHi, 0.70);
+  a.eq(P.SP1.cap, 0.75, "above this it is not speed work");
+  a.eq(P.SP1.repLo, 3);
+  a.eq(P.SP1.repHi, 5);
+  a.eq(P.SP1.window, 28);
+  a.eq(P.SP1.wide, 56);
+});
+
+T("SP1 ex1 - Row 100x5 twelve days ago -> 67.5 kg, band 65-70, and the copy names the triple", function(a){
+  var r = P.speedLoad([TSESS(DA(-12), 1, "d1a", SETS(100, 5))], "d3a", TODAY, "Bent-over or Pendlay row");
+  a.eq(r.target, 67.5);
+  a.eq(r.lo, 65);
+  a.eq(r.hi, 70);
+  a.eq(r.srcId, "d1a");
+  a.eq(r.srcWindow, 28);
+  a.deep(r.source, { w: 100, r: 5, date: DA(-12) });
+  a.ok(r.text.indexOf("67.5 kg. 65") === 0, "the load comes first, then the percentage: " + r.text);
+  a.ok(r.text.indexOf("100 kg triple") >= 0, "it quotes the set it was computed from");
+  a.eq(r.text.indexOf("top set"), -1, "'top set' is not a 3-5RM and the copy no longer says it");
+});
+
+T("SP1 ex2 - two candidates in window: the heaviest wins, 105x3 gives 70 kg", function(a){
+  var s = [TSESS(DA(-12), 1, "d1a", SETS(100, 5)), TSESS(DA(-5), 2, "d1a", SETS(105, 3))];
+  var r = P.speedLoad(s, "d3a", TODAY, "Row");
+  a.eq(r.source.w, 105, "heaviest, not most recent");
+  a.eq(r.target, 70, "105 x 0.675 = 70.875, rounded DOWN to the 2.5 kg grid");
+  a.eq(Math.round(r.target * 10) % 25, 0, "every printed load is a legal 2.5 kg step");
+});
+
+T("SP1 ex3 - a 90x8 is not a 3-5RM: no number, and the fallback names the source lift", function(a){
+  var r = P.speedLoad([TSESS(DA(-3), 1, "d1a", SETS(90, 8))], "d3a", TODAY, "Bent-over or Pendlay row");
+  a.eq(r.target, null, "90x8 implies a 3-5RM near 105 and printing 71 kg would dress an estimate as a measurement");
+  a.eq(r.reason, "no-source");
+  a.ok(r.text.indexOf("Bent-over or Pendlay row") >= 0,
+    "B-28's rename must reach this string through the caller, not through logic.js: " + r.text);
+  a.eq(r.text.indexOf("d1a"), -1, "and never the raw id when a name was supplied");
+});
+
+T("SP1 ex4 - Squat 140x4 -> 95 kg, and 110 kg logged on the speed day is flagged", function(a){
+  var r = P.speedLoad([TSESS(DA(-19), 1, "d2a", SETS(140, 4))], "d4a", TODAY, "Squat");
+  a.eq(r.target, 95, "140 x 0.675 = 94.5 -> 95");
+  a.eq(P.speedTooHeavy(110, 140), true, "110 > 140 x 0.75 = 105");
+  a.eq(P.speedTooHeavy(105, 140), false, "exactly at the cap is not above it");
+  a.eq(P.speedFlagText(110, r.target), "110 kg is not speed work. Drop to 95 kg.");
+});
+
+T("SP1 ex5 - the DB press speed slot reads its source PER DUMBBELL: 35x4 -> 22.5", function(a){
+  var r = P.speedLoad([TSESS(DA(-10), 1, "d1d", SETS(35, 4))], "d5a", TODAY, "Flat DB press");
+  a.eq(r.srcId, "d1d");
+  a.eq(r.target, 22.5, "35 x 0.675 = 23.625, ties and near-ties resolve DOWN onto the grid");
+  a.eq(r.source.w, 35, "the stored number is per dumbbell and is not doubled anywhere");
+});
+
+T("SP1 - the window edges: 28 days in, 29 falls to the wide window, 57 is out of both", function(a){
+  function at(days){ return P.speedLoad([TSESS(DA(-days), 1, "d1a", SETS(100, 5))], "d3a", TODAY, "Row"); }
+  a.eq(at(27).srcWindow, 28);
+  a.eq(at(28).srcWindow, 28, "28 days old is INSIDE the 28-day window");
+  a.eq(at(29).srcWindow, 56, "29 falls through to the wide window and still gives a number");
+  a.eq(at(29).target, 67.5);
+  a.eq(at(56).srcWindow, 56, "56 is inside the wide window");
+  a.eq(at(57).target, null, "57 is out of both");
+  a.eq(at(57).reason, "no-source");
+});
+
+T("SP1 - R > 0 is required: speedTooHeavy(w, 0) must not flag every set ever logged", function(a){
+  /* w > 0 * 0.75 is true for every load, so a missing R would turn the flag on
+     permanently, and a flag that always fires is a flag he learns to ignore. */
+  a.eq(P.speedTooHeavy(1, 0), false);
+  a.eq(P.speedTooHeavy(0.5, 0), false);
+  a.eq(P.speedTooHeavy(200, 0), false);
+  a.eq(P.speedTooHeavy(70, null), false, "no source, no flag");
+  a.eq(P.speedTooHeavy(70, undefined), false);
+  a.eq(P.speedTooHeavy(70, NaN), false);
+  a.eq(P.speedTooHeavy(70, -100), false);
+  a.eq(P.speedTooHeavy("", 100), false, "a blank field is not a heavy set");
+  a.eq(P.speedTooHeavy("7.5.0", 100), false, "and neither is a malformed one");
+  a.eq(P.speedTooHeavy("80", 100), true, "a drafting STRING still reads");
+});
+
+T("SP1 / Z2 - a 0 kg source gives no number, never '0 kg'", function(a){
+  var r = P.speedLoad([TSESS(DA(-3), 1, "d1a", SETS(0, 5))], "d3a", TODAY, "Row");
+  a.eq(r.target, null, "0 kg is not a 3-5RM");
+  a.eq(r.reason, "no-source");
+  a.eq(strOf(r).indexOf("0 kg"), -1, "the app never prints 'Drop to 0 kg'");
+  a.eq(P.speedFlagText(110, 0), "", "and it never flags a load it cannot name an alternative to");
+  a.eq(P.speedFlagText(110, null), "");
+});
+
+T("SP1 - an unknown exercise id is 'unknown', not a guess", function(a){
+  var r = P.speedLoad([TSESS(DA(-3), 1, "d1a", SETS(100, 5))], "d1a", TODAY, "Row");
+  a.eq(r.reason, "unknown", "d1a is a power slot, not a speed slot");
+  a.eq(r.target, null);
+  a.eq(r.text, "", "and it says nothing rather than something wrong");
+  a.eq(P.speedLoad([], "", TODAY).reason, "unknown");
+  a.eq(P.speedLoad(null, "d3a", TODAY).target, null, "a non-array never throws");
+});
+
+T("SP1 - the number is never cached: a heavier source changes the answer on the next call", function(a){
+  var s = [TSESS(DA(-12), 1, "d1a", SETS(100, 5))];
+  a.eq(P.speedLoad(s, "d3a", TODAY, "Row").target, 67.5);
+  s.push(TSESS(DA(-2), 2, "d1a", SETS(110, 4)));
+  a.eq(P.speedLoad(s, "d3a", TODAY, "Row").target, 75, "recomputed from history every session");
+  s.pop();
+  a.eq(P.speedLoad(s, "d3a", TODAY, "Row").target, 67.5, "and it goes back down when the row goes away");
+});
+
+T("SP1 - speedTooHeavy is advice: it alters nothing it is handed", function(a){
+  var s = [TSESS(DA(-12), 1, "d1a", SETS(100, 5))], before = JSON.stringify(s);
+  var r = P.speedLoad(s, "d3a", TODAY, "Row");
+  a.eq(P.speedTooHeavy(90, r.source.w), true, "90 > 75");
+  a.eq(JSON.stringify(s), before, "DATA LOSS: computing a speed target rewrote the log");
+  var row = { w: "90", r: "3" }, rowBefore = JSON.stringify(row);
+  P.speedTooHeavy(row.w, 100);
+  a.eq(JSON.stringify(row), rowBefore, "the flagged set is left exactly as he typed it");
+});
+
+T("SP1 / S2a - a pain note in the window does not move the speed target", function(a){
+  var clean = [TSESS(DA(-12), 1, "d1a", SETS(100, 5))];
+  var pained = [TSESS(DA(-12), 1, "d1a", SETS(100, 5), "left elbow pain on the last set")];
+  a.eq(P.speedLoad(pained, "d3a", TODAY, "Row").target, P.speedLoad(clean, "d3a", TODAY, "Row").target,
+    "R is a historical maximum and P1 already holds the source load: shaving it would be re-prescribing");
+  a.eq(P.painWindow(pained, TODAY, 7).active, false, "12 days ago is outside the 7-day window");
+  a.eq(P.painWindow(pained, TODAY, 14).active, true, "and inside a 14-day one");
+});
+
+T("E2 - SP1 is deliberately NOT deload-excluded: a deload set is a valid observation of load", function(a){
+  /* A deload does not lower the weight. Excluding those dates could drop a
+     real number to the no-data fallback, which is the worse error. */
+  var s = [TSESS(DA(-5), 1, "d1a", SETS(100, 3))];
+  var r = P.speedLoad(s, "d3a", TODAY, "Row", DELOADED(DA(-9), DA(-3)));
+  a.eq(r.target, 67.5, "the number survives a deload window");
+  a.eq(r.source.w, 100);
+});
+
+T("W16 / S2b - painWindow: 7 days by default, edges included, ids sorted, absence is not a signal", function(a){
+  var s = [TSESS(DA(-2), 1, "d1a", SETS(100, 5), "sharp pinch in the shoulder"),
+           TSESS(DA(-9), 2, "d2a", SETS(140, 3), "knee hurts")];
+  var w = P.painWindow(s, TODAY, 7);
+  a.eq(w.active, true);
+  a.deep(w.exIds, ["d1a"], "only the note inside the window");
+  a.eq(w.lastDate, DA(-2));
+  a.deep(P.painWindow(s, TODAY, 14).exIds, ["d1a", "d2a"], "sorted, and widening the window finds both");
+  a.eq(P.painWindow([TSESS(DA(-6), 1, "d1a", SETS(100, 5), "pain")], TODAY, 7).active, true, "day 6 is in");
+  a.eq(P.painWindow([TSESS(DA(-7), 1, "d1a", SETS(100, 5), "pain")], TODAY, 7).active, false, "day 7 is out");
+  a.eq(P.painWindow([], TODAY, 7).active, false, "a man who writes no notes is not a man in pain");
+  a.eq(P.painWindow(null, TODAY, 7).active, false);
+  a.eq(P.painWindow([TSESS(DA(-1), 1, "d1a", SETS(100, 5), "no pain today, felt strong")], TODAY, 7).active, true,
+    "the regex matches the word, not the sentiment - the app does not read English, and errs toward caution");
+});
+
+/* ============================================================ S21 - Rule V1 (W14 / B-23)
+   The volume tier and one-accessory-per-session reintroduction, replacing the
+   all-or-nothing "Full volume" checkbox. Worked examples from audit section 5,
+   with addendum S2b (a pain note suppresses the OFFER and nothing else) and
+   6a/6c (weeks are counted in distinct training DAYS).
+
+   volumeTier takes a CONTEXT OBJECT, not WO-003 W14's positional list. The
+   deviation is deliberate and documented in logic.js: the positional signature
+   cannot satisfy its own acceptance criteria, because exerciseIds needs the
+   day's exercises, statusLine needs every day's cut count, the offer needs a
+   NAME, and the data-loss criterion needs the current draft. Raised as a
+   contract question rather than assumed. */
+group("S21 Rule V1 / W14 / B-23");
+
+function V1CTX(over){
+  var c = { program: PROG, sessions: TFILL(5, MON), state: STORE(), todayStr: TODAY,
+            stallReport: { stalled: [], untested: [], testable: true } }, k;
+  if (over) for (k in over) if (Object.prototype.hasOwnProperty.call(over, k)) c[k] = over[k];
+  return c;
+}
+
+T("W14 / B-23 - PHAT exposes the V1 surface, REINTRO_ORDER and its constants", function(a){
+  needFns(a, "volumeTier", "acceptReintro", "declineReintro", "rollbackReintro",
+             "rollbackNotice", "calendarWeeks");
+  a.deep(P.REINTRO_ORDER, { d1: ["d1c"], d2: ["d2c"], d3: ["d3d", "d3g"],
+                            d4: ["d4g", "d4c"], d5: ["d5d", "d5j", "d5g"] },
+    "the coach's order, ids only - the NAMES come from the caller's PROGRAM");
+  a.eq(P.V1.week, 5, "no offer before five weeks of real training");
+  a.eq(P.V1.cooldown, 7, "one offer per day id per week");
+});
+
+T("V1 ex1 - week 3, Lower power: 6 exercises, Leg extension hidden, no offer, no toggle", function(a){
+  var v = P.volumeTier(V1CTX({ dayId: "d2", sessions: TFILL(3, MON) }));
+  a.eq(v.trainingWeeks, 3);
+  a.eq(v.exerciseIds.length, 6, "seven minus the one cut:1 accessory");
+  a.eq(v.exerciseIds.indexOf("d2c"), -1, "Leg extension is out for weeks 1-4");
+  a.eq(v.offer, null, "and there is no override anywhere in the app");
+  a.eq(v.blocked, "week");
+  a.eq(v.tierLine, "Week 3 of 4 at reduced volume. The cut exercises come back from week 5.");
+});
+
+T("V1 ex2 - week 5, Chest & arms, no stall: the offer names the head of d5's order", function(a){
+  var v = P.volumeTier(V1CTX({ dayId: "d5" }));
+  a.eq(v.trainingWeeks, 5);
+  a.ok(v.offer !== null, "week 5 opens the first offer");
+  a.eq(v.offer.exId, "d5d");
+  a.eq(v.offer.name, "Incline cable fly");
+  a.eq(v.offerLine, "Add Incline cable fly back to this session? Only if last week left " +
+                    "you recovered and no lift went backwards.");
+  a.eq(v.exerciseIds.indexOf("d5d"), -1, "the offer is an offer: nothing is added until he taps");
+  a.eq(v.statusLine, "Week 5 · 0 of 9 accessories back in.");
+});
+
+T("V1 ex5 / 6b HEADLINE - week 5 by the calendar, week 3 of real training: no offer", function(a){
+  /* Five calendar weeks, two of which held only two sessions. The tier is a
+     function of accumulated training, not of the calendar - and the line that
+     explains the divergence is load-bearing copy, not decoration. */
+  var mix = [], i, j, mon, n;
+  for (i = 0; i < 5; i++){
+    mon = P.dateAdd(MON, -7 * i); n = (i === 1 || i === 3) ? 2 : 3;
+    for (j = 0; j < n; j++) mix.push(TSESS(P.dateAdd(mon, j), "m" + i + j, "d1f", SETS(60, 8)));
+  }
+  var v = P.volumeTier(V1CTX({ dayId: "d5", sessions: mix }));
+  a.eq(v.calendarWeeks, 5);
+  a.eq(v.trainingWeeks, 3);
+  a.eq(v.offer, null, "NO OFFER. Nine accessories in week 2 by another route is the failure this prevents.");
+  a.eq(v.blocked, "week");
+  a.eq(v.tierLine, "Week 5 by the calendar, week 3 of real training. Reduced volume holds.");
+  a.eq(v.tierNote, "A training week is a week with three or more logged sessions.");
+});
+
+T("V1 ex2b - accepting adds ONE accessory, and no single control adds more than one", function(a){
+  var st = STORE(), next = P.acceptReintro(st, "d5", TODAY, 3);
+  a.eq(next.reintro.d5, 1, "the counter moves by exactly one");
+  var before = P.volumeTier(V1CTX({ dayId: "d5", state: st }));
+  var after = P.volumeTier(V1CTX({ dayId: "d5", state: next }));
+  a.eq(after.exerciseIds.length, before.exerciseIds.length + 1, "one card appears, not nine");
+  a.ok(after.exerciseIds.indexOf("d5d") >= 0, "and it is the head of the order");
+  a.eq(after.exerciseIds.indexOf("d5j"), -1, "the second and third are still out");
+  a.eq(after.exerciseIds.indexOf("d5g"), -1);
+  a.eq(after.dayBack, 1);
+  a.eq(after.dayCuts, 3);
+});
+
+T("V1 - acceptReintro is idempotent BY THE RULE: a double tap cannot add two accessories", function(a){
+  /* An increment cannot be idempotent by arithmetic. One addition per day id
+     per DATE is what "one per session" means, so a second accept on a date
+     already stamped only re-stamps. A double tap, a re-render or a replayed
+     event must not move the counter twice. */
+  var st = STORE();
+  var one = P.acceptReintro(st, "d5", TODAY, 3);
+  var two = P.acceptReintro(one, "d5", TODAY, 3);
+  var three = P.acceptReintro(two, "d5", TODAY, 3);
+  a.eq(one.reintro.d5, 1);
+  a.eq(two.reintro.d5, 1, "the second tap on the same date adds nothing");
+  a.eq(three.reintro.d5, 1, "and neither does the tenth");
+  a.eq(two.lastReintroDate.d5, TODAY);
+  var i, s = st;
+  for (i = 0; i < 20; i++) s = P.acceptReintro(s, "d5", TODAY, 3);
+  a.eq(s.reintro.d5, 1, "twenty replays of the same event are still one accessory");
+  a.eq(P.volumeTier(V1CTX({ dayId: "d5", state: s })).exerciseIds.length,
+       P.volumeTier(V1CTX({ dayId: "d5", state: one })).exerciseIds.length,
+       "and the rendered day is identical either way");
+});
+
+T("V1 - accepting stamps the date: the same day offers nothing, seven days later it offers the next", function(a){
+  var st = P.acceptReintro(STORE(), "d5", TODAY, 3);
+  a.eq(P.volumeTier(V1CTX({ dayId: "d5", state: st })).offer, null, "not twice in one session");
+  a.eq(P.volumeTier(V1CTX({ dayId: "d5", state: st })).blocked, "cooldown");
+  var six = P.volumeTier(V1CTX({ dayId: "d5", state: st, todayStr: DA(6),
+                                 sessions: TFILL(6, P.dateAdd(MON, 7)) }));
+  a.eq(six.offer, null, "six days is still inside the week");
+  var seven = P.volumeTier(V1CTX({ dayId: "d5", state: st, todayStr: DA(7),
+                                   sessions: TFILL(6, P.dateAdd(MON, 7)) }));
+  a.ok(seven.offer !== null, "seven days later the next one is offered");
+  a.eq(seven.offer.exId, "d5j", "the SECOND entry of d5's order, not the first again");
+  a.eq(seven.offer.name, "Rope pressdown");
+});
+
+T("V1 ex3 - the counters are per day: accepting on d1 does not suppress d5's offer", function(a){
+  var st = P.acceptReintro(STORE(), "d1", TODAY, 1);
+  var v = P.volumeTier(V1CTX({ dayId: "d5", state: st }));
+  a.ok(v.offer !== null, "a different day has its own counter and its own stamp");
+  a.eq(v.offer.exId, "d5d");
+  a.eq(P.volumeTier(V1CTX({ dayId: "d1", state: st })).offer, null, "while d1 itself waits its week");
+});
+
+T("V1 - declining stamps the date without incrementing, and holds for seven days", function(a){
+  var st = P.declineReintro(STORE(), "d5", TODAY);
+  a.deep(st.reintro, {}, "nothing was added");
+  a.eq(st.lastReintroDate.d5, TODAY, "but the week is stamped");
+  a.eq(P.volumeTier(V1CTX({ dayId: "d5", state: st })).offer, null);
+  var later = P.volumeTier(V1CTX({ dayId: "d5", state: st, todayStr: DA(7),
+                                   sessions: TFILL(6, P.dateAdd(MON, 7)) }));
+  a.ok(later.offer !== null, "asked again next week");
+  a.eq(later.offer.exId, "d5d", "and it is still the FIRST one - declining did not consume it");
+});
+
+T("V1 ex4 - a stall suppresses the offer and rolls one accessory back out", function(a){
+  var st = STORE({ reintro: { d1: 1, d5: 1 } });
+  var v = P.volumeTier(V1CTX({ dayId: "d5", state: st, stallReport: { stalled: ["Row"], untested: [], testable: true } }));
+  a.eq(v.offer, null, "no new exercise while a lift is going backwards");
+  a.eq(v.blocked, "stall");
+  var rolled = P.rollbackReintro(st, PROG, TODAY, TFILL(5, MON));
+  a.eq(rolled.reintro.d1, 0, "reintro.d1 goes 1 -> 0");
+  a.eq(rolled.reintro.d5, 0, "and every other day comes down by one too");
+  a.eq(rolled.lastRollback.name, "Rack chin", "the app names what it pulled, in programme order");
+  a.eq(P.rollbackLine(rolled.lastRollback.name), "Progress stalled. Pulling Rack chin back out for now.");
+  a.eq(rolled.lastRollback.items.length, 2, "and it can name all of them if the UI wants to");
+});
+
+T("V1 - rollbackReintro is once per DATE: a render loop cannot strip his programme one per paint", function(a){
+  var st = STORE({ reintro: { d1: 1, d5: 3 } });
+  var once = P.rollbackReintro(st, PROG, TODAY, []);
+  a.eq(once.reintro.d1, 0);
+  a.eq(once.reintro.d5, 2, "every day comes down by one, floor zero");
+  var i, s = once;
+  for (i = 0; i < 30; i++) s = P.rollbackReintro(s, PROG, TODAY, []);
+  a.eq(s.reintro.d5, 2, "thirty repaints later it is still 2 - this is a data-shaped bug even with no set lost");
+  a.eq(s.reintro.d1, 0);
+});
+
+T("V1 - nothing is rolled back, and nothing is stamped, when every counter is already zero", function(a){
+  var st = STORE();
+  var out = P.rollbackReintro(st, PROG, TODAY, []);
+  a.eq(out.lastRollback, undefined, "a notice about an exercise that was never added is an invented event");
+  a.deep(out.reintro, {}, "and there is nothing to decrement");
+  a.eq(P.rollbackNotice(out, [], TODAY).show, false);
+});
+
+T("V1 - rollbackNotice stands until the next session is logged, and absence reads as null", function(a){
+  var sessions = TFILL(5, MON);
+  var rolled = P.rollbackReintro(STORE({ reintro: { d1: 1 } }), PROG, TODAY, sessions);
+  var n = P.rollbackNotice(rolled, sessions, TODAY);
+  a.eq(n.show, true);
+  a.eq(n.text, "Progress stalled. Pulling Rack chin back out for now.");
+  var after = sessions.concat([TSESS(DA(1), "new", "d1f", SETS(60, 8))]);
+  a.eq(P.rollbackNotice(rolled, after, DA(1)).show, false,
+    "from then on the lower accessory count in the cycle line carries the fact");
+  a.eq(P.rollbackNotice(STORE(), sessions, TODAY).show, false, "a store with no lastRollback key");
+  a.eq(P.rollbackNotice(null, sessions, TODAY).show, false);
+  a.eq(P.rollbackNotice({}, sessions, TODAY).text, "");
+});
+
+T("V1 / S2b THE PAIN GATE - a pain note inside 7 days: no offer, nothing stamped, nothing rolled back", function(a){
+  var st = STORE({ reintro: { d5: 1 } });
+  var sessions = TFILL(5, MON).concat([TSESS(DA(-2), "p", "d5b", SETS(30, 10), "shoulder pain on the last set")]);
+  var v = P.volumeTier(V1CTX({ dayId: "d5", state: st, sessions: sessions }));
+  a.eq(v.offer, null, "no new exercise this week");
+  a.eq(v.blocked, "pain");
+  a.eq(v.blockedLine, "No new exercise this week. You logged pain in the last 7 days.");
+  a.eq(strOf(v).toLowerCase().indexOf("rest"), -1, "no severity, no cause, no prescription (audit section 10)");
+  /* Nothing is stamped: stamping would double the delay to 14 days. Nothing is
+     rolled back: a keyword may not shrink his programme. */
+  a.deep(st.lastReintroDate, {}, "the state handed in is unchanged");
+  a.eq(st.reintro.d5, 1, "and the counter is where it was");
+  a.eq(v.exerciseIds.indexOf("d5d") >= 0, true, "the accessory he already earned stays in the session");
+  var clean = P.volumeTier(V1CTX({ dayId: "d5", state: st }));
+  a.ok(clean.offer !== null, "and the same state with no pain note DOES get an offer");
+});
+
+T("V1 - every counter full: 'Full volume. All 9 accessories are in.'", function(a){
+  var st = STORE({ reintro: { d1: 1, d2: 1, d3: 2, d4: 2, d5: 3 } });
+  var v = P.volumeTier(V1CTX({ dayId: "d5", state: st }));
+  a.eq(v.back, 9);
+  a.eq(v.cuts, 9);
+  a.eq(v.statusLine, "Full volume. All 9 accessories are in.");
+  a.eq(v.offer, null);
+  a.eq(v.blocked, "complete");
+  a.eq(v.exerciseIds.length, 10, "d5 renders all ten exercises");
+});
+
+T("V1 DATA LOSS - an exercise the tier hides but the draft has typed into comes back FLAGGED", function(a){
+  var draft = { entries: { d2c: { sets: [{ w: "40", r: "" }], note: "" } } };
+  var v = P.volumeTier(V1CTX({ dayId: "d2", sessions: TFILL(3, MON), draft: draft }));
+  a.ok(v.exerciseIds.indexOf("d2c") >= 0, "a hidden-but-populated exercise is returned, never dropped");
+  a.deep(v.kept, ["d2c"], "and it is flagged as kept rather than prescribed");
+  a.eq(v.prescribed.indexOf("d2c"), -1);
+  var noteOnly = { entries: { d2c: { sets: [], note: "felt it in the knee" } } };
+  a.ok(P.volumeTier(V1CTX({ dayId: "d2", sessions: TFILL(3, MON), draft: noteOnly })).exerciseIds.indexOf("d2c") >= 0,
+    "a note is data too");
+  a.eq(P.volumeTier(V1CTX({ dayId: "d2", sessions: TFILL(3, MON) })).exerciseIds.indexOf("d2c"), -1,
+    "with nothing typed it stays hidden");
+});
+
+T("V1 - the stored includeCut key is never read and never written", function(a){
+  var on = STORE({ includeCut: true }), off = STORE({ includeCut: false });
+  var vOn = P.volumeTier(V1CTX({ dayId: "d2", sessions: TFILL(3, MON), state: on }));
+  var vOff = P.volumeTier(V1CTX({ dayId: "d2", sessions: TFILL(3, MON), state: off }));
+  a.deep(vOn.exerciseIds, vOff.exerciseIds, "the old checkbox cannot restore nine accessories any more");
+  a.eq(on.includeCut, true, "and it is left on disk untouched (WO-003 Decision 6)");
+  var acc = P.acceptReintro(on, "d2", TODAY, 1);
+  a.eq(acc.includeCut, true, "every setter carries it through unread");
+  a.eq(P.rollbackReintro(on, PROG, TODAY, []).includeCut, true);
+});
+
+T("V1 - during an active deload the accessories are out and no offer is made", function(a){
+  var st = STORE({ reintro: { d5: 3 }, deload: { startDate: DA(-2), endDate: null, trigger: "T1",
+                                                 declinedAt: null, declinedDays: null, past: [] } });
+  var v = P.volumeTier(V1CTX({ dayId: "d5", state: st, sessions: TFILL(7, MON) }));
+  a.eq(v.deload.active, true);
+  a.eq(v.deload.day, 3);
+  a.eq(v.exerciseIds.indexOf("d5d"), -1, "cut:1 accessories are out for the deload week (audit section 8)");
+  a.eq(v.offer, null);
+  a.eq(v.blocked, "deload");
+  a.eq(st.reintro.d5, 3, "the COUNTER is not decremented by a deload - only a rollback moves it");
+  a.eq(P.volumeTier(V1CTX({ dayId: "d5", state: STORE({ reintro: { d5: 3 } }), sessions: TFILL(7, MON) }))
+        .exerciseIds.indexOf("d5d") >= 0, true, "and they come back when the deload ends");
+});
+
+T("V1 setters - accept, decline and rollback copy, never mutate, null in -> null out", function(a){
+  var st = STORE({ sessions: [TSESS(DA(-2), 1, "d1a", SETS(100, 5), "belt on")],
+                   includeCut: true, calChangedAt: "2026-09-02", reintro: { d1: 1 } });
+  var before = JSON.stringify(st), k, diff;
+  var acc = P.acceptReintro(st, "d5", TODAY, 3);
+  a.ok(acc !== st);
+  a.eq(JSON.stringify(st), before, "the source state is untouched");
+  diff = []; for (k in acc) if (JSON.stringify(acc[k]) !== JSON.stringify(st[k])) diff.push(k);
+  a.deep(diff.sort(), ["lastReintroDate", "reintro"], "accept writes exactly its own two maps");
+  a.eq(JSON.stringify(acc.sessions), JSON.stringify(st.sessions), "sessions byte-identical");
+  a.eq(acc.calChangedAt, "2026-09-02", "and calChangedAt is carried through untouched");
+  var dec = P.declineReintro(st, "d5", TODAY);
+  diff = []; for (k in dec) if (JSON.stringify(dec[k]) !== JSON.stringify(st[k])) diff.push(k);
+  a.deep(diff, ["lastReintroDate"], "decline writes one map");
+  var rb = P.rollbackReintro(st, PROG, TODAY, []);
+  a.eq(JSON.stringify(st), before, "and rollback still leaves the source alone");
+  a.eq(JSON.stringify(rb.sessions), JSON.stringify(st.sessions));
+  a.eq(rb.includeCut, true);
+  a.eq(P.acceptReintro(null, "d1", TODAY), null, "null in, null out - the caller must not write null over the store");
+  a.eq(P.declineReintro(null, "d1", TODAY), null);
+  a.eq(P.rollbackReintro(null, PROG, TODAY, []), null);
+});
+
+T("V1 - volumeTier reads sessions and the draft and writes to neither", function(a){
+  var sessions = TFILL(5, MON), draft = { entries: { d5d: { sets: [{ w: "20", r: "15" }], note: "" } } };
+  var sBefore = JSON.stringify(sessions), dBefore = JSON.stringify(draft);
+  var st = STORE(), stBefore = JSON.stringify(st);
+  P.volumeTier(V1CTX({ dayId: "d5", sessions: sessions, draft: draft, state: st }));
+  a.eq(JSON.stringify(sessions), sBefore, "DATA LOSS: rendering a tier rewrote the log");
+  a.eq(JSON.stringify(draft), dBefore, "DATA LOSS: rendering a tier rewrote the draft");
+  a.eq(JSON.stringify(st), stBefore, "and the state is read-only to the tier");
+  a.noThrow(function(){ return P.volumeTier(); }, "garbage in gives base exercises, never a throw");
+  a.noThrow(function(){ return P.volumeTier({ dayId: "nope", program: null, sessions: null }); });
+});
+
+T("W14 - calendarWeeks is the number he can count on a calendar, from the first TRAINING day", function(a){
+  a.eq(P.calendarWeeks([], TODAY), 0, "no sessions, no weeks");
+  a.eq(P.calendarWeeks([TSESS(DA(-2), 1, "d1a", SETS(100, 5))], TODAY), 1, "this week is week 1");
+  a.eq(P.calendarWeeks(TFILL(5, MON), TODAY), 5);
+  a.eq(P.calendarWeeks([TSESS("2026-09-06", 1, "d1a", SETS(100, 5))], TODAY), 2,
+    "Sunday belongs to the week before, so it is two calendar weeks back");
+  a.eq(P.calendarWeeks([SESS_NOTE(DA(-30), 1)], TODAY), 0, "a notes-only save is not a training day");
+});
+
+/* ============================================================ S22 - Rule D1 (W19 / B-18)
+   The deload: recommended on evidence, never scheduled and never imposed.
+   Audit section 8, amended by addendum section 7 - E1 (the evidence ladder),
+   E2 (a deload date is not evidence) and the copy changes in 7.1 and 7.3.
+
+   deloadCheck takes a CONTEXT OBJECT for the same reason volumeTier does: W19's
+   positional signature cannot evaluate T1 without each key lift's `s` and `lo`,
+   and those live in PROGRAM. Raised as a contract question, not assumed. */
+group("S22 Rule D1 / W19 / B-18 / E1 / E2");
+
+/* The amended copy (addendum 7.3): the rep clause is scoped to power days,
+   because the prescription is. Four pinned WO-003 criteria moved with it. */
+var D1_TAIL = "Take a deload week: same weights, 2 sets. On power days stop 2 reps short. Resume where you left off.";
+var D1_ACTIVE_TAIL = "Same weights, 2 sets. Power days stop 2 reps short. Do not chase numbers this week.";
+
+function SQ(offset, id, setList){ return TSESS(DA(-offset), id, "d2a", setList); }
+/* Background that buys exactly 8 training weeks and 14 weeks of DATE range.
+   The older weeks hold ONE day each: a stale squat date seeded into one of
+   them can never complete a third distinct date and tip trainingWeeks to 9,
+   which would answer T3's backstop while the test believed it was reading T1.
+   Every T1 test below asserts trainingWeeks < 9 for that reason. */
+function D1BG(){ return TFILL(8, MON).concat(TFILL(6, P.dateAdd(MON, -56), 1)); }
+function CHK(sessions, over){
+  var c = { sessions: sessions, todayStr: TODAY, keyLifts: KLIFTS, state: STORE(),
+            stallReport: { stalled: [], untested: [], testable: true } }, k;
+  if (over) for (k in over) if (Object.prototype.hasOwnProperty.call(over, k)) c[k] = over[k];
+  return P.deloadCheck(c);
+}
+
+T("W19 / B-18 - PHAT exposes the D1 surface and the constants the audit fixed", function(a){
+  needFns(a, "deloadCheck", "deloadStatus", "startDeload", "declineDeload", "endDeload",
+             "deloadEx", "cycleLine");
+  a.eq(P.DELOAD.days, 7, "a deload week is a week");
+  a.eq(P.DELOAD.sets, 2, "same weights, fewer sets");
+  a.eq(P.DELOAD.short, 2, "stop two reps short of hi - on power days");
+  a.eq(P.DELOAD.weeks, 6, "below trainingWeeks 6 there is no deload language at all");
+  a.eq(P.DELOAD.backstop, 9, "T3's calendar backstop, in TRAINING weeks");
+  a.eq(P.DELOAD.run, 2, "two consecutive failing DATES for T1");
+});
+
+T("D1 - trainingWeeks 5: no trigger from any of the three, and no deload word anywhere", function(a){
+  var s = TFILL(5, MON).concat([SQ(20, "a", SETS(120, 5, 120, 5, 120, 5)),
+                                SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                                SQ(3, "c", SETS(120, 3, 120, 2, 120, 2))]);
+  var r = CHK(s);
+  a.eq(r.trigger, null, "a deload recommended six sessions in teaches him to ignore the banner");
+  a.eq(r.reason, "early");
+  a.eq(r.text, "");
+  var cy = P.cycleLine({ sessions: s, state: STORE(), program: PROG, todayStr: TODAY });
+  a.eq(cy.text.toLowerCase().indexOf("deload"), -1, "and the cycle line does not say the word: " + cy.text);
+});
+
+T("D1 ex1 - one bad squat session is a bad day, not a trigger", function(a){
+  var s = D1BG().concat([SQ(20, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(3, "b", SETS(120, 3, 120, 3, 120, 3))]);
+  a.eq(CHK(s).trigger, null, "3 reps where 5 was done, once. One bad day is a bad day.");
+});
+
+T("D1 ex2 / T1 - 120x5/5/5, then 120x2/2/2, then 120x3/2/2 fires with the amended copy", function(a){
+  var s = D1BG().concat([SQ(20, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 3, 120, 2, 120, 2))]);
+  var r = CHK(s);
+  a.eq(r.trigger, "T1");
+  a.deep(r.lifts, ["Squat"]);
+  a.eq(r.text, "Two sessions where Squat went backwards. " + D1_TAIL);
+  a.ok(r.text.indexOf("On power days stop 2 reps short.") >= 0,
+    "addendum 7.3: the banner may not state a prescription the card does not give");
+});
+
+/* ---- Rule E1 (addendum 7.6): the evidence ladder ---- */
+
+T("E1 ex1 HEADLINE - fail, ABANDONED, fail is NOT two consecutive failures", function(a){
+  /* Ruled 2026-09-10, against the shipped behaviour. A half-finished date is
+     not an observation of whether the prescription could be met, and the app
+     cannot tell "I bailed" from "I tapped Save early" out of the stored data.
+     Skipping over it and firing off the two either side describes two sessions
+     of squat that did not happen. SHORT breaks the streak. */
+  var s = D1BG().concat([SQ(24, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(17, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(10, "x", SETS(120, 2)),
+                         SQ(3, "c", SETS(120, 3, 120, 2, 120, 2))]);
+  var r = CHK(s);
+  a.eq(r.trigger, null, "no deload off two failures with an unknown between them");
+  a.eq(r.text, "");
+  a.eq(P.liftDays(s, "d2a", TODAY).length, 4, "the abandoned date is still in the log and still visible");
+});
+
+T("E1 ex2 - fail, abandoned, success is no trigger under either rule", function(a){
+  var s = D1BG().concat([SQ(24, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(17, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(10, "x", SETS(120, 2)),
+                         SQ(3, "c", SETS(120, 5, 120, 5, 120, 5))]);
+  a.eq(CHK(s).trigger, null, "E1 alters exactly one classification, and this proves it is narrow");
+});
+
+T("E1 ex3 - the true positive is unchanged: two ADJACENT failing dates still fire", function(a){
+  var s = D1BG().concat([SQ(17, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 3, 120, 2, 120, 2))]);
+  a.eq(CHK(s).trigger, "T1", "E1 must not break the case T1 exists for");
+});
+
+T("E1 ex4 - fail, abandoned, fail, fail fires on the third and fourth", function(a){
+  /* He gave the app the second data point and it agreed. run: 1 -> 0 -> 1 -> 2. */
+  var s = D1BG().concat([SQ(28, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(21, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(14, "x", SETS(120, 2)),
+                         SQ(7, "c", SETS(120, 3, 120, 2, 120, 2)),
+                         SQ(2, "d", SETS(120, 2, 120, 2, 120, 2))]);
+  a.eq(CHK(s).trigger, "T1");
+});
+
+T("E1 ex5 / item 5 - failing at a NEW heavier load is an attempt, not a regression", function(a){
+  var s = D1BG().concat([SQ(17, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "b", SETS(130, 2, 130, 2, 130, 2)),
+                         SQ(3, "c", SETS(130, 2, 130, 2, 130, 2))]);
+  a.eq(CHK(s).trigger, null, "missing a jump is what a jump is for; P1 handles it locally");
+});
+
+T("E1 / item 5 - failing at a load BELOW one he has completed fires, equality not required", function(a){
+  var s = D1BG().concat([SQ(24, "a", SETS(125, 5, 125, 5, 125, 5)),
+                         SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.eq(CHK(s).trigger, "T1", "a load he has demonstrated he owns, and he no longer owns it");
+});
+
+T("E1 / item 5 - a load completed AFTER the failures does not make them retroactively count", function(a){
+  var s = D1BG().concat([SQ(17, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(10, "c", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "a", SETS(125, 5, 125, 5, 125, 5))]);
+  a.eq(CHK(s).trigger, null, "'previously' means previously - best is the max of EARLIER dates only");
+});
+
+T("E1 clause (a) - two failures 69 days apart are not consecutive, whatever sits between them", function(a){
+  /* The two stale squat dates sit in DIFFERENT old weeks on purpose: dropping
+     both into one of D1BG's single-day weeks would make three distinct dates
+     there, take trainingWeeks to 9, and answer with T3's backstop while this
+     test believed it was reading T1. */
+  var s = D1BG().concat([SQ(79, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(72, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.ok(P.trainingWeeks(s, TODAY) < P.DELOAD.backstop,
+    "seeded below T3's nine-week backstop, so a null answer here is T1's and not the backstop's");
+  a.eq(CHK(s).trigger, null, "six weeks off then two hard weeks is detraining, not fatigue");
+  var near = D1BG().concat([SQ(24, "a", SETS(120, 5, 120, 5, 120, 5)),
+                            SQ(17, "b", SETS(120, 2, 120, 2, 120, 2)),
+                            SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.eq(CHK(near).trigger, "T1", "the identical shape 14 days apart still fires - only the gap changed");
+});
+
+T("E1 clause (b) - two adjacent failures that are both 40 days old do not fire today", function(a){
+  var s = D1BG().concat([SQ(60, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(45, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(40, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.ok(P.trainingWeeks(s, TODAY) < P.DELOAD.backstop, "below the backstop, so this is T1's answer");
+  a.eq(CHK(s).trigger, null, "a recommendation must be about the weeks he is in now");
+});
+
+T("E1 clause (c) - the completed load it is measured against must itself be recent", function(a){
+  var s = D1BG().concat([SQ(50, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(8, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.ok(P.trainingWeeks(s, TODAY) < P.DELOAD.backstop, "below the backstop, so this is T1's answer");
+  a.eq(CHK(s).trigger, null, "best never decaying is how a load completed a year ago accuses him today");
+});
+
+T("E1 / 6c - a correction saved beside its original is not the second of two consecutive failures", function(a){
+  /* Two saves on one DATE are one row: complete if ANY entry on it completed
+     the prescription. B-05 is still open, so corrections arrive as extra rows
+     before they arrive as edits. */
+  var s = D1BG().concat([SQ(17, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(10, "b-fixed", SETS(120, 5, 120, 5, 120, 5))]);
+  a.eq(CHK(s).trigger, null, "one day of training, corrected, is not two failures");
+  var both = D1BG().concat([SQ(17, "a", SETS(120, 5, 120, 5, 120, 5)),
+                            SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                            SQ(10, "b2", SETS(120, 2, 120, 2, 120, 1))]);
+  a.eq(CHK(both).trigger, null, "and two failing saves on ONE date are still one failing date");
+});
+
+T("D1 ex5 - two missed sessions then one weaker session: absence is not fatigue", function(a){
+  var s = D1BG().concat([SQ(30, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(2, "b", SETS(120, 2, 120, 2, 120, 2))]);
+  a.eq(CHK(s).trigger, null);
+});
+
+/* ---- Rule E2 in T1 (addendum 7.7 N2 example 3) ---- */
+
+/* A deload window with no CURRENT deload record: state.deload.past holds it,
+   startDate is null, so deloadStatus reports no last-deload date and T1's
+   evidence window is not truncated. That isolates Rule E2's exclusion from the
+   separate "evidence restarts after a deload" behaviour pinned below. */
+function PASTDELOAD(from, to){
+  return STORE({ deload: { startDate: null, endDate: null, trigger: null, declinedAt: null,
+                           declinedDays: null, past: [{ startDate: from, endDate: to, trigger: "T1" }] } });
+}
+
+T("E2 / T1 - a failure logged INSIDE a deload week is not a row: the app may not read it as weakness", function(a){
+  var st = PASTDELOAD(DA(-12), DA(-6));
+  var s = D1BG().concat([SQ(30, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "d", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.ok(P.deloadWindows(st).length === 1, "the window the test claims to have seeded");
+  a.eq(CHK(s, { state: st }).trigger, null,
+    "it told him not to chase numbers that week and may not then score the result");
+  a.eq(CHK(s).trigger, "T1", "the identical rows with no deload recorded ARE two consecutive failures");
+});
+
+T("E2 / T1 - a deload date is skipped ENTIRELY: it neither extends a run nor resets one", function(a){
+  /* He ignores the deload and completes the full prescription inside it. That
+     date is a known non-attempt either way, and it must not clear the run the
+     two real failures either side of it establish. */
+  var st = PASTDELOAD(DA(-12), DA(-6));
+  var s = D1BG().concat([SQ(30, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(17, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(10, "d", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.eq(CHK(s, { state: st }).trigger, "T1", "skipped, not read as a completed date");
+  a.eq(CHK(s).trigger, null, "and with no deload recorded that completed date resets the run");
+});
+
+T("D1 - a FINISHED deload also restarts T1's evidence: failures before it are not counted", function(a){
+  /* Separate mechanism from E2, and worth its own name: deloadCheck reads only
+     dates after the last deload ended. A pair of failures straddling a deload
+     is not a pair. */
+  var s = D1BG().concat([SQ(30, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(17, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  a.eq(CHK(s).trigger, "T1", "without a deload the two failures are consecutive");
+  a.eq(CHK(s, { state: DELOADED(DA(-12), DA(-6)) }).trigger, null,
+    "with one between them the earlier failure is behind the reset");
+});
+
+T("E2 - the three places it deliberately does NOT reach: trainingWeeks, speedLoad, testable", function(a){
+  /* Each exclusion is a ruling, not an oversight, and each has a reason on the
+     record. Losing any of them would be a silent behaviour change. */
+  var s = TFILL(6, MON).concat([TSESS(P.dateAdd(MON, -5), "sp", "d1a", SETS(100, 4))]);
+  var st = DELOADED(P.dateAdd(MON, -7), P.dateAdd(MON, -1));
+  /* 1. TW1: a deload week is a week he trained. */
+  a.eq(P.trainingWeeks(s, TODAY), 6, "the count does not consult the deload state at all");
+  a.eq(P.volumeTier({ dayId: "d5", program: PROG, sessions: s, state: st, todayStr: TODAY }).trainingWeeks, 6,
+    "so a deload week still counts toward week 5's offer");
+  /* 2. SP1: a deload does not lower the weight, so the set is a valid
+        observation of load; excluding it could drop a real number to the
+        no-data fallback, which is the worse error. */
+  var sp = P.speedLoad(s, "d3a", TODAY, "Bent-over or Pendlay row");
+  a.eq(sp.target, 67.5, "the 100x4 inside the deload window still sets R");
+  a.eq(sp.source.date, P.dateAdd(MON, -5), "and it is quoted as the source");
+  /* 3. testable: E2 drops SAMPLES, never the week count that opens ST1. */
+  var r = ST1CALL(TFILL(8, MON), TODAY, KLIFTS, DELOADED(DA(-9), DA(-3)));
+  a.eq(r.testable, true, "eight training weeks is still eight training weeks");
+});
+
+/* ---- T2 and T3 ---- */
+
+T("D1 ex3 / T2 - stalled on two key lifts states the deload AND V1's rollback, in ST1's vocabulary", function(a){
+  var s = TFILL(9, MON);
+  var r = CHK(s, { stallReport: { stalled: ["Row", "DB press"], untested: [], testable: true } });
+  a.eq(r.trigger, "T2");
+  a.deep(r.lifts, ["Row", "DB press"]);
+  a.eq(r.rollback, true, "audit section 8 example 3: both statements are correct and both are made");
+  a.eq(r.text, "No progress on Row and DB press. " + D1_TAIL);
+  a.eq(r.text.indexOf("stalled"), -1,
+    "one app, one vocabulary: ST1 says 'no progress' for the same finding on the same day");
+  a.eq(r.text.indexOf("have both"), -1, "the both/all grammatical branch is deleted");
+  var three = CHK(s, { stallReport: { stalled: ["Row", "DB press", "Squat"], untested: [], testable: true } });
+  a.eq(three.text, "No progress on Row, DB press and Squat. " + D1_TAIL, "no branch, one string");
+  a.ne(CHK(s, { stallReport: { stalled: ["Row"], untested: [], testable: true } }).trigger, "T2",
+    "one stalled lift is not a broad stall");
+});
+
+T("D1 - T2 stays suppressed until ST1's recent block sits ENTIRELY after the last deload", function(a){
+  var s = TFILL(9, MON);
+  var stalled = { stallReport: { stalled: ["Row", "DB press"], untested: [], testable: true } };
+  var fresh = CHK(s, { state: DELOADED(DA(-11), DA(-5)), stallReport: stalled.stallReport });
+  a.ne(fresh.trigger, "T2", "a recent block that is partly deload week would re-fire the day it ended");
+  var old = CHK(s, { state: DELOADED(DA(-40), DA(-30)), stallReport: stalled.stallReport });
+  a.eq(old.trigger, "T2", "once the block clears the deload entirely, T2 runs again");
+});
+
+T("D1 ex4 / T3 - exactly nine training weeks with no deload fires; eight does not", function(a){
+  var nine = TFILL(9, MON), eight = TFILL(8, MON);
+  a.eq(P.trainingWeeks(nine, TODAY), 9, "the seed must be what the test claims");
+  a.eq(P.trainingWeeks(eight, TODAY), 8);
+  a.eq(CHK(eight).trigger, null);
+  var r = CHK(nine);
+  a.eq(r.trigger, "T3");
+  a.eq(r.text, "Nine weeks straight. Take a deload week before something makes you.");
+});
+
+T("D1 / T3 - the clock restarts when a deload finishes", function(a){
+  var s = TFILL(12, MON);
+  a.eq(CHK(s).trigger, "T3", "twelve training weeks, no deload");
+  a.ne(CHK(s, { state: DELOADED(DA(-30), DA(-24)) }).trigger, "T3",
+    "with a deload four weeks ago the backstop counts from there");
+});
+
+T("D1 - declining re-runs the check after the NEXT session, not on the next render", function(a){
+  var s = D1BG().concat([SQ(17, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 3, 120, 2, 120, 2))]);
+  a.eq(CHK(s).trigger, "T1", "it fires first");
+  var declined = P.declineDeload(STORE(), TODAY, s);
+  a.eq(declined.deload.declinedDays, P.trainingDays(s, TODAY).length,
+    "it snapshots the training-DAY count, so the clock cannot defeat it");
+  a.eq(CHK(s, { state: declined }).reason, "declined", "same log, no new session: silent");
+  a.eq(CHK(s, { state: declined }).trigger, null);
+  var after = s.concat([TSESS(DA(1), "new", "d1f", SETS(60, 8))]);
+  a.eq(P.deloadCheck({ sessions: after, todayStr: DA(1), keyLifts: KLIFTS, state: declined,
+                       stallReport: { stalled: [] } }).trigger, "T1",
+    "one new session later it asks again");
+});
+
+T("D1 - deloadStatus: day 1 through 7, then it is over whether or not anything stamped it", function(a){
+  var st = P.startDeload(STORE(), TODAY, "T1");
+  a.eq(P.deloadStatus(st, TODAY).active, true);
+  a.eq(P.deloadStatus(st, TODAY).day, 1);
+  a.eq(P.deloadStatus(st, DA(2)).day, 3);
+  a.eq(P.deloadStatus(st, DA(2)).text, "Deload week, day 3. " + D1_ACTIVE_TAIL);
+  a.eq(P.deloadStatus(st, DA(6)).day, 7, "seven days is the week");
+  var over = P.deloadStatus(st, DA(8));
+  a.eq(over.active, false, "the phone may have been closed all week - the end date is implied");
+  a.eq(over.ended, true);
+  a.eq(over.last, DA(6));
+  a.eq(over.endedLine, "Deload done. Back to full sets at your last working loads.");
+  a.eq(P.deloadStatus(STORE(), TODAY).active, false, "no deload key at all");
+  a.eq(P.deloadStatus(null, TODAY).active, false);
+  a.eq(P.deloadStatus({ deload: { startDate: "nope" } }, TODAY).active, false, "junk is not a deload");
+});
+
+T("D1 - endDeload is the way out, and it is idempotent", function(a){
+  /* Without it a deload renders two set rows for seven days and he has nowhere
+     to put a third set he actually did. */
+  var st = P.startDeload(STORE(), DA(-3), "T1");
+  a.eq(P.deloadStatus(st, TODAY).active, true);
+  var done = P.endDeload(st, TODAY);
+  a.eq(P.deloadStatus(done, TODAY).active, false);
+  a.eq(P.deloadStatus(done, TODAY).last, TODAY);
+  var again = P.endDeload(done, DA(1));
+  a.eq(P.deloadStatus(again, DA(1)).last, TODAY, "a double tap cannot stamp an end over a completed one");
+  a.eq(P.endDeload(STORE(), TODAY).deload, null, "nothing to end is a no-op copy, not a fresh record");
+  a.eq(P.endDeload(null, TODAY), null);
+});
+
+T("D1 - starting a deload keeps the record of the one he actually took", function(a){
+  var first = P.startDeload(STORE(), DA(-30), "T1");
+  var ended = P.endDeload(first, DA(-24));
+  var second = P.startDeload(ended, TODAY, "T3");
+  a.eq(second.deload.startDate, TODAY);
+  a.eq(second.deload.past.length, 1, "the finished week is pushed onto past, never overwritten");
+  a.eq(second.deload.past[0].startDate, DA(-30));
+  a.eq(second.deload.past[0].endDate, DA(-24));
+  var twice = P.startDeload(second, TODAY, "T3");
+  a.eq(twice.deload.past.length, 1, "starting twice on one date does not duplicate the record");
+});
+
+T("D1 / 7.3 - deloadEx: same weights, 2 sets, 2 reps short on POWER only, speed untouched", function(a){
+  var squat = { id: "d2a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" };
+  var before = JSON.stringify(squat);
+  var d = P.deloadEx(squat, true);
+  a.eq(d.s, 2, "three sets to two");
+  a.eq(d.hi, 3, "hi - 2, never below lo");
+  a.eq(d.lo, 3, "lo does not move");
+  a.eq(JSON.stringify(squat), before, "the PROGRAM object is never mutated");
+  a.ok(d !== squat, "a new object");
+  var hyp = P.deloadEx({ id: "d3c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp" }, true);
+  a.eq(hyp.s, 2, "hypertrophy loses a set");
+  a.eq(hyp.hi, 12, "and keeps its range: hi - 2 on an 8-12 slot prescribes 10, which reduces nothing");
+  var speed = { id: "d3a", n: "Row - speed work", s: 6, lo: 3, hi: 3, k: "speed" };
+  a.deep(P.deloadEx(speed, true), speed, "speed work is unchanged - it is already submaximal");
+  a.deep(P.deloadEx(squat, false), squat, "and nothing changes when no deload is active");
+  a.eq(P.deloadEx({ id: "x", s: 2, lo: 6, hi: 10, k: "power" }, true).s, 2, "already at 2 sets stays at 2");
+});
+
+T("D1 - deloadEx stamps dl:1, and a deloaded prescription cannot launder itself clean", function(a){
+  /* Enumerable on purpose, in the shape of cut:1, so the marker survives a
+     shallow copy and a JSON round trip. Without it a deloaded exercise handed
+     to the wrong reader is indistinguishable from a programme exercise that
+     happens to prescribe two sets. */
+  var d = P.deloadEx(EX.squat, true);
+  a.eq(d.dl, 1, "the marker");
+  a.ok(Object.keys(d).indexOf("dl") >= 0, "enumerable, so a copy carries it");
+  a.eq(JSON.parse(JSON.stringify(d)).dl, 1, "and it survives serialization");
+  var copy = {}, k;
+  for (k in d) copy[k] = d[k];
+  a.eq(copy.dl, 1, "a shallow copy cannot drop it");
+  a.eq(EX.squat.dl, undefined, "and the PROGRAM object never gains it");
+});
+
+T("D1 - deloadEx is idempotent: hi cannot be lowered twice", function(a){
+  var once = P.deloadEx(EX.squat, true), twice = P.deloadEx(once, true);
+  a.ok(once === twice, "a deloaded exercise is returned unchanged, not re-deloaded");
+  a.eq(twice.hi, 3);
+  /* The case that would have been silently wrong: a 1-5 slot, where hi - 2
+     twice lands on 1 and the prescription becomes a single. */
+  var wide = { id: "dX", n: "Wide", s: 3, lo: 1, hi: 5, k: "power" };
+  var w1 = P.deloadEx(wide, true), w2 = P.deloadEx(w1, true);
+  a.eq(w1.hi, 3);
+  a.eq(w2.hi, 3, "not 1");
+  a.eq(w2.lo, 1, "and lo never moves");
+});
+
+T("D1 / item 4 - a DELOADED lift in keyLifts is REFUSED by name, not answered off an s=2 ladder", function(a){
+  /* Binding constraint from addendum 7.4: the deloaded ex goes to the card and
+     to verdict, and to nothing else. d1T1 reads lift.s and lift.lo from its
+     caller, so a deloaded lift there shifts the whole evidence ladder. A
+     silent null would be the same class of defect as DL1 itself, so the
+     refusal is named where a test can see it. */
+  var s = D1BG().concat([SQ(17, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "b", SETS(120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 2, 120, 2))]);
+  a.eq(CHK(s).trigger, null, "with PROGRAM's s = 3 those two dates are SHORT, and SHORT breaks the streak");
+  var r = CHK(s, { keyLifts: [P.deloadEx({ id: "d2a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" }, true)] });
+  a.eq(r.trigger, null, "and a deloaded lift can never produce a trigger");
+  a.eq(r.reason, "deloaded-lifts", "it says WHY, so the wiring mistake is visible instead of silent");
+});
+
+T("D1 - cycleLine renders the permanent Train-screen line, and says 'deload' only from week 6", function(a){
+  var wk7 = P.cycleLine({ sessions: TFILL(7, MON), state: STORE({ reintro: { d1: 1, d5: 3 } }),
+                          program: PROG, todayStr: TODAY });
+  a.eq(wk7.text, "Week 7 · full volume phase · 4 of 9 accessories back · last deload: none");
+  a.eq(wk7.trainingWeeks, 7);
+  a.eq(wk7.back, 4);
+  a.eq(wk7.cuts, 9);
+  a.eq(P.cycleLine({ sessions: [], state: STORE(), program: PROG, todayStr: TODAY }).text, "",
+    "no sessions: the first-run copy stands and this adds nothing");
+  a.eq(P.cycleLine({ sessions: [TSESS(DA(-2), 1, "d1f", SETS(60, 8))], state: STORE(), program: PROG, todayStr: TODAY }).text,
+    "Reduced volume until you have logged four weeks of three or more sessions.");
+  a.eq(P.cycleLine({ sessions: TFILL(3, MON), state: STORE(), program: PROG, todayStr: TODAY }).text,
+    "Week 3 of 4 at reduced volume. The cut exercises come back from week 5.");
+  a.eq(P.cycleLine({ sessions: TFILL(5, MON), state: STORE(), program: PROG, todayStr: TODAY }).text,
+    "Week 5 · 0 of 9 accessories back in.");
+  var i, txt;
+  for (i = 1; i <= 5; i++){
+    txt = P.cycleLine({ sessions: TFILL(i, MON), state: STORE(), program: PROG, todayStr: TODAY }).text;
+    a.eq(txt.toLowerCase().indexOf("deload"), -1, "week " + i + " must not contain the word: " + txt);
+  }
+});
+
+T("D1 / B-44 - the cycle line prints its date through dayMon, never Intl", function(a){
+  var st = STORE({ deload: { startDate: DA(-20), endDate: "2026-09-01", trigger: "T1",
+                             declinedAt: null, declinedDays: null, past: [] } });
+  var line = P.cycleLine({ sessions: TFILL(7, MON), state: st, program: PROG, todayStr: TODAY }).text;
+  a.ok(line.indexOf("last deload: 1 Sep") >= 0, "expected '1 Sep' in: " + line);
+  a.eq(line.indexOf("Sept"), -1, "B-44: en-GB short month is 'Sept' on current ICU");
+});
+
+T("D1 DATA LOSS - start, decline and end write ONLY the deload key", function(a){
+  var st = STORE({ sessions: [TSESS(DA(-2), 1, "d1a", SETS(100, 5), "belt on")],
+                   includeCut: true, calChangedAt: "2026-09-02",
+                   reintro: { d1: 1 }, lastReintroDate: { d1: DA(-8) } });
+  var before = JSON.stringify(st);
+  var each = [P.startDeload(st, TODAY, "T1"), P.declineDeload(st, TODAY, []), P.endDeload(st, TODAY)];
+  var i, k, diff;
+  for (i = 0; i < each.length; i++){
+    a.ok(each[i] !== st, "a new object every time");
+    diff = [];
+    for (k in each[i]) if (JSON.stringify(each[i][k]) !== JSON.stringify(st[k])) diff.push(k);
+    a.ok(diff.length === 0 || (diff.length === 1 && diff[0] === "deload"),
+      "only the deload key may differ, got: " + diff.join(","));
+    a.eq(JSON.stringify(each[i].sessions), JSON.stringify(st.sessions), "every set and note byte-identical");
+    a.eq(each[i].includeCut, true);
+    a.eq(each[i].calChangedAt, "2026-09-02");
+    a.deep(each[i].reintro, { d1: 1 });
+  }
+  a.eq(JSON.stringify(st), before, "and the source state is never touched");
+  a.eq(P.startDeload(null, TODAY), null, "null in, null out");
+  a.eq(P.declineDeload(null, TODAY), null);
+});
+
+T("D1 - deloadCheck mutates nothing and never throws a banner on garbage", function(a){
+  var s = D1BG().concat([SQ(17, "a", SETS(120, 5, 120, 5, 120, 5)),
+                         SQ(10, "b", SETS(120, 2, 120, 2, 120, 2)),
+                         SQ(3, "c", SETS(120, 2, 120, 2, 120, 2))]);
+  var before = JSON.stringify(s);
+  CHK(s);
+  a.eq(JSON.stringify(s), before, "DATA LOSS: checking for a deload rewrote the log");
+  a.noThrow(function(){ return P.deloadCheck(); }, "a thrown banner is a spurious recommendation");
+  a.noThrow(function(){ return P.deloadCheck({ sessions: null, keyLifts: [null, {}, { id: "d2a" }] }); });
+  a.noThrow(function(){ return CHK(s, { keyLifts: [{ id: "d2a", n: "Squat" }] }); });
+  a.eq(CHK(s, { keyLifts: [{ id: "d2a", n: "Squat" }] }).trigger, null,
+    "a key lift with no s and no lo cannot be evaluated, so it is silent rather than guessed at");
+});
+
+/* ============================================================ S23 - Rules DL1 and N3
+   The verdict during an active deload week (addendum 7.7 N1) and H1 case 3's
+   split (7.7 N3). Both are wrong-advice defects that only exist because two
+   individually correct decisions met: the deload lowers `hi`, the verdict
+   gates on the deloaded set count, and the result is a LOAD INCREASE handed to
+   a man for doing exactly what the app told him. */
+group("S23 Rule DL1 / N3 / addendum 7.7");
+
+T("DL1 HEADLINE - a deload week never recommends more weight for obeying it", function(a){
+  /* deloadEx makes the squat {s:2, lo:3, hi:3}. He does 100x3, 100x3 - the
+     prescription - and verdictPower case 4 (minRep >= hi) fires
+     `Top of range on all 2 sets. Go to 102.5 kg next session.` in the middle
+     of a deload week. He can act on that with a barbell. */
+  var dl = P.deloadEx(EX.squat, true);
+  a.eq(dl.s, 2); a.eq(dl.lo, 3); a.eq(dl.hi, 3, "the prescription that produces the trap");
+  var v = P.verdict(DCTX(dl, SETS(100, 3, 100, 3), null, "", true));
+  var out = vtext(v);
+  a.eq(out, "Deload week. Stay at 100 kg. Nothing to add until full sets resume.");
+  a.eq(out.indexOf("102.5"), -1, "NO LOAD INCREASE. This is the whole of N1.");
+  a.eq(out.indexOf("Go to"), -1);
+  a.eq(out.indexOf("Top of range"), -1);
+  var without = vtext(P.verdict(DCTX(dl, SETS(100, 3, 100, 3), null, "", false)));
+  a.ok(without.indexOf("102.5") >= 0,
+    "and with the flag off the same sets DO produce the increase - the guard is what stops it: " + without);
+});
+
+T("DL1 ex2 - the B-24 gate outranks DL1: below the deloaded set count there is no verdict", function(a){
+  var dl = P.deloadEx(EX.squat, true);
+  a.eq(P.verdict(DCTX(dl, SETS(100, 3), null, "", true)), null, "one set of two is not a verdict");
+  a.eq(P.verdict(DCTX(dl, [], null, "", true)), null);
+  a.ok(P.verdict(DCTX(dl, SETS(100, 3, 100, 3), null, "", true)) !== null, "two sets is");
+});
+
+T("DL1 ex3 - grinding through a deload does not earn a load increase either", function(a){
+  /* Case 3 ("too light", minRep >= hi + 2 = 5) is suppressed. Doing more than
+     a deload asks is not evidence the load is light, and rewarding it with
+     +5 kg trains him to ignore deloads. */
+  var dl = P.deloadEx(EX.squat, true);
+  var out = vtext(P.verdict(DCTX(dl, SETS(100, 5, 100, 5), null, "", true)));
+  a.eq(out, "Deload week. Stay at 100 kg. Nothing to add until full sets resume.");
+  a.eq(out.indexOf("Too light"), -1);
+  a.eq(out.indexOf("kg next session"), -1);
+});
+
+T("DL1 - a dropped load during a deload is not answered with 'Drop to 95 kg' either", function(a){
+  /* Case 1 would contradict the deload's own instruction: do not reduce the
+     weight, reduce the sets. */
+  var dl = P.deloadEx(EX.squat, true);
+  var out = vtext(P.verdict(DCTX(dl, SETS(100, 2, 100, 2), null, "", true)));
+  a.eq(out, "Deload week. Stay at 100 kg. Nothing to add until full sets resume.");
+  a.eq(out.indexOf("Drop to"), -1);
+  a.eq(out.indexOf("95"), -1);
+});
+
+T("DL1 ex4 / Z2 - a rack chin during a deload says bodyweight, never 0 kg", function(a){
+  var dl = P.deloadEx(EX.rackchin, true);
+  var out = vtext(P.verdict(DCTX(dl, SETS(0, 10, 0, 10), null, "", true)));
+  a.eq(out, "Deload week. Stay at bodyweight. Nothing to add until full sets resume.");
+  a.eq(out.indexOf("0 kg"), -1, "Rule Z2 holds inside DL1 too");
+});
+
+T("DL1 - the hypertrophy branch is short-circuited too: no tonnage comparison mid-deload", function(a){
+  var dl = P.deloadEx(EX.cablerow, true);
+  var prev = PREV(SETS(60, 12, 60, 12, 60, 12));
+  var out = vtext(P.verdict(DCTX(dl, SETS(60, 10, 60, 10), prev, "", true)));
+  a.eq(out, "Deload week. Stay at 60 kg. Nothing to add until full sets resume.");
+  a.eq(out.indexOf("Volume"), -1, "comparing a deliberately reduced block to a full one is not information");
+  a.eq(out.indexOf("%"), -1);
+  a.eq(out.indexOf("Add a rep"), -1);
+});
+
+T("DL1 - speed work is untouched: the deload leaves it unchanged (audit section 8)", function(a){
+  var out = vtext(P.verdict(DCTX(EX.speedrow, SETS(65, 3, 65, 3, 65, 3, 65, 3, 65, 3, 65, 3), null, "", true)));
+  a.eq(out.indexOf("Deload week."), -1, "DL1 does not reach a speed slot: " + out);
+  a.eq(P.deloadEx(EX.speedrow, true).s, 6, "and its set count does not move");
+});
+
+T("DL1 - the deloaded prescription is derived, not trusted: both call shapes agree", function(a){
+  /* The caller may pass the PROGRAM exercise or the deloaded one. They must
+     converge, and hi must not be lowered twice. */
+  var a1 = vtext(P.verdict(DCTX(EX.squat, SETS(100, 3, 100, 3), null, "", true)));
+  var a2 = vtext(P.verdict(DCTX(P.deloadEx(EX.squat, true), SETS(100, 3, 100, 3), null, "", true)));
+  a.eq(a1, a2, "same session, same sentence, whichever object the caller held");
+  a.eq(P.deloadEx(P.deloadEx(EX.squat, true), true).hi, 3, "deloadEx refuses to re-deload its own output");
+  a.eq(P.deloadEx(P.deloadEx(EX.squat, true), true).lo, 3, "and never drives hi below lo");
+});
+
+T("DL1 - a pain note during a deload still suppresses nothing and adds no load", function(a){
+  var dl = P.deloadEx(EX.squat, true);
+  var out = vtext(P.verdict(DCTX(dl, SETS(100, 3, 100, 3), null, "sharp pain in the left hip", true)));
+  a.ok(out.indexOf("Deload week. Stay at 100 kg.") >= 0, "the deload line is what the verdict says: " + out);
+  a.eq(out.indexOf("Go to"), -1, "and no load increase reaches him by any route");
+  a.eq(out.indexOf("102.5"), -1);
+});
+
+T("DL1 - ctx.deload is a Boolean flag, and anything that is not true is not a deload", function(a){
+  var dl = P.deloadEx(EX.squat, true);
+  var sets2 = SETS(100, 3, 100, 3);
+  a.eq(vtext(P.verdict(DCTX(dl, sets2, null, "", false))).indexOf("Deload week"), -1);
+  var c = VCTX(dl, sets2, null, "");
+  a.eq(vtext(P.verdict(c)).indexOf("Deload week"), -1, "an absent flag is not a deload");
+  c.deload = "yes";
+  a.eq(vtext(P.verdict(c)).indexOf("Deload week"), -1, "and neither is a truthy string");
+});
+
+T("N3 - H1 case 3a is unchanged: no previous entry at all is a first-time baseline", function(a){
+  a.eq(vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), null))),
+    "First time logged. This becomes your baseline.");
+  a.eq(vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), PREV([])))),
+    "First time logged. This becomes your baseline.",
+    "an entry that recorded nothing is indistinguishable from no entry");
+});
+
+T("N3 - H1 case 3b: a SHORT previous entry is named as short, not called a first session", function(a){
+  /* This fires the whole week after every deload and after every abandoned
+     session, on an exercise with months of history. The string was false. */
+  var prev = PREV(SETS(60, 10, 60, 10));
+  var out = vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), prev)));
+  a.eq(out, "Last logged session was short. Not comparable. This becomes your baseline.");
+  a.eq(out.indexOf("First time logged"), -1, "he has logged it before and the app knows it");
+});
+
+T("N3 - the week after a deload: a 2-set entry against a restored s of 3 is 3b", function(a){
+  var deloadEntry = PREV(SETS(100, 3, 100, 3));
+  var out = vtext(P.verdict(VCTX(EX.chinhyp, SETS(0, 10, 0, 10, 0, 10), PREV(SETS(0, 10, 0, 10)))));
+  a.eq(out, "Last logged session was short. Not comparable. This becomes your baseline.",
+    "and it holds at zero load too, where Z3 would otherwise compare reps");
+  a.eq(vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), deloadEntry))),
+    "Last logged session was short. Not comparable. This becomes your baseline.");
+});
+
+T("N3 / DL1 - the rule tags name the branch that fired: H1.3a, H1.3b, DL1", function(a){
+  /* The tag is a diagnostic, never copy - vtext() skips it deliberately - but
+     it is how a test pins CASE SELECTION separately from wording, and H1.3
+     split into two cases in the addendum. */
+  a.eq(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), null)).rule, "H1.3a");
+  a.eq(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), PREV([]))).rule, "H1.3a",
+    "an entry that recorded nothing routes to 3a: the app may not claim 'last session was short' off it");
+  a.eq(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), PREV(SETS(60, 10, 60, 10)))).rule, "H1.3b");
+  a.eq(P.verdict(DCTX(P.deloadEx(EX.squat, true), SETS(100, 3, 100, 3), null, "", true)).rule, "DL1");
+  a.eq(vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10), PREV([])))).indexOf("was short"), -1,
+    "and the copy follows the tag");
+});
+
+T("N3 - the boundary: a full previous entry still runs the comparison", function(a){
+  var out = vtext(P.verdict(VCTX(EX.cablerow, SETS(60, 10, 60, 10, 60, 10),
+                                 PREV(SETS(60, 10, 60, 10, 60, 10)))));
+  a.eq(out.indexOf("First time logged"), -1);
+  a.eq(out.indexOf("was short"), -1);
+  a.ok(out.indexOf("Volume") >= 0, "three sets against three sets is a comparison: " + out);
+});
+
+/* ============================================================ S24 - the five engines, crosswise
+   Purity, storage, the new lastRollback key, and the two copy hazards that
+   cut across every rule. */
+group("S24 W7/W9/W12/W14/W19 crosswise");
+
+/* One call of every engine, on one seed, so the crosswise tests below all read
+   the same surface. */
+function ENGINES(){
+  var sessions = TFILL(7, MON).concat([
+    TSESS(DA(-20), "p1", "d1a", SETS(100, 5, 100, 5, 100, 5)),
+    TSESS(DA(-38), "p2", "d1a", SETS(100, 5, 100, 5, 100, 5)),
+    TSESS(DA(-41), "p3", "d1a", SETS(100, 5, 100, 5, 100, 5)),
+    TSESS(DA(-17), "p4", "d1a", SETS(100, 5, 100, 5, 100, 5)),
+    TSESS(DA(-2), "p5", "d2a", SETS(140, 4, 140, 4, 140, 4))
+  ]);
+  var entries = RATE(0.25);
+  var state = STORE({ reintro: { d1: 1 }, lastReintroDate: { d1: DA(-9) }, calChangedAt: DA(-3) });
+  return {
+    sessions: sessions, entries: entries, state: state,
+    out: [
+      P.calorieAdvice(entries, TODAY, state.calChangedAt),
+      P.bwWindows(entries, TODAY),
+      ST1CALL(sessions, TODAY, KLIFTS, state),
+      P.speedLoad(sessions, "d3a", TODAY, "Bent-over or Pendlay row"),
+      P.speedLoad(sessions, "d4a", TODAY, "Squat"),
+      P.painWindow(sessions, TODAY, 7, PROG),
+      P.volumeTier({ dayId: "d5", program: PROG, sessions: sessions, state: state, todayStr: TODAY,
+                     stallReport: { stalled: [], untested: [], testable: true } }),
+      P.deloadCheck({ sessions: sessions, todayStr: TODAY, keyLifts: KLIFTS, state: state,
+                      stallReport: { stalled: [], untested: [], testable: true } }),
+      P.cycleLine({ sessions: sessions, state: state, program: PROG, todayStr: TODAY }),
+      P.rollbackNotice(state, sessions, TODAY)
+    ]
+  };
+}
+
+T("W7/W9/W12/W14/W19 - every engine is callable as PHAT.<fn> from file:// with no DOM (B-20)", function(a){
+  var need = ["bwWindows", "calorieAdvice", "calCooldown", "setCalChanged", "clearCalChanged",
+              "stallReport", "e1rmByDate", "liftDays", "workingLoadStrict",
+              "speedLoad", "speedTooHeavy", "speedFlagText", "painWindow",
+              "volumeTier", "acceptReintro", "declineReintro", "rollbackReintro", "rollbackNotice",
+              "calendarWeeks", "deloadCheck", "deloadStatus", "deloadEx", "startDeload",
+              "declineDeload", "endDeload", "cycleLine"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none",
+    "a rule that needs a browser is a W5/B-20 failure, not something to work around in the harness");
+});
+
+T("W7/W9/W12/W14/W19 - the five engines touch neither localStorage nor the window.storage bridge", function(a){
+  var ls;
+  try { ls = window.localStorage; } catch (e) { ls = null; }
+  a.ok(!!ls, "localStorage unavailable, so the spy cannot be installed - re-run in a normal window");
+  var calls = 0, realSet = ls.setItem, realGet = ls.getItem, realDel = ls.removeItem;
+  ls.setItem = function(){ calls++; return realSet.apply(ls, arguments); };
+  ls.getItem = function(){ calls++; return realGet.apply(ls, arguments); };
+  ls.removeItem = function(){ calls++; return realDel.apply(ls, arguments); };
+  var stashed = window.storage, storageHits = 0, stashedS = window.S;
+  window.storage = { get: function(){ storageHits++; }, set: function(){ storageHits++; } };
+  try {
+    delete window.S;                       /* anything still reading S must throw, not read a stale one */
+    ENGINES();
+    P.setCalChanged(STORE(), TODAY); P.clearCalChanged(STORE());
+    P.acceptReintro(STORE(), "d5", TODAY, 3); P.declineReintro(STORE(), "d5", TODAY);
+    P.rollbackReintro(STORE({ reintro: { d1: 1 } }), PROG, TODAY, []);
+    P.startDeload(STORE(), TODAY, "T1"); P.declineDeload(STORE(), TODAY, []); P.endDeload(STORE(), TODAY);
+  } finally {
+    ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel;
+    if (stashed === undefined) { try { delete window.storage; } catch (e) { window.storage = undefined; } }
+    else window.storage = stashed;
+    if (stashedS !== undefined) window.S = stashedS;
+  }
+  a.eq(calls, 0, "an advice engine read or wrote localStorage");
+  a.eq(storageHits, 0, "an advice engine reached the window.storage bridge");
+});
+
+T("W7/W9/W12/W14/W19 - deep-equal in, deep-equal out: no engine rewrites its arguments", function(a){
+  var e = ENGINES();
+  var sBefore = clone(e.sessions), bBefore = clone(e.entries), stBefore = clone(e.state);
+  ENGINES();
+  a.deep(e.sessions, sBefore, "DATA LOSS: an engine rewrote a logged session");
+  a.deep(e.entries, bBefore, "DATA LOSS: an engine rewrote a bodyweight row");
+  a.deep(e.state, stBefore, "DATA LOSS: an engine rewrote the log store");
+  /* and the serialized log is byte-identical, which is what actually goes to disk */
+  a.eq(JSON.stringify(e.state), JSON.stringify(stBefore));
+  a.eq(JSON.stringify(e.sessions), JSON.stringify(sBefore));
+});
+
+T("W14 - lastRollback is a NEW top-level key and is deliberately NOT in the migration's V3 set", function(a){
+  /* If it joined V3_KEYS every store would gain a null lastRollback on boot,
+     and the "exactly these keys are added" migration test would be wrong
+     rather than the code. Absence must read as null everywhere instead. */
+  var fresh = mig(seedLog(), seedBw());
+  a.eq(Object.prototype.hasOwnProperty.call(fresh.log, "lastRollback"), false,
+    "migration must not invent a rollback that never happened");
+  a.eq(P.rollbackNotice(fresh.log, [], TODAY).show, false, "and every reader treats absence as null");
+  a.eq(P.volumeTier({ dayId: "d1", program: PROG, sessions: TFILL(5, MON), state: fresh.log, todayStr: TODAY })
+        .offer !== null, true, "a store without the key still works normally");
+  /* a store that HAS one loads unchanged and keeps it */
+  var carried = seedLog();
+  carried.lastRollback = { exId: "d1c", name: "Rack chin", date: DA(-3), days: 4, items: [] };
+  var out = mig(carried, seedBw());
+  a.deep(out.log.lastRollback, carried.lastRollback, "an existing rollback record survives migration intact");
+  a.eq(P.rollbackNotice(out.log, [], TODAY).text, "Progress stalled. Pulling Rack chin back out for now.");
+});
+
+T("W14 - rollbackReintro writes lastRollback and nothing else beyond the counters", function(a){
+  var st = STORE({ sessions: [TSESS(DA(-2), 1, "d1a", SETS(100, 5), "belt on")], includeCut: true,
+                   reintro: { d1: 1 }, calChangedAt: DA(-3) });
+  var before = JSON.stringify(st);
+  var out = P.rollbackReintro(st, PROG, TODAY, []);
+  var diff = [], k;
+  for (k in out) if (JSON.stringify(out[k]) !== JSON.stringify(st[k])) diff.push(k);
+  a.deep(diff.sort(), ["lastRollback", "reintro"], "the counters and the record of what was pulled");
+  a.eq(JSON.stringify(st), before, "the source is untouched");
+  a.eq(JSON.stringify(out.sessions), JSON.stringify(st.sessions), "sessions byte-identical");
+  a.eq(out.calChangedAt, DA(-3), "and no other rule's key is disturbed");
+  a.eq(out.includeCut, true);
+});
+
+T("B-44 - no engine string reaches for Intl month names: Sep, never Sept", function(a){
+  var joined = strOf(ENGINES().out) + "\n" +
+    strOf(P.cycleLine({ sessions: TFILL(7, MON),
+                        state: STORE({ deload: { startDate: DA(-20), endDate: "2026-09-01",
+                                                 trigger: "T1", past: [] } }),
+                        program: PROG, todayStr: TODAY }));
+  a.eq(joined.indexOf("Sept"), -1, "one app, one month table (B-44): " + joined);
+  a.eq(P.dayMon("2026-09-01"), "1 Sep");
+  a.eq(P.dayMon("2026-07-04"), "4 Jul");
+  a.eq(P.dayMon("2028-02-29"), "29 Feb", "leap day");
+  a.eq(P.dayMon("nope"), "", "junk gives nothing, never today's date");
+});
+
+T("contract - no engine prints a raw e1RM: e1rm(100,1) is 103.3 and no user ever sees it", function(a){
+  a.ok(Math.abs(P.e1rm(100, 1) - 103.3333) < 0.001, "Epley at one rep is not 100 - audit section 4 has no r=1 case");
+  var joined = strOf(ENGINES().out);
+  a.eq(joined.indexOf("103.3"), -1, "an estimated 1RM off a logged single reads as a bug to the lifter");
+  a.eq(joined.indexOf("116.6"), -1);
+  a.eq(joined.indexOf("116.7"), -1);
+  a.eq(joined.indexOf("1RM"), -1);
+  a.eq(joined.indexOf("e1rm"), -1);
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -2862,6 +4803,34 @@ contract("<b>Copy punctuation is the <code>ux-designer</code>'s, not the coach's
   "S17 asserts the numbers and the separator strictly and allows em dash / en dash / hyphen, because a " +
   "dash is a typography decision and a wrong number is a coaching one. Same for the <code>8&ndash;12</code> " +
   "range token.");
+contract("<b><code>volumeTier</code> and <code>deloadCheck</code> take a CONTEXT OBJECT, not WO-003's " +
+  "positional signature.</b> The work order fixes " +
+  "<code>volumeTier(dayId, sessions, state, todayStr, stallReport, deloadState)</code> and " +
+  "<code>deloadCheck(sessions, todayStr, stallReport, deloadState)</code>; neither can satisfy its own " +
+  "acceptance criteria - <code>exerciseIds</code> needs the day's exercises, <code>statusLine</code> " +
+  "needs every day's cut count, the offer needs a NAME, the data-loss criterion needs the current " +
+  "draft, and T1 needs each key lift's <code>s</code> and <code>lo</code>. <code>logic.js</code> takes " +
+  "one object, per WO-003 &sect;Decision 3. The suite follows the code and says so here rather than " +
+  "quietly. <b>The PM should restate the two signatures in W14 and W19.</b>");
+contract("<b><code>stallReport</code>'s fourth argument is the log store, and Rule E2 needs it.</b> " +
+  "W9 fixes the signature as <code>stallReport(sessions, todayStr, keyLifts)</code>; E2 (addendum " +
+  "&sect;7.7 N2) then requires ST1 to know the deload windows, and nothing states how they arrive. " +
+  "<code>logic.js</code> takes <code>state</code> as a fourth argument. Every ST1 test here goes " +
+  "through one adapter, <code>ST1CALL</code>, so a different choice is a one-line change in the suite " +
+  "rather than thirty.");
+contract("<b>A finished deload restarts T1's evidence window, separately from E2.</b> " +
+  "<code>deloadCheck</code> passes <code>deloadStatus().last</code> as <code>since</code>, so dates on " +
+  "or before the last deload's end are not rows at all - which means E2's exclusion inside T1 is only " +
+  "reachable when the window sits in <code>state.deload.past</code> with no current record. Both are " +
+  "defensible and both are pinned, in <em>a FINISHED deload also restarts T1's evidence</em> and in " +
+  "the two <em>E2 / T1</em> tests. <b>Worth one line from <code>strength-coach</code></b> confirming " +
+  "that a failure before a deload and one after it are deliberately not a pair.");
+contract("<b><code>deloadEx</code> stamps <code>dl:1</code> on its output.</b> Not named in the " +
+  "coach's &sect;7; it is backend's own device, in the shape of <code>cut:1</code>, so a deloaded " +
+  "prescription survives a shallow copy and a JSON round trip and cannot pass itself off as a " +
+  "programme exercise. It is what lets <code>deloadCheck</code> answer " +
+  "<code>reason: \"deloaded-lifts\"</code> instead of silently evaluating T1 on an " +
+  "<code>s = 2</code> ladder. Pinned in two tests; if the marker is ever renamed, both fail loudly.");
 contract("<b>bw argument.</b> Assumed to be the whole <code>phat:v1:bw</code> store object " +
   "<code>{entries:[...]}</code>, matching <code>load(BWK)</code>. A bare array is also accepted by the helper.");
 contract("<b>Reason for <code>-5</code> and <code>1e3</code>.</b> Decision 4 does not say whether a parseable " +
@@ -2968,9 +4937,20 @@ contract("<b>Timezone tests are deterministic, and here is the one thing that wo
     "<code>workingLoad</code>), <code>lastFor</code> and <code>verdictFor</code> out too, so <b>every rule in " +
     "<code>docs/coach-audit.md</code> that this batch has implemented is asserted here over " +
     "<code>file://</code> with no DOM</b> - sections S13 to S17. The END-STATE test in S0 names anything still " +
-    "missing. The rules not yet built (W7 bodyweight windows, W9 stall, W12 speed, W14 volume tier, W19 " +
-    "deload) have no tests here on purpose: their signatures are not fixed, and a test written against a " +
-    "guessed signature is a test the engineer deletes.</p>" +
+    "missing. <b>W7, W9, W12, W14 and W19 landed on 2026-09-10 and are covered in S18 to S24</b>, together " +
+    "with the addendum &sect;7 rulings (E1, E2, DL1, N3) - all of them pure, all callable from " +
+    "<code>file://</code>, none of them needing a browser.</p>" +
+    "<p><b>Where the engine coverage stops: the render boundary.</b> Every rule below is asserted as a " +
+    "STRING and a shape coming out of <code>PHAT</code>. Whether that string reaches the screen - the " +
+    "Weight tab (W8), the Trend tab (W10), the speed card (W13), the volume-tier UI (W15), the pain notice " +
+    "(W17) and the deload banner and cycle line (W20) - is not built yet and is not asserted here. Three " +
+    "specific joins are worth naming now, because each is a place a correct engine can still produce wrong " +
+    "advice on screen: (1) the caller must pass <code>deload:true</code> into <code>PHAT.verdict</code> or " +
+    "Rule DL1 never fires and a deload week recommends more weight; (2) the caller must pass PROGRAM's key " +
+    "lifts to <code>deloadCheck</code>, never the deloaded ones - the engine now refuses them by name, and " +
+    "the refusal is silent to the user; (3) <code>calorieAdvice</code>'s acknowledgement control renders " +
+    "exactly when <code>tone === \"act\"</code>, and a UI that renders it elsewhere gives him a way to " +
+    "silence advice he was never given. All three are W22 verification items.</p>" +
     "<p><b>What this page still cannot assert, and how it was covered in the W8 verification pass.</b> " +
     "Everything below needs the DOM, the async storage adapter or the browser lifecycle. It was verified on " +
     "2026-09-09 by driving <code>index.html</code> in a same-origin iframe from a throwaway probe harness served " +

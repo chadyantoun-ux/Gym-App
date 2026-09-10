@@ -468,3 +468,31 @@ from T1, falls through, and the suite asserts against T3 while believing it is r
 dates' spacing interacts with that seed. Backend hit exactly this and read the red correctly as a
 fixture precondition rather than a defect.
 **Rules out:** debugging a T1 red without first checking `trainingWeeks` against `DELOAD.backstop`.
+
+### 2026-09-10 — WO-003's signatures for three engines could not be met as written
+`volumeTier` and `deloadCheck` take a context object because the work order's positional lists cannot
+satisfy their own acceptance criteria — `volumeTier` needs the day's exercises, every day's cut count,
+the offered exercise's name and the current draft; `deloadCheck` cannot evaluate T1 without each key
+lift's `s` and `lo`. And `stallReport` takes a fourth argument, `state`, which Rule E2 requires and
+which **no document specifies**.
+The code is right and the work order is stale. Every ST1 call in the suite goes through one adapter
+(`ST1CALL`) so a different choice is a one-line edit.
+**To apply:** PM restates W9/W14/W19's signatures rather than anyone "fixing" the code back.
+**Rules out:** treating a work-order signature as authoritative over an implementation that met the
+criteria the signature could not.
+
+### 2026-09-10 — A survived mutant that was not a coverage hole
+QA injected 13 regressions; 12 died. The survivor — removing `d1T1`'s `!r.evaluable` guard — changed
+nothing because a SHORT row always has `failLoad === null` and the very next branch resets the run
+identically. QA proved the two branches behaviourally equivalent, confirmed the *semantic* revert
+(moving the null check above row creation, i.e. the pre-ruling code) IS caught by the E1 headline test,
+and reported it rather than adding a test that would have pinned dead code.
+**Worth keeping as a standard:** a surviving mutant is a question, not a verdict. Diagnose it before
+adding a test to make it go away — the fix for an equivalent mutant is a note, not an assertion.
+
+### 2026-09-10 — Test-fixture hazard in the deload suite
+Seeding a stale date into the D1 background can complete a third distinct date in an old week, push
+`trainingWeeks` to 9, and answer **T3** while the test believes it is reading T1. It bit both QA and
+backend once each. The background now uses one-day weeks for the old range, and every T1 recency test
+asserts `trainingWeeks < DELOAD.backstop` before asserting `null`.
+**Rules out:** debugging a T1 red without first checking the seed against T3's backstop.
