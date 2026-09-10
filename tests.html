@@ -72,7 +72,13 @@ recommends more weight) and <b>N3</b> (a short previous entry is not a first ses
 prefilled into an 8&ndash;12 slot), the deliberate strict key with no tolerance band, <em>a deload is not
 an epoch</em> in both directions, the schema-5 migration and the deliberate asymmetry between the v4 and
 v5 version gates, plus V1a, <code>keyLiftDisclosure</code>, distinct-date session counting, SP1's
-<code>source-not-heavy</code> fallback, X1's extra-set ordinal and S1a's 21-day restatement.</p>
+<code>source-not-heavy</code> fallback, X1's extra-set ordinal and S1a's 21-day restatement.
+It also carries the <b>&sect;9.11 role gate</b> (an unrecognised <code>k</code> fires no verdict, for
+any role, deloaded or not &mdash; ten <code>k</code> shapes &times; two deload states) and the
+<b>row-number / completed-set-ordinal divergence</b> in <code>extraSets</code>' <code>Set N</code>
+copy, written with both readings named. Three tests in S26 that pinned wrong behaviour on purpose
+were inverted when <code>fae1fd7</code> fixed them; each keeps the account of what it used to pin and
+asserts the old string is gone, because a fix is only provable against the thing it fixed.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -6405,39 +6411,88 @@ T("W5 / PE1 - kWord: all four strings are approved as written (section 9.11 ruli
   a.eq(kOnly.prefill, false, "a role change is still an epoch change");
 });
 
-T("W5 / section 9.11 - an unrecognised k still fires a hypertrophy verdict (OBSERVED; the ruling says it must not)", function(a){
-  /* SECTION 9.11 RULING 2's RIDER, ADDED AFTER W5 WAS BUILT:
+T("W5 / section 9.11 - an unrecognised k fires NO verdict (the role gate; was red, fixed in fae1fd7)", function(a){
+  /* SECTION 9.11 RULING 2's RIDER:
        "if k is unrecognised, no verdict may fire for that exercise. An app
         that cannot tell which rule applies must not run one."
-     That is not true today. verdict() returns null for k:"speed", routes
-     k:"power" to P1, and falls THROUGH to H1 for everything else - so a
-     corrupt or imported k:"tempo" gets a hypertrophy tonnage comparison it was
-     never assessed under, and a MISSING k gets one too.
 
-     Unreachable from the editor (C-7 constrains k to PLAN_KINDS), so it only
-     appears on corrupt or imported data - which, as the coach says, is exactly
-     when guessing is worst. WO-002's importer is the path that makes it real.
+     WHAT THIS TEST USED TO PIN, kept because a fix is only provable against
+     the thing it fixed: verdict() returned null for k:"speed", routed
+     k:"power" to P1, and fell THROUGH to H1 for everything else, so a corrupt
+     or imported k:"tempo" got H1.4d - a tonnage comparison on an exercise
+     nobody had classified - and a MISSING k got H1.3a. The two assertions
+     below were `ne(..., null)` and each was followed by an assertion naming
+     the H1 branch that fired. Both branch assertions are DELETED, not
+     inverted: with the gate in place there is no object to read `.rule` from,
+     and keeping them would throw a TypeError rather than fail an assertion.
 
-     PINNED AS OBSERVED, NOT AS CORRECT. Backend owns the fix: gate on
-     PLAN_KINDS and return null. When it lands, invert the two `ne` assertions
-     and keep this comment. It is not carried as a red because the ruling
-     post-dates the build - it is an open work item, not a regression in
-     delivered scope - but it IS a defect and it is reported as one. */
+     The gate is `PLAN_KINDS.indexOf(ctx.ex.k) < 0 -> null`, placed ABOVE the
+     deload branch on purpose: a deload is an instruction about a prescription
+     whose role is known, so DL1 must not fire on an unclassified exercise
+     either. That half is asserted in the k-matrix test below. */
   a.deep(P.PLAN_KINDS, ["power", "hyp", "speed"], "the three the validator allows");
   var unknown = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "bb" },
                             sets: SETS(60, 10, 60, 10, 60, 10),
                             prev: PREV(SETS(60, 9, 60, 9, 60, 9)) });
-  a.ne(unknown, null, "OBSERVED: a verdict fires. Section 9.11 says it must be null.");
-  a.eq(unknown.rule, "H1.4d", "and it is H1's tonnage comparison, on an exercise nobody classified");
+  a.eq(unknown, null, "k:\"tempo\" used to return H1.4d - a tonnage comparison it was never assessed under");
   var missing = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
                             sets: SETS(60, 10, 60, 10, 60, 10) });
-  a.ne(missing, null, "OBSERVED: an ABSENT k does the same");
-  a.eq(missing.rule, "H1.3a");
-  /* The two that are right today, so the fix cannot break them. */
+  a.eq(missing, null, "an ABSENT k used to return H1.3a");
+  /* The two that were right before the gate, so the fix cannot have broken them. */
   a.eq(P.verdict({ ex: { id: "x", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb" },
                    sets: SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3) }), null,
     "speed is silent by design - speedLoad owns that card");
   a.eq(P.verdict({ ex: PE_ROW, sets: SETS(100, 5, 100, 5, 100, 5) }).rule, "P1.4");
+  a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb" },
+                   sets: SETS(60, 10, 60, 10, 60, 10),
+                   prev: PREV(SETS(60, 9, 60, 9, 60, 9)) }).rule, "H1.4d",
+    "and the branch the unrecognised k used to steal is still reachable by the k that owns it");
+});
+
+T("W5 / section 9.11 - the role gate holds for every shape of k, deloaded or not", function(a){
+  /* THE GATE IS STRICT, UNTRIMMED AND CASE-SENSITIVE - deliberately, because
+     it is `PLAN_KINDS.indexOf(ctx.ex.k)`, the same test validatePlan applies
+     at creation. "HYP" and " hyp " are not hyp. If either were ever coerced
+     here, a store could hold a `k` the validator refuses and the rules would
+     still run on it, which is the whole failure this gate closes.
+
+     EACH CASE IS RUN TWICE, plain and with deload:true. The gate sits above
+     the deload branch, so DL1 - the one rule that fires on ANY role - must be
+     unreachable too. Run the gate below `var dl = ...` instead and every row
+     of the deload column comes back "DL1". */
+  var shapes = [
+    ["empty string",  ""],
+    ["upper case",    "HYP"],
+    ["padded",        " hyp "],
+    ["null",          null],
+    ["number",        7],
+    ["object",        {}],
+    ["array",         ["hyp"]],
+    ["boolean",       true],
+    ["near miss",     "hypertrophy"],
+    ["near miss 2",   "Power"]
+  ];
+  var i, ex, plain, dl;
+  for (i = 0; i < shapes.length; i++) {
+    ex = { id: "x", s: 3, lo: 8, hi: 12, implement: "bb", k: shapes[i][1] };
+    plain = P.verdict({ ex: ex, sets: SETS(60, 10, 60, 10, 60, 10),
+                        prev: PREV(SETS(60, 9, 60, 9, 60, 9)) });
+    dl = P.verdict({ ex: ex, sets: SETS(60, 10, 60, 10, 60, 10),
+                     prev: PREV(SETS(60, 9, 60, 9, 60, 9)), deload: true });
+    a.eq(plain, null, "k as " + shapes[i][0] + " (" + show(shapes[i][1]) + ") must fire no verdict");
+    a.eq(dl, null, "k as " + shapes[i][0] + " must fire no verdict UNDER A DELOAD either - " +
+      "a deload is an instruction about a prescription whose role is known");
+  }
+  /* k ABSENT entirely, both ways round. */
+  a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
+                   sets: SETS(60, 10, 60, 10, 60, 10) }), null);
+  a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, implement: "bb" },
+                   sets: SETS(60, 10, 60, 10, 60, 10), deload: true }), null);
+  /* And DL1 is genuinely alive for a k the gate allows, so the rows above are
+     the gate refusing and not DL1 being broken. */
+  a.eq(P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb" },
+                   sets: SETS(60, 10, 60, 10, 60, 10), deload: true }).rule, "DL1",
+    "the control: a recognised k under a deload still reaches DL1");
 });
 
 T("W5 / section 9.11 - the PER-ROW ghost is DELETED across an epoch, not captioned", function(a){
@@ -6739,23 +6794,56 @@ T("W5 / PE1 - a v3 store's two notes are in pass order, and each names its own v
   a.ok(n[1].indexOf("Schema 5:") === 0, "v5 second: " + JSON.stringify(n));
 });
 
-T("W5 / PE1 - the v3 pass labels its own note with SCHEMA_VERSION, not with its gate (OBSERVED, P2)", function(a){
-  /* PINNED AS A DEFECT, NOT AS CORRECT. On a v1 store the schema-3 pass reports
+T("W5 / PE1 - the v3 pass labels its note with its own gate, not SCHEMA_VERSION (was red, fixed in fae1fd7)", function(a){
+  /* WHAT THIS USED TO PIN: on a v1 store the schema-3 pass reported
        "Schema 5: added reintro, lastReintroDate, calChangedAt, deload."
      Those four keys are schema THREE's. v4 and v5 each interpolate their own
-     gate constant (V_PLAN, V_RX) and read correctly; the v3 pass interpolates
-     SCHEMA_VERSION and has been mislabelling itself since the 3 -> 4 bump.
+     gate constant (V_PLAN, V_RX) and read correctly; the v3 pass interpolated
+     SCHEMA_VERSION and had been mislabelling itself since the 3 -> 4 bump.
+     No data was ever at risk - it is a developer-facing note - but
+     decisions.md rules that a migration's account of itself IS its evidence,
+     and the account named a version that added none of those keys.
 
-     No data is at risk - it is a developer-facing note - but decisions.md
-     rules that the account IS the evidence for a migration, and this account
-     names the wrong version. One-token fix, backend's, out of scope for W5,
-     so it is pinned here rather than quietly corrected. */
+     Fixed by interpolating V_STATEKEYS. Asserted against the CONSTANT below
+     as well as the literal, so the next bump cannot silently reintroduce it:
+     if the note ever stops tracking its gate, both halves go red. */
   var n = logNotes(P.migrateStore(PESTORE(1), null));
   var added = null, i;
   for (i = 0; i < n.length; i++) if (n[i].indexOf("added reintro") >= 0) added = n[i];
   a.ok(added !== null, "the v3 pass must still report the four keys it adds: " + JSON.stringify(n));
-  a.eq(added, "Schema 5: added reintro, lastReintroDate, calChangedAt, deload. No existing value was changed.",
-    "observed today. The '5' is wrong - these are schema 3's keys. Fix it to 'Schema 3:' and update this line.");
+  a.eq(added, "Schema 3: added reintro, lastReintroDate, calChangedAt, deload. No existing value was changed.",
+    "the note names the version that added these four keys");
+  a.eq(added.indexOf("Schema " + P.SCHEMA_VERSION + ":"), -1,
+    "and it must never again name the CURRENT version - that is the bug, restated so a bump re-detects it");
+});
+
+T("W5 / PE1 - a v1 store's log notes: three, in pass order, and logChanged is untouched", function(a){
+  /* The migration-note fix changed one token inside one string. This pins the
+     surrounding facts it could have disturbed: how many notes a v1 store
+     produces, in what order, and that the write flag is unaffected.
+
+     NOTE FOR THE WORK ORDER, which said "two notes": a v1 store produces
+     THREE log notes, not two. The first is the dateBasis backfill (v1 is the
+     only store shape with no dateBasis), then the schema-3 pass, then the
+     schema-5 pass. The schema-4 note is absent, and correctly so under the
+     un-fixed v4 idiom already pinned in the asymmetry test above: an earlier
+     pass has already stamped the version, so v4Bumped reads false. "Two" is
+     right for the SCHEMA notes and wrong for the note count. Both readings
+     are asserted separately below so neither can be lost. */
+  var r = P.migrateStore(PESTORE(1), null);
+  var n = logNotes(r);
+  a.eq(n.length, 3, "all log notes: " + JSON.stringify(n));
+  a.ok(n[0].indexOf("UTC-dated") >= 0, "1st: the dateBasis backfill, before any schema pass: " + JSON.stringify(n[0]));
+  a.ok(n[1].indexOf("Schema 3:") === 0, "2nd: the v3 pass: " + JSON.stringify(n[1]));
+  a.ok(n[2].indexOf("Schema 5:") === 0, "3rd: the v5 pass: " + JSON.stringify(n[2]));
+  var schemaNotes = n.filter(function(m){ return m.indexOf("Schema ") === 0; });
+  a.eq(schemaNotes.length, 2, "TWO schema notes - 3 and 5; 4's is swallowed by the un-fixed v4 idiom");
+  a.eq(r.logChanged, true, "the log is still rewritten, and the note fix cost no byte and no write");
+  a.eq(r.changed, true);
+  a.eq(r.bwChanged, false, "and bw was not passed, so nothing there moved");
+  /* Ordering is pass order, not sort order: the numbers happen to ascend, so
+     assert the sequence is what the passes ran in and not an artefact. */
+  a.eq(n.indexOf(n[1]) < n.indexOf(n[2]), true, "3 before 5");
 });
 
 /* -------------------------------------------- section 9.4: loggedSessions */
@@ -6971,34 +7059,232 @@ T("W5 / X1 - the EXTRA badge keys off completed-set ORDINAL, never the row index
   a.eq(P.extraSets(SETS(100, 5, 100, 5, 100, 5, 90, 5), { s: 3, k: "power" }).idle, false,
     "on a power slot the app does not suggest a fourth hard set");
   a.eq(P.extraSets(SETS(60, 10), ex).idle, true, "on hyp it does");
+  /* OPEN QUESTION, PINNED AS OBSERVED, NOT RULED ON HERE.
+     Since fae1fd7 the n === 1 head clause is SHARED across all three roles,
+     so speed inherits "Set 7 is past the prescription." where this line used
+     to read "1 set past the prescription." Backend's reason for sharing it:
+     two different sentences for the same fact, split by role, is the "one
+     concept, two names" defect the coach rejected twice.
+
+     THE QUESTION PUT TO strength-coach: should the ordinal head clause be
+     POWER-ONLY? The concreteness argument in section 9.11 was made about the
+     power line, where "the verdict reads the first 3" needs a specific row to
+     contrast with. On speed the tail is about fatigue, not about the verdict,
+     so naming a row may be precision nobody asked for.
+
+     This assertion pins WHAT THE APP SAYS TODAY so the ruling, whichever way
+     it goes, lands as a deliberate edit here. Do not "correct" it to the
+     counted form without the ruling. */
   a.eq(P.extraSets(SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3), { s: 6, k: "speed" }).line,
-    "1 set past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.");
+    "Set 7 is past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.",
+    "OBSERVED: the ordinal head is shared across roles. Coach ruling outstanding on power-only.");
+  a.eq(P.extraSets(SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3), { s: 6, k: "speed" }).line,
+    "2 sets past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.",
+    "the plural speed form is X1's counted line and is not in question either way");
   /* And none of it touches the verdict, which truncates on both sides anyway. */
   a.eq(P.verdict({ ex: { id: "d3c", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable" },
                    sets: SETS(60, 10, 60, 10, 60, 10, 60, 10),
                    prev: PREV(SETS(60, 10, 60, 10, 60, 10)) }).rule, "H1.4d");
 });
 
-T("W5 / X1 - at n === 1 the line still counts where section 9.11 prefers the ordinal (OBSERVED, P2 copy)", function(a){
+T("W5 / X1 - at n === 1 the line names the set, not the count (was red, fixed in fae1fd7)", function(a){
   /* Section 9.11's conflict ruling: X1's line ships and the UX 4.5 line is
      withdrawn - backend read the precedence right. The one thing carried over
-     from the withdrawn line is its CONCRETENESS: where n === 1, prefer
+     from the withdrawn line is its CONCRETENESS: at n === 1
        "Set 4 is past the prescription. The verdict reads the first 3."
-     over
+     rather than
        "1 set past the prescription. The verdict reads the first 3."
-     Plural rows keep X1's counted form, which is what ships and is correct.
+     Plural rows keep X1's counted form, which was never in question.
 
-     The ruling post-dates the build. Pinned as observed so the change is
-     deliberate; reported to backend as a one-branch copy fix. It needs the
-     ROW NUMBER of the first extra, which extraSets already knows from `flags`. */
+     THIS TEST PREVIOUSLY PINNED THE COUNTED FORM as observed-and-wrong. The
+     expectation is inverted; the previous string is asserted as forbidden
+     below so the branch cannot quietly revert. */
   var one = P.extraSets(SETS(100, 5, 100, 5, 100, 5, 90, 5), { s: 3, k: "power" });
   a.eq(one.count, 1);
-  a.deep(one.flags, [false, false, false, true], "and it already knows the extra is row 4");
-  a.eq(one.line, "1 set past the prescription. The verdict reads the first 3.",
-    "OBSERVED. Section 9.11 prefers 'Set 4 is past the prescription.' at n === 1; plural is unchanged.");
+  a.deep(one.flags, [false, false, false, true], "and it knows the extra is row 4");
+  a.eq(one.line, "Set 4 is past the prescription. The verdict reads the first 3.");
+  a.eq(one.line.indexOf("1 set past"), -1, "the counted form at n === 1 is the thing that was fixed");
   var two = P.extraSets(SETS(100, 5, 100, 5, 100, 5, 90, 5, 90, 5), { s: 3, k: "power" });
   a.eq(two.line, "2 sets past the prescription. The verdict reads the first 3.",
-    "the plural form is X1's and is not in question");
+    "the plural form is X1's and is unchanged");
+  /* The hyp tail takes the same head. */
+  a.eq(P.extraSets(SETS(60, 10, 60, 10, 60, 10, 60, 10), { s: 3, k: "hyp" }).line,
+    "Set 4 is past the prescription. Counted in today's volume, not in the verdict.");
+});
+
+T("W5 / X1 - the n === 1 line names the ROW NUMBER, and row and completed-set ordinal diverge", function(a){
+  /* BACKEND'S JUDGEMENT CALL, TESTED EXPLICITLY WITH BOTH READINGS NAMED,
+     because it is the kind of thing that gets assumed rather than decided.
+
+     The two readings of "Set N":
+       (a) ROW NUMBER - the label the view prints beside the row;
+           index.html:571 renders `${i+1}`.
+       (b) COMPLETED-SET ORDINAL - "the 4th set you actually did".
+     They coincide whenever no row is blank, which is the ruling's example,
+     which is why the ruling does not distinguish them.
+
+     SHIPPED: (a), the row number. Backend's reasoning: the EXTRA badge sits
+     ON the row, so a sentence reading "Set 4" next to a badge on row 5 is the
+     prototype's lie relocated rather than removed. The FLAGS stay
+     completed-ordinal-driven - only the copy is row-numbered. That split is
+     asserted below in the same call, so the two cannot drift into agreement
+     by accident.
+
+     If the ruling ever comes back as (b), this test is where it lands: the
+     first case's expected string becomes "Set 4" and `flags` does not move. */
+  var ex = { id: "d3c", s: 3, lo: 8, hi: 12, k: "hyp" };
+  var C = { w: 60, r: 10 }, BLANK = { w: "", r: "" };
+
+  /* Rows 1, 3, 4, 5 filled on a 3-set exercise: the FOURTH completed set sits
+     in the FIFTH row. Reading (a) says "Set 5", reading (b) says "Set 4". */
+  var gap = P.extraSets([C, BLANK, C, C, C], ex);
+  a.eq(gap.count, 1, "one completed set past a 3-set prescription");
+  a.deep(gap.flags, [false, false, false, false, true],
+    "flags stay completed-ordinal-driven: rows 1, 3 and 4 hold the three that drive the verdict");
+  a.eq(gap.line, "Set 5 is past the prescription. Counted in today's volume, not in the verdict.",
+    "SHIPPED READING (a), the row number. Reading (b), the completed-set ordinal, would say 'Set 4'.");
+  a.eq(gap.line.indexOf("Set 4"), -1, "and it deliberately does NOT say Set 4 here");
+
+  /* The mirror case: a blank in the middle AFTER the prescription is met, so
+     row 4 is flagged, is not a set, and is not the row named. */
+  var mid = P.extraSets([C, C, C, BLANK, C], ex);
+  a.eq(mid.count, 1);
+  a.deep(mid.flags, [false, false, false, true, true],
+    "row 4 is blank but already past the prescription, so it is flagged");
+  a.eq(mid.line, "Set 5 is past the prescription. Counted in today's volume, not in the verdict.",
+    "the blank row 4 is flagged but is not a set, so the named row is 5");
+
+  /* And where nothing before the extra is blank, the two readings coincide -
+     the ruling's own example, kept so the divergence cases are not the only
+     evidence on record. */
+  var plain = P.extraSets([C, C, C, C, BLANK], ex);
+  a.eq(plain.count, 1);
+  a.deep(plain.flags, [false, false, false, true, true], "backend's observed flags for [c,c,c,c,blank]");
+  a.eq(plain.line, "Set 4 is past the prescription. Counted in today's volume, not in the verdict.",
+    "row 4 and completed set 4 are the same row here, so both readings agree");
+});
+
+T("W5 / X1 - a TRAILING blank row is flagged but is not a set and is never named", function(a){
+  /* The failure this guards against: taking the row number off the last TRUE
+     in `flags` instead of off the first extra COMPLETED set. `flags` marks
+     every row past the prescription including empty ones, so the naive read
+     would announce a set the user has not done. */
+  var ex = { id: "d3c", s: 3, lo: 8, hi: 12, k: "hyp" };
+  var C = { w: 60, r: 10 }, BLANK = { w: "", r: "" };
+
+  /* Three completed sets and one empty row: no extra AT ALL, and no line. */
+  var none = P.extraSets([C, C, C, BLANK], ex);
+  a.eq(none.count, 0, "an empty fourth row is not a fourth set");
+  a.eq(none.line, "", "and there is nothing to say about it");
+  a.deep(none.flags, [false, false, false, true],
+    "the row is still flagged - it CANNOT affect the verdict - which is why count and flags are separate");
+
+  /* Two trailing blanks after one genuine extra: the named row is the extra's
+     (4), never the last flagged row (6). */
+  var one = P.extraSets([C, C, C, C, BLANK, BLANK], ex);
+  a.eq(one.count, 1);
+  a.deep(one.flags, [false, false, false, true, true, true]);
+  a.eq(one.line, "Set 4 is past the prescription. Counted in today's volume, not in the verdict.");
+  a.eq(one.line.indexOf("Set 6"), -1, "the last flagged row is 6 and must never be the one named");
+  a.eq(one.line.indexOf("Set 5"), -1);
+
+  /* Every row past the prescription blank: silence, whatever the row count. */
+  var empty = P.extraSets([C, C, C, BLANK, BLANK, BLANK, BLANK], ex);
+  a.eq(empty.count, 0);
+  a.eq(empty.line, "");
+});
+
+T("W5 / X1 - s === 1 with one extra, and the default object on s < 1 or a garbage ex", function(a){
+  var C = { w: 60, r: 10 };
+  /* A single-set prescription is the smallest case that can produce an extra,
+     and the power tail interpolates s, so it has to read "the first 1" rather
+     than "the first 3" from some default. */
+  var p1 = P.extraSets([C, C], { s: 1, k: "power" });
+  a.eq(p1.count, 1);
+  a.deep(p1.flags, [false, true]);
+  a.eq(p1.line, "Set 2 is past the prescription. The verdict reads the first 1.");
+  a.eq(p1.idle, false, "power never gets the standing invitation");
+  var h1 = P.extraSets([C, C], { s: 1, k: "hyp" });
+  a.eq(h1.line, "Set 2 is past the prescription. Counted in today's volume, not in the verdict.");
+  a.eq(h1.idle, true);
+
+  /* s < 1 and garbage: the DEFAULT OBJECT, never a throw and never a line.
+     `line:""` is the load-bearing part - a view that prints out.line
+     unconditionally must render nothing rather than a sentence about a
+     prescription that does not exist. */
+  function isDefault(o, idle, rows, msg){
+    a.eq(o.count, 0, msg + ": count");
+    a.eq(o.line, "", msg + ": line must be empty");
+    a.eq(o.idle, idle, msg + ": idle");
+    a.eq(o.flags.length, rows, msg + ": one flag per row, always");
+    for (var i = 0; i < o.flags.length; i++) a.eq(o.flags[i], false, msg + ": nothing is extra");
+  }
+  isDefault(P.extraSets([C, C, C], { s: 0, k: "hyp" }), true, 3, "s === 0");
+  isDefault(P.extraSets([C, C, C], { s: -1, k: "hyp" }), true, 3, "s === -1");
+  isDefault(P.extraSets([C, C, C], { s: "3", k: "hyp" }), true, 3, "s as a string is not a number");
+  isDefault(P.extraSets([C, C, C], { s: NaN, k: "hyp" }), true, 3, "s NaN");
+  isDefault(P.extraSets([C, C, C], { s: Infinity, k: "hyp" }), true, 3, "s Infinity");
+  isDefault(P.extraSets([C, C, C], null), false, 3, "ex null");
+  isDefault(P.extraSets([C, C, C], undefined), false, 3, "ex undefined");
+  isDefault(P.extraSets([C, C, C], 7), false, 3, "ex 7");
+  isDefault(P.extraSets([C, C, C], "hyp"), false, 3, "ex a string");
+  isDefault(P.extraSets([C, C, C], {}), false, 3, "ex {} - no s at all");
+  isDefault(P.extraSets([C, C, C], []), false, 3, "ex []");
+  /* And a non-array `sets` gives no flags rather than throwing. */
+  isDefault(P.extraSets("nonsense", { s: 3, k: "hyp" }), true, 0, "sets not an array");
+  isDefault(P.extraSets(null, { s: 3, k: "hyp" }), true, 0, "sets null");
+  isDefault(P.extraSets(undefined, null), false, 0, "both arguments garbage");
+  /* A fractional prescription floors, so 3.7 behaves as 3 rather than as 4. */
+  a.eq(P.extraSets([C, C, C, C], { s: 3.7, k: "hyp" }).line,
+    "Set 4 is past the prescription. Counted in today's volume, not in the verdict.",
+    "ex.s is floored, so 3.7 is a 3-set prescription");
+});
+
+T("W5 / OPEN - extraSets and incrementLine still fall through to HYPERTROPHY copy on an unrecognised k", function(a){
+  /* THE SAME SHAPE AS THE VERDICT DEFECT JUST FIXED, ONE LAYER DOWN, PINNED
+     AS OBSERVED AND ROUTED, NOT FIXED HERE.
+
+     verdict() now refuses an unrecognised `k` outright (the role gate). These
+     two do not: both are written as "if power -> ... ; else -> hyp copy", so
+     k:"tempo", k:"", k:7 and a MISSING k all receive hypertrophy sentences.
+       extraSets     -> "Counted in today's volume, not in the verdict."
+       incrementLine -> "If 2.5 kg is not available, add reps first, then jump."
+     Neither is reachable alongside a verdict any more, because there is no
+     verdict. Both are reachable by a view that calls them directly, which is
+     exactly how the verdict defect would have shipped.
+
+     WHY IT IS OPEN RATHER THAN A BUG REPORT WITH A FIX ATTACHED: the coach's
+     rider in section 9.11 spoke about VERDICTS. Backend implemented it as
+     written and flagged the rest, which is the correct order. The question
+     for strength-coach is whether "an app that cannot tell which rule applies
+     must not run one" extends to the two copy helpers - i.e. whether
+     extraSets should return line:"" and incrementLine "" on an unrecognised k.
+
+     Note the ONE thing that already refuses: `idle` is `k === "hyp"`, strictly,
+     so the standing "add sets freely" invitation IS withheld. The copy and the
+     flag disagree about the same unknown k, inside the same returned object. */
+  var C = { w: 60, r: 10 };
+  var unk = P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12, k: "tempo" });
+  a.eq(unk.line, "Set 4 is past the prescription. Counted in today's volume, not in the verdict.",
+    "OBSERVED: hyp copy on a k nobody recognises. Coach ruling outstanding.");
+  a.eq(unk.idle, false, "but `idle` DOES refuse it - the two halves of one object disagree");
+  var noK = P.extraSets([C, C, C, C], { id: "x", s: 3, lo: 8, hi: 12 });
+  a.eq(noK.line, "Set 4 is past the prescription. Counted in today's volume, not in the verdict.",
+    "OBSERVED: an ABSENT k does the same");
+  a.eq(noK.idle, false);
+
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "tempo", implement: "machine" }),
+    "If 2.5 kg is not available, add reps first, then jump.",
+    "OBSERVED: hyp's increment line on an unrecognised k. Coach ruling outstanding.");
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, implement: "machine" }),
+    "If 2.5 kg is not available, add reps first, then jump.", "OBSERVED: and on an absent k");
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: 7, implement: "db" }),
+    "If 2.5 kg per DB is not available, add reps first, then jump.", "OBSERVED: and on a numeric k");
+  /* The two that are right: power gets its own line, speed is silent. */
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "power", implement: "machine" }),
+    "If 2.5 kg is not available, add reps up to 14 first, then jump.");
+  a.eq(P.incrementLine({ id: "x", s: 3, lo: 8, hi: 12, k: "speed", implement: "machine" }), "",
+    "speed is the one role incrementLine refuses by name");
 });
 
 /* ------------------------------------------------ Rule S1a: the 21-day line */
@@ -7290,28 +7576,64 @@ contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Dele
   "the mutant cannot quietly stop being equivalent. 23 of 24 injected mutants killed.");
 
 /* ---------------------------------------------------- WO-004 W5 (S26) --- */
-contract("<b>WO-004 W5 &mdash; an unrecognised <code>k</code> still fires a hypertrophy verdict, and " +
-  "&sect;9.11 says it must fire none.</b> The ruling's rider is <em>\"if <code>k</code> is unrecognised, " +
-  "no verdict may fire for that exercise. An app that cannot tell which rule applies must not run one.\"</em> " +
-  "<code>verdict()</code> returns null for <code>speed</code>, routes <code>power</code> to P1, and falls " +
-  "THROUGH to H1 for everything else &mdash; so <code>k:\"tempo\"</code> and a MISSING <code>k</code> both " +
-  "get H1's tonnage comparison. Unreachable from the editor (C-7 constrains <code>k</code> to " +
-  "<code>PLAN_KINDS</code>), so it needs corrupt or imported data, which is what <b>WO-002</b> is. " +
-  "<b>Backend: gate on <code>PLAN_KINDS</code> and return null.</b> Pinned as observed in S26; the ruling " +
-  "post-dates the build, so it is an open item rather than a regression.");
-contract("<b>WO-004 W5 &mdash; X1's line at <code>n === 1</code>.</b> &sect;9.11 ships X1's line and " +
-  "withdraws the UX &sect;4.5 one, which backend read correctly. The one thing to carry over is its " +
-  "concreteness: at <code>n === 1</code> prefer <code>Set 4 is past the prescription. The verdict reads " +
-  "the first 3.</code> over <code>1 set past the prescription. &hellip;</code> Plural rows keep X1's " +
-  "counted form. <code>extraSets</code> already knows the row from <code>flags</code>, so it is a " +
-  "one-branch change. <b>Backend, P2 copy.</b> Pinned as observed in S26.");
-contract("<b>WO-004 W5 &mdash; the schema-3 migration pass labels its own note with the wrong version.</b> " +
-  "On a v1 store it reports <code>Schema 5: added reintro, lastReintroDate, calChangedAt, deload.</code> " +
-  "Those four keys are schema <b>3</b>'s. The v4 and v5 passes each interpolate their own gate constant " +
-  "(<code>V_PLAN</code>, <code>V_RX</code>) and read correctly; the v3 pass interpolates " +
-  "<code>SCHEMA_VERSION</code> and has been mislabelling itself since the 3 &rarr; 4 bump. No data is at " +
-  "risk, but <code>decisions.md</code> rules that a migration's account of itself IS its evidence, and " +
-  "this account names the wrong version. <b>Backend, P2, one token.</b> Pinned as observed in S26.");
+/* --- three CLOSED in fae1fd7, kept as the record of what was fixed --- */
+contract("<b>CLOSED (fae1fd7) &mdash; an unrecognised <code>k</code> fired a hypertrophy verdict.</b> " +
+  "&sect;9.11's rider is <em>\"if <code>k</code> is unrecognised, no verdict may fire for that exercise. " +
+  "An app that cannot tell which rule applies must not run one.\"</em> <code>verdict()</code> used to " +
+  "return null for <code>speed</code>, route <code>power</code> to P1 and fall THROUGH to H1 for " +
+  "everything else, so <code>k:\"tempo\"</code> got <code>H1.4d</code> and a MISSING <code>k</code> got " +
+  "<code>H1.3a</code>. Now gated on <code>PLAN_KINDS</code>, <b>above</b> the deload branch, so DL1 " +
+  "cannot fire on an unclassified exercise either. <b>Verified:</b> S26 <em>an unrecognised k fires NO " +
+  "verdict</em> and <em>the role gate holds for every shape of k, deloaded or not</em> &mdash; ten " +
+  "<code>k</code> shapes &times; two deload states, all null, with recognised-<code>k</code> controls " +
+  "for P1.4, H1.4d and DL1 so the gate cannot be passing by breaking the rules behind it.");
+contract("<b>CLOSED (fae1fd7) &mdash; X1's line at <code>n === 1</code> counted instead of naming.</b> " +
+  "It now reads <code>Set 4 is past the prescription. The verdict reads the first 3.</code>; plural rows " +
+  "keep X1's counted form. <b>Verified:</b> S26 <em>at n === 1 the line names the set, not the count</em>, " +
+  "which also asserts the old counted string is absent so the branch cannot silently revert.");
+contract("<b>CLOSED (fae1fd7) &mdash; the schema-3 migration pass labelled its own note with " +
+  "<code>SCHEMA_VERSION</code>.</b> A v1 store reported <code>Schema 5: added reintro, " +
+  "lastReintroDate, calChangedAt, deload.</code> for four keys schema <b>3</b> added. Now " +
+  "<code>V_STATEKEYS</code>. <b>Verified:</b> S26 <em>the v3 pass labels its note with its own gate</em>, " +
+  "which asserts the literal <code>Schema 3:</code> AND that the note never names " +
+  "<code>P.SCHEMA_VERSION</code>, so the next bump re-detects the same class of drift.");
+
+/* --- two OPEN, pinned as observed, named here so the ruling lands deliberately --- */
+contract("<b>OPEN &mdash; should X1's ordinal head clause be POWER-ONLY? <code>strength-coach</code>.</b> " +
+  "The <code>n === 1</code> head is shared across all three roles, so speed now reads <code>Set 7 is " +
+  "past the prescription. Speed work is 6 sets. Extra sets are extra fatigue.</code> Backend's reason " +
+  "for sharing it: two sentences for one fact, split by role, is the \"one concept, two names\" defect " +
+  "the coach rejected twice. The counter-argument: &sect;9.11's concreteness point was made about the " +
+  "POWER line, where the tail (<em>the verdict reads the first 3</em>) needs a specific row to contrast " +
+  "with; on speed the tail is about fatigue and naming a row may be precision nobody asked for. " +
+  "<b>QA is not guessing.</b> The observed speed string is pinned in S26's <em>the EXTRA badge keys off " +
+  "completed-set ORDINAL</em> with the question named in the test, so whichever way it is ruled is a " +
+  "deliberate edit to one assertion.");
+contract("<b>OPEN &mdash; <code>extraSets</code> and <code>incrementLine</code> still fall through to " +
+  "HYPERTROPHY copy on an unrecognised <code>k</code>. <code>strength-coach</code>.</b> The same shape " +
+  "as the verdict defect just fixed, one layer down. Both are <code>if power &hellip; else hyp</code>, so " +
+  "<code>k:\"tempo\"</code>, <code>k:\"\"</code>, <code>k:7</code> and an absent <code>k</code> all get " +
+  "<code>Counted in today's volume, not in the verdict.</code> and <code>If 2.5 kg is not available, add " +
+  "reps first, then jump.</code> Neither is reachable alongside a verdict any more &mdash; there is no " +
+  "verdict &mdash; but both are reachable by a view calling them directly, which is exactly how the " +
+  "verdict defect would have shipped. The rider spoke only about verdicts; backend implemented it as " +
+  "written and flagged this, which is the right order. One thing already refuses: <code>idle</code> is " +
+  "<code>k === \"hyp\"</code> strictly, so the copy and the flag disagree about the same unknown " +
+  "<code>k</code> inside one returned object. Pinned in S26 <em>OPEN &mdash; extraSets and incrementLine " +
+  "still fall through</em>.");
+
+/* --- one judgement call by backend, tested with both readings named --- */
+contract("<b>JUDGEMENT CALL, DOCUMENTED &mdash; <code>extraSets</code>' <code>Set N</code> is the ROW " +
+  "NUMBER, not the completed-set ordinal.</b> They coincide in &sect;9.11's example and diverge the " +
+  "moment a row is blank: rows 1, 3, 4, 5 filled on a 3-set exercise is the <em>fourth completed set</em> " +
+  "in the <em>fifth row</em>, and the line says <code>Set 5</code>. Backend's reasoning: " +
+  "<code>index.html:571</code> labels rows <code>${i+1}</code> and the EXTRA badge sits on the row, so " +
+  "<code>Set 4</code> beside a badge on row 5 would be the prototype's lie relocated. The <b>flags</b> " +
+  "stay completed-ordinal-driven; only the copy is row-numbered. <b>QA's position: this is the right " +
+  "call</b> &mdash; the sentence and the badge must name the same thing, and the badge is on a row. It is " +
+  "asserted in S26 <em>the n === 1 line names the ROW NUMBER</em> with <em>both</em> readings written out, " +
+  "so if it is ever ruled the other way the change is one expected string and <code>flags</code> does not " +
+  "move.");
 contract("<b>WO-004 W5 &mdash; <code>verdict({epochChanged:false})</code> can reinstate the exact defect " +
   "PE1 exists to prevent.</b> An explicit Boolean wins over the value derived from the entry, which is " +
   "what lets a view reuse <code>prescriptionEpoch().changed</code> instead of computing it twice. It also " +
