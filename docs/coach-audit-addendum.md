@@ -804,3 +804,484 @@ treatment — the only design-dependent item is 6b's calendar-vs-training-week l
 not a layout. Nothing here needs to wait for the new design, and nothing here should be simplified to
 suit it. The one thing I will keep saying: the measure of this batch is still one logged Upper Power
 session with a correct verdict under it, and a redesign is another tool, not a session.
+
+---
+
+# 7. Sign-off pass on the WO-003 engines
+
+**Added 2026-09-10.** Answers the six items `backend-engineer` flagged as gaps it filled. Judged on the
+strings and the rules only; the frontend is on hold and no layout is assessed here.
+
+**Verdict: sign off with changes.** Four of the six are right as built. Two are wrong — item 3's banner
+contradicts item 3's card, and item 6 fires a deload off a session the app cannot read. Both are the
+wrong-advice class this batch exists to close, and neither is a code defect: they are places where my
+audit was under-specified and the fill was reasonable. Plus four new findings the six questions walked
+past, one of which is the worst thing in the deload feature.
+
+## 7.0 Rulings at a glance
+
+| # | Item | Ruling |
+|---|---|---|
+| 1 | T2's copy | **Amend.** Drop `have both/all stalled` for `No progress on …` — ST1's own vocabulary for the same finding. One fewer branch. Rollback line pinned as a second line. |
+| 2 | T2 suppressed until ST1's recent block clears the deload | **Approve, unchanged.** `entirely after` is correct and partial overlap is actively harmful. Reasoning below is stronger than backend's. |
+| 3 | `deloadEx` applies `hi − 2` to power only | **Card is right, banner is wrong.** Power-only is what I meant and it is correct. `D1_TAIL` and `D1_ACTIVE_TAIL` must say so. |
+| 4 | `verdict` gates on the deloaded set count | **Confirm** — and it matters more than backend thinks, because of N1. |
+| 5 | T1's `at a load previously completed` = `≥ the failing load`, not equality | **Confirm.** That is the intent, stated. |
+| 6 | `fail, abandoned, fail` fires T1 | **Reject.** An abandoned date is not a failure *and* it is not invisible. It breaks the streak. Rule **E1**. |
+| N1 | The verdict during a deload week recommends **more weight** | **New, P1.** Rule **DL1**. |
+| N2 | Deload sessions are evidence to ST1 and T1 | **New, P1.** Rule **E2**. |
+| N3 | H1 says `First time logged` after any short session | **New, P2.** Amendment to H1 case 3. |
+| N4 | T1 has no recency bound at all | **New, P2.** Clauses in **E1**. |
+
+---
+
+## 7.1 Item 1 — T2's copy: **amend**
+
+The literal built is defensible and I would ship it before I would ship nothing. Two changes.
+
+**Change A — vocabulary.** ST1 tells him `Week 7 and no progress on Row, Squat.` on the Trend tab.
+The T2 banner tells him `Row and DB press have both stalled.` on the Train tab. Same finding, same
+day, two words for it. That is the B-44 failure in miniature: one app, two vocabularies, and he has
+to work out they are the same thing. ST1's wording is fixed by the brief and cannot move, so the
+banner moves. `[Opinion]`, and I hold it — consistency of terms is not decoration when the two screens
+are describing one event.
+
+**Change B — delete the `both` / `all` branch.** It buys nothing and it is a second string to get
+wrong. `No progress on Row and DB press` and `No progress on Row, DB press and Squat` need no
+grammatical switch.
+
+```
+Rule: D1-T2 copy
+Applies to:   the Train-screen deload banner, trigger T2 only.
+Inputs:       stallReport.stalled (>= 2 names), rollbackReintro's named exercise.
+Logic:        text = "No progress on " + andList(stalled) + ". " + D1_TAIL
+              Rendered as TWO lines when rollback is true. Line 2 is V1's own
+              existing rollback string, never a new one, and never joined to
+              line 1's sentence.
+Output copy:  2 lifts:  `No progress on Row and DB press. Take a deload week: same weights, 2 sets. On power days stop 2 reps short. Resume where you left off.`
+              3 lifts:  `No progress on Row, DB press and Squat. Take a deload week: same weights, 2 sets. On power days stop 2 reps short. Resume where you left off.`
+              line 2:   `Progress stalled. Pulling Upright row back out for now.`
+Not enough data: T2 cannot fire below trainingWeeks 6, and ST1 returns empty
+              lists when it is not testable. Nothing renders.
+```
+
+Note `andList` gives `Row and DB press` where ST1's headline gives `Row, Squat`. That divergence is
+deliberate and I accept it: the banner is a sentence and the warning is a headline. `[Opinion]`
+
+**Worked examples**
+
+1. `stalled = ["Row","DB press"]`, week 9, rollback pulls `Upright row` → the two lines above, in that
+   order. Audit §8 example 3 requires both statements and this is what "both should be stated" meant.
+2. **Boundary.** `stalled = ["Row"]` → T2 does not fire at one lift. Falls through to T3.
+3. **Failing case.** `stalled = ["Row","DB press"]` but `reintro` is all zeros, so nothing can be pulled
+   back out. Line 1 renders, line 2 does not. The banner must not print a rollback line naming nothing.
+
+---
+
+## 7.2 Item 2 — T2 after a deload: **approve, `entirely after` is right**
+
+The suppression is correct and the boundary is correct. Backend's stated reason — "the report is still
+reading the weeks that produced the recommendation" — is true but it is the weaker half of the argument.
+The decisive one:
+
+`[Certain]` **a deload week's sets have a systematically lower estimated 1RM than the weeks around
+them, by construction.** The prescription is the same weight, stopping 2 reps short of `hi`. On a
+3–5 power lift that is 100 × 3 where he was doing 100 × 5: Epley 110.0 against 116.7, **5.7 % lower**
+— more than twice ST1's 2.5 % progress threshold. ST1 takes the *max* of each block, so deload sets are
+harmless while the block also holds normal weeks, and they dominate the block the moment it does not.
+
+So partial overlap is not merely eager, it is **the B-07 failure re-created one layer up**: a recent
+block that is mostly deload week reports a stall manufactured by the deload the app itself recommended,
+and then blames his effort or his diet for it. That is the exact sentence this batch exists to stop
+printing. `entirely after` is the only boundary that guarantees no deload set is in the pool.
+
+The cost is a 21-day silence on T2 after a deload ends (`today − 20 > deloadEnd`). I accept it. During
+that window T1 and T3 still run, so a genuine collapse is still caught, and the conservative failure
+direction on a *deload recommendation* is late, not early — audit §8 already ruled that a deload that
+fires without earned evidence teaches him to ignore the banner, which costs the one that matters later.
+
+**Approve unchanged.** No new constant was invented and none should be. But see **E2** in §7.7 — the
+same problem exists on the Trend tab, where backend's fix does not reach, and that one is not cosmetic.
+
+---
+
+## 7.3 Item 3 — `hi − 2` on power only: **the card is right, the banner is wrong**
+
+I meant power only. Audit §8's content block names the rep change under *Power days* and gives
+hypertrophy days `2 sets per exercise, all cut:1 accessories out` with no rep change. `deloadEx`
+implements what I wrote. Confirming it, with the reasoning I did not give at the time:
+
+`[Opinion]`, strongly held — **`hi − 2` is not a meaningful instruction on a hypertrophy slot.** On a
+3 × 8–12 exercise it prescribes 10 reps, which is inside the range he was already working in; on a
+15–20 slot it prescribes 18. Neither reduces the effort of the set, because the load is unchanged and
+he will take a 10-rep set to the same proximity to failure he took the 12. The lever that actually
+reduces fatigue on a hypertrophy day is **set count and exercise count**, and the deload already cuts
+both — three sets to two, and every `cut:1` accessory out. `[Certain]` the other lever, proximity to
+failure, is an RIR judgement the app does not measure and must not start inferring from a rep number.
+
+Second reason, engineering-visible: moving `hi` on a hypertrophy slot moves H1 case 2's trigger with
+it. At `hi = 10` an 11-rep set on an 8–12 exercise would print `All sets above 10. Go to 45 kg next
+session.` **during a deload week.** One wrong number begets another.
+
+**So the card stays as built. The banner changes**, because right now it states a prescription the card
+does not give, and he can see both on the same day.
+
+```
+Rule: D1 deload content copy
+Applies to:   D1_TAIL (all three trigger banners) and D1_ACTIVE_TAIL.
+Logic:        The rep clause is scoped to power days, because the prescription is.
+Output copy:  D1_TAIL        -> `Take a deload week: same weights, 2 sets. On power days stop 2 reps short. Resume where you left off.`
+              D1_ACTIVE_TAIL -> `Same weights, 2 sets. Power days stop 2 reps short. Do not chase numbers this week.`
+              Active line in full: `Deload week, day 3. Same weights, 2 sets. Power days stop 2 reps short. Do not chase numbers this week.`
+```
+
+**This moves four pinned acceptance criteria** — WO-003 §W19's T1 and T2 strings, §W20's day-3 string,
+and any test QA has already written against them. Flagged deliberately so it is a restated criterion and
+not a surprise red test. The rule did not change; the sentence describing it became accurate.
+
+**One rendering note for the redesign, not a rule.** On a 3–5 power slot the deloaded exercise is
+`{s:2, lo:3, hi:3}`. The target line must render `2 × 3`, not `2 × 3–3`.
+
+---
+
+## 7.4 Item 4 — the verdict gates on the deloaded set count: **confirm**
+
+Confirmed, and it is the right call for the reason given: gating on 3 while prescribing 2 would withhold
+his verdict for seven days, which is the app going quiet in the week he is most likely to wonder whether
+he is wasting his time. Pass the deloaded `ex` to the card and to the verdict, one object, no divergence.
+
+Three consequences I am accepting on the record:
+
+1. A deload week produces verdicts computed over **2 sets**. Correct: 2 sets *is* the prescription that
+   week, and P1's working load is "the weight he held for every prescribed set", not for every set in
+   the programme's normal week.
+2. A third set logged anyway is **ignored by the verdict and still saved**. Correct, and it is the same
+   principle as audit §3's "extra sets beyond `ex.s` are ignored". The deload changes what he is asked
+   for, never what he did.
+3. Those verdicts feed nothing downstream — provided **E2** lands. Without E2 they do feed something:
+   a 2-set deload session becomes evaluable evidence to T1 at `s = 2`, and to ST1 as an e1RM sample.
+   See §7.7. `verdict` itself is a leaf and writes nothing; the exposure is that the *deloaded* `ex`
+   must never be the object handed to `deloadCheck`'s `keyLifts`. `d1T1` reads `lift.s` and `lift.lo`
+   from the caller, and if the caller passes deloaded lifts the whole T1 evidence ladder shifts under it.
+
+**Confirm, with one binding constraint:** the deloaded `ex` goes to the card and to `verdict`, and to
+nothing else. `deloadCheck`, `stallReport`, `speedLoad` and `volumeTier` read `PROGRAM`.
+
+---
+
+## 7.5 Item 5 — `at a load previously completed`: **confirm**
+
+Confirmed. `≥ the failing load`, not equality, is the intent.
+
+- Failing at 120 having previously completed 125 **must** fire. It is the cleanest regression signature
+  there is: a load he has demonstrated he owns, and he no longer owns it. Requiring exact equality would
+  make T1 miss the most obvious case in favour of the narrowest one.
+- Failing at a **new heavier 140** must not fire. `[Certain]` that is not a regression, it is an attempt.
+  Missing a jump is what a jump is for, and P1 case 1 already handles it correctly and locally by
+  telling him to drop 5 %. A deload recommendation for a failed PR attempt would be absurd.
+
+Two implementation details I am also confirming, because they are load-bearing and easy to "tidy" away:
+
+- `best` is the running max of *earlier* dates only. A load completed **after** the failure does not
+  make the failure retroactively count. "Previously" means previously.
+- A date is a failure only when **every** evaluable entry on it failed, and complete when **any** entry
+  on it completed. That is addendum 6c and it survives B-05 landing, where corrections arrive as extra
+  rows before they arrive as edits.
+
+One amendment attaches here rather than being a separate finding — see **E1** clause (c): `best` never
+decays, so a load he completed a year ago still counts. That is wrong after a layoff and is bounded below.
+
+---
+
+## 7.6 Item 6 — `fail, abandoned, fail`: **reject**
+
+This is the one to attack first and backend was right to say so.
+
+**Ruling: an abandoned date is not a failure, and it is not invisible either. It breaks the streak.**
+
+Backend's framing — is it evidence he is beaten up, or is it noise — is the right question and the
+answer is **neither, and that is the point.** Take it in two halves:
+
+`[Certain]` **it is not an observation of the thing T1 measures.** T1's claim is "he could not complete
+the prescription at a load he has already completed". One logged set of three tells you nothing about
+whether he could have completed three. The current code is right to refuse to score it as a failure.
+
+`[Opinion]`, and this is the half backend filled the other way — **it does not follow that it should be
+skipped over.** "Two consecutive sessions" in audit §8 means adjacent *in his training*, not adjacent
+*among the dates the app happened to be able to read*. `fail, abandoned, fail` is not two consecutive
+failures. It is two failures with an unknown between them, and the correct response to an unknown is to
+get another data point, not to prescribe a week of reduced stimulus off the two either side of it.
+
+The "conservative direction" argument does not rescue the skip, because a deload is not free in this
+app's economy. Audit §8 already ruled that a deload recommended on evidence he has not earned teaches
+him to ignore the banner, which costs the one that matters later. And with zero sessions logged and
+B-05 still open, the **most likely** cause of a half-logged date here is not fatigue — it is a logging
+artifact: a draft restored and finished elsewhere, a Save tapped early, a session he will want to
+correct and cannot. Firing a programme-level recommendation off a logging artifact is precisely the
+B-06/B-07 class.
+
+And note what the copy would say: `Two sessions where Squat went backwards.` If one of them was
+abandoned after a set, he did not have two sessions of squat. The app would be describing something
+that did not happen.
+
+```
+Rule: E1 — T1's evidence ladder
+Applies to:   Rule D1 trigger T1 only, on the four key lifts. Engine only.
+              Supersedes d1Rows' current "half-finished dates are SKIPPED".
+Inputs:       sessions; the key lift's PROGRAMME s and lo (never a deloaded s);
+              todayStr; the last deload end date. Distinct local dates only
+              (addendum 6c). Minimum: trainingWeeks >= 6, unchanged.
+Logic:        Walk, ascending, every distinct date on which that exercise id
+              holds >= 1 completed set (Rule Z1). Dates on which the lift was
+              not logged at all are not rows. Deload dates are not rows (E2).
+              Classify each date:
+                COMPLETE  some entry on it holds >= s completed sets and all of
+                          its first s sets reach lo.
+                SHORT     no entry on it holds >= s completed sets.
+                MISS-NEW  >= s completed sets, some set below lo, at a working
+                          load ABOVE every previously completed load.
+                FAIL      >= s completed sets, some set below lo, at a working
+                          load <= a previously completed load (item 5).
+              Then:
+                FAIL      -> run += 1;  fires at run >= 2
+                COMPLETE  -> run = 0
+                SHORT     -> run = 0    <-- THE CHANGE
+                MISS-NEW  -> run = 0
+              Recency, all three clauses required to fire (N4):
+                (a) the two failing dates are <= 20 days apart      [ST1_RECENT]
+                (b) the later failing date is within 20 days of today
+                (c) the previously completed load used in the FAIL test was
+                    completed within 41 days of the later failing date
+                                                              [ST1_PRIOR_FROM]
+              No new constant. All three reuse ST1's own window.
+Output copy:  unchanged — the T1 banner, per §7.1's amended tail.
+Not enough data: a lift with no COMPLETE date has no previously completed load,
+              so it can produce no FAIL and T1 cannot fire on it. Silent, no
+              placeholder. A lift with only SHORT dates is silent likewise.
+```
+
+**Worked examples** — Squat `{s:3, lo:3, hi:5}`, `trainingWeeks` 8, no deload.
+
+1. **`fail, abandoned, fail` — the case asked about.** `05-04` 120×5/5/5 COMPLETE (best 120).
+   `05-11` 120×2/2/2 FAIL (run 1). `05-18` 120×5 and nothing else logged → **SHORT → run 0.**
+   `05-25` 120×3/2/2 FAIL (run 1). → **no trigger.** Today: fires, off two failures with a session
+   between them the app cannot read.
+2. **`fail, abandoned, success`.** Same through `05-18`. `05-25` 120×5/5/5 → COMPLETE → run 0.
+   → **no trigger**, under both the old rule and the new one. This case was never the problem; it is
+   here because it proves the change is narrow — E1 alters exactly one classification.
+3. **The true positive, unchanged.** `05-04` 120×5/5/5, `05-11` 120×2/2/2, `05-18` 120×3/2/2 →
+   FAIL, FAIL adjacent → **T1 fires.** E1 must not break this, and it does not.
+4. **Boundary.** `fail, abandoned, fail, fail`: run goes 1 → 0 → 1 → 2 → **fires on the third and
+   fourth.** He gave the app the second data point and the second data point agreed. Correct.
+5. **Failing case, item 5's other half.** `05-04` 120×5/5/5, `05-11` 130×2/2/2, `05-18` 130×2/2/2.
+   Both fails are at 130, above the best completed 120 → MISS-NEW → run resets each time →
+   **no trigger.** Two missed attempts at a new weight is a fortnight, not a deload.
+6. **Failing case, N4 clause (a).** `03-02` 120×2/2/2 FAIL, then nine weeks of SHORT and untouched
+   dates, then `05-11` 120×2/2/2 FAIL. Under E1's classification the SHORT dates already reset the
+   run. Had they all been untouched dates instead — he simply did not squat — the run would survive
+   and clause (a) stops it: 70 days apart. **No trigger.** Audit §8 example 5 says absence is not
+   fatigue; without (a) the rule said it only for a single session.
+
+**Rationale.** `[Certain]` a session with fewer than the prescribed sets is not an observation of
+whether the prescription could be met, and the app cannot tell "I bailed, the bar felt like lead"
+from "the gym shut" from "I tapped Save early" out of the stored data. `[Opinion]` when the app cannot
+tell, it declines rather than picks the interpretation that lets it say something — the same principle
+as §10's refusal to assess pain and W1's refusal to average eight weigh-ins over 24 days.
+
+**The cost, stated honestly.** A lifter who is genuinely wrecked and bails after one set every week
+will never trigger T1. I accept it: ST1 still reads those sets (they contribute e1RM without needing a
+full prescription), T3's nine-week backstop still fires, and the T1 copy would have been describing
+sessions he did not do. **I am deliberately not building a "repeated abandonment" trigger.** It would
+be a new signal, off thin data, calibrated on a log containing zero sessions. Raise it again after
+there are twelve weeks of real history, or never.
+
+---
+
+## 7.7 Four findings the six questions walked past
+
+### N1 — the verdict during a deload week recommends **more weight**. Rule DL1. `[Certain]`, P1
+
+`deloadEx` sets `hi = max(lo, hi − 2)`, so a squat becomes `{s:2, lo:3, hi:3}`. He does what the banner
+told him — 100 × 3, 100 × 3 — and `verdictPower` case 4 (`minRep >= hi`) fires:
+
+```
+Top of range on all 2 sets. Go to 102.5 kg next session.
+```
+
+**In the middle of a deload week, at a man who did exactly what the app instructed.** This is B-07's
+failure mode with a load recommendation attached instead of a warning, and it is worse, because he
+can act on it with a barbell. It is reachable on every power slot of every deload week and it is a
+direct consequence of items 3 and 4 being correct — the two right answers combine into a wrong output,
+which is why neither owner saw it.
+
+The rest of the branch is wrong in the same week for smaller reasons: case 5's hold copy would read
+`Stay at 100 kg until all 2 sets reach 3 reps`, which describes a progression target that does not
+exist; case 1 would tell him to `Drop to 95 kg next session`, contradicting the deload's own
+`Do not reduce the weight`; and H1 case 4 would compare a deliberately reduced block to a full one and
+say `Add a rep or 2.5 kg next time`.
+
+Do not patch four branches. Replace the output.
+
+```
+Rule: DL1 — the verdict during an active deload week
+Applies to:   k:"power" and k:"hyp". Session screen verdict. k:"speed" is
+              unchanged, as the deload leaves speed work unchanged (audit §8).
+Inputs:       ctx gains `deload:Boolean` — true when deloadStatus().active is
+              true for todayStr. Threaded exactly like ctx.painFlag, which is
+              the same mechanism and the same reason.
+              Minimum: unchanged. Completed sets >= the DELOADED ex.s (item 4).
+Logic:        deload === true -> return the fixed line below. No P1 case, no
+              H1 case, no I2 appendix, no comparison, no percentage.
+              Working load = min of the first ex.s completed sets, as always,
+              printed through loadWord() (Rule Z2).
+              A pain note still renders its own §10 notice on the card; DL1 does
+              not suppress it and does not repeat it.
+Output copy:  `Deload week. Stay at 100 kg. Nothing to add until full sets resume.`
+              zero load: `Deload week. Stay at bodyweight. Nothing to add until full sets resume.`
+Not enough data: below the deloaded ex.s, render nothing. B-24's gate is
+              unchanged and outranks this rule.
+```
+
+**Worked examples**
+
+1. Squat, deload active, `{s:2, lo:3, hi:3}`, logged `100×3, 100×3` → `Deload week. Stay at 100 kg.
+   Nothing to add until full sets resume.` Today: `Top of range on all 2 sets. Go to 102.5 kg next
+   session.` **This is the test that must exist.**
+2. **Boundary.** Same session, one set logged → `null`. The gate fires before DL1.
+3. **Failing case.** He ignores the deload and grinds `100×5, 100×5` → still the DL1 line. Case 3
+   ("too light", `minRep >= hi + 2` = 5) is suppressed. Correct: doing more than a deload asks is not
+   evidence that the load is light, and rewarding it with +5 kg trains him to ignore deloads.
+4. Rack chin at bodyweight during a deload, `0×10, 0×10` → `Deload week. Stay at bodyweight. Nothing to
+   add until full sets resume.` The substring `0 kg` does not appear (Z2 holds).
+
+**Rationale.** `[Certain]` meeting a prescription that was deliberately set below his capacity is not
+evidence he is ready to add load; the whole content of a deload is "same weights, less of it", and any
+verdict that moves a number contradicts the instruction that produced the session. `[Opinion]` one
+fixed line rather than four downgraded branches, because a deload week's verdict has nothing to decide
+and the app should say so in one sentence rather than perform a calculation with no consequence.
+
+### N2 — deload sessions are evidence to ST1 and T1. Rule E2. `[Certain]`, P1
+
+Backend's item-2 suppression protects the **deload banner**. It does not protect the **Trend tab**,
+which is where the same wrong sentence is actually printed. In the fortnight after a deload ends,
+ST1's recent block is one deload week plus the two stalled weeks that triggered it, and it will report:
+
+```
+Week 12 and no progress on Row, Squat.
+… Either the sets aren't close enough to failure, or you aren't eating enough.
+```
+
+The sets were not close enough to failure **because the app told him to stop two reps short.** That is
+the app blaming him for obeying it, which is the defect B-07 exists to close, arriving through a door
+B-07 did not know about.
+
+```
+Rule: E2 — a deload date is not evidence
+Applies to:   ST1 (both blocks, and its distinct-date minimums) and D1 trigger
+              T1 (E1's ladder). Engine only.
+Inputs:       the deload windows: every [startDate .. endDate] in state.deload
+              plus state.deload.past. Implied end dates count (deloadStatus
+              already derives them).
+Logic:        A session whose date falls inside any deload window contributes:
+                - no e1RM sample to either ST1 block
+                - no distinct date to either block's >= 2 minimum
+                - no row to E1's ladder: not COMPLETE, not FAIL, not SHORT.
+                  It does not reset the run and it does not extend it. A deload
+                  date is skipped entirely, which is what the current code does
+                  for short dates and should not.
+              NOT applied to Rule SP1. R is the heaviest set at 3-5 reps and a
+              deload does not lower the weight, so a deload set is a valid
+              observation of load; excluding it could drop a real number to the
+              no-data fallback, which is the worse error.
+              NOT applied to Rule TW1. A deload week is a week he trained.
+Output copy:  none of its own. If exclusion drops a lift below ST1's 2-date
+              minimum, it lands in `untested` and prints the existing string:
+              `Not enough sessions on Row to judge. Log it weekly.`
+Not enough data: covered by the line above. ST1 saying nothing for two weeks
+              after a deload is the correct output.
+```
+
+**Worked examples**
+
+1. Deload `06-01`–`06-07`. Today `06-10`. ST1's recent block `[05-21 .. 06-10]` holds 2 pre-deload Row
+   dates and 2 deload Row dates. Under E2 the deload dates drop out; 2 remain, the minimum is met, and
+   the max is drawn from real weeks. Same answer as before the deload, honestly obtained.
+2. **The case E2 exists for.** Same deload, today `06-12`, and the only Row dates in the recent block
+   are the two deload ones at `100×3`. Under E2: 0 qualifying dates → `Row` is `untested`, no stall
+   warning. Without E2: block max 110.0 against a prior 116.7, ratio 0.943 → **`Row` reported stalled**,
+   with the effort-or-diet attribution, off a week the app prescribed.
+3. **T1.** Deload `06-01`–`06-07`. He logs `120×2/2/2` on `06-03`, below `lo` 3, at a load he has
+   completed. Without E2 that is a FAIL row. Under E2 it is not a row at all. Correct: the app told him
+   not to chase numbers that week, and it may not then read the result as weakness.
+
+**Rationale.** `[Certain]` a deload prescribes submaximal work, so its sets measure compliance, not
+capacity, and feeding them to a capacity test guarantees a false negative. `[Opinion]` skip rather than
+reset in E1's ladder, unlike an abandoned date: an abandoned date is an unknown, and a deload date is a
+known non-attempt. Different facts, different handling.
+
+### N3 — `First time logged` after any short session. `[Certain]`, P2
+
+`verdict` computes `Cprev` and H1 case 3 fires when `Cprev.length < ex.s`, printing
+`First time logged. This becomes your baseline.` The previous entry is not missing — it is short. This
+fires the whole week after every deload (2-set entries against a restored `s` of 3) and after every
+abandoned session, on an exercise with months of history. The string is simply false.
+
+**Amendment to Rule H1, case 3. Split it.**
+
+```
+3a. No previous entry at all              -> `First time logged. This becomes your baseline.`   (unchanged)
+3b. Previous entry exists but holds fewer
+    than ex.s completed sets              -> `Last logged session was short. Not comparable. This becomes your baseline.`
+```
+
+**Worked examples**
+
+1. Seated cable row 3 × 8–12, no history → 3a, unchanged.
+2. Previous entry `60×10, 60×10` (2 sets), this session `60×10 ×3` → 3b. Today: `First time logged.`
+3. **Boundary.** Previous entry `60×10 ×3` and this session `60×10 ×3` → neither 3a nor 3b; the
+   tonnage comparison runs. E2 does not apply — this is display of history, not a capacity test.
+
+`[Opinion]` on refusing the alternative: do not "look further back" for a comparable entry. Comparing
+this week to a session three weeks old and labelling it `Volume up 4%` is a comparison across a gap the
+copy does not disclose. Declining is correct and it is one string.
+
+### N4 — T1 has no recency bound. `[Likely]`, P2
+
+Folded into **E1** as clauses (a), (b) and (c) rather than given its own rule, because it is the same
+walk. Two failures 70 days apart currently read as consecutive if nothing evaluable sits between them,
+and `best` never decays, so a load completed a year ago still qualifies a failure today. The concrete
+bad output: he trains for six weeks, stops for six months, comes back, has two hard weeks — and the app
+recommends a deload. `[Certain]` that is detraining, not fatigue, and a deload is the wrong answer to
+it. All three clauses reuse ST1's existing constants; no number is invented.
+
+---
+
+## 7.8 What this changes, by work item
+
+| Item | Change |
+|---|---|
+| **W19** | `D1_TAIL` and `D1_ACTIVE_TAIL` rewritten (§7.3) — **four pinned criteria move.** T2's text loses the `both`/`all` branch and reads `No progress on …` (§7.1). `d1Rows` gains SHORT rows that reset the run, and E1's three recency clauses (§7.6). E2's deload-window exclusion in the ladder (§7.7). |
+| **W9** | E2: deload dates contribute no e1RM sample and no distinct date to either ST1 block (§7.7). This is a **P1 wrong-advice fix**, not a tidy-up. |
+| **W5 / W6** | `ctx.deload` threaded exactly as `ctx.painFlag` is; Rule DL1 short-circuits the power and hypertrophy branches (§7.7 N1). H1 case 3 splits into 3a / 3b (§7.7 N3). |
+| **W12 / W14** | Nothing. E2 explicitly does not reach SP1 or TW1, and says why. |
+| **W20** | The banner renders T2 as two lines, deload text then V1's rollback line, in that order (§7.1). The deloaded target line renders `2 × 3`, not `2 × 3–3` (§7.3). |
+| **W21** | New named tests: E1 examples 1–6 (example 1 is the headline), DL1 examples 1–4 (example 1 is the headline), E2 examples 1–3 (example 2 is the headline), H1.3b, and the four restated D1 copy criteria. |
+
+## 7.9 Verdict
+
+**Sign off with changes.** Items 2, 4 and 5 are approved as built and item 1 needs two copy changes.
+Item 3 is right in the engine and wrong in the banner. Item 6 is rejected: `fail, abandoned, fail`
+must not fire, because two failures either side of a session the app cannot read are not two
+consecutive failures, and a deload recommended on that is the banner spending credibility it will need
+later.
+
+The four findings matter more than the six questions. **N1 is the serious one:** as the engines stand
+today, a deload week tells him `Top of range on all 2 sets. Go to 102.5 kg next session.` for doing
+exactly what the deload banner asked. That is a load recommendation produced by obedience, and it is
+the same defect this whole batch was written to close, reassembled out of two correct decisions.
+
+**Standing note, made for the third time and still true.** Nine rule engines are built. The log
+contains **zero of Chady's sessions.** Every rule in this file is calibrated against a brief and an
+empty store, and every one of them would be sharper after twelve weeks of real history than after
+another review. The measure of WO-003 is still one logged Upper Power session with a correct verdict
+under it. It is his call, but the bottleneck has not moved.

@@ -364,3 +364,78 @@ signed-off string, so the app now has two month formats in it.
 **Filed as B-44.** One source of truth for month names, both formatters routed through it.
 **Lesson worth keeping:** a locale is not a format. Pinning one fixes ordering and leaves spelling,
 width and separators to the platform's ICU version, which changes under you.
+
+### 2026-09-10 — DL1: the deload week recommended a load increase for obeying it
+`strength-coach` §7, found while signing off two decisions that were each individually correct.
+`deloadEx` makes squat `{s:2, lo:3, hi:3}`; he does `100×3, 100×3` exactly as prescribed; `verdictPower`
+case 4 fires `Top of range on all 2 sets. Go to 102.5 kg next session.` **A load increase produced by
+obedience, on every power slot of every deload week.**
+Neither owner saw it because neither decision was wrong — scoping `hi − 2` to power days is right, and
+gating the verdict on the deloaded set count is right. The defect lives in the seam.
+**Rule DL1:** during an active deload a power slot returns one fixed line —
+`Deload week. Stay at 100 kg. Nothing to add until full sets resume.`
+**Rules out:** any progression verdict during a deload, by any path.
+**Lesson:** two correct decisions can compose into a wrong output, and only someone reading the
+*rendered advice* rather than the code will catch it. That is the whole argument for the coach agent.
+
+### 2026-09-10 — E2: deload dates are not evidence
+A deload set is the same weight two reps short, so on a 3–5 slot `100×3` vs `100×5` is e1RM 110.0
+against 116.7 — **5.7% lower, more than twice ST1's 2.5% threshold.** Left alone, the app would print
+`no progress … the sets aren't close enough to failure` two weeks after telling him to stop short:
+B-07 re-created one layer up, by the app's own prescription.
+Deload dates give ST1 no e1RM sample and no distinct date, and give T1 no row. **Deliberately not
+applied** to SP1 (a deload does not lower the weight) or to `trainingWeeks` (it is still a week he
+trained).
+
+### 2026-09-10 — E1: an abandoned session breaks the streak
+Backend and I both left `fail, abandoned, fail` reading as two consecutive failures. Coach rejected it:
+"consecutive" means adjacent **in his training**, not adjacent among the dates the app can read.
+`fail, abandoned, fail` → no trigger. `fail, abandoned, success` → no trigger. `fail, fail` → fires.
+**Two reasons worth keeping:** with zero sessions logged and B-05 still open, the likeliest cause of a
+half-logged date is a logging artifact, not a hard session. And the copy would say `Two sessions where
+Squat went backwards` about a session he did not do.
+The coach explicitly refused to add a "repeated abandonment" trigger. Also folds in a recency bound —
+without it, six weeks of training, six months off, then two hard weeks back recommends a deload for
+detraining.
+
+### 2026-09-10 — One app, one vocabulary
+The deload banner said `stalled` where ST1 says `no progress` for the same finding, on the same day,
+about the same lifts. ST1's wording is fixed by the brief, so the banner moves to
+`No progress on Row and DB press. Take a deload week: …`
+**Rules out:** two words for one finding. Worth checking whenever a new surface describes an existing one.
+
+### 2026-09-10 — E1 clause (c) is a WINDOWED best, not a recency gate on the all-time best
+`backend-engineer`, implementing §7.6. The clause reads "the previously completed load used in the
+FAIL test was completed within 41 days of the later failing date". Two readings, and they differ in
+one case: he completed 125 kg a year ago and 120 kg ten days ago, then fails at 120 twice.
+- Gate the all-time max on its own date → `best` is the stale 125, the clause fails, **no trigger.**
+- Take the max over completions inside the 41-day window → `best` is 120, `120 <= 120`, **fires.**
+Implemented as the second. The first would make T1 miss item 5's "cleanest regression signature there
+is — a load he has demonstrated he owns, and he no longer owns it" precisely because he *also* has an
+older, heavier PR, which is backwards. Both readings give the same answer to N4's headline case (six
+weeks on, six months off, two hard weeks back → no trigger), which is what the clause was written for.
+No number was invented: the window is `ST1_PRIOR_FROM`. **Open for the coach to overturn** — it is one
+line in `bestWithin`.
+
+### 2026-09-10 — DL1 made structurally unreachable, not merely correct
+`verdictPower` and `verdictHyp` are unexported with exactly one call site each, both below an
+unconditional `if (dl) return verdictDeload(ex, C);`. During an active deload no P1 case, no H1 case,
+no I2 second line and no `g1Step` call is reachable at all.
+Two more structural choices worth keeping:
+- **`verdict` no longer trusts its caller.** `deload:true` makes it apply `deloadEx` itself, so the
+  gate and the verdict are computed on the same object the card renders, whichever shape was passed.
+  `deloadEx` is idempotent for this reason — without it, two call shapes would lower `hi` twice, which
+  on a `lo:1, hi:5` slot changes the prescription.
+- **`deloadEx` stamps `dl:1`, enumerable on purpose**, in the shape of `cut:1`, so a deloaded
+  prescription survives `copyObj` and JSON and cannot launder itself clean. `deloadCheck` scans
+  `keyLifts` before the T1 loop and returns `{trigger:null, reason:"deloaded-lifts"}` rather than
+  answering off an `s = 2` ladder — a silent "no trigger" would have been the same class of defect as
+  the bug it guards, so the refusal is named where a caller and a test can see it.
+**Rules out:** relying on a comment to keep a deloaded prescription out of the evidence path.
+
+### 2026-09-10 — The deload feature is engine-only and invisible on screen
+`index.html:711` calls `PHAT.verdict({ex, sets, prev, note})` with no `deload`, and calls
+`deloadCheck` / `deloadEx` / `stallReport` not at all. DL1 and E2 are correct in the engine and reach
+nothing until the frontend passes `deload: PHAT.deloadStatus(S, today).active` and `stallReport(…, S)`.
+That wiring is a frontend item, held for the redesign.
+**Recorded so nobody reads "ten engines signed off" as "ten features shipped."**

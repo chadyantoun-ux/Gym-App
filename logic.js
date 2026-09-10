@@ -1124,9 +1124,24 @@
         incrementLine(ex), "H1.2");
     }
 
-    /* 3 — no comparable previous entry. */
-    if (!Cprev || Cprev.length < s) {
-      return mk("", "First time logged. This becomes your baseline.", "", "H1.3");
+    /* 3 — no comparable previous entry, split by WHY (addendum §7.7 N3).
+       `First time logged` on an exercise with months of history is simply
+       false, and it fired the whole week after every deload (2-set entries
+       against a restored s of 3) and after every abandoned session. The app
+       says which of the two it is.
+
+       A previous entry with ZERO completed sets is 3a, not 3b: nothing
+       distinguishes it from no entry at all, and the app may not claim "last
+       session was short" off an entry that recorded nothing.
+
+       Deliberately NOT "look further back for a comparable entry" — comparing
+       this week to a session three weeks old and printing `Volume up 4%` is a
+       comparison across a gap the copy does not disclose. */
+    if (!Cprev || Cprev.length === 0) {
+      return mk("", "First time logged. This becomes your baseline.", "", "H1.3a");
+    }
+    if (Cprev.length < s) {
+      return mk("", "Last logged session was short. Not comparable. This becomes your baseline.", "", "H1.3b");
     }
 
     /* 4 — Rule Z3. Tonnage is banned when EITHER side is zero-load: it is
@@ -1158,6 +1173,35 @@
     return mk("", "Volume matched. One more rep next session.", "", "H1.4d");
   }
 
+  /* ------------------------------------------------------------- DL1 */
+
+  /* Rule DL1 (addendum §7.7 N1) — the verdict during an ACTIVE deload week.
+
+     THE BUG THIS CLOSES. deloadEx makes a 3–5 squat {s:2, lo:3, hi:3}. He does
+     exactly what the banner told him — 100×3, 100×3 — and P1 case 4 fires:
+     `Top of range on all 2 sets. Go to 102.5 kg next session.` A load increase
+     produced by OBEDIENCE, on every power slot of every deload week. The rest
+     of the branch is wrong the same week for smaller reasons: case 5 would
+     print a progression target that does not exist, case 1 would contradict
+     the deload's own "do not reduce the weight", and H1 case 4 would compare a
+     deliberately reduced block to a full one.
+
+     So this does not patch four branches, it REPLACES the output. No P1 case,
+     no H1 case, no I2 second line, no comparison, no percentage. Meeting a
+     prescription that was deliberately set below his capacity is not evidence
+     he is ready to add load.
+
+     Working load is the min of the first ex.s completed sets as always, and it
+     prints through loadWord, so a bodyweight slot reads
+     `Stay at bodyweight` and the substring `0 kg` is never produced (Rule Z2).
+
+     A pain note still renders its own §10 notice on the card. DL1 neither
+     suppresses it nor repeats it, which is why `pain` is not read here. */
+  function verdictDeload(ex, C) {
+    return mk("", "Deload week. Stay at " + loadWord(minW(C), ex.implement) +
+      ". Nothing to add until full sets resume.", "", "DL1");
+  }
+
   /* ---------------------------------------------------------- verdict */
 
   /* verdict(ctx) -> {t, x, x2, rule} | null
@@ -1171,6 +1215,21 @@
        note      this exercise's note, read only through Rule S1's regex
        painFlag  optional Boolean; overrides `note` when present, so a caller
                  can hold a committed flag while the field is still being typed
+       deload    optional Boolean; true when deloadStatus().active is true for
+                 the session's date. Threaded exactly like painFlag, because it
+                 is the same mechanism for the same reason: a fact about today
+                 that only the caller can know, passed in rather than read out
+                 of storage by a pure function (Rule DL1)
+
+     THE DELOADED PRESCRIPTION IS DERIVED HERE, NOT TRUSTED FROM THE CALLER.
+     With `deload:true` this applies deloadEx() to ctx.ex itself, so the gate
+     and the verdict are computed against the SAME object the card renders
+     whether the caller passed the programme exercise or the deloaded one.
+     deloadEx is idempotent (it refuses to re-deload its own output), so the
+     two call shapes converge instead of lowering `hi` twice. That removes the
+     one way this function could be handed the wrong prescription — the
+     converse constraint, that the deloaded ex must reach NOTHING ELSE, is
+     enforced in deloadCheck (addendum §7.4).
 
      One context object, not an argument list: S1, V1 and R1 all add inputs to
      this function at different points in this batch, and three signature
@@ -1195,8 +1254,9 @@
      It does not throw on bad input; it returns null. */
   function verdict(ctx) {
     if (!isObj(ctx)) return null;
-    var ex = ctx.ex;
-    if (!isObj(ex)) return null;
+    if (!isObj(ctx.ex)) return null;
+    var dl = (ctx.deload === true);
+    var ex = dl ? deloadEx(ctx.ex, true) : ctx.ex;
     var s = ex.s;
     if (typeof s !== "number" || !isFinite(s) || s < 1) return null;
 
@@ -1206,9 +1266,15 @@
 
     if (ex.k === "speed") {
       /* Unchanged from the old verdictFor, and deliberately untested: Rule SP1
-         (W12) replaces this whole branch with a computed load. */
+         (W12) replaces this whole branch with a computed load. Speed work is
+         unchanged by a deload (audit §8), so DL1 does not reach it. */
       return mk("", "Submaximal and fast. Do not grind these.", "", "SP0");
     }
+
+    /* Rule DL1. Above verdictPower and verdictHyp, which are not exported and
+       are called from nowhere else — so during an active deload no P1 case and
+       no H1 case is reachable by any path. */
+    if (dl) return verdictDeload(ex, C);
 
     var pain = (typeof ctx.painFlag === "boolean") ? ctx.painFlag : painFlag(ctx.note);
 
@@ -1685,7 +1751,20 @@
     return m;
   }
 
-  /* stallReport(sessions, todayStr, keyLifts) -> {stalled, untested, testable}
+  /* stallReport(sessions, todayStr, keyLifts, state)
+       -> {stalled, untested, testable}
+
+     state     OPTIONAL. The app state ({deload:…}) or the bare deload object.
+               Rule E2: a date inside any deload window contributes no e1RM
+               sample to either block and no distinct date to either block's
+               2-date minimum. A deload set is the same weight two reps short,
+               which is 5.7% down on Epley on a 3-5 slot - more than twice this
+               rule's own 2.5% threshold - so left in the pool it manufactures
+               the stall the app itself prescribed and then blames his effort
+               or his diet for it. Omit it and nothing is excluded, which is
+               the pre-E2 behaviour and is correct for a log with no deload in
+               it. `testable` is unaffected: TW1 counts a deload week as a week
+               he trained (addendum §7.7 N2).
 
      keyLifts  [{id, n}, ...] - index.html's KEY_LIFTS. WHICH four lifts are
                tested is settled (audit 12) and is NOT decided here; the caller
@@ -1708,8 +1787,9 @@
      when a stalled lift also carries a pain note inside the recent block. It
      needs painWindow(), which is W16's, and the coach marked it deferrable and
      "nothing else breaks if it is cut". When W16 lands, this takes the flagged
-     ids as a fourth argument and W10 renders the extra line. */
-  function stallReport(sessions, todayStr, keyLifts) {
+     ids as a FIFTH argument - E2's state took the fourth - and W10 renders the
+     extra line. */
+  function stallReport(sessions, todayStr, keyLifts, state) {
     var today = safeToday(todayStr);
     var out = { stalled: [], untested: [], testable: false };
 
@@ -1721,6 +1801,7 @@
     var pFrom = dateAdd(today, -ST1_PRIOR_FROM);
     var pTo = dateAdd(today, -ST1_PRIOR_TO);
     if (rFrom === null || pFrom === null || pTo === null) return out;
+    var wins = deloadWindows(state);                   /* Rule E2 */
 
     for (var i = 0; i < keyLifts.length; i++) {
       var l = keyLifts[i];
@@ -1729,8 +1810,8 @@
       if (id === "") continue;
       var name = (typeof l.n === "string" && l.n.trim() !== "") ? l.n : id;
 
-      var R = e1rmByDate(sessions, id, rFrom, today);
-      var P = e1rmByDate(sessions, id, pFrom, pTo);
+      var R = dropDeloadRows(e1rmByDate(sessions, id, rFrom, today), wins);
+      var P = dropDeloadRows(e1rmByDate(sessions, id, pFrom, pTo), wins);
       if (R.length < ST1_DATES || P.length < ST1_DATES) { out.untested.push(name); continue; }
 
       var rb = bestE(R), pb = bestE(P);
@@ -2481,8 +2562,17 @@
   var D1_WEEKS = 6;          /* below this: no deload language at all      */
   var D1_T3_WEEKS = 9;       /* the calendar backstop                      */
   var D1_RUN = 2;            /* consecutive failing DATES for T1           */
-  var D1_TAIL = "Take a deload week: same weights, 2 sets, stop 2 reps short. Resume where you left off.";
-  var D1_ACTIVE_TAIL = "Same weights, 2 sets, 2 reps short. Do not chase numbers this week.";
+  /* The rep clause is SCOPED TO POWER DAYS, because the prescription is
+     (addendum §7.3). `hi − 2` is not a meaningful instruction on a hypertrophy
+     slot: on a 3 × 8–12 it prescribes 10, which is inside the range he was
+     already working in, and the load is unchanged, so nothing is reduced. The
+     lever that cuts fatigue on a hypertrophy day is set count and exercise
+     count, and the deload already cuts both. These two strings previously
+     stated a prescription deloadEx does not give, on a screen he can see the
+     card on the same day. Four pinned WO-003 criteria moved with them; the
+     rule did not change, the sentence describing it became accurate. */
+  var D1_TAIL = "Take a deload week: same weights, 2 sets. On power days stop 2 reps short. Resume where you left off.";
+  var D1_ACTIVE_TAIL = "Same weights, 2 sets. Power days stop 2 reps short. Do not chase numbers this week.";
   var D1_ENDED = "Deload done. Back to full sets at your last working loads.";
   var D1_DECLINED = "Noted. Asked again after the next session.";
 
@@ -2533,6 +2623,90 @@
     return out;
   }
 
+  /* ------------------------------------------------------------- E2 */
+
+  /* Rule E2 (addendum §7.7 N2) — A DELOAD DATE IS NOT EVIDENCE.
+
+     A deload set is the same weight stopping two reps short, so on a 3–5 slot
+     100×3 against 100×5 is an Epley 110.0 against 116.7 — 5.7% lower, more
+     than TWICE ST1's 2.5% threshold. Left in the pool, the Trend tab reports
+     `Week 12 and no progress on Row, Squat … Either the sets aren't close
+     enough to failure, or you aren't eating enough` two weeks after the app
+     itself told him to stop short. That is the app blaming him for obeying it:
+     B-07 arriving through a door B-07 did not know about.
+
+     A session dated inside any window contributes:
+       - no e1RM sample to either ST1 block, and no distinct date to either
+         block's >= 2 minimum (stallReport);
+       - no row to E1's ladder — not COMPLETE, not FAIL, not SHORT. It is
+         SKIPPED, so it neither resets the run nor extends it. An abandoned
+         date is an unknown and resets; a deload date is a known non-attempt
+         and is invisible. Different facts, different handling.
+
+     NOT applied to Rule SP1: R is the heaviest set at 3–5 reps and a deload
+     does not lower the weight, so a deload set is a valid observation of load,
+     and excluding it could drop a real number to the no-data fallback.
+     NOT applied to Rule TW1: a deload week is a week he trained.
+     Do not extend it to either.
+
+     `past` plus the current one, whether it is running or finished. An
+     unstamped end is IMPLIED from the start exactly as deloadStatus implies
+     it — the phone may have been shut all week. */
+
+  /* The deload record out of either shape a caller has: the app state
+     ({deload:…}) or the bare deload object. Callers hold one or the other and
+     must not have to know which this wants. */
+  function deloadOf(v) {
+    if (!isObj(v)) return null;
+    if (isObj(v.deload)) return v.deload;
+    if (own(v, "startDate") || own(v, "past")) return v;
+    return null;
+  }
+
+  function deloadWin(d) {
+    if (!isObj(d)) return null;
+    var s = dateOrNull(d.startDate);
+    if (s === null) return null;
+    var e = dateOrNull(d.endDate);
+    if (e === null) e = dateAdd(s, DELOAD_DAYS - 1);
+    if (e === null || e < s) e = s;
+    return { from: s, to: e };
+  }
+
+  /* deloadWindows(state) -> [{from, to}] ascending by start. */
+  function deloadWindows(state) {
+    var out = [];
+    var d = deloadOf(state);
+    if (!isObj(d)) return out;
+    var list = Array.isArray(d.past) ? d.past.slice(0) : [];
+    list.push(d);
+    for (var i = 0; i < list.length; i++) {
+      var w = deloadWin(list[i]);
+      if (w !== null) out.push(w);
+    }
+    out.sort(function (a, b) { return a.from < b.from ? -1 : (a.from > b.from ? 1 : 0); });
+    return out;
+  }
+
+  function inDeload(date, wins) {
+    if (!Array.isArray(wins) || typeof date !== "string") return false;
+    for (var i = 0; i < wins.length; i++) {
+      if (date >= wins[i].from && date <= wins[i].to) return true;
+    }
+    return false;
+  }
+
+  /* [{date, e}] with every deload date dropped. A new array; the rows are the
+     caller's own objects and are not written to. */
+  function dropDeloadRows(rows, wins) {
+    if (!Array.isArray(wins) || !wins.length) return rows;
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      if (!inDeload(rows[i].date, wins)) out.push(rows[i]);
+    }
+    return out;
+  }
+
   /* Weeks of >= 3 training days AFTER `sinceStr` (exclusive), or all of them
      when it is null. T3's "9 CONSECUTIVE trainingWeeks with no deload taken"
      is this count: the clock restarts when a deload finishes. TW1 unchanged
@@ -2550,41 +2724,57 @@
     return n;
   }
 
-  /* T1's evidence, one row per DISTINCT DATE, ascending (addendum 6c).
+  /* Rule E1 (addendum §7.6) — T1's evidence ladder, one row per DISTINCT DATE,
+     ascending (addendum 6c). Supersedes "half-finished dates are SKIPPED".
 
-     A date is evidence only when an entry on it holds at least `s` completed
-     sets: workingLoadStrict's rule, because a load read off a session he
-     abandoned after one set is a confident wrong number with no tell (B-24).
-     Half-finished dates are SKIPPED, not counted as failures - the app does
-     not read a short session as weakness.
+     A row exists for every distinct date on which the lift holds at least ONE
+     completed set (Rule Z1). Dates he did not train the lift at all are not
+     rows. Deload dates are not rows either (Rule E2) — skipped entirely, so
+     they neither reset the run nor extend it.
 
-     Two saves on one date are ONE row. A correction saved beside its original
-     must not read as two consecutive failures, so a date counts as completed
-     if ANY entry on it completed the prescription, and as a failure only when
-     every evaluable entry on it failed. */
-  function d1Rows(sessions, exId, s, lo, todayStr, sinceStr) {
+       evaluable  some entry on the date holds >= s completed sets. False is
+                  the SHORT row: he logged the lift and stopped early.
+       full       some entry on it holds >= s completed sets AND all of its
+                  first s reach `lo`. A date counts as COMPLETE if ANY entry on
+                  it completed the prescription, and as a failure only when
+                  every evaluable entry on it failed — two saves on one date
+                  are ONE row, and a correction saved beside its original must
+                  not read as two consecutive failures (addendum 6c, and it
+                  survives B-05, where corrections arrive as extra rows before
+                  they arrive as edits).
+       fullLoad / failLoad   the heaviest working load on that date on each
+                  side, through workingLoadStrict: a load read off a session he
+                  abandoned after one set is a confident wrong number with no
+                  tell (B-24). */
+  function d1Rows(sessions, exId, s, lo, todayStr, sinceStr, windows) {
     var out = [];
     if (!Array.isArray(sessions)) return out;
     var today = safeToday(todayStr);
+    var wins = Array.isArray(windows) ? windows : [];
     var by = {}, i, j, ses, d, e, C, load, full, rec;
     for (i = 0; i < sessions.length; i++) {
       ses = sessions[i];
       d = sessionDate(ses);
       if (d === "" || d > today) continue;
       if (sinceStr !== null && d <= sinceStr) continue;
+      if (inDeload(d, wins)) continue;           /* E2 - not a row at all */
       if (!isObj(ses) || !isObj(ses.entries) || !own(ses.entries, exId)) continue;
       e = ses.entries[exId];
       if (!isObj(e) || !Array.isArray(e.sets)) continue;
       C = completedSets(e.sets);
-      if (C.length < s) continue;                /* not evaluable evidence */
+      if (!C.length) continue;                   /* the lift was not trained */
+      if (!own(by, d)) {
+        by[d] = { date: d, evaluable: false, full: false, fullLoad: null, failLoad: null };
+      }
+      rec = by[d];
+      load = workingLoadStrict(e.sets, s);
+      if (load === null) continue;               /* SHORT - the row stands, this entry is not evidence */
+      rec.evaluable = true;
       C = C.slice(0, s);
-      load = C[0].w; full = true;
+      full = true;
       for (j = 0; j < C.length; j++) {
-        if (C[j].w < load) load = C[j].w;
         if (C[j].r < lo) full = false;
       }
-      if (!own(by, d)) by[d] = { date: d, full: false, fullLoad: null, failLoad: null };
-      rec = by[d];
       if (full) {
         rec.full = true;
         if (rec.fullLoad === null || load > rec.fullLoad) rec.fullLoad = load;
@@ -2596,30 +2786,88 @@
     return out;
   }
 
+  /* The heaviest load COMPLETED within `days` of `onDate`, or null. Earlier
+     dates only, because "previously" means previously: a load completed AFTER
+     a failure does not make the failure retroactively count (addendum §7.5).
+
+     The window is E1 clause (c) and it is ST1_PRIOR_FROM, not a new number.
+     Without it `best` never decays: six weeks of training, six months off, two
+     hard weeks back, and the app recommends a deload for detraining (N4).
+     Note it is the WINDOWED max, not a recency gate on the all-time max — a
+     125 kg he owned last year must not veto a T1 fired off the 120 kg he
+     completed ten days ago, which is item 5's cleanest regression signature. */
+  function bestWithin(done, onDate, days) {
+    var m = null, g, i;
+    for (i = 0; i < done.length; i++) {
+      if (done[i].date >= onDate) continue;
+      g = dayGap(done[i].date, onDate);
+      if (g === null || g > days) continue;
+      if (m === null || done[i].load > m) m = done[i].load;
+    }
+    return m;
+  }
+
   /* T1: two consecutive failing DATES on one key lift, at a load he has
      already completed for the full prescription. The load clause is what
      keeps normal progression out of it: failing 3 sets at a new heavier
-     weight is a Tuesday, not a deload. */
-  function d1T1(sessions, lift, todayStr, sinceStr) {
+     weight is a Tuesday, not a deload.
+
+     CONSECUTIVE MEANS ADJACENT IN HIS TRAINING, not adjacent among the dates
+     the app can read (Rule E1). A SHORT date resets the run: `fail, abandoned,
+     fail` is not two consecutive failures, it is two failures with an unknown
+     between them, and the correct response to an unknown is to get another
+     data point rather than prescribe a week of reduced stimulus. He gives the
+     app that data point on the next session, and `fail, abandoned, fail, fail`
+     fires on the third and fourth.
+
+     `lift.s` and `lift.lo` are the PROGRAMME's, never a deloaded exercise's —
+     see the guard in deloadCheck.
+
+     Three recency clauses, all required, all on ST1's own constants:
+       (a) the two failing dates <= ST1_RECENT days apart
+       (b) the later failing date within ST1_RECENT days of today
+       (c) inside bestWithin: the completed load it is measured against was
+           completed within ST1_PRIOR_FROM days of it. */
+  function d1T1(sessions, lift, todayStr, sinceStr, windows) {
     if (!isObj(lift)) return null;
+    if (lift.dl === 1) return null;              /* a deloaded prescription - see deloadCheck */
     var id = str(lift.id).trim();
     var s = lift.s, lo = lift.lo;
     if (id === "") return null;
     if (typeof s !== "number" || !isFinite(s) || s < 1) return null;
     if (typeof lo !== "number" || !isFinite(lo) || lo < 1) return null;
-    var rows = d1Rows(sessions, id, Math.floor(s), lo, todayStr, sinceStr);
-    var best = null, run = 0, at = null, i, r;
+    var today = safeToday(todayStr);
+    var rows = d1Rows(sessions, id, Math.floor(s), lo, today, sinceStr, windows);
+    var done = [];                               /* every COMPLETE date, ascending */
+    var run = 0, prevFail = null, i, r, best, g;
     for (i = 0; i < rows.length; i++) {
       r = rows[i];
-      if (r.full) {
-        run = 0;
-      } else if (best !== null && r.failLoad !== null && r.failLoad <= best + 1e-9) {
-        run++; at = r.date;
-        if (run >= D1_RUN) return { date: at };
-      } else {
-        run = 0;
+
+      if (!r.evaluable) {                        /* SHORT - breaks the streak */
+        run = 0; prevFail = null; continue;
       }
-      if (r.full && (best === null || r.fullLoad > best)) best = r.fullLoad;
+      if (r.full) {                              /* COMPLETE */
+        run = 0; prevFail = null;
+        done.push({ date: r.date, load: r.fullLoad });
+        continue;
+      }
+      if (r.failLoad === null) { run = 0; prevFail = null; continue; }
+
+      best = bestWithin(done, r.date, ST1_PRIOR_FROM);          /* clause (c) */
+      if (best === null || r.failLoad > best + 1e-9) {          /* MISS-NEW */
+        run = 0; prevFail = null; continue;
+      }
+
+      /* FAIL. Clause (a): too far from the previous failure and this one
+         STARTS a run rather than continuing it - absence is not fatigue. */
+      g = (prevFail === null) ? null : dayGap(prevFail, r.date);
+      run = (g !== null && g <= ST1_RECENT) ? run + 1 : 1;
+      prevFail = r.date;
+
+      if (run >= D1_RUN) {                                      /* clause (b) */
+        g = dayGap(r.date, today);
+        if (g !== null && g <= ST1_RECENT) return { date: r.date };
+      }
     }
     return null;
   }
@@ -2649,7 +2897,9 @@
     var sessions = Array.isArray(c.sessions) ? c.sessions : [];
     var today = safeToday(c.todayStr);
     var state = isObj(c.state) ? c.state : {};
-    var dl = deloadStatus((c.deload !== undefined) ? { deload: c.deload } : state, today);
+    var dsrc = (c.deload !== undefined) ? { deload: c.deload } : state;
+    var dl = deloadStatus(dsrc, today);
+    var wins = deloadWindows(dsrc);              /* Rule E2 */
 
     if (trainingWeeks(sessions, today) < D1_WEEKS) { out.reason = "early"; return out; }
     if (dl.active) { out.reason = "active"; return out; }
@@ -2666,11 +2916,28 @@
     var lifts = Array.isArray(c.keyLifts) ? c.keyLifts : [];
     var i, l, name;
 
+    /* THE BINDING CONSTRAINT (addendum §7.4). The deloaded exercise goes to the
+       card and to verdict() and TO NOTHING ELSE. d1T1 reads lift.s and lift.lo
+       from here, so one deloaded lift in this list would shift the whole T1
+       evidence ladder to s = 2 and start reading two-set weeks as full ones.
+       deloadEx stamps every prescription it alters with `dl:1`, and this
+       refuses to answer at all rather than answering off the wrong ladder —
+       silently returning "no trigger" would be the same class of defect as the
+       bug it guards. `reason` names it so a caller and a test can see it.
+       keyLifts is the caller's KEY_LIFTS joined to PROGRAM, never to the
+       week's prescription. */
+    for (i = 0; i < lifts.length; i++) {
+      if (isObj(lifts[i]) && lifts[i].dl === 1) {
+        out.reason = "deloaded-lifts";
+        return out;
+      }
+    }
+
     /* T1 - the most specific trigger, so it is checked first. */
     for (i = 0; i < lifts.length; i++) {
       l = lifts[i];
       if (!isObj(l)) continue;
-      if (d1T1(sessions, l, today, since) === null) continue;
+      if (d1T1(sessions, l, today, since, wins) === null) continue;
       name = (typeof l.n === "string" && l.n.trim() !== "") ? l.n : str(l.id);
       out.trigger = "T1";
       out.lifts = [name];
@@ -2691,8 +2958,16 @@
       out.trigger = "T2";
       out.lifts = stalled.slice(0);
       out.rollback = true;
-      out.text = andList(stalled) + " have " + (stalled.length === 2 ? "both" : "all") +
-                 " stalled. " + D1_TAIL;
+      /* ST1's own vocabulary for the same finding on the same day (addendum
+         §7.1). The Trend tab says `Week 7 and no progress on Row, Squat.` and
+         this said `Row and DB press have both stalled.` — one app, two words
+         for one event, and ST1's wording is fixed by the brief, so the banner
+         moved. The `both`/`all` branch is gone with it: andList needs no
+         grammatical switch and a second string is a second thing to get wrong.
+         `rollback` still tells the caller to render V1's own rollback line as a
+         SECOND LINE. It is never joined to this sentence and it is not written
+         here, because the exercise being pulled is rollbackReintro's to name. */
+      out.text = "No progress on " + andList(stalled) + ". " + D1_TAIL;
       return out;
     }
 
@@ -2789,26 +3064,45 @@
   /* deloadEx(ex, active) -> the exercise as PRESCRIBED this week.
 
      A NEW object; `ex` is never mutated. Content, audit section 8: same
-     weights, 2 sets, stop 2 reps short of hi. Speed work is returned
-     unchanged - it is already submaximal and low-fatigue - and cut:1
+     weights, 2 sets, and ON POWER DAYS stop 2 reps short of hi. Speed work is
+     returned unchanged - it is already submaximal and low-fatigue - and cut:1
      accessories are dropped by volumeTier, not here.
 
      `hi` is only pulled in on POWER slots, which is the only place the audit
-     names a rep change. Never below `lo`.
+     names a rep change, and it is never below `lo`. On a hypertrophy slot
+     `hi - 2` would prescribe 10 reps on an 8-12 exercise - inside the range he
+     was already working in, at an unchanged load, so it reduces nothing - and
+     it would move H1 case 2's trigger with it, printing `All sets above 10. Go
+     to 45 kg next session.` in the middle of a deload week. The levers that
+     cut fatigue on a hypertrophy day are set count and exercise count, and the
+     deload already cuts both (addendum §7.3).
 
-     THE VERDICT GATE. verdict(ctx) gates on ex.s, so the caller must pass the
-     SAME exercise object to the card and to the verdict: the deloaded one.
-     Gating on 3 while prescribing 2 withholds his verdict for the whole week.
-     Sets he logs beyond the prescription still render and still save - the
-     deload changes what he is asked for, never what he did. */
+     THE VERDICT GATE. verdict(ctx) gates on ex.s, so the card and the verdict
+     see the same prescription: the deloaded one. Gating on 3 while prescribing
+     2 withholds his verdict for the whole week. Sets he logs beyond the
+     prescription still render and still save - the deload changes what he is
+     asked for, never what he did. verdict() derives this itself from
+     ctx.deload, so it cannot be handed the wrong object.
+
+     `dl:1` MARKS THE OUTPUT, in the shape of `cut:1`, and it is not
+     decoration. §7.4's binding constraint is that this object reaches the card
+     and verdict() and NOTHING ELSE: d1T1 reads lift.s and lift.lo from its
+     caller, and a deloaded lift there would shift T1's whole evidence ladder
+     to s = 2. The mark makes that mistake detectable instead of silent -
+     deloadCheck refuses to run on a marked lift - and it makes this function
+     idempotent, so applying it twice cannot lower `hi` twice on a slot whose
+     lo is more than 2 below its hi. It is enumerable on purpose: it survives
+     copyObj and JSON, so a marked prescription cannot launder itself clean. */
   function deloadEx(ex, active) {
     if (!isObj(ex) || active !== true || ex.k === "speed") return ex;
+    if (ex.dl === 1) return ex;                  /* already deloaded */
     var out = copyObj(ex);
     if (typeof ex.s === "number" && isFinite(ex.s) && ex.s > DELOAD_SETS) out.s = DELOAD_SETS;
     if (ex.k === "power" && typeof ex.hi === "number" && isFinite(ex.hi) &&
         typeof ex.lo === "number" && isFinite(ex.lo)) {
       out.hi = Math.max(ex.lo, ex.hi - DELOAD_SHORT);
     }
+    out.dl = 1;
     return out;
   }
 
@@ -2956,6 +3250,9 @@
               weeks: D1_WEEKS, backstop: D1_T3_WEEKS, run: D1_RUN },
     deloadCheck: deloadCheck,
     deloadStatus: deloadStatus,
+    /* Rule E2 - the deload windows, exported because ST1 (W9) and E1 (W19)
+       both read them and a test needs to see what was excluded and why. */
+    deloadWindows: deloadWindows,
     deloadEx: deloadEx,
     startDeload: startDeload,
     declineDeload: declineDeload,
