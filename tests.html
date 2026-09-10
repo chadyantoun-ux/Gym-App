@@ -54,13 +54,16 @@
 <p class="sub">Pure-function regression suite for WO-001 (B-01 / B-02 / B-03 / B-21) and WO-003 (the advice batch).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: one deliberate failure, and it is a work item, not a carried-forward red.</b>
-<code>strength-coach</code> ruled on 2026-09-10 (addendum &sect;9.13.3) that the
-trainingWeeks-0 line must read <code>3 sessions logged. Week 1 starts when three land in one
-week.</code> <code>logic.js</code> still ships the struck wording, so the regression test was written
-<em>before</em> the fix &mdash; S26 <em>section 9.13 ruling 3</em>. Owner: <code>backend</code>,
-<code>tierLines()</code>. Flip <code>TW0LINE()</code> when it lands and the page returns to N / N / 0
-with no other edit.<br>
+<b>Today: no failures and no skips.</b> The one deliberate red is cleared.
+<code>strength-coach</code> ruled on 2026-09-10 (addendum &sect;9.13.3) that the trainingWeeks-0 line
+must read <code>3 sessions logged. Week 1 starts when three land in one week.</code>; the regression
+test was written <em>before</em> the fix and went green on <code>5cd014a</code> with one string in
+<code>tierLines()</code> and one literal here &mdash; S26 <em>section 9.13 ruling 3</em>, which now
+also asserts that <b>&quot;three&quot; is spelled and not interpolated</b> from
+<code>TRAINING_WEEK_MIN</code>. The same commit inverted three assertions this suite had pinned as
+OBSERVED rather than correct (an unreadable <code>plan</code> naming PHAT's first day, a numeric day
+name coerced into <code>Start with 42.</code>, and a garbage plan argument answering as PHAT), and
+normalised <code>verdict()</code>'s success path onto <code>absent:false</code>.<br>
 <b>Target shape is N / N / 0.</b> No expected failure is carried forward. A failure kept alive as
 "the known one" becomes a rule applied from memory, and that is how a second, real failure gets waved
 through (WO-003 &sect;Decision 1). Two meta-tests at the end enforce it: one fails on any test NAME
@@ -4481,29 +4484,41 @@ T("D1 / item 4 - a DELOADED lift in keyLifts is REFUSED by name, not answered of
 
 /* THE ONE EDIT POINT FOR THE trainingWeeks-0 COUNT LINE.
    Every assertion in this file that pins that sentence reads it from here, in
-   S22 and in S26 alike, because addendum §9.13 ruling 3 has AMENDED it and
-   logic.js has not followed yet:
+   S22 and in S26 alike.
 
-     shipping today   N sessions logged. A training week is 3, so week 1
-                      starts when you get there.
-     RULED (§9.13.3)  N sessions logged. Week 1 starts when three land in
-                      one week.
+     was (§9.8, §9.12)   N sessions logged. A training week is 3, so week 1
+                         starts when you get there.
+     RULED (§9.13.3)     N sessions logged. Week 1 starts when three land in
+                         one week.
+     LANDED              5cd014a, logic.js -> tierLines()
 
-   The coach struck his own §9.8/§9.12 wording: it states the rule as a COUNT
-   when the rule is about CONCENTRATION, which is flatly confusing at three
-   logged sessions and was never right at one. The red test in S26
-   ("section 9.13 ruling 3") pins the ruled string and FAILS until logic.js
-   changes. When backend lands it, change the return below and that test goes
-   green with no other edit anywhere in this file. Do not change one and not
-   the other - that is how the two strings end up both being asserted. */
-function TW0LINE(n){
-  return n + (n === 1 ? " session" : " sessions") +
-    " logged. A training week is 3, so week 1 starts when you get there.";
-}
+   The coach struck his own wording: it states the rule as a COUNT when the
+   rule is about CONCENTRATION, which is flatly confusing at three logged
+   sessions and was never right at one. The regression test in S26 ("section
+   9.13 ruling 3") was written RED, before the fix, and went green on 5cd014a
+   with this one function as the only edit - which is what it was built to
+   prove.
+
+   TW0RULED HOLDS THE LITERAL; TW0LINE IS AN ALIAS. The ruled sentence is
+   spelled out in exactly one place in this file, and every other assertion -
+   including the one whose job is to pin the ruled form - resolves to it. Two
+   copies of a string that must be identical is how a half-applied copy change
+   passes: one site gets edited, the other keeps asserting the old words, and
+   both stay green. Keeping the two NAMES is deliberate: the call sites read
+   differently ("the line as it ships" vs "the line as it was ruled") and the
+   next copy amendment will re-open the same gap between them.
+
+   "three" IS SPELLED, NOT INTERPOLATED from TRAINING_WEEK_MIN, in logic.js
+   and here alike. QA asked for that and the coach's sentence settles it: it
+   is one sentence about ONE week, not a parameterised statement of the
+   minimum, and if the minimum ever moves the sentence gets rewritten by the
+   coach rather than re-interpolated. Asserted directly in the §9.13.3 test
+   below, so nobody "tidies" it into TRAINING_WEEK_MIN + " land in one week". */
 function TW0RULED(n){
   return n + (n === 1 ? " session" : " sessions") +
     " logged. Week 1 starts when three land in one week.";
 }
+function TW0LINE(n){ return TW0RULED(n); }
 
 T("D1 - cycleLine renders the permanent Train-screen line, and says 'deload' only from week 6", function(a){
   var wk7 = P.cycleLine({ sessions: TFILL(7, MON), state: STORE({ reintro: { d1: 1, d5: 3 } }),
@@ -5877,7 +5892,13 @@ T("W2-AC / C-7 - validatePlan requires a lift on every exercise", function(a){
      every reader coerces the same way, the token is still unique, and the
      namespace pass still sees it as "42" - but it is the only field in the
      document where the shape is not what the validator claims. Reported to
-     backend as a P2 tidy-up; asserted here so a change to it is deliberate. */
+     backend as a P2 tidy-up; asserted here so a change to it is deliberate.
+     THE PAIR: `days[0].name = 42` was the same gap one level up and was
+     closed in 5cd014a (planFirstDayName now requires typeof name ===
+     "string", so it no longer prints "Start with 42."). See S26 "the day-one
+     line reads the plan's first day, and falls back when it cannot". `lift`
+     is the last member of the class; if it is ever closed, close it there
+     and invert the assertion below rather than deleting it. */
   p = MINIPLAN(); p.days[0].ex[0].lift = 42;
   a.eq(P.validatePlan(p).ok, true, "a numeric lift is coerced, not refused - pinned, see the comment");
   a.deep(P.exIdsForLift(p, "42"), ["x_1"], "and it behaves as the token \"42\" everywhere downstream");
@@ -6643,15 +6664,64 @@ T("W5 / section 9.12 - null and the ABSENT object are two different non-verdicts
   var noSets = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "tempo" }, sets: [] });
   a.eq(noSets.absent, true, "unclassified is true from the first render, not only once 3 sets are in");
 
-  /* A REAL VERDICT IS NOT ABSENT. Asserted as `!== true` rather than
-     `=== false`: verdict()'s success path does not run through notAbsent(),
-     so the property is genuinely missing on an advice object. That asymmetry
-     with volumeTier/stallReport/speedLoad (which do set absent:false) is
-     pinned as a contract question, not asserted as a requirement. */
+  /* A REAL VERDICT IS NOT ABSENT - AND CARRIES THE FIELD. Since 5cd014a the
+     three success paths return through notAbsent(), so a real verdict is
+     `absent:false, absentLines:[], absentLine:""` and matches volumeTier,
+     stallReport, speedLoad and cycleLine. It used to have no `absent`
+     property at all.
+
+     WHY `absent === true` IS FALSE IS NO LONGER ENOUGH, and QA had this
+     assertion the weak way round until backend flagged it: `false === true`
+     and `undefined === true` are both false, so the old line passed against
+     BOTH shapes and could not tell them apart. It is kept - it is the thing
+     a caller actually does - and hasOwnProperty is asserted beside it, on
+     all three success paths (power, hypertrophy, deload), because that is
+     the check that distinguishes the shapes. If the normalisation is ever
+     partially reverted, one of the three fails and names which. */
+  function shape(v, label){
+    a.eq(Object.prototype.hasOwnProperty.call(v, "absent"), true,
+      label + ": a real verdict must CARRY absent, not merely fail to be true");
+    a.eq(v.absent, false, label + ": and carry it false");
+    a.deep(v.absentLines, [], label + ": with no refusal lines");
+    a.eq(v.absentLine, "", label + ": and an empty refusal line, which renders as nothing");
+    a.eq(v.absent === true, false, label + ": the caller's own test still reads correctly");
+  }
   var real = P.verdict({ ex: PE_ROW, sets: SETS(100, 5, 100, 5, 100, 5) });
-  a.eq(real.absent === true, false, "a real verdict is never mistaken for a refusal");
+  shape(real, "power");
   a.eq(real.rule, "P1.4", "and the rule that fired is named");
   a.ok(real.x.length > 0, "advice lives in x; refusal never does");
+
+  var hyp = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb" },
+                        sets: SETS(60, 10, 60, 10, 60, 10),
+                        prev: PREV(SETS(60, 9, 60, 9, 60, 9)) });
+  shape(hyp, "hyp");
+  a.ok(hyp.rule && hyp.rule.indexOf("H1") === 0, "the hypertrophy path fired: " + show(hyp.rule));
+  var dl = P.verdict({ ex: { id: "x", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb" },
+                       sets: SETS(60, 10, 60, 10, 60, 10), deload: true });
+  shape(dl, "deload");
+  a.eq(dl.rule, "DL1", "the deload path fired");
+
+  /* The refusal keeps the opposite shape, so the two are told apart by the
+     VALUE of a field both carry - which is the whole point of normalising. */
+  a.eq(Object.prototype.hasOwnProperty.call(refusal, "absent"), true);
+  a.eq(refusal.absent, true);
+  a.ok(refusal.absentLine.length > 0);
+  /* And null still carries nothing at all: three states, and only two of
+     them are objects. A caller that reaches for hasOwnProperty must still
+     null-check first. */
+  a.eq(below, null);
+  a.eq(P.verdict({ ex: PE_ROW, sets: SETS(100, 5) }), null, "still null below the gate after the change");
+
+  /* THE COPY WALKER IS UNAFFECTED, verified rather than assumed. The three
+     new fields are a boolean, an empty array and an empty string, so vtext
+     collects nothing new from them - but vtext is a blind key walk, and the
+     next field to be normalised in might not be empty. This pins the
+     rendered copy of a real verdict as exactly x (+ x2), with `t` and `rule`
+     skipped by VNONCOPY and nothing arriving from the absent trio. */
+  var expected = [real.x, real.x2].filter(function(s){ return s; }).join("\n");
+  a.eq(vtext(real), expected, "vtext sees the copy fields only - absent/absentLines/absentLine add nothing");
+  a.eq(vtext(real).indexOf("false"), -1, "and no boolean leaked into the rendered copy");
+  a.eq(vtext(dl), [dl.x, dl.x2].filter(function(s){ return s; }).join("\n"), "same on the deload path");
 });
 
 T("W5 / section 9.12 - the role gate reads the RAW ex.k, so \" hyp \" is silent in all three helpers", function(a){
@@ -7117,25 +7187,26 @@ T("W5 / section 9.12 ruling 3 - the day-one line reads the plan's first day, and
   a.eq(firstLine(mut(function(p){ delete p.days[0].name; })), OLD, "no name field at all");
   a.eq(firstLine(mut(function(p){ p.days[0] = 7; })), OLD, "a non-object day");
   a.eq(firstLine(mut(function(p){ p.days[0] = null; })), OLD, "a null day");
-  /* `days` NOT AN ARRAY is not a fallback inside planFirstDayName at all -
-     it fails isPlanDoc, so cycleLine substitutes the shipped PHAT plan and
-     prints PHAT's first day. Pinned separately from the fallbacks above
-     because it is a different mechanism with a louder consequence: a user
-     plan whose `days` is corrupt names a session from a plan he is not
-     running. Documented behaviour (`plan` is optional and defaults to PHAT),
-     flagged in the contract list, not asserted as correct here. */
-  a.eq(firstLine(mut(function(p){ p.days = "nope"; })), "No sessions logged. Start with Upper power.",
-    "OBSERVED: an unreadable plan silently becomes PHAT_PLAN");
-  /* A NUMERIC NAME IS COERCED, NOT REFUSED - pinned as observed, and it is
-     the same coercion-vs-validator gap as `lift:42` (see the contract list).
-     `validatePlan` requires `typeof d.name === "string"`, so this plan could
-     never be built in the app; it is reachable only from a corrupt store or
-     an import (WO-002), which is exactly where guessing is worst. The output
-     is nonsense but not dangerous - "Start with 42." names something, it does
-     not print undefined, and no advice hangs off it. If the importer is ever
-     the thing that fixes this, this assertion is the one to invert. */
-  a.eq(firstLine(mut(function(p){ p.days[0].name = 42; })), "No sessions logged. Start with 42.",
-    "OBSERVED: str() coerces where validatePlan refuses. Unreachable from the editor.");
+  /* INVERTED BY 5cd014a, and it was QA's pin. `days` NOT AN ARRAY fails
+     isPlanDoc, so cycleLine used to substitute the shipped PHAT plan and
+     print PHAT's first day - a user plan whose `days` is corrupt naming a
+     session out of a plan he is not running. Pinned OBSERVED, not asserted
+     as correct; backend fixed it with `dayOneName`, which reads the CALLER'S
+     argument rather than the resolved plan. The engine default is untouched
+     and must stay untouched - see the asymmetry test below. */
+  a.eq(firstLine(mut(function(p){ p.days = "nope"; })), OLD,
+    "an unreadable plan names nothing; it no longer silently becomes PHAT_PLAN");
+  /* INVERTED BY 5cd014a. A NUMERIC NAME used to be COERCED by str() and
+     printed "Start with 42." - the same coercion-vs-validator gap as
+     `lift:42` (contract list; the two are cross-referenced there, because
+     they are one class and `lift` is now the only member left).
+     `planFirstDayName` requires `typeof d.name === "string"`, so the stored
+     shape and validatePlan's claim finally agree. Unreachable from the
+     editor; reachable from a corrupt store or the WO-002 importer, which is
+     exactly where a coerced guess is worst - the value is not a name, and
+     the honest output is no name. */
+  a.eq(firstLine(mut(function(p){ p.days[0].name = 42; })), OLD,
+    "a numeric name is refused, not coerced - the stored shape now matches the validator");
 
   var i, all = [firstLine(mut(function(p){ p.days = []; })),
                 firstLine(mut(function(p){ p.days[0].name = ""; })),
@@ -7145,14 +7216,91 @@ T("W5 / section 9.12 ruling 3 - the day-one line reads the plan's first day, and
     a.eq(all[i].indexOf("Start with ."), -1, "and none prints an empty imperative");
   }
 
-  /* A NON-PLAN falls back to the shipped PHAT plan, not to the old string -
-     cycleLine's own default. Worth pinning: it means the fallback line is
-     genuinely reachable only through a plan that exists and cannot name a
-     day, which is the plan-editor case (WO-004 W15). */
-  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY, plan: "nonsense" }).text,
-    "No sessions logged. Start with Upper power.", "a garbage plan is not a plan; PHAT_PLAN answers");
+  /* INVERTED BY 5cd014a, and QA ARGUED THE OTHER WAY AND WITHDREW. This one
+     was pinned separately from `days:"nope"` on the reasoning "a garbage
+     plan is not a plan; PHAT_PLAN answers" - i.e. that `plan: "nonsense"`
+     is closer to passing nothing than to passing a broken document. Backend
+     treated `"nonsense"`, `{}` and `{days:"nope"}` as ONE class: the caller
+     handed the engine something it believes is a plan and the engine cannot
+     read it.
+
+     QA'S POSITION NOW: backend is right, and the case that decides it is
+     `plan: "p_user1"` - a caller passing a plan ID string where the document
+     was wanted. That is the realistic way a bare string arrives here, it is
+     indistinguishable from "nonsense" at this seam, and it means he is
+     running SOME plan that is not PHAT. Naming PHAT's first day there is the
+     exact defect the fix is about, and my split would have preserved it in
+     the likeliest case. The remaining difference between a string and
+     `undefined` is not worth a branch that has to be re-justified every time
+     someone reads it. One rule, three shapes: unreadable means silence. */
+  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY, plan: "nonsense" }).text, OLD,
+    "a garbage plan names nothing - including the `plan: \"p_user1\"` case that made this one class");
+  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY, plan: {} }).text, OLD,
+    "and an object that is not a plan document is the same class");
   a.eq(P.cycleLine({ sessions: [], todayStr: TODAY }).text,
-    "No sessions logged. Start with Upper power.", "and so does no plan argument at all");
+    "No sessions logged. Start with Upper power.",
+    "but NO plan argument still names PHAT's first day - see the asymmetry test below");
+  a.eq(P.cycleLine({ sessions: [], todayStr: TODAY, plan: null }).text,
+    "No sessions logged. Start with Upper power.", "and so does an explicit null");
+  /* The valid copy still names its own first day, unchanged - the whole
+     point of tightening the fallbacks is that the working case does not move. */
+  a.eq(firstLine(P.copyPlan(P.PHAT_PLAN, "My PHAT", TODAY).plan),
+    "No sessions logged. Start with Upper power.", "a copyPlan result is a plan and names its day one");
+});
+
+T("W5 / 5cd014a - absent means PHAT, unreadable means silence, and ONLY the naming line refuses", function(a){
+  /* THE ASYMMETRY, IN ONE PLACE, BECAUSE SOMEONE WILL UNIFY IT. It is subtle
+     and both halves look like inconsistencies from the other's side:
+
+       plan absent (undefined / null)   -> the shipped PHAT plan, everywhere,
+                                           INCLUDING the sentence that names
+                                           day one. An absent plan MEANS PHAT
+                                           in every other function in the
+                                           file; this is not the place to
+                                           invent a second meaning.
+       plan present but unreadable      -> the ENGINE DEFAULTS still fall back
+                                           to PHAT (block length, cut tier,
+                                           reintroduction order), because a
+                                           rule that must not fail confident
+                                           needs numbers and the worst case is
+                                           advice calibrated to PHAT. Only the
+                                           sentence that NAMES A SESSION
+                                           refuses, because naming the wrong
+                                           session sends him to the wrong
+                                           barbell and no default can be right.
+
+     A tidy-up in either direction breaks something real: make `undefined`
+     silent and day one stops pointing at a session on the shipped plan (the
+     CLAUDE.md §8 reason the line exists); make the unreadable plan name PHAT
+     again and 5cd014a is undone. */
+  var OLD = "No sessions logged yet.";
+  function txt(plan){ return P.cycleLine({ sessions: [], todayStr: TODAY, plan: plan }).text; }
+
+  a.eq(txt(undefined), "No sessions logged. Start with Upper power.", "absent -> PHAT names day one");
+  a.eq(txt(null), "No sessions logged. Start with Upper power.", "explicit null is absent, not unreadable");
+  a.eq(txt("nonsense"), OLD, "unreadable -> the naming line refuses");
+  a.eq(txt(42), OLD);
+  a.eq(txt([]), OLD, "an array is not a plan document either");
+
+  /* AND THE ENGINE DEFAULTS DID NOT MOVE. Same unreadable plan, same call:
+     the week-gated numbers are still PHAT's. If a future change makes the
+     whole engine go silent on an unreadable plan, these four fail and the
+     trade gets re-argued instead of drifting. */
+  var un = P.cycleLine({ sessions: TFILL(3, MON), state: STORE(), program: PROG,
+                         todayStr: TODAY, plan: "nonsense" });
+  var ph = P.cycleLine({ sessions: TFILL(3, MON), state: STORE(), program: PROG, todayStr: TODAY });
+  a.eq(un.trainingWeeks, 3);
+  a.eq(un.text, "Week 3 of 4 at reduced volume. The cut exercises come back from week 5.",
+    "PHAT's 4-week block length still answers on a plan the engine cannot read");
+  a.eq(un.text, ph.text, "byte for byte what the absent-plan call says - only day one differs");
+  a.eq(un.cuts, ph.cuts, "PHAT's cut tier still answers");
+  var vun = P.volumeTier({ sessions: TFILL(5, MON), state: STORE({ reintro: { d1: 1 } }),
+                           todayStr: TODAY, dayId: "d1", program: PROG, plan: "nonsense" });
+  var vph = P.volumeTier({ sessions: TFILL(5, MON), state: STORE({ reintro: { d1: 1 } }),
+                           todayStr: TODAY, dayId: "d1", program: PROG });
+  a.deep(vun.reintroduced, vph.reintroduced, "PHAT's reintroduction order still answers");
+  a.eq(vun.reducedWeeks, vph.reducedWeeks);
+  a.eq(vun.tierLine, vph.tierLine, "and the tier sentence, which names no session, is unchanged");
 });
 
 T("W5 / section 9.8 + 9.12 - at trainingWeeks 0 cycleLine and volumeTier are two slots, two sentences", function(a){
@@ -7218,8 +7366,9 @@ T("W5 / section 9.12 - sessions that exist but do not COUNT still print the day-
      sessions logged" is a claim about the log, and the log is not empty - he
      saved a note after walking out, and the app tells him he has logged
      nothing. The honest alternatives are the count line ("0 sessions logged.
-     A training week is 3 ...", which reads worse) or a fourth sentence, which
-     is new copy and therefore the coach's call, not QA's and not backend's.
+     Week 1 starts when three land in one week.", which reads worse at zero)
+     or a fourth sentence, which is new copy and therefore the coach's call,
+     not QA's and not backend's.
 
      Nothing is lost either way: the note-only save is kept, stored and shown
      (B-33), and volumeTier still explains the hidden cut exercises. This is a
@@ -7282,11 +7431,12 @@ T("W5 / section 9.12 - three or more sessions can still span zero training weeks
 });
 
 T("W5 / section 9.13 ruling 3 - the tw-0 line states CONCENTRATION, not a count", function(a){
-  /* THIS TEST IS RED ON PURPOSE AND IS NOT A CARRIED-FORWARD FAILURE. It is
-     the regression test for a copy defect that has been RULED and not yet
-     implemented, written before the fix so the fix is provable - which is
-     the same shape B-38 had, and the opposite of a failure kept alive under
-     a label. It goes green the moment logic.js changes, with no edit here.
+  /* WAS RED ON PURPOSE; GREEN SINCE 5cd014a. It was written before the fix,
+     so the fix is provable - the same shape B-38 had, and the opposite of a
+     failure kept alive under a label. It went green with one edit in
+     logic.js (tierLines) and one in this file (TW0RULED, the literal), which
+     is exactly the claim it was built to test. It stays, unweakened: it is
+     now the regression test that stops the struck clause coming back.
 
      RULED, addendum §9.13 ruling 3 (2026-09-10), superseding the middle line
      of §9.8 and the second line of §9.12's cycleLine block:
@@ -7306,9 +7456,7 @@ T("W5 / section 9.13 ruling 3 - the tw-0 line states CONCENTRATION, not a count"
 
      OWNER: backend, in logic.js `tierLines()`. One string, one branch, no
      new state, and no interpolation of TRAINING_WEEK_MIN - the ruled copy
-     spells "three" as a word inside a sentence about one week.
-     WHEN IT LANDS: flip TW0LINE() (defined above the D1 cycleLine test) to
-     the ruled form. Every other assertion in this file follows from there. */
+     spells "three" as a word inside a sentence about one week. */
   function line(n){
     var s = [], i;
     for (i = 0; i < n; i++) s.push(TSESS(P.dateAdd("2026-08-04", i * 7), i + 1, "d1a", SETS(100, 5)));
@@ -7320,6 +7468,38 @@ T("W5 / section 9.13 ruling 3 - the tw-0 line states CONCENTRATION, not a count"
   a.eq(line(5), TW0RULED(5), "and at five, where the old line reads worst");
   a.eq(line(3).indexOf("A training week is 3"), -1, "the struck clause must be gone, not reworded around");
   a.eq(line(3).indexOf("Week 0"), -1, "and the §9.8 constraint still holds");
+  /* The four counts spelled out ONCE against literals, not against the
+     helper. Everything above resolves through TW0RULED, so if that function
+     were ever edited to a different sentence every assertion in this file
+     would follow it green. These four do not: they are the anchor that makes
+     the helper safe to share. n = 1 for the singular, 2 and 3 because 3 is
+     where the struck line collided with its own number, 5 because that is
+     where it read worst. */
+  a.eq(line(1), "1 session logged. Week 1 starts when three land in one week.");
+  a.eq(line(2), "2 sessions logged. Week 1 starts when three land in one week.");
+  a.eq(line(3), "3 sessions logged. Week 1 starts when three land in one week.");
+  a.eq(line(5), "5 sessions logged. Week 1 starts when three land in one week.");
+
+  /* "three" IS SPELLED, NOT INTERPOLATED - asserted, not just commented,
+     because the tidy-up that breaks it looks like an improvement:
+     TRAINING_WEEK_MIN + " land in one week" reads as de-duplication and
+     silently makes a coach-signed sentence a function of a constant. The
+     sentence is about ONE week; the constant is a rule parameter. If the
+     minimum ever moves, the coach rewrites the sentence.
+     The check runs on the CLAUSE that states the minimum, not on the whole
+     sentence: "3 sessions" and "Week 1" are digits that belong there, and a
+     whole-sentence digit test would either fail on them or be relaxed until
+     it proved nothing. */
+  a.eq(P.TRAINING_WEEK_MIN, 3, "the constant still exists and is 3 - this is not a claim that it moved");
+  var tail = line(3).split("logged. ")[1];
+  a.eq(tail, "Week 1 starts when three land in one week.");
+  var clause = tail.split("starts ")[1];
+  a.eq(clause, "when three land in one week.");
+  a.match(clause, /\bthree\b/, "the word, spelled");
+  a.eq(/[0-9]/.test(clause), false,
+    "and no digit in the clause that states the minimum - an interpolation would print one");
+  a.eq(clause.indexOf(String(P.TRAINING_WEEK_MIN)), -1,
+    "specifically not TRAINING_WEEK_MIN interpolated into the sentence");
 });
 
 /* ------------------------------------------------- section 9.3: Rule V1a */
@@ -8046,7 +8226,14 @@ contract("<b>WO-004 W2 &mdash; <code>lift</code> is the one identity field valid
   "register it because that reads <code>typeof e.lift === \"string\"</code> &mdash; so a numeric lift " +
   "sits outside the collision guard. Harmless today (every reader coerces the same way, minted ids are " +
   "never bare digits) but it is the only field whose stored shape is not what the validator claims. P2, " +
-  "backend. Pinned in S25.");
+  "backend. Pinned in S25. <b>Its twin is fixed, which makes this the last one:</b> " +
+  "<code>planFirstDayName</code> coerced <code>days[0].name</code> through <code>str()</code> and " +
+  "printed <code>Start with 42.</code> where <code>validatePlan</code> requires " +
+  "<code>typeof d.name === \"string\"</code> &mdash; the same coercion-vs-validator gap, closed in " +
+  "<code>5cd014a</code> and inverted in S26 <em>the day-one line reads the plan's first day, and falls " +
+  "back when it cannot</em>. Both are reachable only from a corrupt store or the WO-002 importer, which " +
+  "is the argument for closing <code>lift</code> the same way: that is exactly where a coerced guess is " +
+  "worst.");
 contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Deleting " +
   "<code>taken[exId] = true;</code> from <code>addExercise</code> &mdash; the line reserving the " +
   "exercise id before the lift is minted &mdash; changes no test result and cannot, because an exercise " +
@@ -8119,20 +8306,35 @@ contract("<b>CONFIRMED (&sect;9.13 ruling 2) &mdash; &sect;9.12's day-one line r
   "Pinned in S26 <em>the day-one line reads the plan's first day, and falls back when it cannot</em>, " +
   "which also proves it never scans forward to day two and never prints <code>Start with .</code> or " +
   "<code>undefined</code>.");
-contract("<b>RULED AND NOT YET IMPLEMENTED &mdash; the one RED test on this page. <code>backend</code>, " +
-  "<code>logic.js</code> &rarr; <code>tierLines()</code>.</b> &sect;9.13 ruling 3 struck the coach's own " +
-  "wording: <code>A training week is 3</code> states the rule as a <b>count</b> where the rule is about " +
-  "<b>concentration</b>, which collides with the number in front of it at three logged sessions and was " +
-  "never right at one. Replacement, superseding &sect;9.8's middle line and &sect;9.12's: <code>3 " +
-  "sessions logged. Week 1 starts when three land in one week.</code> The app still ships the struck " +
-  "line, so S26 <em>section 9.13 ruling 3 &mdash; the tw-0 line states CONCENTRATION, not a count</em> " +
-  "<b>fails today, on purpose, written before the fix so the fix is provable</b> &mdash; the same shape " +
-  "as B-38, and the opposite of a failure kept alive under a label. Every other assertion of that " +
-  "sentence in this file reads <code>TW0LINE()</code>, defined above the D1 cycleLine test: change that " +
-  "one function when logic.js changes and the red goes green with no other edit. <b>The arithmetic is " +
-  "not in question</b> &mdash; one session a week for three weeks IS three sessions and zero training " +
-  "weeks (Rule TW1), and the packed-week control in the neighbouring test proves TW1 is counting and not " +
-  "stuck.");
+contract("<b>CLOSED (5cd014a) &mdash; the one RED test on this page is green, and the page is now " +
+  "N / N / 0.</b> &sect;9.13 ruling 3 struck the coach's own wording: <code>A training week is 3</code> " +
+  "states the rule as a <b>count</b> where the rule is about <b>concentration</b>, which collides with " +
+  "the number in front of it at three logged sessions and was never right at one. Shipping now, from " +
+  "<code>tierLines()</code>: <code>3 sessions logged. Week 1 starts when three land in one week.</code> " +
+  "The regression test was written before the fix, so the fix is provable, and it went green with " +
+  "<b>one</b> string in <code>logic.js</code> and <b>one</b> literal here &mdash; the claim the " +
+  "single-edit-point design was making. <b>Verified</b> at n = 1, 2, 3 and 5, against literals as well " +
+  "as against <code>TW0RULED()</code>, plus <code>&quot;three&quot; is spelled, not interpolated</code>: " +
+  "the clause that states the minimum contains the word and no digit, so the de-duplication that would " +
+  "make a coach-signed sentence a function of <code>TRAINING_WEEK_MIN</code> now fails a test. " +
+  "<b>The arithmetic was never in question</b> &mdash; one session a week for three weeks IS three " +
+  "sessions and zero training weeks (Rule TW1), and the packed-week control in the neighbouring test " +
+  "proves TW1 is counting and not stuck.");
+contract("<b>CLOSED (5cd014a) &mdash; three assertions this suite pinned OBSERVED have inverted, and " +
+  "one of them was QA's argument to lose.</b> (1) A plan whose <code>days</code> is not an array used to " +
+  "fail <code>isPlanDoc</code>, fall to the engine default and print <code>Start with Upper power.</code> " +
+  "&mdash; naming a session out of a plan he is not running. (2) <code>days[0].name = 42</code> was " +
+  "coerced by <code>str()</code> into <code>Start with 42.</code>. (3) <code>plan: \"nonsense\"</code> " +
+  "answered as PHAT. QA had pinned (3) separately, on <em>\"a garbage plan is not a plan; PHAT_PLAN " +
+  "answers\"</em>; backend treated all three as one class and <b>QA withdraws</b> &mdash; the case that " +
+  "decides it is <code>plan: \"p_user1\"</code>, a plan ID passed where the document was wanted, which " +
+  "is indistinguishable from garbage at this seam and means he is running some plan that is not PHAT. " +
+  "<b>The asymmetry that survives is deliberate and is asserted in one place</b> (S26 <em>absent means " +
+  "PHAT, unreadable means silence, and ONLY the naming line refuses</em>): an ABSENT plan " +
+  "(<code>undefined</code>/<code>null</code>) still means PHAT everywhere including day one, and on an " +
+  "UNREADABLE plan the engine defaults &mdash; block length, cut tier, reintroduction order &mdash; " +
+  "still fall back to PHAT, byte for byte, because a rule must not fail confident; only the sentence " +
+  "that NAMES a session refuses. Unify it in either direction and something real breaks.");
 contract("<b>OPEN &mdash; a session that exists but does not COUNT still prints <code>No sessions " +
   "logged.</code> <code>strength-coach</code> / <code>ux-designer</code>.</b> &sect;9.4 counts distinct " +
   "dates with a completed set, so a note-only save, a future-dated save and an undated save each leave " +
@@ -8143,15 +8345,23 @@ contract("<b>OPEN &mdash; a session that exists but does not COUNT still prints 
   "not a data question, and a fourth sentence would be new user-facing copy, so it is the coach's call " +
   "and not QA's. Pinned in S26 <em>sessions that exist but do not COUNT still print the day-one " +
   "line</em>, both slots in one test.");
-contract("<b>NOTED &mdash; <code>verdict()</code>'s success path does not set <code>absent:false</code>, " +
-  "unlike every other engine. P2, backend.</b> <code>volumeTier</code>, <code>stallReport</code>, " +
-  "<code>speedLoad</code> and <code>cycleLine</code> run their happy path through " +
-  "<code>notAbsent()</code>, so <code>absent</code> is present and <code>false</code>; a real verdict " +
-  "has no <code>absent</code> property at all. Harmless &mdash; <code>if (v.absent)</code> reads the " +
-  "same either way &mdash; but it is one more shape a caller has to know, and a <code>hasOwnProperty</code> " +
-  "check would behave differently. S26 asserts <code>real.absent === true</code> is <code>false</code> " +
-  "rather than <code>absent === false</code>, deliberately, so the suite does not freeze the asymmetry " +
-  "in place if backend chooses to normalise it.");
+contract("<b>CLOSED (5cd014a) &mdash; <code>verdict()</code>'s success path now sets " +
+  "<code>absent:false</code>, matching every other engine.</b> A real verdict is " +
+  "<code>{t, x, x2, rule, absent:false, absentLines:[], absentLine:\"\"}</code> on all three success " +
+  "paths (P1, H1, DL1); it used to carry no <code>absent</code> property at all, so " +
+  "<code>if (v.absent)</code> and <code>hasOwnProperty(\"absent\")</code> disagreed about the same " +
+  "object. <b>QA's old assertion no longer distinguished the two shapes</b> &mdash; backend flagged this " +
+  "itself &mdash; because <code>undefined === true</code> and <code>false === true</code> are both " +
+  "<code>false</code>. S26 now asserts <code>hasOwnProperty(\"absent\") === true</code> plus " +
+  "<code>absent === false</code>, <code>absentLines</code> <code>[]</code> and <code>absentLine</code> " +
+  "<code>\"\"</code> on power, hypertrophy and deload separately, so a partial revert names which path " +
+  "lost it, and keeps the caller's own <code>=== true</code> reading beside it. <b>The three-state " +
+  "contract is unchanged and still tested:</b> <code>null</code> for the four nothing-to-say paths, the " +
+  "ABSENT object for an unrecognised <code>k</code> &mdash; still <b>truthy</b>, which is why " +
+  "<code>if (v)</code> is the wrong test &mdash; and a real verdict with <code>absent:false</code>. " +
+  "<code>vtext()</code> was <b>verified, not assumed</b>: the walker collects nothing from a boolean, an " +
+  "empty array or an empty string, and a real verdict's rendered copy is still exactly " +
+  "<code>x</code> (+ <code>x2</code>).");
 
 /* --- one judgement call by backend, tested with both readings named --- */
 contract("<b>JUDGEMENT CALL, DOCUMENTED &mdash; <code>extraSets</code>' <code>Set N</code> is the ROW " +
