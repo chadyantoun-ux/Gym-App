@@ -1154,3 +1154,28 @@ is a double announcement, and §2.6 asks for exactly one. The toast node is now 
 "verdicts need `aria-live`": `paintVerdict(card, speak)` announces through `#bs-live` on the commit
 paths only — a full render paints ten cards and must not read ten verdicts out.
 **Rules out:** giving any new component its own live region.
+
+### 2026-09-10 — Desktop is a review surface; the phone is the logging surface
+Chady opened the app at ~1900 px and the chrome had escaped the content column: an ~1870 px RESUME
+button, five tabs strung across the viewport, the restore sheet covering the day list. **Shipped
+behaviour, not an artifact quirk.**
+**Root cause worth keeping:** every measurement pass in this project ran at 400 px and 200 % text,
+because those are the two cases the spec names. Desktop was never specified, so it was never measured.
+The discipline was sound and the *inventory* was incomplete — **measuring rigorously against an
+incomplete list of cases still ships a broken screen.**
+**Ruled:** logging is a phone activity — chalky hands, 90 seconds, one thumb. Desktop is where he
+reviews: trend, bodyweight, plan editing, and correcting a mistyped set. So the app renders as a
+**centred column at its design width and does not stretch**. Dock, offer sheet, toast and modal
+contents all align to that column from **one token**, so they cannot drift. The scrim still covers the
+whole viewport: a modal that dims part of the screen is worse than one that dims all of it.
+**Not ruled out, deliberately:** the review screens (Trend, Weight, plan editor) may later earn more
+than a phone column. Logging never does.
+
+### 2026-09-10 — Archivo ships in the design file and not in the product
+The app names Archivo and never fetches it — no CDN, offline-first, both correct. The consequence is
+that the typeface the whole design is built on **falls back to the platform sans on the one device the
+app is for**, and the artifact only looks right because it fetches from Google Fonts, which the app
+cannot do.
+Fixable within every constraint: inline the face as a base64 woff2 — no build step, no network, works
+from `file://`, ~30–50 KB. Filed as B-63.
+**Worth stating plainly:** a design system whose typeface does not ship is half decorative.
