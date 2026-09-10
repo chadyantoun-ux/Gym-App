@@ -800,3 +800,36 @@ QA decided the three failing assertions per test rather than bumping them togeth
   gated-but-unreached pass would still leave the number correct. **The version assertion could not
   detect the bug that test existed for.** The added-key set and a second run reporting `changed:false`
   can, and now do — which is what "migrates in one pass" means when you test it rather than infer it.
+
+### 2026-09-10 — Two criteria in our own work order asked for opposite things
+WO-004 W14 criterion 3 said a duplicated plan gets **new** ids and therefore separate history.
+Criterion 1, four lines above it, said switching to a copy and back must leave the log diffable —
+which is *only satisfiable because ids are preserved*. Both `ux-designer` and `backend-engineer` flagged
+it independently, from opposite directions.
+**Criterion 1 is the true one.** `copyPlan` preserves ids deliberately: re-minting orphans every logged
+set, which is the entire reason identity is opaque. Criterion 3 is struck and restated, and the UI ships
+the true sentence — `The copy keeps this plan's history.`
+**Worth noticing:** the contradiction survived a PM pass, my read, and a coach adjudication. It was
+caught by two agents *implementing against it*. A criterion is only really reviewed when someone has to
+satisfy it.
+
+### 2026-09-10 — ST1 splits into measurement and diagnosis, as two functions
+The coach's ruling — the measurement travels to a user-built plan, the diagnosis does not — is
+implemented as a split rather than extra keys. `stallReport` is untouched: same three keys, same
+arithmetic, runs on any plan. `PHAT.stallAdvice` carries the diagnosis and is gated on
+`phatProvenance`. `The split isn't the problem and neither is the diet` is unreachable unless the plan
+is PHAT, or derived from it with the same four key lifts at unchanged `s`/`lo`/`hi` — a rename keeps
+provenance, a 5×5 squat loses it. D1 splits identically: T3 survives on a foreign plan with restated
+copy; T1 and T2 go silent.
+**Also:** ABSENT is tested **before** thin, and `reason` was deliberately not overloaded to carry it —
+`deloadCheck.reason` is a developer signal that must never render.
+
+### 2026-09-10 — No slot id survives in code outside the plan document
+`SPEED_SRC`, `REINTRO_ORDER`, `KEY_LIFTS` and the weeks-1–4 block are now plan data. The only remaining
+`"d1a"`-style literal in `logic.js` is inside a comment. Every reader **reconciles**: an id a table
+names that the plan no longer contains is dropped on the way out, and `removeExercise` scrubs the
+document itself. Drop the reference, keep the rest — deleting `d1a` costs `d3a` its speed number and
+costs `d4a`, `d5a`, the reintro order and the other three key lifts nothing.
+**Accepted regression, temporary:** `verdict()` now returns `null` for `k:"speed"` (SP0 deleted, one
+source for the speed sentence), so the three speed slots render blank on the branch until W7 wires
+`speedLoad`. Losing a sentence sourced from the wrong engine is the cheaper side.

@@ -837,8 +837,20 @@ Acceptance criteria:
   logging under PHAT, switching to a copy, switching back, and diffing the log JSON.
 - A session logged under a plan that is later deleted still renders with real names, never with raw ids
   and never blank. State what it renders and test it.
-- Duplicating PHAT produces a plan whose ids are **new** and whose history is therefore separate, and
-  the UI says so before the duplicate is created.
+- ~~Duplicating PHAT produces a plan whose ids are **new** and whose history is therefore separate, and
+  the UI says so before the duplicate is created.~~
+  **RESTATED 2026-09-10 — this criterion was wrong, and it contradicted criterion 1 above.**
+  `PHAT.copyPlan` preserves ids **deliberately**: re-minting them orphans every logged set (C-6), which
+  is the whole reason identity is opaque. Criterion 1 — log under PHAT, switch to a copy, switch back,
+  diff the log — is *only satisfiable because ids are preserved*. Two criteria in one item asked for
+  opposite things; criterion 1 is the true one.
+  **The real criterion:** duplicating PHAT produces a plan that **keeps this plan's history**, all 42
+  ids survive the copy, a session logged on `d1a` under the copy's `planId` is still found by
+  `lastFor`, and the UI says so in the design's own voice before the duplicate is created —
+  `The copy keeps this plan's history.`
+  **Consequence to carry, not to fix here:** history is keyed by exercise id alone and no engine reads
+  `session.planId`, so changing a copied exercise's prescription makes its verdict read sets logged
+  under the old one. That is a coaching question, currently with `strength-coach`, not a code defect.
 - The design's honest note ships verbatim: *"Editing the plan is the easiest thing in this app to do
   instead of training."*
 
