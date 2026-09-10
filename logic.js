@@ -1111,7 +1111,14 @@
 
      `todayStr` is passed in, never read from a clock - and if it is not a
      usable local date, `createdAt` is null. A date nobody chose is a silent
-     wrong number (decisions.md, buildSession refuses rather than guessing). */
+     wrong number (decisions.md, buildSession refuses rather than guessing).
+
+     `derivedFrom` is CARRIED, not rewritten: a copy of PHAT is still derived
+     from PHAT, which is the gate the coach's ST1 ruling needs (decisions.md,
+     "ST1: the measurement travels, the diagnosis does not"). A plan built from
+     empty has no `derivedFrom` and never acquires one. `from` is the human
+     provenance line; `derivedFrom` is the machine one, and they are separate
+     so that renaming a plan can never change which rules it may run. */
   function copyPlan(plan, name, todayStr) {
     if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
     var next = clonePlan(plan);
@@ -1122,6 +1129,9 @@
     next.from = "Copied from " + srcName;
     next.readOnly = false;
     next.createdAt = dateOrNull(todayStr);
+    if (typeof next.derivedFrom !== "string" || next.derivedFrom.trim() === "") {
+      delete next.derivedFrom;
+    }
     return { ok: true, plan: next, problems: [] };
   }
 
@@ -1153,6 +1163,7 @@
     planId: PHAT_PLAN_ID,
     name: "PHAT",
     from: "Layne Norton, Power Hypertrophy Adaptive Training",
+    derivedFrom: PHAT_PLAN_ID,
     readOnly: true,
     createdAt: null,
     days: [

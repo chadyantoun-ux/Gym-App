@@ -640,3 +640,12 @@ Two riders: **`createdAt` is passed in, never read from a clock**, and is `null`
 date is supplied — a date nobody chose is a silent wrong number. And **removing an exercise from a
 plan deletes no logged set**: history lives in `session.entries[exId]`, so putting the slot back with
 the same id restores the whole trend. `removeExercise` returns the removed object so an undo can.
+
+### 2026-09-10 — `derivedFrom` is the machine provenance; `from` is the human one
+Folded into the plan document the same hour `strength-coach` ruled that ST1's *diagnosis* may only run
+`gated on derivedFrom:"phat"`. Two separate fields on purpose: `from` is a sentence a user reads and
+may edit ("Copied from PHAT"), `derivedFrom` is an id nothing renders. If one field did both jobs,
+renaming a plan would change which rules it is allowed to run.
+`copyPlan` **carries** `derivedFrom` rather than rewriting it — a copy of PHAT is still derived from
+PHAT, and a copy of that copy still is. A plan built from empty has no `derivedFrom` and never
+acquires one, which is exactly the ABSENT state W3 has to make silent.
