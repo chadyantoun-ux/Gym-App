@@ -23,3 +23,6 @@ phat-log-*.json
 
 # Keep the source spreadsheet and brief, they are context not build output
 !docs/context/phat-log.xlsx
+
+# Source zip; its contents are unpacked in docs/context/
+docs/Initial Context/
