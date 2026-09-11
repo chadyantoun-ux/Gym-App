@@ -123,7 +123,20 @@ from every copy field, because asserting only the positive passes on a rule that
 <code>painting</code>) and the whole exclusion table asserted <b>false</b>. <b>A two-set slot cannot
 discriminate</b> a repeat target &mdash; at <code>s = 2</code>, <code>k = 1</code> and <code>R</code>
 <em>is</em> the max &mdash; so every discriminating case uses three, four or five sets, and that fact is
-itself asserted.</p>
+itself asserted.<br>
+<b>S29</b> is WO-005 T4, <b>Rule DT1</b> &mdash; the Diet tab&rsquo;s eight figures and every sentence on
+it. The defect it closes is the design prototype&rsquo;s hardcoded <code>v.macroLabel = "Today &mdash;
+high-carb training day"</code>: on Wednesday and Sunday that is <b>3,200 kcal and 300 g of carbs where the
+programme says 2,500 and 60</b>, delivered under the word &ldquo;Today&rdquo;. The load-bearing assertion is
+not &ldquo;Sunday says rest&rdquo; but the <b>inverse</b> &mdash; across 33 shapes of <code>view</code> and all
+52 Sundays of 2026, the sentence must be unreachable &mdash; because a positive test alone passes on a
+function that is right for the wrong reason. <b>No second copy of the schedule</b> lives here: one test pins
+the shipped plan&rsquo;s rest days and every other expectation is derived, with 35 one-day rewrites of
+<code>wd</code> required to move the answer with them (B-66, in a new place). The 22 signed-off strings are
+transcribed from <code>docs/coach-audit-addendum.md</code> &sect;8.6 and compared, so code and document
+cannot drift. <b>Two P2 defects are pinned as OBSERVED, not accepted</b> &mdash; <code>reason:"manual"</code>
+on a call where nothing was switched, and <code>2026-02-30</code> earning a confident claim about a day that
+has never existed. Both are in the contract list, both are backend&rsquo;s, and both invert when fixed.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -9589,6 +9602,817 @@ T("S1b BLAST RADIUS - the wider list reaches painWindow (V1's offer) and painSta
   a.eq(psS.text, "");
 });
 
+/* ============================================================ S29 - Rule DT1, the Diet tab's numbers
+   WO-005 T4. `PHAT.dietTargets` landed in aa20871 and this section pins it.
+
+   WHAT IT EXISTS TO STOP. The design prototype hardcoded the day:
+
+       v.macroLabel = "Today - high-carb training day";
+       v.mKcal = "3,200"; v.mP = "170g"; v.mC = "300g"; v.mF = "145g";
+
+   unconditionally (PHAT App.dc.html:729). On Wednesday and Sunday - the
+   brief's two rest days - that is 3,200 kcal and 300 g of carbs where the
+   programme says 2,500 and 60. A 700 kcal and 240 g error, delivered under
+   the word "Today", on the two days the low-carb floor exists to protect.
+
+   HOW THESE TESTS ARE BUILT, and it matters more than usual here:
+
+   1. THE POSITIVE TESTS ALONE WOULD NOT HAVE CAUGHT IT. A suite that only
+      asserts "Sunday says rest" passes on a function that returns the right
+      thing for the wrong reason. So the load-bearing assertion is the
+      INVERSE: for EVERY value of `view`, on every Sunday of a year, the
+      string `Today - high-carb training day` must be unreachable. Verified
+      by stubbing dietTargets back to the prototype's always-training
+      behaviour and confirming which tests below go red - the ones that do
+      are marked BUG-PROOF, the ones that stay green are marked GUARD. A
+      guard is not worthless; it is just not evidence about this bug.
+      RESULT, 2026-09-11: twelve mutants injected, twelve killed. M1, the
+      prototype defect itself, dies against SIXTEEN of these tests; M2, the
+      right-for-the-wrong-reason variant that reads the segment and defaults
+      to training, dies against fifteen. Seven of the thirty are guards and
+      no mutant of the day-type logic can fail them - the frozen figures, the
+      tick in the store, the three stores byte-identity, determinism, the
+      transcription, the copy voice and the Mon..Sun ordering. Named in the
+      contract list so none of them is ever cited as evidence about the bug.
+   2. NO SECOND COPY OF THE SCHEDULE. Nothing here asserts "Mon Tue Thu Fri
+      Sat" against a list typed into this file except in ONE named test that
+      pins the shipped programme on purpose. Everything else derives the
+      expectation from the plan document, and one test rewrites a `wd` and
+      requires the rest days to move with it. B-66 cost the app its whole cue
+      layer because a schedule got copied; this is that guard in a new place.
+   3. THE COPY IS TRANSCRIBED FROM THE DOCUMENT, NOT FROM THE CODE. The 22
+      strings below were read out of docs/coach-audit-addendum.md section 8.6
+      and typed here. If logic.js and the addendum ever drift, this section
+      fails and the app stops giving advice nobody signed. */
+group("S29 Rule DT1 / WO-005 T4 / dietTargets / B-29");
+
+/* The week the coach's worked examples use. Mon 7 Sep 2026 through Sun 13
+   Sep 2026 - worked example 1 is "Sunday 2026-09-13". The weekday of each is
+   asserted from PHAT.wdOf in the first test, so a wrong date here cannot sit
+   quietly underneath everything else. */
+var DTW = { Mon: "2026-09-07", Tue: "2026-09-08", Wed: "2026-09-09", Thu: "2026-09-10",
+            Fri: "2026-09-11", Sat: "2026-09-12", Sun: "2026-09-13" };
+
+/* The two labels, exact, with the dash written as an escape ON PURPOSE: the
+   difference between U+2014 and a hyphen is invisible in a diff and in an
+   editor, and this is a string the coach signed. */
+var DT_TRAIN_TODAY = "Today — high-carb training day";
+var DT_REST_TODAY  = "Today — low-carb rest day";
+var DT_TRAIN_PLAIN = "Training day";
+var DT_REST_PLAIN  = "Rest day";
+
+/* Every shape a caller, a URL parameter or a corrupted preference could put
+   in `view`. The point of the list is that NONE of them may buy a claim
+   about today that the calendar does not support. */
+var DT_VIEWS = ["training", "rest", "TRAINING", "REST", "Training", "Rest",
+                "train", "traning", " training", "training ", " rest",
+                "", " ", "0", "1", "true", "null", "undefined", "[object Object]",
+                null, undefined, 0, 1, -1, NaN, true, false, {}, [], ["training"],
+                { view: "training" }, function(){ return "training"; },
+                { toString: function(){ return "training"; } }];
+
+function DTOWN(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+
+/* A deep, order-stable clone of the plan. PHAT_PLAN is deep-frozen, so every
+   test that rewrites a day works on one of these. */
+function DTPLAN(){ return clone(P.PHAT_PLAN); }
+
+/* Drives dietTargets down EVERY branch it has: seven days x three views x
+   four plan shapes. Used by the storage and determinism tests, which have to
+   assert about a full render rather than one call. */
+function DTALL(){
+  var out = [], plans = [null, P.PHAT_PLAN, DTPLAN(), { days: [] }], d, v, i;
+  var views = [undefined, "training", "rest"];
+  for (i = 0; i < plans.length; i++)
+    for (d in DTW) if (DTOWN(DTW, d))
+      for (v = 0; v < views.length; v++)
+        out.push(P.dietTargets(DTW[d], plans[i], views[v]));
+  return out;
+}
+
+/* Reads the three real store keys WITHOUT WRITING ANYTHING. tests.html is
+   deployed on the same origin as the app, so a test that wrote phat:v1:log
+   to prove a point would take his history with it the first time he opened
+   /tests.html on his phone. Nothing in this section writes. */
+var DT_KEYS = ["phat:v1:log", "phat:v1:bw", "phat:v1:draft"];
+function DTSNAP(){
+  var ls, out = {}, i;
+  try { ls = window.localStorage; } catch (e) { ls = null; }
+  if (!ls) return null;
+  for (i = 0; i < DT_KEYS.length; i++) {
+    try { out[DT_KEYS[i]] = ls.getItem(DT_KEYS[i]); }
+    catch (e) { out[DT_KEYS[i]] = " unreadable"; }
+  }
+  return out;
+}
+
+/* ---------------------------------------------------------------- 1. the bug */
+
+T("DT1 / 8.6 example 1 - Wednesday and Sunday are REST: 2,500 / 175 / 60 / 175, and the label is exact",
+function(a){
+  needFns(a, "dietTargets", "wdOf", "planRestWeekdays", "planTrainingWeekdays");
+  /* BUG-PROOF. This is the 700 kcal defect, stated as two dates. */
+  a.eq(P.wdOf(DTW.Wed), "Wed", "the fixture date must really be a Wednesday");
+  a.eq(P.wdOf(DTW.Sun), "Sun", "the fixture date must really be a Sunday");
+  /* The shipped programme's two rest days, pinned HERE and nowhere else in
+     this section. Every other expectation is derived from the plan. */
+  a.deep(P.planRestWeekdays(P.PHAT_PLAN), ["Wed", "Sun"],
+    "the shipped plan rests Wed and Sun; if this changes it is a programme change, not a test fix");
+
+  ["Wed", "Sun"].forEach(function(w){
+    var r = P.dietTargets(DTW[w]);
+    a.eq(r.dayType, "rest", w + " is a rest day");
+    a.eq(r.label, DT_REST_TODAY, w + " label, exact string, not a substring");
+    a.eq(r.kcal, 2500, w + " kcal");
+    a.eq(r.protein, 175, w + " protein");
+    a.eq(r.carb, 60, w + " carb - the low-carb floor the whole rule exists for");
+    a.eq(r.fat, 175, w + " fat");
+    a.eq(r.text.kcal, "2,500"); a.eq(r.text.protein, "175 g");
+    a.eq(r.text.carb, "60 g");  a.eq(r.text.fat, "175 g");
+    a.eq(r.text.strip, "2,500 · 175 g · 60 g · 175 g",
+      "the Home strip, exactly as the coach wrote it in worked example 1");
+    a.eq(r.claimsToday, true, "the plan places " + w + ", so the app may say Today");
+    a.eq(r.reason, null);
+    a.eq(r.medicalUnderGrid, true, "8.6 item 3: the medical line renders under the grid on REST");
+  });
+  a.eq(DT_REST_TODAY.charCodeAt(6), 0x2014, "the dash in the label is an em dash, not a hyphen");
+});
+
+T("DT1 / THE 700 kcal ERROR - no rest day may show a training number anywhere in its output", function(a){
+  /* BUG-PROOF. Not "the kcal field is 2500" but "3,200 and 300 g are absent
+     from every string this call would put on screen", because the prototype's
+     defect was a LABEL and a strip, not a field. */
+  ["Wed", "Sun"].forEach(function(w){
+    var r = P.dietTargets(DTW[w]), s = strOf(r);
+    a.ne(r.kcal, 3200, w + " must never carry the training calorie figure");
+    a.ne(r.carb, 300,  w + " must never carry the training carb figure");
+    a.eq(s.indexOf("3,200"), -1, w + ": the string 3,200 reached the screen on a rest day");
+    a.eq(s.indexOf("300 g"), -1, w + ": the string 300 g reached the screen on a rest day");
+    a.eq(s.indexOf("170 g"), -1, w + ": the training protein figure reached the screen on a rest day");
+    a.eq(s.indexOf("145 g"), -1, w + ": the training fat figure reached the screen on a rest day");
+    a.eq(s.indexOf(DT_TRAIN_TODAY), -1, w + ": " + DT_TRAIN_TODAY);
+  });
+});
+
+T("DT1 / THE INVERSE - no value of view can make a Sunday say the training-day sentence", function(a){
+  /* BUG-PROOF, and this is the assertion that actually guards the rule. A
+     positive test passes on a function that is right for the wrong reason;
+     this one fails on any implementation that can reach the forbidden
+     sentence from a Sunday, including one that reads the segment first.
+     8.6 worked example 2: tapping TRAINING DAY on a Sunday shows 3,200 and
+     the label `Training day` - the numbers may move, the claim may not. */
+  var i, r, v, s;
+  for (i = 0; i < DT_VIEWS.length; i++) {
+    v = DT_VIEWS[i];
+    r = P.dietTargets(DTW.Sun, null, v);
+    s = strOf(r);
+    a.ne(r.label, DT_TRAIN_TODAY, "view " + show(v) + " produced the forbidden Sunday label");
+    a.eq(s.indexOf(DT_TRAIN_TODAY), -1, "view " + show(v) + ": the sentence appeared somewhere in the output");
+    a.eq(s.indexOf("Today — high-carb"), -1, "view " + show(v) + ": a variant of it appeared");
+    if (r.claimsToday) a.eq(r.dayType, "rest",
+      "view " + show(v) + ": the app claimed today and then showed the other day's numbers");
+  }
+  /* The one view that IS honoured, checked in the same test so "everything
+     went quiet" cannot pass as a fix: the numbers move, the label does not
+     claim today. */
+  var t = P.dietTargets(DTW.Sun, null, "training");
+  a.eq(t.kcal, 3200, "tapping TRAINING DAY still shows the training numbers");
+  a.eq(t.label, DT_TRAIN_PLAIN, "and the label drops the Today prefix");
+  a.eq(t.claimsToday, false);
+  a.eq(t.reason, "manual");
+  a.eq(t.todayType, "rest", "and the function still knows what today really is");
+});
+
+T("DT1 / THE INVERSE, every Sunday of a year - the forbidden sentence is unreachable", function(a){
+  /* BUG-PROOF. One Sunday could be luck. 52 of them across a year, each
+     against three views, could not be. */
+  var d = "2026-01-04", n = 0, i, r;      /* the first Sunday of 2026 */
+  a.eq(P.wdOf(d), "Sun", "the walk must start on a Sunday");
+  while (d < "2027-01-01") {
+    for (i = 0; i < 3; i++) {
+      r = P.dietTargets(d, null, [undefined, "training", "rest"][i]);
+      a.ne(r.label, DT_TRAIN_TODAY, d + " produced the forbidden label");
+      a.eq(r.todayType, "rest", d + " is a Sunday and the plan rests on it");
+    }
+    n++; d = P.dateAdd(d, 7);
+  }
+  a.eq(n, 52, "52 Sundays walked");
+});
+
+/* ------------------------------------------------------- 2. the training days */
+
+T("DT1 / the five training days are 3,200 / 170 / 300 / 145 and claim today", function(a){
+  /* GUARD - it passes under the hardcoded implementation too, by accident.
+     Named as a guard so it is never cited as evidence about this bug. */
+  var train = P.planTrainingWeekdays(P.PHAT_PLAN), i, w, r;
+  a.eq(train.length, 5, "five training days");
+  for (i = 0; i < train.length; i++) {
+    w = train[i]; r = P.dietTargets(DTW[w]);
+    a.eq(r.dayType, "training", w);
+    a.eq(r.label, DT_TRAIN_TODAY, w + " label, exact string");
+    a.eq(r.kcal, 3200); a.eq(r.protein, 170); a.eq(r.carb, 300); a.eq(r.fat, 145);
+    a.eq(r.text.strip, "3,200 · 170 g · 300 g · 145 g", w + " Home strip");
+    a.eq(r.claimsToday, true);
+    a.eq(r.medicalUnderGrid, false, "8.6 item 3 puts the medical line under the grid on REST only");
+  }
+  a.eq(DT_TRAIN_TODAY.charCodeAt(6), 0x2014, "em dash, not a hyphen");
+});
+
+T("DT1 / a full year of dates lands on the day type the plan's own wd fields say", function(a){
+  /* BUG-PROOF. 365 dates, and the expectation is DERIVED from the plan, not
+     typed here. An implementation that assumes a day type fails on 104 of
+     these; one that reads the wrong field fails on all of them. */
+  var rest = P.planRestWeekdays(P.PHAT_PLAN), d = "2026-01-01", n = 0, r, want, bad = [];
+  while (d < "2027-01-01") {
+    r = P.dietTargets(d);
+    want = rest.indexOf(P.wdOf(d)) >= 0 ? "rest" : "training";
+    if (r.dayType !== want) bad.push(d + " " + P.wdOf(d) + " got " + r.dayType + " want " + want);
+    if (r.label !== (want === "rest" ? DT_REST_TODAY : DT_TRAIN_TODAY)) bad.push(d + " label " + r.label);
+    n++; d = P.dateAdd(d, 1);
+  }
+  a.eq(n, 365, "2026 is not a leap year; 365 dates walked");
+  a.eq(bad.slice(0, 5).join(" | ") || "none", "none");
+});
+
+/* ------------------------------------------------- 3. B-66, the schedule guard */
+
+T("DT1 / B-66 - rewrite a day's wd and the derived rest days move with it", function(a){
+  /* BUG-PROOF against the defect class that cost the cue layer a night: a
+     schedule copied into a second place. Move Upper power from Mon to Wed and
+     the whole answer must follow, with nothing in this file re-stating it. */
+  var p = DTPLAN();
+  a.eq(p.days[0].id, "d1", "the first day is d1");
+  a.eq(p.days[0].wd, "Mon", "and it ships on Monday");
+  p.days[0].wd = "Wed";
+
+  a.deep(P.planRestWeekdays(p), ["Mon", "Sun"], "Monday is now a rest day and Wednesday is not");
+  var mon = P.dietTargets(DTW.Mon, p), wed = P.dietTargets(DTW.Wed, p);
+  a.eq(mon.dayType, "rest", "Monday follows the edited plan");
+  a.eq(mon.label, DT_REST_TODAY);
+  a.eq(mon.kcal, 2500);
+  a.eq(mon.medicalUnderGrid, true);
+  a.eq(wed.dayType, "training", "Wednesday follows the edited plan");
+  a.eq(wed.label, DT_TRAIN_TODAY);
+  a.eq(wed.kcal, 3200);
+
+  /* and the shipped plan is untouched by the edit - no shared mutable state */
+  a.eq(P.dietTargets(DTW.Mon).dayType, "training", "PHAT_PLAN still trains on Monday");
+  a.eq(P.dietTargets(DTW.Wed).dayType, "rest", "PHAT_PLAN still rests on Wednesday");
+  a.deep(P.planRestWeekdays(P.PHAT_PLAN), ["Wed", "Sun"]);
+});
+
+T("DT1 / B-66 - all 35 one-day rewrites of the schedule move the answer with them", function(a){
+  /* BUG-PROOF. Five days x seven weekdays. Any hardcoded table anywhere in
+     the path fails a large fraction of these. */
+  var i, j, p, w, r, want, bad = [], rest;
+  for (i = 0; i < 5; i++) {
+    for (j = 0; j < P.WD_ORDER.length; j++) {
+      p = DTPLAN(); p.days[i].wd = P.WD_ORDER[j];
+      rest = P.planRestWeekdays(p);
+      for (w in DTW) if (DTOWN(DTW, w)) {
+        r = P.dietTargets(DTW[w], p);
+        /* A plan with a duplicated weekday declares fewer than five training
+           days; the derived answer is still the plan's own, which is the
+           whole point. */
+        want = rest.indexOf(w) >= 0 ? "rest" : "training";
+        if (r.dayType !== want) bad.push("day" + (i + 1) + "->" + P.WD_ORDER[j] + " on " + w +
+                                         ": got " + r.dayType + " want " + want);
+      }
+    }
+  }
+  a.eq(bad.slice(0, 5).join(" | ") || "none", "none");
+});
+
+/* ------------------------------------------- 4. the plans that declare nothing */
+
+T("DT1 / a plan that names no weekday makes NO claim about today", function(a){
+  /* BUG-PROOF for the C7a-shaped half: on a user plan the app does not know
+     which days are rest days, so it shows the targets and asserts nothing. */
+  var p = DTPLAN(), i, r;
+  for (i = 0; i < p.days.length; i++) delete p.days[i].wd;
+  a.deep(P.planTrainingWeekdays(p), [], "no weekday declared");
+  a.deep(P.planRestWeekdays(p), [], "and no rest day inferred from that silence");
+
+  r = P.dietTargets(DTW.Sun, p);
+  a.eq(r.label, DT_TRAIN_PLAIN, "no Today prefix");
+  a.eq(r.claimsToday, false);
+  a.eq(r.todayType, null, "the function does not guess a day type");
+  a.eq(r.reason, "no-schedule");
+  a.eq(strOf(r).indexOf("Today —"), -1, "the words Today - appear nowhere in the output");
+
+  r = P.dietTargets(DTW.Sun, p, "rest");
+  a.eq(r.label, DT_REST_PLAIN, "the segment still switches the numbers");
+  a.eq(r.kcal, 2500);
+  a.eq(r.claimsToday, false);
+  a.eq(r.reason, "no-schedule");
+});
+
+T("DT1 / PROVISIONAL - a plan that trains all seven days also makes no claim about today", function(a){
+  /* PROVISIONAL. The coach's rule (8.6 item 5) addresses a plan with NO
+     declared weekdays. A plan declaring ALL SEVEN is a third case the
+     document does not reach, and COACH SIGN-OFF IS OUTSTANDING. Backend chose
+     the conservative reading - no `Today -` prefix - because never falsely
+     claiming "today" is the direction that cannot cost 700 kcal, and I agree
+     with the direction. This test pins THAT CHOICE, not a ruling. If the
+     coach rules the other way this test is edited deliberately and the ruling
+     is recorded in docs/decisions.md; it is not a test "fixed" to match code. */
+  var p = DTPLAN(), i, extra;
+  ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach(function(w, ix){ p.days[ix].wd = w; });
+  ["Sat", "Sun"].forEach(function(w, ix){
+    extra = clone(p.days[0]);
+    extra.id = "dX" + ix; extra.wd = w;
+    for (i = 0; i < extra.ex.length; i++) { extra.ex[i].id = "dX" + ix + i; extra.ex[i].lift = "l_x" + ix + i; }
+    p.days.push(extra);
+  });
+  a.eq(P.planTrainingWeekdays(p).length, 7, "all seven weekdays are trained");
+  a.deep(P.planRestWeekdays(p), [], "so there is no rest day to be on");
+
+  var r = P.dietTargets(DTW.Sun, p);
+  a.eq(r.todayType, "training", "the plan does place today - it trains every day");
+  a.eq(r.claimsToday, false, "PROVISIONAL: no claim about today, pending coach sign-off");
+  a.eq(r.label, DT_TRAIN_PLAIN, "PROVISIONAL: the plain label, no Today prefix");
+  a.eq(r.reason, "no-rest-days", "and the reason says which of the three cases this is");
+  a.eq(r.weekly, "", "the surplus sentence is 5/2 arithmetic and is silent here");
+});
+
+/* ------------------------------------------------------------ 5. weekly */
+
+T("DT1 / weekly is the full sentence for a 5/2 week and empty for every other split", function(a){
+  /* BUG-PROOF for the invented-number class: the three figures in that
+     sentence are arithmetic over five training days and two rest days, and
+     recomputing them for another split would be the app inventing a macro
+     target - the one thing this block exists to stop. */
+  var WEEKLY = "Weekly average ~3,000 kcal against an estimated 2,700 maintenance. The 300 is the surplus.";
+  a.eq(P.dietTargets(DTW.Sun).weekly, WEEKLY, "PHAT is 5 training / 2 rest");
+  a.eq(P.DIET_WEEKLY.trainingDays, 5); a.eq(P.DIET_WEEKLY.restDays, 2);
+  a.eq(P.DIET_WEEKLY.avg, 3000); a.eq(P.DIET_WEEKLY.maintenance, 2700); a.eq(P.DIET_WEEKLY.surplus, 300);
+  a.eq((5 * 3200 + 2 * 2500) / 7, 3000, "the arithmetic behind the sentence, checked by hand");
+  a.eq(3000 - 2700, 300, "and the surplus");
+
+  var four = DTPLAN(); four.days.pop();
+  a.eq(P.planTrainingWeekdays(four).length, 4);
+  a.eq(P.dietTargets(DTW.Sun, four).weekly, "", "4/3 gets no sentence");
+
+  var six = DTPLAN(), extra = clone(six.days[0]);
+  extra.id = "d6"; extra.wd = "Wed";
+  extra.ex.forEach(function(e, i){ e.id = "d6x" + i; e.lift = "l_d6x" + i; });
+  six.days.push(extra);
+  a.eq(P.planTrainingWeekdays(six).length, 6);
+  a.eq(P.dietTargets(DTW.Sun, six).weekly, "", "6/1 gets no sentence");
+
+  var none = DTPLAN();
+  none.days.forEach(function(d){ delete d.wd; });
+  a.eq(P.dietTargets(DTW.Sun, none).weekly, "", "a plan with no schedule gets no sentence");
+
+  /* two days sharing a weekday is a 4-training week, not a 5-training one */
+  var dup = DTPLAN(); dup.days[1].wd = dup.days[0].wd;
+  a.eq(P.planTrainingWeekdays(dup).length, 4, "a duplicated weekday is one weekday");
+  a.eq(P.dietTargets(DTW.Sun, dup).weekly, "", "and so it gets no sentence either");
+});
+
+/* ------------------------------------------- 6. calibration and the medical line */
+
+T("DT1 / calibration has exactly 3 lines and the medical sentence is the last of them", function(a){
+  var r = P.dietTargets(DTW.Sun);
+  a.eq(r.calibration.heading, "Calibration");
+  a.eq(r.calibration.lines.length, 3, "two coach lines plus the medical sentence");
+  a.eq(r.calibration.lines[2], P.DIET_COPY.medical, "8.6 item 3: in the calibration block on BOTH segments");
+  a.eq(r.medical, P.DIET_COPY.medical);
+  a.eq(P.DIET_COPY.calibration.lines.length, 2, "the source block is two lines; the third is appended");
+  /* 8.6 corrected item 1: the Diet tab points at Rule W1, it does not restate
+     it. The design's version described a decision procedure the app does not
+     run, and two screens describing two rules is the shape of B-06. */
+  var s = r.calibration.lines.join("\n");
+  a.eq(s.indexOf("add 200 kcal"), -1, "the calibration block must not restate W1's decision procedure");
+  a.eq(s.indexOf("Flat means"), -1, "nor the design's 'flat' trigger, which W1 does not use");
+  a.ok(s.indexOf("The Weight tab") >= 0, "it points at the screen that owns the decision");
+  a.ok(s.indexOf("at least 5 weigh-ins") >= 0, "and states W1's real gate");
+
+  var all = DTALL(), i, bad = [];
+  for (i = 0; i < all.length; i++)
+    if (all[i].calibration.lines.length !== 3) bad.push(i + ":" + all[i].calibration.lines.length);
+  a.eq(bad.join(" | ") || "none", "none", "3 lines on every branch");
+});
+
+T("DT1 / the returned calibration array is a COPY - a caller cannot poison the next call", function(a){
+  var r = P.dietTargets(DTW.Sun);
+  r.calibration.lines.push("injected");
+  r.calibration.lines[0] = "rewritten";
+  a.eq(P.dietTargets(DTW.Sun).calibration.lines.length, 3, "the next call is unaffected");
+  a.eq(P.DIET_COPY.calibration.lines[0].indexOf("rewritten"), -1, "and the source copy is intact");
+  a.eq(P.dietTargets(DTW.Sun).calibration.lines[0], P.DIET_COPY.calibration.lines[0]);
+});
+
+T("DT1 / medicalUnderGrid is true on rest and false on training, on every branch", function(a){
+  var all = DTALL(), i, bad = [];
+  for (i = 0; i < all.length; i++)
+    if (all[i].medicalUnderGrid !== (all[i].dayType === "rest"))
+      bad.push(all[i].date + "/" + all[i].dayType + "=" + all[i].medicalUnderGrid);
+  a.eq(bad.slice(0, 5).join(" | ") || "none", "none",
+    "8.6 item 3: below the macro grid on the REST DAY segment");
+  a.eq(P.dietTargets(DTW.Sun, null, "training").medicalUnderGrid, false,
+    "the flag follows the SHOWN day, not the real one - the grid it sits under is the training grid");
+  a.eq(P.dietTargets(DTW.Mon, null, "rest").medicalUnderGrid, true);
+});
+
+/* ----------------------------------------------------- 7. the eight figures */
+
+T("DT1 / the eight figures are the coach's, and no code path can reformat them", function(a){
+  var t = P.DIET_TARGETS.training, r = P.DIET_TARGETS.rest;
+  a.eq(t.kcal, 3200); a.eq(t.protein, 170); a.eq(t.carb, 300); a.eq(t.fat, 145);
+  a.eq(r.kcal, 2500); a.eq(r.protein, 175); a.eq(r.carb, 60);  a.eq(r.fat, 175);
+  a.eq(t.text.kcal, "3,200"); a.eq(t.text.protein, "170 g");
+  a.eq(t.text.carb, "300 g"); a.eq(t.text.fat, "145 g");
+  a.eq(r.text.kcal, "2,500"); a.eq(r.text.protein, "175 g");
+  a.eq(r.text.carb, "60 g");  a.eq(r.text.fat, "175 g");
+  /* Frozen, so a render that decorates the figures throws instead of shipping
+     a silently reformatted number - the S25 deep-freeze ruling, same shape. */
+  var wrote = [];
+  [["kcal", 9999], ["protein", 1], ["carb", 1], ["fat", 1]].forEach(function(pair){
+    try { P.DIET_TARGETS.training[pair[0]] = pair[1]; wrote.push(pair[0]); } catch (e) {}
+    try { P.DIET_TARGETS.training.text[pair[0]] = "x"; wrote.push("text." + pair[0]); } catch (e) {}
+  });
+  a.eq(wrote.join(" | ") || "none", "none", "DIET_TARGETS is deep-frozen");
+  a.eq(P.DIET_TARGETS.training.kcal, 3200, "and still reads 3,200 after eight attempted writes");
+  /* the strip is a join of the four, not a second source of the numbers */
+  a.eq(t.text.strip, [t.text.kcal, t.text.protein, t.text.carb, t.text.fat].join(" · "));
+  a.eq(r.text.strip, [r.text.kcal, r.text.protein, r.text.carb, r.text.fat].join(" · "));
+});
+
+/* ------------------------------------------------------- 8. the protein tick */
+
+T("DT1 / THE PROTEIN TICK IS NOT DATA - no parameter, no reader, no store key", function(a){
+  /* 8.6, [Certain]: it is a habit tick, it may be stored per date, and NO
+     RULE MAY EVER READ IT. Trivially true today, which is exactly why it is
+     pinned: this is the regression that matters, and it would arrive as a
+     convenience ("while we're here, feed it to W1").
+     GUARD - it cannot fail under the hardcoded implementation. Named as one. */
+  a.deep(Object.keys(P.DIET_COPY.protein).sort(), ["off", "on", "sub"],
+    "the tick block is three labels - no state, no date, no store");
+  a.eq(P.DIET_COPY.protein.on, "PROTEIN HIT TODAY");
+  a.eq(P.DIET_COPY.protein.off, "PROTEIN NOT YET HIT");
+  a.eq(P.DIET_COPY.protein.sub, "The one non-negotiable. Rest days included.");
+
+  /* no exported function is shaped like a tick reader or writer */
+  var k, hits = [];
+  for (k in P) if (Object.prototype.hasOwnProperty.call(P, k)) {
+    if (/protein/i.test(k) && typeof P[k] === "function") hits.push(k);
+    if (/tick|hitToday|proteinHit/i.test(k)) hits.push(k);
+  }
+  a.eq(hits.join(" | ") || "none", "none", "nothing on PHAT reads or writes the tick");
+
+  /* a fourth and a fifth argument change nothing: there is no parameter one
+     could be smuggled through */
+  var base = JSON.stringify(P.dietTargets(DTW.Sun, null, undefined));
+  [true, false, 1, 0, "hit", { protein: true }, { tick: 1 }].forEach(function(x){
+    a.eq(JSON.stringify(P.dietTargets(DTW.Sun, null, undefined, x)), base,
+      "a 4th argument of " + show(x) + " changed the output");
+    a.eq(JSON.stringify(P.dietTargets(DTW.Sun, null, undefined, x, x)), base,
+      "a 5th argument of " + show(x) + " changed the output");
+  });
+  a.eq(P.dietTargets.length, 3, "the signature is (dateStr, plan, view) and nothing else");
+});
+
+T("DT1 / a protein tick smuggled into the STORE changes no engine's answer", function(a){
+  /* The realistic regression: the tick IS stored (which is allowed) on the
+     bodyweight rows or the sessions, and an engine starts reading it. Three
+     are checked - the diet targets, Rule W1's calorie decision, which the
+     coach named specifically, and the verdict. */
+  needFns(a, "calorieAdvice", "verdict");
+  var clean = RATE(0.25), ticked = clone(clean), i;
+  for (i = 0; i < ticked.length; i++) ticked[i].protein = (i % 2 === 0);
+  a.eq(JSON.stringify(P.calorieAdvice(ticked, TODAY, null)),
+       JSON.stringify(P.calorieAdvice(clean, TODAY, null)),
+       "Rule W1's calorie decision moved because of a habit tick");
+
+  var sets = SETS(100, 5, 100, 5, 100, 5), tickedSets = clone(sets);
+  for (i = 0; i < tickedSets.length; i++) tickedSets[i].protein = true;
+  a.eq(JSON.stringify(P.verdict(VCTX(EX.squat, tickedSets, null, ""))),
+       JSON.stringify(P.verdict(VCTX(EX.squat, sets, null, ""))),
+       "the verdict moved because of a habit tick");
+
+  var p = DTPLAN();
+  p.proteinTick = { "2026-09-13": true };
+  p.days[0].protein = true;
+  a.eq(JSON.stringify(P.dietTargets(DTW.Sun, p)),
+       JSON.stringify(P.dietTargets(DTW.Sun, DTPLAN())),
+       "dietTargets read a tick off the plan document");
+});
+
+/* ----------------------------------------------------------- 9. the stores */
+
+T("DT1 / a full render leaves phat:v1:log, phat:v1:bw and phat:v1:draft byte-identical", function(a){
+  /* THIS TEST NEVER WRITES. tests.html is served from the same origin as the
+     app, so a test that seeded phat:v1:log to prove a point would take his
+     history with it the first time he opened /tests.html on his phone. It
+     snapshots, renders every branch, and re-reads. */
+  var ls;
+  try { ls = window.localStorage; } catch (e) { ls = null; }
+  a.ok(!!ls, "localStorage unavailable, so the spy cannot be installed - re-run in a normal window");
+  var before = DTSNAP();
+  var sets = 0, dels = 0, gets = [];
+  var realSet = ls.setItem, realGet = ls.getItem, realDel = ls.removeItem;
+  var stashed = window.storage, bridge = 0;
+  ls.setItem = function(){ sets++; return realSet.apply(ls, arguments); };
+  ls.removeItem = function(){ dels++; return realDel.apply(ls, arguments); };
+  ls.getItem = function(k){ gets.push(String(k)); return realGet.apply(ls, arguments); };
+  window.storage = { get: function(){ bridge++; }, set: function(){ bridge++; } };
+  try { DTALL(); }
+  finally {
+    ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel;
+    if (stashed === undefined) { try { delete window.storage; } catch (e) { window.storage = undefined; } }
+    else window.storage = stashed;
+  }
+  a.eq(sets, 0, "dietTargets wrote to localStorage");
+  a.eq(dels, 0, "dietTargets removed a key");
+  a.eq(gets.join(" | ") || "none", "none", "dietTargets read localStorage");
+  a.eq(bridge, 0, "dietTargets reached the window.storage bridge");
+  a.deep(DTSNAP(), before, "one of the three stores changed across a full render");
+});
+
+/* ------------------------------------------------------ 10. determinism */
+
+T("DT1 / determinism - same arguments in, byte-identical JSON out", function(a){
+  /* Asserted on the JSON string, as with demoStore: a rule whose output
+     wobbles between two calls cannot be tested and cannot be trusted. */
+  var shapes = [
+    [DTW.Sun], [DTW.Sun, null], [DTW.Sun, P.PHAT_PLAN], [DTW.Sun, P.PHAT_PLAN, "training"],
+    [DTW.Mon, DTPLAN(), "rest"], [DTW.Wed], ["2026-13-45"], ["nonsense", { days: [] }]
+  ];
+  var i, first, j, again, bad = [];
+  for (i = 0; i < shapes.length; i++) {
+    first = JSON.stringify(P.dietTargets.apply(null, shapes[i]));
+    for (j = 0; j < 5; j++) {
+      again = JSON.stringify(P.dietTargets.apply(null, shapes[i]));
+      if (again !== first) bad.push(show(shapes[i][0]) + " call " + j);
+    }
+  }
+  a.eq(bad.join(" | ") || "none", "none", "a repeated call returned a different object");
+  /* and call ORDER does not matter - no memo, no accumulated state */
+  var first1 = JSON.stringify(P.dietTargets(DTW.Sun));
+  P.dietTargets(DTW.Mon, DTPLAN(), "rest"); P.dietTargets("2026-13-45"); DTALL();
+  a.eq(JSON.stringify(P.dietTargets(DTW.Sun)), first1, "an intervening call changed the answer");
+  a.ok(JSON.stringify(P.dietTargets(DTW.Sun)).length > 500, "the object serialises in full");
+});
+
+/* ----------------------------------------------- 11. dates the caller got wrong */
+
+T("DT1 / OBSERVED not correct - a well-formed impossible date makes no claim, and echoes itself back",
+function(a){
+  /* Backend named this as one of three things it was least sure about and
+     asked for a decision. Mine, on the record:
+
+     RIGHT: `2026-13-45` passes DATE_RE, Date.parse gives NaN, wdOf returns
+     null, and the function degrades to `Training day` with NO claim about
+     today. That is the direction that cannot cost 700 kcal.
+
+     WRONG, and reported as a P2 defect rather than accepted:
+       (1) `.date` echoes `2026-13-45` back. The function knows it could not
+           read it - `weekday` is null - and hands the string on anyway. It is
+           a string no screen should render.
+       (2) `reason` is "manual", i.e. "he switched the segment", on a call
+           where `view` was undefined and `manual` is false. The object
+           contradicts itself: manual:false with reason:"manual". Backend's
+           note says this case answers "no-schedule"; it does not, because
+           PHAT_PLAN does declare a schedule - what failed is the DATE.
+     Both are unreachable from the app today (the only caller passes
+     PHAT.localDate()) and both are reachable from the WO-002 importer, which
+     is where a coerced guess is worst. Pinned as OBSERVED so the fix inverts
+     a named test. NOT a ruling. */
+  var r = P.dietTargets("2026-13-45");
+  a.eq(r.weekday, null, "the date could not be read");
+  a.eq(r.todayType, null, "so no day type is derived");
+  a.eq(r.claimsToday, false, "and nothing is claimed about today - the part that is right");
+  a.eq(r.label, DT_TRAIN_PLAIN);
+  a.eq(strOf(r).indexOf("Today —"), -1, "the words Today - appear nowhere");
+  a.eq(r.date, "2026-13-45", "OBSERVED: the impossible date is echoed back in .date (P2, backend)");
+  a.eq(r.manual, false);
+  a.eq(r.reason, "manual",
+    "OBSERVED: reason says he switched the segment when he did not (P2, backend) - " +
+    "it contradicts manual:false in the same object");
+});
+
+T("DT1 / a date that ROLLS OVER makes a confident claim about a day that does not exist", function(a){
+  /* The sibling backend did not name, and the worse of the two. 2026-02-30
+     also passes DATE_RE, but Date.parse does NOT return NaN for it - V8 rolls
+     it into 2 March, a Monday - so the app says the training-day sentence
+     about a date that has never existed, with .date reading 2026-02-30. Same
+     class as the above, one step worse because the output is confident.
+     P2, backend: wdOf could round-trip the parse (format the parsed date and
+     require it to equal the input) and return null, which closes both this
+     and the .date echo in one change.
+     OBSERVED, not correct. When it is fixed, this test inverts. */
+  a.ok(!isNaN(Date.parse("2026-02-30T12:00:00")), "V8 parses it rather than rejecting it");
+  a.eq(P.wdOf("2026-02-30"), "Mon", "OBSERVED: it rolls into Monday 2 March");
+  var r = P.dietTargets("2026-02-30");
+  a.eq(r.claimsToday, true, "OBSERVED: the app claims today off a date that does not exist (P2, backend)");
+  a.eq(r.label, DT_TRAIN_TODAY, "OBSERVED");
+  a.eq(r.date, "2026-02-30", "OBSERVED: and echoes the impossible date");
+  a.eq(P.wdOf("2026-02-29"), "Sun", "OBSERVED: 2026 has no 29 February and this rolls into 1 March");
+  /* the real leap day, which is not a defect at all */
+  a.eq(P.wdOf("2024-02-29"), "Thu", "a real leap day reads correctly");
+  a.eq(P.dietTargets("2024-02-29").dayType, "training", "and lands on the day type Thursday says");
+});
+
+T("DT1 / an UNREADABLE date falls back to the real local date and still advises", function(a){
+  /* The other half of the contract, and the one the app relies on: a date
+     that fails DATE_RE is not a well-formed impossible date, it is rubbish,
+     and safeToday falls back to today. A rule that refuses to speak because a
+     caller passed rubbish is worse than one that speaks about now. */
+  var todayReal = P.localDate(), i, r;
+  var junk = ["", " ", "not-a-date", "2026-9-1", "13/09/2026", null, undefined, 42, {}, [], NaN];
+  for (i = 0; i < junk.length; i++) {
+    r = P.dietTargets(junk[i]);
+    a.eq(r.date, todayReal, "fallback for " + show(junk[i]));
+    a.eq(r.weekday, P.wdOf(todayReal), "and the weekday of the real today");
+    a.oneOf(r.dayType, ["training", "rest"]);
+  }
+});
+
+T("DT1 / an unusable PLAN falls back to PHAT, and an empty one declares no schedule", function(a){
+  var i, r, junk = [null, undefined, 42, "PHAT", true, {}, [], { days: "x" }, { days: null }];
+  var phat = JSON.stringify(P.dietTargets(DTW.Sun, P.PHAT_PLAN));
+  for (i = 0; i < junk.length; i++) {
+    r = P.dietTargets(DTW.Sun, junk[i]);
+    a.eq(JSON.stringify(r), phat, "plan " + show(junk[i]) + " must answer exactly as PHAT does");
+  }
+  /* a plan document with zero days is a DIFFERENT thing from rubbish: it is a
+     real plan that declares no schedule, and it must not silently answer as
+     PHAT */
+  r = P.dietTargets(DTW.Sun, { days: [] });
+  a.eq(r.reason, "no-schedule");
+  a.eq(r.claimsToday, false);
+  a.deep(r.trainingDays, []);
+  a.deep(r.restDays, []);
+});
+
+/* --------------------------------------------------------------- 12. DST */
+
+T("DT1 / DST - the weekday never moves, three years of dates in this device's real timezone", function(a){
+  /* Every date read in dietTargets is anchored at local NOON, so a DST shift
+     moves the hour and never the day. Verified here against Zeller's
+     congruence - the weekday is a fact of the calendar, not of a timezone -
+     for 1,095 consecutive dates, including every DST transition this device's
+     zone has in 2025, 2026 and 2027.
+     STATED PLAINLY, because it changes what this proves: run off-harness
+     under 12 zones (Beirut, which shifts AT MIDNIGHT, Lord Howe at 30
+     minutes, Chatham at +12:45, Santiago, Sao Paulo, Apia, Tehran, Havana,
+     Amman, Kiritimati, Los Angeles, London) it passed in all of them - and so
+     did a midnight-anchored variant, because V8 rolls a nonexistent local
+     midnight forward within the same day. The noon anchor is therefore belt
+     and braces rather than the thing standing between him and a wrong day.
+     What this test DOES prove is the claim that matters: on the device he is
+     holding, in his zone, the calendar day never moves. */
+  function zeller(y, m, d){
+    if (m < 3) { m += 12; y -= 1; }
+    var K = y % 100, J = Math.floor(y / 100);
+    return ["Sat","Sun","Mon","Tue","Wed","Thu","Fri"][
+      (d + Math.floor(13 * (m + 1) / 5) + K + Math.floor(K / 4) + Math.floor(J / 4) + 5 * J) % 7];
+  }
+  var d = "2025-01-01", n = 0, bad = [], want, got;
+  while (d < "2028-01-01" && n < 1200) {
+    want = zeller(+d.slice(0, 4), +d.slice(5, 7), +d.slice(8, 10));
+    got = P.wdOf(d);
+    if (got !== want) bad.push(d + " got " + got + " want " + want);
+    n++; d = P.dateAdd(d, 1);
+  }
+  a.eq(n, 1095, "three years of dates walked");
+  a.eq(bad.slice(0, 5).join(" | ") || "none", "none",
+    "a weekday moved - which moves a rest day, which is 700 kcal");
+  /* the transition dates most zones use, named so a failure says which */
+  ["2026-03-08", "2026-03-29", "2026-10-25", "2026-11-01", "2026-04-05", "2026-10-04"].forEach(function(x){
+    a.eq(P.wdOf(x), "Sun", x + " is a Sunday in every timezone on earth");
+    a.eq(P.dietTargets(x).dayType, "rest", x + " must be a rest day");
+    a.eq(P.dietTargets(x).label, DT_REST_TODAY, x);
+  });
+});
+
+T("DT1 / month, year and leap boundaries land on the right day type", function(a){
+  var rest = P.planRestWeekdays(P.PHAT_PLAN), i, r, want;
+  var edges = ["2025-12-31", "2026-01-01", "2026-01-31", "2026-02-01", "2026-02-28",
+               "2026-03-01", "2026-06-30", "2026-07-01", "2026-12-31", "2027-01-01",
+               "2024-02-28", "2024-02-29", "2024-03-01", "2028-02-29"];
+  for (i = 0; i < edges.length; i++) {
+    r = P.dietTargets(edges[i]);
+    want = rest.indexOf(P.wdOf(edges[i])) >= 0 ? "rest" : "training";
+    a.eq(r.dayType, want, edges[i] + " (" + P.wdOf(edges[i]) + ")");
+    a.eq(r.date, edges[i], "the date is carried through unchanged");
+  }
+  a.eq(P.wdOf("2024-02-29"), "Thu", "the leap day of 2024");
+  a.eq(P.wdOf("2028-02-29"), "Tue", "and of 2028");
+});
+
+/* ------------------------------------------------- 13. the transcription guard */
+
+T("DT1 / TRANSCRIPTION - all 22 strings are the coach's, character for character", function(a){
+  /* Typed from docs/coach-audit-addendum.md section 8.6, not copied from
+     logic.js. tests.html cannot read the document (fetch is dead on a file://
+     opaque origin), so the document is transcribed here and the comparison is
+     against the shipped copy. If the two ever drift, the app starts giving
+     advice nobody signed, and this test is what says so.
+     Independently re-run off-harness on 2026-09-11 against the document
+     itself: 22 of 22 matched, modulo the document's hard line wrapping. */
+  var want = {
+    "kicker": "Diet",
+    "kickerSub": "Targets only",
+    "timing.training.heading": "Carb placement",
+    "timing.training.text": "80–100 g in the meal two hours before lifting, 80–100 g in the meal after, the rest spread across the day. Rice, potatoes, oats, fruit.",
+    "timing.rest.heading": "Rest-day watch item",
+    "timing.rest.text": "60 g, not zero — vegetables, berries, a little dairy. Fat at 175 g is easy to overshoot because it's calorically dense; weigh it for the first two weeks.",
+    "calibration.heading": "Calibration",
+    "calibration.lines.0": "These targets are estimates from your height, weight and training load, not measurements. The bodyweight trend overrides them.",
+    "calibration.lines.1": "Weigh daily, same conditions. The Weight tab compares your last 7 days against the 7 before and tells you when to change something. It needs at least 5 weigh-ins in each of those weeks before it will say anything.",
+    "nonNegotiables.heading": "Non-negotiables",
+    "nonNegotiables.lines.0": "Protein every day, rest days included.",
+    "nonNegotiables.lines.1": "Creatine monohydrate 5 g daily.",
+    "nonNegotiables.lines.2": "If the bar numbers do not move month over month, the surplus is being wasted.",
+    "medical": "Not a dietitian. Rest-day fat is 175 g by design. If you have any cardiovascular or metabolic history, run this past a doctor before you run it for months.",
+    "weekly": "Weekly average ~3,000 kcal against an estimated 2,700 maintenance. The 300 is the surplus.",
+    "protein.on": "PROTEIN HIT TODAY",
+    "protein.off": "PROTEIN NOT YET HIT",
+    "protein.sub": "The one non-negotiable. Rest days included."
+  };
+  function dig(o, path){
+    var parts = path.split("."), i, v = o;
+    for (i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  var k, n = 0;
+  for (k in want) if (Object.prototype.hasOwnProperty.call(want, k)) {
+    a.eq(dig(P.DIET_COPY, k), want[k], "DIET_COPY." + k + " has drifted from the addendum");
+    n++;
+  }
+  a.eq(n, 18, "18 strings in DIET_COPY");
+  a.eq(P.DIET_LABEL.training.today, DT_TRAIN_TODAY);
+  a.eq(P.DIET_LABEL.training.plain, DT_TRAIN_PLAIN);
+  a.eq(P.DIET_LABEL.rest.today, DT_REST_TODAY);
+  a.eq(P.DIET_LABEL.rest.plain, DT_REST_PLAIN);
+  /* the corrections the coach REQUIRED, asserted as absences and presences */
+  var whole = strOf(P.DIET_COPY);
+  a.eq(whole.indexOf("fortnight"), -1, "8.6 item 4: fortnight -> two weeks");
+  a.ok(whole.indexOf("Creatine monohydrate 5 g daily.") >= 0, "8.6 item 2: creatine was missing from the design");
+  a.ok(whole.indexOf("Not a dietitian.") >= 0, "8.6 item 3: the medical caveat is not optional");
+  a.eq(whole.indexOf("over +0.5 kg means cut 200"), -1, "8.6 item 1: the tab must not restate W1");
+});
+
+T("DT1 / the copy carries no emoji, no exclamation mark and no hype (CLAUDE.md section 4)", function(a){
+  var s = strOf(P.DIET_COPY) + "\n" + strOf(P.DIET_LABEL) + "\n" + strOf(DTALL());
+  a.eq(s.indexOf("!"), -1, "no exclamation mark");
+  a.ok(!/[☀-➿\uD83C-\uDBFF]/.test(s), "no emoji");
+  a.eq(s.indexOf("Great"), -1); a.eq(s.indexOf("Keep pushing"), -1);
+});
+
+/* ------------------------------------------------- 14. the shape of the answer */
+
+T("DT1 / the returned object's shape is stable across every branch", function(a){
+  var keys = ["dayType","label","kcal","protein","carb","fat","text","date","weekday","todayType",
+              "claimsToday","derived","manual","reason","trainingDays","restDays","timing","weekly",
+              "calibration","nonNegotiables","medical","medicalUnderGrid"].sort().join(",");
+  var all = DTALL(), i, got, bad = [];
+  for (i = 0; i < all.length; i++) {
+    got = Object.keys(all[i]).sort().join(",");
+    if (got !== keys) bad.push(i + ": " + got);
+  }
+  a.eq(bad.slice(0, 3).join(" | ") || "none", "none", "every branch returns the same 22 keys");
+  /* derived and manual are not the same question as claimsToday, and a caller
+     that confuses them is how the label goes wrong again */
+  var d = P.dietTargets(DTW.Sun);
+  a.eq(d.derived, true); a.eq(d.manual, false); a.eq(d.claimsToday, true);
+  var m = P.dietTargets(DTW.Sun, null, "training");
+  a.eq(m.derived, false); a.eq(m.manual, true); a.eq(m.claimsToday, false);
+  var s = P.dietTargets(DTW.Sun, null, "rest");
+  a.eq(s.derived, false, "he tapped REST on a Sunday - that is still a manual switch");
+  a.eq(s.manual, true);
+  a.eq(s.claimsToday, true, "but it agrees with today, so the app may say Today");
+  a.eq(s.label, DT_REST_TODAY);
+});
+
+T("DT1 / timing copy follows the day SHOWN, and the two blocks never mix", function(a){
+  var tr = P.dietTargets(DTW.Mon), re = P.dietTargets(DTW.Sun);
+  a.eq(tr.timing.heading, "Carb placement");
+  a.eq(re.timing.heading, "Rest-day watch item");
+  a.ok(tr.timing.text.indexOf("two hours before lifting") >= 0);
+  a.ok(re.timing.text.indexOf("60 g, not zero") >= 0);
+  a.eq(tr.timing.text.indexOf("60 g, not zero"), -1, "a training day must not carry the rest-day watch item");
+  a.eq(re.timing.text.indexOf("two hours before lifting"), -1, "and a rest day must not carry carb placement");
+  a.eq(P.dietTargets(DTW.Sun, null, "training").timing.heading, "Carb placement");
+  a.eq(P.dietTargets(DTW.Mon, null, "rest").timing.heading, "Rest-day watch item");
+});
+
+T("DT1 / trainingDays and restDays are the plan's, in Mon..Sun order, and disjoint", function(a){
+  var r = P.dietTargets(DTW.Sun), i, all, seq = [];
+  a.deep(r.trainingDays, P.planTrainingWeekdays(P.PHAT_PLAN));
+  a.deep(r.restDays, P.planRestWeekdays(P.PHAT_PLAN));
+  all = r.trainingDays.concat(r.restDays);
+  a.eq(all.length, 7, "the two lists together are the week");
+  for (i = 0; i < r.trainingDays.length; i++)
+    a.eq(r.restDays.indexOf(r.trainingDays[i]), -1, "a weekday cannot be both");
+  for (i = 0; i < P.WD_ORDER.length; i++)
+    if (r.trainingDays.indexOf(P.WD_ORDER[i]) >= 0) seq.push(P.WD_ORDER[i]);
+  a.deep(r.trainingDays, seq, "returned in Mon..Sun order");
+  a.eq(P.WD_ORDER[0], "Mon", "and the week starts on Monday");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -9799,6 +10623,51 @@ contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Dele
   "id is always <code>x_</code> and a minted lift always <code>l_</code>. The line stays (it becomes " +
   "load-bearing the moment two kinds share a prefix) and S25 now pins the disjoint-prefix invariant, so " +
   "the mutant cannot quietly stop being equivalent. 23 of 24 injected mutants killed.");
+
+/* ---------------------------------------------------- WO-005 T4 (S29) --- */
+contract("<b>WO-005 T4 &mdash; <code>dietTargets</code> answers <code>reason:\"manual\"</code> when nothing " +
+  "was switched.</b> Hand it a well-formed impossible date (<code>2026-13-45</code>, which passes " +
+  "<code>DATE_RE</code> and then fails <code>Date.parse</code>) with no <code>view</code> argument and it " +
+  "returns <code>manual:false</code> beside <code>reason:\"manual\"</code> &mdash; the object contradicts " +
+  "itself, and a caller branching on <code>reason</code> would tell him he is looking at a day he never " +
+  "chose. Backend's own note says this case answers <code>\"no-schedule\"</code>; it cannot, because " +
+  "PHAT_PLAN <em>does</em> declare a schedule &mdash; what failed is the DATE, and there is no reason code " +
+  "for that. <b>Wanted: a fourth code</b> (<code>\"no-date\"</code>) or the existing three restated. P2, " +
+  "backend. Pinned as OBSERVED in S29 <em>a well-formed impossible date makes no claim, and echoes itself " +
+  "back</em>, which also pins the second half: <code>.date</code> hands the impossible string back to the " +
+  "caller while <code>weekday</code> is null, so the function knows it could not read it and passes it on " +
+  "anyway.");
+contract("<b>WO-005 T4 &mdash; a date that ROLLS OVER gets a confident claim, and this is the worse of the " +
+  "two.</b> <code>2026-02-30</code> passes <code>DATE_RE</code> too, but V8 does <em>not</em> reject " +
+  "<code>Date.parse(\"2026-02-30T12:00:00\")</code> &mdash; it rolls into Monday 2 March, so the app says " +
+  "<code>Today &mdash; high-carb training day</code> about a date that has never existed and echoes " +
+  "<code>2026-02-30</code> in <code>.date</code>. Unreachable from the app today (the only caller passes " +
+  "<code>PHAT.localDate()</code>) and reachable from the WO-002 importer, which is exactly where a coerced " +
+  "guess is worst &mdash; the same argument already on the record for <code>lift:42</code>. <b>One change " +
+  "closes both this and the echo:</b> <code>wdOf</code> round-trips the parse (format the parsed date, " +
+  "require it to equal the input) and returns null when it does not. P2, backend. Pinned as OBSERVED in " +
+  "S29 <em>a date that ROLLS OVER makes a confident claim about a day that does not exist</em>; when it " +
+  "is fixed, that test inverts.");
+contract("<b>WO-005 T4 &mdash; a plan that trains all seven days is PROVISIONAL and needs " +
+  "<code>strength-coach</code>.</b> &sect;8.6 item 5 rules two cases: a plan that declares rest days " +
+  "(<code>Today &mdash; &hellip;</code>) and a plan that declares none (<code>Training day</code> / " +
+  "<code>Rest day</code>, no claim about today). A plan declaring <em>all seven</em> weekdays is a third " +
+  "case the document does not reach: the app <em>can</em> place today (it is a training day) but there is " +
+  "no rest day for the segment to mean. Backend chose the conservative reading &mdash; no " +
+  "<code>Today &mdash;</code> prefix, <code>reason:\"no-rest-days\"</code> &mdash; because never falsely " +
+  "claiming today is the direction that cannot cost 700 kcal, and QA agrees with the direction. It is " +
+  "still a choice, not a ruling. Pinned in S29 <em>PROVISIONAL - a plan that trains all seven days also " +
+  "makes no claim about today</em> with the comment saying so. <b>If the coach rules the other way that " +
+  "test is edited deliberately and the ruling goes in docs/decisions.md.</b>");
+contract("<b>WO-005 T4 &mdash; the pre/post check, so nobody cites a guard as a bug-proof.</b> Twelve " +
+  "mutants were injected into <code>dietTargets</code> and all twelve were killed, including the one that " +
+  "matters: <b>M1, the design prototype's own defect</b> (day type always <code>training</code>, label " +
+  "hardcoded) dies against <b>16</b> S29 tests, and <b>M2</b> (right for the wrong reason: the segment " +
+  "decides and defaults to training) dies against 15. <b>Seven S29 tests are GUARDS, not bug-proofs</b> " +
+  "&mdash; no mutant of the day-type logic can fail them, because they guard other classes: the eight " +
+  "frozen figures, the protein tick in the store, the three stores' byte-identity, determinism, the " +
+  "transcription, the copy voice, and the Mon..Sun ordering. They are worth keeping and they are not " +
+  "evidence about the 700 kcal bug. Every other S29 test killed at least one mutant.");
 
 /* ---------------------------------------------------- WO-004 W5 (S26) --- */
 /* --- three CLOSED in fae1fd7, kept as the record of what was fixed --- */
@@ -10239,7 +11108,34 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
     "&sect;7.5.1), not a gap in this suite: the harness has no <code>fetch</code> on a " +
     "<code>file://</code> opaque origin and cannot read the view. <b>When it lands, the check is " +
     "three taps in a browser:</b> stamp a calorie change, seed a +0.25 kg/week fortnight, and the card " +
-    "must show the note AND the clear control; tap clear and both must go.</p>";
+    "must show the note AND the clear control; tap clear and both must go.</p>" +
+    "<p><b>Rule DT1 &mdash; the engine is fully reachable from here; TWO THINGS AROUND IT ARE NOT, and " +
+    "one of them is an acceptance criterion.</b> <code>PHAT.dietTargets</code> is pure and is asserted " +
+    "in <b>S29</b> over <code>file://</code> &mdash; 30 tests, every branch, no DOM. What this page " +
+    "cannot reach: <b>(1) the export payload.</b> WO-005 T4 asks for proof that <em>no export accepts " +
+    "or reads the protein tick</em>. <code>exportAll()</code> lives in <code>index.html:3888</code>, " +
+    "reads <code>S</code> and builds a <code>Blob</code>, so it is not callable from here and the " +
+    "harness cannot <code>fetch</code> the file on a <code>file://</code> opaque origin. What S29 CAN " +
+    "prove is asserted: <code>dietTargets</code> has no parameter a tick could arrive through, a 4th " +
+    "and 5th argument change nothing, no <code>PHAT</code> export is shaped like a tick reader, and a " +
+    "tick planted on the bodyweight rows, on the sets and on the plan document moves neither Rule W1, " +
+    "nor the verdict, nor the diet targets. The export half is <b>read by eye, not asserted</b>: on " +
+    "2026-09-11 the payload was <code>{schemaVersion, dateBasis, exportedAt, sessions, bodyweight, " +
+    "includeCut}</code> plus <code>S.logMeta</code>, with no tick field and no diet field. <b>B-20: " +
+    "extract <code>PHAT.exportPayload(state)</code></b> and this stops being an eyeball check. " +
+    "<b>(2) the render.</b> Whether the caveat and the macro grid fit one 400 px screen without " +
+    "scrolling (&sect;8.6's condition on showing <code>[Guessing]</code> numbers at all) is a layout " +
+    "fact. <b>WO-004 W12 landed the tab in <code>676a685</code> while this section was being written</b>, " +
+    "and the wiring was read rather than assumed: <code>vDiet()</code> calls " +
+    "<code>PHAT.dietTargets(PHAT.localDate(), PHAT.PHAT_PLAN, S.dietView)</code>, prints " +
+    "<code>v.label</code> and <code>v.text.*</code> and formats nothing; <code>setDietView</code> writes " +
+    "no store; the tick writes <code>phat:v1:prefs</code> only; and <code>exportAll</code> at " +
+    "<code>:4090</code> serialises <code>{schemaVersion, dateBasis, exportedAt, sessions, bodyweight, " +
+    "includeCut}</code> plus <code>S.logMeta</code> &mdash; no tick field, no diet field. <b>That is an " +
+    "eyeball check, not an assertion, and it is a fail until <code>PHAT.exportPayload(state)</code> is " +
+    "extracted (B-20).</b> What is left for a phone is &sect;8.6&rsquo;s own condition on showing " +
+    "<code>[Guessing]</code> numbers at all &mdash; <b>the estimate caveat renders on the same screen as " +
+    "the macro grid, without scrolling, at 400 px</b> &mdash; and it is item 5 of the checklist below.</p>";
 
   /* ---------------------------------------------------------------------
      The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a
@@ -10252,7 +11148,7 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
      light. Those residues, merged, are the four items here.
      --------------------------------------------------------------------- */
   document.getElementById("manual").innerHTML =
-    "<p><b>Five items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Six items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -10302,6 +11198,21 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
     "or at 200 % text. <b>So look for what a measurement cannot answer</b> &mdash; whether the reach is " +
     "comfortable with one hand and whether the 11 px tab labels and the .55 grey are readable under gym " +
     "lights &mdash; and not for the three numbers above.</span></li>" +
+
+    "<li><b>Open the Diet tab and read the day out loud (WO-005 T4 / B-29).</b> Look at the label above " +
+    "the four numbers. <b>On a Wednesday or a Sunday it must read <i>Today &mdash; low-carb rest day</i> " +
+    "with 2,500 / 175 g / 60 g / 175 g.</b> Any other day: <i>Today &mdash; high-carb training day</i>, " +
+    "3,200 / 170 g / 300 g / 145 g. Now tap the other segment: the four numbers change and the label " +
+    "must lose the word <i>Today</i>. Without scrolling, check you can still see the line that says " +
+    "these are estimates.<br><span class=\"skipmsg\">Why a phone: the rule is fully asserted here " +
+    "(S29, 30 tests, 12 of 12 mutants killed) and <code>vDiet()</code> is a printer that formats " +
+    "nothing. Two things this page still cannot see. First, <b>end to end on his real clock</b>: the " +
+    "engine is handed <code>PHAT.localDate()</code>, and only the device can prove the date it produces " +
+    "at 23:50 in his own timezone is the day he thinks it is. Second, <b>layout</b>: addendum " +
+    "&sect;8.6 allows the app to show numbers the brief tags <code>[Guessing]</code> ONLY while the " +
+    "estimate caveat stays visible with the grid at 400 px. That is a measurement of a screen, not of " +
+    "a function. If the tab has grown past one screen, the caveat moves directly under the " +
+    "grid.</span></li>" +
 
     "<li><b>Turn the screen reader on, once.</b> VoiceOver or TalkBack. Paste <code>7.5.0</code> into a weight " +
     "field and tap Save - it should speak <i>Not saved. 1 set needs a fix.</i> and land you on that row. " +

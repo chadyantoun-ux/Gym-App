@@ -1358,3 +1358,72 @@ force whoever bumps it to come and update B-04's importer list. **Checked rather
 (lines 907, 909, 914, 3428, 3830) and the one prose mention, at :3783, already reads "schema 5".
 So there is nothing to chase and nothing to tidy; recorded so the next reader does not go hunting
 for a stale comment that is not there, or "fix" the right number to match a wrong one.
+
+### 2026-09-11 — Rule DT1 pinned: three QA judgement calls, and two defects pinned as OBSERVED
+WO-005 T4. `tests.html` gains **S29**, 30 tests over `PHAT.dietTargets`. The suite is
+**556 / 556 / 0** in 387 ms. No product code was touched; no existing test was changed. Four calls
+are written down here because they are judgement, not transcription.
+
+**1. Two P2 defects are pinned as OBSERVED rather than left red.** Both are in the class "a
+well-formed date the calendar cannot hold":
+
+- `dietTargets("2026-13-45")` returns `manual:false` beside `reason:"manual"` — the object
+  says he switched the segment on a call where `view` was `undefined`. It contradicts itself, and
+  a caller branching on `reason` would tell him he is looking at a day he never chose. Backend's
+  note predicted `"no-schedule"`; that cannot fire, because PHAT_PLAN *does* declare a schedule —
+  what failed is the date, and there is no code for that. It also echoes the impossible string back
+  in `.date` while `weekday` is null, so the function knows it could not read the date and hands
+  it on anyway.
+- `dietTargets("2026-02-30")` is worse, and backend did not name it. V8 does **not** reject
+  `Date.parse("2026-02-30T12:00:00")` — it rolls into Monday 2 March — so the app prints
+  `Today — high-carb training day` about a date that has never existed.
+
+**Why OBSERVED and not a red test.** The old `B-38` convention was a deliberate failing test; the
+suite has since replaced it with two meta-tripwires and a standing `N / N / 0` target, on the
+argument that a red kept alive under a label is how the next real red gets waved through. Both
+defects are **unreachable from the app today** — the only caller passes `PHAT.localDate()` — and
+reachable from the WO-002 importer, which is the same argument already on the record for
+`lift:42`. So they are pinned with `OBSERVED` in the assertion message, named in the contract
+list with the owner and the fix, and **they invert when fixed**. One change closes both: `wdOf`
+round-trips the parse and returns null when the reformatted date does not equal its input.
+**Rules out:** treating a pinned OBSERVED assertion as a ruling, or closing either by deleting the
+test.
+
+**2. The all-seven-weekday plan is pinned as PROVISIONAL.** §8.6 item 5 rules two cases; a plan
+declaring all seven weekdays is a third the document does not reach. Backend chose no `Today —`
+prefix and `reason:"no-rest-days"`. QA agrees with the **direction** — never falsely claiming
+today is the side that cannot cost 700 kcal — and pins the behaviour with the word PROVISIONAL in
+the test comment. **Coach sign-off is outstanding.** If the coach rules the other way the test is
+edited deliberately and the ruling is recorded here.
+
+**3. No test in S29 writes to `localStorage`, including the one that proves the stores are
+untouched.** `tests.html` is deployed on the same origin as the app. A test that seeded
+`phat:v1:log` to prove a point would take his history with it the first time he opened
+`/tests.html` on his phone. The byte-identity test snapshots the three keys, renders every branch,
+and re-reads — plus a spy asserting zero `setItem`, zero `removeItem`, zero `getItem` and zero
+hits on the `window.storage` bridge. **Rules out:** any future harness test that writes a real
+store key to set up a fixture.
+
+**4. The DST claim is stated for what it proves, not for what it sounds like.** Every date read is
+noon-anchored, so a shift should move the hour and never the day. Verified in-harness against
+Zeller's congruence for 1,095 consecutive dates in the device's real zone, and off-harness under
+**twelve zones** — Beirut (which shifts *at midnight*), Lord Howe (30-minute DST), Chatham (+12:45),
+Santiago, São Paulo, Apia, Tehran, Havana, Amman, Kiritimati, Los Angeles, London — 13,140 date
+reads, zero mismatches. **Recorded honestly: a midnight-anchored variant passed all twelve too**,
+because V8 rolls a nonexistent local midnight forward within the same day. The noon anchor is belt
+and braces here rather than the thing standing between him and a wrong rest day. It stays, because
+it costs nothing and the next date helper may not be so lucky — but it must not be cited as a
+defect that was caught.
+
+**And the pre/post check, which is the part that makes the rest evidence.** Twelve mutants were
+injected into `dietTargets`; twelve were killed. M1 — the design prototype's own defect, day type
+always `training` with the label hardcoded — dies against **16** of the 30 tests. M2, the
+right-for-the-wrong-reason variant that reads the segment and defaults to training, dies against 15.
+**Seven of the 30 are guards, not bug-proofs**, and are named as such in the contract list so none
+of them is ever cited as evidence about the 700 kcal bug.
+
+**Separately verified and clean:** all 22 signed-off Diet strings in `logic.js` are verbatim
+substrings of `docs/coach-audit-addendum.md` §8.6, checked off-harness against the document itself
+(modulo the document's hard line wrapping) and then transcribed into S29 from the document rather
+than copied from the code, so the two cannot drift silently. Backend's report said 19; the true
+count is 22 — 18 in `DIET_COPY` and 4 in `DIET_LABEL`. No string differs.
