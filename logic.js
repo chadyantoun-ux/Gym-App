@@ -5953,6 +5953,301 @@
     return out;
   }
 
+  /* ============================================== Rule DT1 — diet targets
+
+     WO-005 W12 / W9. The eight macro figures and every sentence on the Diet
+     tab, made reachable from code. They were signed off in
+     docs/coach-audit-addendum.md §8.6 and until tonight existed only in prose,
+     which is why W9 refused to render the Home macro row: the numbers were
+     real, they were just not in logic.js and were not the engineer's to
+     invent. This block is a TRANSCRIPTION. Nothing in it was computed,
+     rounded, re-derived or improved, and a figure changes only against a new
+     coach ruling.
+
+     THE DEFECT IT CLOSES (§8.6 item 5, [Certain]). The design prototype
+     hardcoded the day type:
+
+         v.macroLabel = "Today — high-carb training day";
+         v.mKcal = "3,200"; v.mP = "170g"; v.mC = "300g"; v.mF = "145g";
+
+     unconditionally. On a Wednesday or a Sunday — PHAT's two rest days — that
+     tells him 3,200 kcal and 300 g of carbs when the programme says 2,500 and
+     60. A 700 kcal and 240 g error, delivered under the word "Today", on the
+     two days of the week the low-carb floor exists to protect. So the day type
+     here is DERIVED from the local weekday against the plan's own `wd` fields,
+     never assumed, and there is no second copy of the schedule in this file
+     (B-66 — a duplicated schedule is what cost the cue layer a whole night).
+
+     NOTHING IS STORED. No schema bump, no migration, no stored-value rewrite.
+     Given a date and a plan document the output is a pure function of the two:
+     no DOM, no storage, no clock it was not handed, no Math.random, and no
+     toISOString anywhere near a calendar date (CLAUDE.md §3.4).
+
+     THE PROTEIN TICK IS NOT AN INPUT AND MUST NEVER BECOME ONE. The coach's
+     ruling, §8.6: it is a habit tick, it may be stored per date, and NO RULE
+     MAY EVER READ IT. It is self-reported, unverifiable and one tap; if it fed
+     Rule W1's calorie decision the app would be adjusting his food off a
+     checkbox. dietTargets therefore takes no tick argument and has no
+     parameter one could be smuggled through, and DIET_COPY.protein carries the
+     two labels and nothing else — no state, no date, no store. If the control
+     needs a key it gets its own (`phat:v1:prefs`), never `phat:v1:log` and
+     never `phat:v1:bw`.
+
+     THE CALIBRATION BLOCK POINTS AT RULE W1, IT DOES NOT RESTATE IT. The
+     design's version described a decision procedure the app does not run
+     ("flat means add 200 kcal"), while calorieAdvice runs a different one
+     (rate < +0.10, two 7-day windows, >= 5 weigh-ins in each, 7-day cooldown).
+     Two screens describing two rules is the shape of B-06. The coach's
+     corrected copy below hands the decision back to the Weight tab. */
+
+  /* The eight figures. §8.6, "The numbers: approved verbatim, all eight".
+     `text` is carried rather than formatted, so no code path can reformat a
+     coach-approved number. `strip` is the Home row's joined form, exactly as
+     the coach wrote it in worked example 1 (U+00B7 separators, spaced). */
+  var DIET_TARGETS = deepFreeze({
+    training: {
+      dayType: "training", kcal: 3200, protein: 170, carb: 300, fat: 145,
+      text: { kcal: "3,200", protein: "170 g", carb: "300 g", fat: "145 g",
+              strip: "3,200 · 170 g · 300 g · 145 g" }
+    },
+    rest: {
+      dayType: "rest", kcal: 2500, protein: 175, carb: 60, fat: 175,
+      text: { kcal: "2,500", protein: "175 g", carb: "60 g", fat: "175 g",
+              strip: "2,500 · 175 g · 60 g · 175 g" }
+    }
+  });
+
+  /* The four labels. §8.6 item 5, verbatim, em dash U+2014.
+     `plain` is used when the app may not claim anything about today. */
+  var DIET_LABEL = deepFreeze({
+    training: { today: "Today — high-carb training day", plain: "Training day" },
+    rest:     { today: "Today — low-carb rest day",      plain: "Rest day" }
+  });
+
+  /* Every sentence on the tab, verbatim. Sources, in the coach's own order:
+       kicker / kickerSub  §8.6 "Approved verbatim, no change"
+       timing.training     ditto (carb placement, faithful to handoff-brief:73-74)
+       timing.rest         §8.6 corrected item 4 (`fortnight` -> `two weeks`)
+       calibration         §8.6 corrected item 1
+       nonNegotiables      §8.6 corrected item 2 (creatine was missing)
+       medical             §8.6 corrected item 3 (NOT optional - the tab shows
+                           175 g of fat as a daily target)
+       weekly              §8.6 item 6, tagged [Opinion] by the coach: a
+                           recommended addition, not a correction
+       protein             §8.6 approved verbatim - LABELS ONLY, see above
+     The en dash in `80–100` is U+2013 and the dash in `60 g, not zero —` is
+     U+2014; both are the coach's characters and both survive esc(). */
+  var DIET_COPY = deepFreeze({
+    kicker: "Diet",
+    kickerSub: "Targets only",
+    timing: {
+      training: {
+        heading: "Carb placement",
+        text: "80–100 g in the meal two hours before lifting, 80–100 g in the meal after, the rest spread across the day. Rice, potatoes, oats, fruit."
+      },
+      rest: {
+        heading: "Rest-day watch item",
+        text: "60 g, not zero — vegetables, berries, a little dairy. Fat at 175 g is easy to overshoot because it's calorically dense; weigh it for the first two weeks."
+      }
+    },
+    calibration: {
+      heading: "Calibration",
+      lines: [
+        "These targets are estimates from your height, weight and training load, not measurements. The bodyweight trend overrides them.",
+        "Weigh daily, same conditions. The Weight tab compares your last 7 days against the 7 before and tells you when to change something. It needs at least 5 weigh-ins in each of those weeks before it will say anything."
+      ]
+    },
+    nonNegotiables: {
+      heading: "Non-negotiables",
+      lines: [
+        "Protein every day, rest days included.",
+        "Creatine monohydrate 5 g daily.",
+        "If the bar numbers do not move month over month, the surplus is being wasted."
+      ]
+    },
+    medical: "Not a dietitian. Rest-day fat is 175 g by design. If you have any cardiovascular or metabolic history, run this past a doctor before you run it for months.",
+    weekly: "Weekly average ~3,000 kcal against an estimated 2,700 maintenance. The 300 is the surplus.",
+    /* HABIT TICK. Labels only. No engine reads the tick. */
+    protein: {
+      on: "PROTEIN HIT TODAY",
+      off: "PROTEIN NOT YET HIT",
+      sub: "The one non-negotiable. Rest days included."
+    }
+  });
+
+  /* The arithmetic behind DIET_COPY.weekly, so the gate below is checkable:
+     (5 × 3,200 + 2 × 2,500) / 7 = 3,000, +300 over an estimated 2,700
+     maintenance. It holds for a 5-training / 2-rest week and for no other
+     split, which is exactly the condition `weekly` is emitted under. */
+  var DIET_WEEKLY = deepFreeze({ avg: 3000, maintenance: 2700, surplus: 300,
+                                 trainingDays: 5, restDays: 2 });
+
+  /* --------------------------------------------------- the weekday reading */
+
+  var WD_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  /* Date#getDay() order, which starts on Sunday. Kept separate from WD_ORDER
+     rather than index-shifted inline: an off-by-one here is a rest day
+     labelled a training day. */
+  var WD_BY_DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  /* "Monday" / "mon" / " MON " -> "Mon". "" for anything unreadable, so a
+     day with no `wd` simply declares no weekday rather than declaring a
+     wrong one. */
+  function wdToken(v) {
+    var s = str(v).trim().slice(0, 3).toLowerCase(), i;
+    for (i = 0; i < WD_ORDER.length; i++) {
+      if (WD_ORDER[i].toLowerCase() === s) return WD_ORDER[i];
+    }
+    return "";
+  }
+
+  /* wdOf("2026-09-13") -> "Sun", or null for an unusable date.
+     Anchored at local noon like dateAdd/weekStart/draftAge, so a DST shift
+     moves the hour and never the day. Never toISOString(): that is UTC and
+     would put Chady's Sunday on a Saturday for half the year (B-03). */
+  function wdOf(dateStr) {
+    if (typeof dateStr !== "string" || !DATE_RE.test(dateStr.trim())) return null;
+    var t = Date.parse(dateStr.trim() + "T12:00:00");
+    if (isNaN(t)) return null;
+    return WD_BY_DAY[new Date(t).getDay()] || null;
+  }
+
+  /* planTrainingWeekdays(plan) -> ["Mon","Tue","Thu","Fri","Sat"] for PHAT.
+     Read off the plan's own day documents. THE SCHEDULE LIVES ON THE PLAN and
+     is read from there every time; nothing in this file holds a second copy
+     (B-66). A plan whose days carry no `wd` returns [] — it has declared no
+     weekday schedule, and every caller below treats that as "unknown", never
+     as "no training days". Deduplicated, and returned in Mon..Sun order so
+     two plans that mean the same week compare equal. */
+  function planTrainingWeekdays(plan) {
+    var days = planDays(plan), seen = {}, out = [], i, w;
+    for (i = 0; i < days.length; i++) {
+      w = isObj(days[i]) ? wdToken(days[i].wd) : "";
+      if (w && !seen[w]) seen[w] = 1;
+    }
+    for (i = 0; i < WD_ORDER.length; i++) {
+      if (seen[WD_ORDER[i]]) out.push(WD_ORDER[i]);
+    }
+    return out;
+  }
+
+  /* The complement: the weekdays the plan puts no training on. [] when the
+     plan declares no schedule at all (unknown is not "all seven are rest")
+     and [] when it covers all seven. */
+  function planRestWeekdays(plan) {
+    var train = planTrainingWeekdays(plan), out = [], i;
+    if (train.length === 0) return out;
+    for (i = 0; i < WD_ORDER.length; i++) {
+      if (train.indexOf(WD_ORDER[i]) < 0) out.push(WD_ORDER[i]);
+    }
+    return out;
+  }
+
+  /* -------------------------------------------------------- dietTargets */
+
+  /* dietTargets(dateStr, plan, view)
+       -> { dayType, label, kcal, protein, carb, fat, text,
+            date, weekday, todayType, claimsToday, derived, manual, reason,
+            trainingDays, restDays,
+            timing:{heading,text}, weekly, calibration:{heading,lines},
+            nonNegotiables:{heading,lines}, medical, medicalUnderGrid }
+
+     `dateStr`  the caller's today, YYYY-MM-DD. Unusable input falls back to
+                the real local date, the same contract as every other rule in
+                this file (safeToday) — a rule that refuses to speak because a
+                caller passed rubbish is worse than one that speaks about now.
+                It never throws.
+     `plan`     a plan document. Anything that is not one falls back to
+                PHAT_PLAN, matching cycleLine/volumeTier/deloadCheck.
+     `view`     OPTIONAL. "training" | "rest" — the segment he has tapped.
+                Anything else is ignored. A manual switch changes the numbers
+                shown and NEVER the claim about today: §8.6 worked example 2,
+                tapping TRAINING DAY on a Sunday must not be able to produce
+                the sentence `Today — high-carb training day`.
+
+     THE THREE LABEL CASES, §8.6 item 5, ruled by the coach and not by me:
+       1. the plan declares rest days and the view is today's type
+          -> `Today — high-carb training day` / `Today — low-carb rest day`
+       2. the plan declares rest days and he has switched to the other segment
+          -> `Training day` / `Rest day`, no `Today —`
+       3. the plan declares no rest days — either no `wd` anywhere, or all
+          seven weekdays trained -> `Training day` / `Rest day`, no `Today —`,
+          no claim about today. On a user plan the app does not know which
+          days are rest days, so it shows the targets and asserts nothing.
+          Same ruling shape as Rule C7a.
+
+     `reason` names WHY the `Today —` prefix is absent, so a caller and a test
+     can see it: "manual" | "no-schedule" | "no-rest-days", and null when the
+     label does claim today.
+
+     `weekly` is the [Opinion] surplus line and is emitted ONLY for a 5/2 week,
+     because its three numbers (3,000 · 2,700 · 300) are arithmetic over five
+     training days and two rest days and are wrong for any other split.
+     Recomputing it for a user plan would be inventing a macro target, which
+     is the one thing this block exists to stop. Other splits get "".
+
+     `medicalUnderGrid` carries the coach's placement ruling (§8.6 item 3:
+     below the macro grid on the REST DAY segment, and in the calibration
+     block on both) so the frontend does not have to remember it. The
+     calibration lines returned here ALREADY include the medical sentence as
+     their last line, for the same reason. */
+  function dietTargets(dateStr, plan, view) {
+    var p = isPlanDoc(plan) ? plan : PHAT_PLAN;
+    var today = safeToday(dateStr);
+    var wd = wdOf(today);
+    var train = planTrainingWeekdays(p);
+    var rest = planRestWeekdays(p);
+    /* Does this plan declare rest days? It must name at least one weekday AND
+       leave at least one unclaimed. Both halves matter: no `wd` at all means
+       the app cannot place today, and all seven trained means there is no rest
+       day to be on. Either way it makes no claim about today. */
+    var declares = train.length > 0 && rest.length > 0;
+    var todayType = (train.length > 0 && wd)
+      ? (train.indexOf(wd) >= 0 ? "training" : "rest")
+      : null;
+    var v = (view === "training" || view === "rest") ? view : null;
+    /* The displayed day type. Derived first, the caller's segment second, and
+       "training" only as the last resort when the plan places nothing — and in
+       that case claimsToday is false, so nothing calls it today's. */
+    var dayType = v || todayType || "training";
+    var t = DIET_TARGETS[dayType];
+    var claimsToday = declares && todayType !== null && dayType === todayType;
+    var reason = null;
+    if (!claimsToday) {
+      if (train.length === 0) reason = "no-schedule";
+      else if (rest.length === 0) reason = "no-rest-days";
+      else reason = "manual";
+    }
+    var fiveTwo = (train.length === DIET_WEEKLY.trainingDays &&
+                   rest.length === DIET_WEEKLY.restDays);
+    var cal = DIET_COPY.calibration.lines.slice();
+    cal.push(DIET_COPY.medical);
+    return {
+      dayType: dayType,
+      label: claimsToday ? DIET_LABEL[dayType].today : DIET_LABEL[dayType].plain,
+      kcal: t.kcal,
+      protein: t.protein,
+      carb: t.carb,
+      fat: t.fat,
+      text: t.text,
+      date: today,
+      weekday: wd,
+      todayType: todayType,
+      claimsToday: claimsToday,
+      derived: v === null && todayType !== null,
+      manual: v !== null,
+      reason: reason,
+      trainingDays: train,
+      restDays: rest,
+      timing: DIET_COPY.timing[dayType],
+      weekly: fiveTwo ? DIET_COPY.weekly : "",
+      calibration: { heading: DIET_COPY.calibration.heading, lines: cal },
+      nonNegotiables: DIET_COPY.nonNegotiables,
+      medical: DIET_COPY.medical,
+      medicalUnderGrid: dayType === "rest"
+    };
+  }
+
   /* ==================================================== the demo store
 
      WO-005 W2b. A PURE, DETERMINISTIC sample-data generator. It writes
@@ -6558,6 +6853,24 @@
     declineDeload: declineDeload,
     endDeload: endDeload,
     cycleLine: cycleLine,
+    /* Rule DT1 — WO-005. The Diet tab's eight figures and every sentence on
+       it, transcribed from strength-coach's §8.6 sign-off. `dietTargets`
+       DERIVES the day type from the local weekday against the plan's own `wd`
+       fields — the design's hardcoded "Today — high-carb training day" was a
+       700 kcal error on Wednesdays and Sundays. Nothing here is stored and
+       nothing reads the protein tick; DIET_COPY.protein is two labels. */
+    DIET_TARGETS: DIET_TARGETS,
+    DIET_LABEL: DIET_LABEL,
+    DIET_COPY: DIET_COPY,
+    DIET_WEEKLY: DIET_WEEKLY,
+    dietTargets: dietTargets,
+    /* The weekday reading behind it, exported because B-31's weekday labels
+       on Home need the same single source and must not grow a second copy. */
+    WD_ORDER: WD_ORDER,
+    wdOf: wdOf,
+    wdToken: wdToken,
+    planTrainingWeekdays: planTrainingWeekdays,
+    planRestWeekdays: planRestWeekdays,
     migrateStore: migrateStore,
     /* WO-005 W2b — the pure sample-data generator. Writes nothing, reads no
        clock it was not handed, and every session it builds carries demo:true
