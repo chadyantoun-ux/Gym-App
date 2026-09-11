@@ -694,6 +694,54 @@
      Success is the advice enclosure; failure is the four-sided refusal. */
   .setsec .advice,.setsec .refuse{margin-top:11px}
 
+  /* ---- W12: DIET (spec 8, coach addendum 8.6) ---------------------------
+     EVERY NUMBER AND EVERY SENTENCE ON THIS SCREEN COMES OUT OF
+     PHAT.dietTargets. Nothing here formats a figure and nothing here writes a
+     macro word. If you find yourself typing 3,200 in this file, that is the
+     bug (see vDiet's comment).
+     The segment reuses .seg unchanged - 7.5rem = 120px min-width and 48px
+     min-height is exactly control-inventory row 31, and its mark is the drawn
+     outline/fill pair, not a glyph (B-67). */
+  /* The grid. Two columns at 400px: four cells in one row would put the
+     mono figures at 5rem of min-content each and scroll the column
+     sideways. Labels are .lbl, which is --faint (.55) - the prototype's .50
+     is 4.3:1 on --surface (spec 0.5). */
+  /* MEASURED at 200% text: `1fr 1fr` with the default auto minimum let
+     CARBOHYDRATE's min-content (252px at 22px + .12em) size the first track,
+     which pushed the second column 41px past the viewport. minmax in REM
+     collapses the grid to ONE column the moment half the column is narrower
+     than a cell needs - no media query, and nothing about the phone changes -
+     and min-width:0 stops a long label sizing a track ever again. */
+  .macro{display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));
+    gap:var(--s2); margin-top:var(--s3)}
+  .macro .cell{background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--r); padding:var(--s3) var(--s4); min-width:0}
+  .macro .v{font-family:var(--mono); font-size:1.375rem; color:var(--bone);
+    line-height:1.15; margin-top:var(--s1); display:block}
+  /* The day label. It is a CLAIM ("Today - ...") or it is not, and which one
+     is the engine's decision - see dietTargets' claimsToday. */
+  .dayline{color:var(--bone); font-size:1rem; font-weight:800; line-height:1.3; margin-top:var(--s3)}
+  /* THE PROTEIN TICK IS A HABIT TICK, NOT DATA (addendum 8.6, ruled). It is
+     styled as a control and never as a logged figure: no mono face, no
+     number, no kg. Same two-form mark as .seg and label.check - outline vs
+     amber fill - so it survives greyscale, and the LABEL TEXT changes too, so
+     it survives both. The rules are repeated here rather than shared with
+     .seg because .seg's are scoped to .seg buttons and this is not one. */
+  #protein{width:100%; min-height:56px; display:flex; align-items:center; gap:var(--s3);
+    background:var(--surface); border:2px solid var(--line); border-radius:var(--r);
+    padding:10px var(--s4); text-align:left; margin-top:var(--s4)}
+  #protein .mk{width:14px; height:14px; flex:none; border:2px solid var(--line);
+    border-radius:var(--r); display:block}
+  #protein[aria-pressed="true"]{border-color:var(--amber)}
+  #protein[aria-pressed="true"] .mk{background:var(--amber); border-color:var(--amber)}
+  #protein .t{font-size:.8125rem; font-weight:800; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--bone); display:block}
+  #protein[aria-pressed="true"] .t{color:var(--amber)}
+  #protein .s{color:var(--dim); font-size:.78125rem; line-height:1.4; margin-top:3px; display:block}
+  .dietsec{padding:var(--s6) var(--s4) 0}
+  .dietsec p{color:var(--dim); font-size:.8125rem; line-height:1.5}
+  .dietsec p+p{margin-top:var(--s2)}
+
   /* ---- ONBOARDING (spec 10.1) -------------------------------------------
      Writes exactly one key and clears nothing. START WITH AN EMPTY LOG sets a
      flag; it is not an erase and cannot become one. */
@@ -898,10 +946,18 @@ async function del(k){
             "identical" content is not a byte-identical file. The cost is
             that a reload from the summary lands on the last exercise
             instead, one tap away, with every number intact. */
+/* W12 adds:
+   dietView the Diet tab's segment: null (show the day the plan derives) |
+            "training" | "rest". IN MEMORY ONLY and deliberately not stored -
+            a stored view would survive into tomorrow and answer "what am I
+            eating today" with yesterday's tap. Every boot re-derives.
+   prefs.proteinDate  the habit tick, stored as the local DATE it was ticked
+            on, so it expires with the day. NO ENGINE READS IT (addendum 8.6,
+            ruled) and it lives in phat:v1:prefs, never in the log. */
 const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
          problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
-         exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,
-         stores:{log:"absent",bw:"absent"},prefs:{restAuto:true,onboarded:false},
+         exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,dietView:null,
+         stores:{log:"absent",bw:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:""},
          prefsMeta:{},exp:null};
 const logPayload=()=>Object.assign({},S.logMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,sessions:S.sessions,includeCut:S.includeCut});
@@ -911,7 +967,8 @@ const bwPayload=()=>Object.assign({},S.bwMeta,
    the same contract logMeta/bwMeta hold: a write never drops a key it did not
    understand. */
 const prefsPayload=()=>Object.assign({},S.prefsMeta,
-  {schemaVersion:PHAT.SCHEMA_VERSION,restAuto:!!S.prefs.restAuto,onboarded:!!S.prefs.onboarded});
+  {schemaVersion:PHAT.SCHEMA_VERSION,restAuto:!!S.prefs.restAuto,onboarded:!!S.prefs.onboarded,
+   proteinDate:String(S.prefs.proteinDate||"")});
 
 /* ============================================================ utils */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -2363,8 +2420,126 @@ function vTodo(kick,name,line){
     <p>${esc(line)}</p>
     <p>Nothing on this screen reads or writes your log.</p></div>`;
 }
-const vDiet=()=>vTodo("Diet","Not built yet",
-  "The calorie and protein targets land here. Until then the numbers you need are in the handoff brief, not in this app.");
+/* ============================================================== W12: diet
+   B-29, closed, and the last `Not built yet` in the app.
+
+   EVERY FIGURE AND EVERY SENTENCE HERE IS PHAT.dietTargets' OUTPUT, PRINTED
+   VERBATIM. Nothing on this screen is assembled, re-rounded, pluralised or
+   retyped: the eight numbers carry their own `text` strings so no code path
+   can reformat a coach-approved figure, and all nineteen sentences are
+   asserted in tests.html to be substrings of the coach's signed-off document.
+   If you find yourself typing `3,200` or a macro sentence in this function,
+   that is the bug. The only strings this file owns are the four cell labels
+   and the two segment labels, which the spec assigns to the frontend
+   (spec 8, control-inventory rows 31-32).
+
+   THE DEFECT IT MUST NOT REINTRODUCE (addendum 8.6 item 5, [Certain]). The
+   design prototype hardcoded `dietDay:"train"` and the label
+   `Today — high-carb training day`, so on a Wednesday or a Sunday - PHAT's
+   two rest days - it told him 3,200 kcal and 300 g of carbs against a
+   programme that says 2,500 and 60. A 700 kcal and 240 g error under the word
+   "Today", on the two days the low-carb floor exists to protect. So THE DAY
+   TYPE IS NEVER ASSUMED HERE: this function passes the real LOCAL date
+   (PHAT.localDate(), never toISOString - CLAUDE.md 3.4) and the active plan,
+   and the engine derives the day from the plan's own `wd` fields.
+
+   S.dietView IS A VIEW, NOT A FACT. Tapping a segment changes the numbers
+   shown and NEVER the claim about today: on a Sunday, view "training" comes
+   back with label `Training day` and claimsToday:false, so the sentence
+   `Today — high-carb training day` is unreachable on a Sunday. The engine
+   owns that; this function only prints `v.label`.
+
+   NOTHING ON THIS TAB WRITES TO STORAGE ON RENDER. The one control that
+   writes - the protein tick - writes phat:v1:prefs and nothing else. */
+function vDiet(){
+  const D=PHAT.DIET_COPY;
+  /* FAIL SILENT, NEVER FAIL CONFIDENT (spec 8, states). dietTargets is pure
+     and defensive, but a throw here must cost the screen, not the numbers:
+     there is no fallback set of macros in this file to fall back TO, and
+     inventing one is the single thing this screen exists to stop. */
+  let v=null;
+  try{ v=PHAT.dietTargets(PHAT.localDate(),PHAT.PHAT_PLAN,S.dietView); }catch(err){ v=null; }
+  let h=`<div class="hd"><span class="kick">${esc(D&&D.kicker?D.kicker:"Diet")}</span>
+    <span class="kick">${esc(D&&D.kickerSub?D.kickerSub:"")}</span></div>`;
+  /* The guard covers the copy table as well as the figures: a logic.js that
+     answers dietTargets but has no DIET_COPY.protein is a partial deploy, and
+     a partial deploy must refuse this screen rather than throw inside it. */
+  if(!v||!v.text||!D||!D.protein) return h+`<div class="pad mt24"><div class="refuse" role="alert">
+    <p><span aria-hidden="true">! </span>Targets could not be read. Nothing on this screen
+    reads or writes your log.</p></div></div>`;
+
+  /* ---- the segment. aria-pressed is the accessible carrier, the drawn
+     outline/fill mark is the non-colour one, amber is the third. The mark is
+     DRAWN and not a U+2713 - that glyph is outside the inlined Archivo
+     unicode-range and would fall back per-glyph, the defect B-67 closed. */
+  h+=`<div class="pad mt16"><div class="seg" role="group" aria-label="Day type">
+      <button data-diet="training" aria-pressed="${v.dayType==="training"?"true":"false"}">
+        <span class="mk" aria-hidden="true"></span>TRAINING DAY</button>
+      <button data-diet="rest" aria-pressed="${v.dayType==="rest"?"true":"false"}">
+        <span class="mk" aria-hidden="true"></span>REST DAY</button>
+    </div>
+    <p class="dayline">${esc(v.label)}</p>`;
+
+  /* ---- the four cells. PER-CELL CATCH (spec 8, states): a cell whose string
+     is missing prints an em dash. It never prints the other day's number and
+     it never prints a computed one. */
+  const cell=(lab,s)=>`<div class="cell"><span class="lbl">${lab}</span>
+    <span class="v">${typeof s==="string"&&s?esc(s):"&mdash;"}</span></div>`;
+  h+=`<div class="macro">${cell("Calories",v.text.kcal)}${cell("Protein",v.text.protein)}
+    ${cell("Carbohydrate",v.text.carb)}${cell("Fat",v.text.fat)}</div>`;
+
+  /* The medical caveat's PLACEMENT is the coach's, and the engine carries the
+     ruling so this function does not have to remember it: below the grid on
+     the REST DAY segment, and in the calibration block on both. It is not
+     optional - the rest-day segment prescribes 175 g of fat. */
+  if(v.medicalUnderGrid&&v.medical)
+    h+=`<div class="advice mt12"><p>${esc(v.medical)}</p></div>`;
+  /* The surplus line is emitted ONLY for a 5-training/2-rest week, because
+     its three numbers are arithmetic over that split. Any other plan gets ""
+     and this slot does not render - an empty enclosure would read as a
+     withheld sentence. */
+  if(v.weekly) h+=`<p class="tiny mt12">${esc(v.weekly)}</p>`;
+
+  /* ---- THE PROTEIN TICK. A HABIT TICK, NOT DATA, AND NO ENGINE READS IT
+     (addendum 8.6, ruled). It is stored per DATE under phat:v1:prefs, so
+     "hit today" expires with the day instead of greeting him as a fact
+     tomorrow morning, and phat:v1:log / phat:v1:bw / phat:v1:draft are
+     byte-identical across a toggle. dietTargets has no parameter it could be
+     smuggled through; keep it that way. */
+  const hit=proteinHit();
+  h+=`<button id="protein" aria-pressed="${hit?"true":"false"}">
+      <span class="mk" aria-hidden="true"></span>
+      <span><span class="t">${esc(hit?D.protein.on:D.protein.off)}</span>
+      <span class="s">${esc(D.protein.sub)}</span></span></button>`;
+  h+=`</div>`;
+
+  /* ---- CALIBRATION FIRST, AND THE ORDER IS A MEASUREMENT, NOT A PREFERENCE.
+     The coach approved these eight numbers on ONE condition (addendum 8.6):
+     "the caveat renders on the same screen as the macro grid, without
+     scrolling, at 400 px. If the tab grows past one screen, the caveat moves
+     directly under the grid." The caveat is calibration's first line. With
+     the spec's block order (timing, then calibration) its heading measured
+     767px down a 400x850 viewport on a REST day - under the tab dock, off the
+     screen. So calibration moves up to sit under the grid, as the coach's own
+     conditional instructs, and the tick stays above it because it is the only
+     control on the tab. Deviation from spec 8's block order, flagged for
+     ux-designer. Re-measure before moving anything above it.
+     THE BLOCK POINTS AT RULE W1, IT DOES NOT RESTATE IT: the design's version
+     described a procedure ("flat means add 200 kcal") the app does not run,
+     while the Weight tab runs another. Two screens, two rules, is the shape
+     of B-06. Its third line is the medical caveat, which the engine has
+     already appended - the coach's "in the calibration block on both". */
+  const sec=(head,lines)=>`<div class="dietsec"><span class="lbl secrule">${esc(head)}</span>`+
+    lines.filter(Boolean).map(l=>`<p>${esc(l)}</p>`).join("")+`</div>`;
+  if(v.calibration) h+=sec(v.calibration.heading,v.calibration.lines||[]);
+  if(v.timing) h+=sec(v.timing.heading,[v.timing.text]);
+  if(v.nonNegotiables) h+=sec(v.nonNegotiables.heading,v.nonNegotiables.lines||[]);
+  return h+`<div class="mt24"></div>`;
+}
+/* The tick is ON only for TODAY's local date. A stored date that is not
+   today reads as off and is never rewritten on render. */
+function proteinHit(){ return S.prefs.proteinDate===PHAT.localDate(); }
+
 const vPlan=()=>vTodo("Plan","Not built yet",
   "The plan list and the editor land here. The programme you are logging against is unchanged and is still the one on the Train tab.");
 
@@ -2763,6 +2938,13 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#rest-auto")){ await setRestAuto(true); return; }
   if(e.target.closest("#rest-manual")){ await setRestAuto(false); return; }
   if(e.target.closest("#ob-start")){ await finishOnboarding(); return; }
+  /* ---- W12. The Diet segment is a VIEW and writes nothing at all; the
+     protein tick writes one key. Both delegated from #view like everything
+     else. B-19 does not apply on this screen: it holds no text field, so
+     there is no uncommitted value a re-render could discard. */
+  const dv=e.target.closest("[data-diet]");
+  if(dv){ setDietView(dv.dataset.diet); return; }
+  if(e.target.closest("#protein")){ await toggleProtein(); return; }
   if(e.target.closest("#dl-start")){ await answerDeload("start"); return; }
   if(e.target.closest("#dl-no")){ await answerDeload("no"); return; }
   if(e.target.closest("#dl-end")){ await answerDeload("end"); return; }
@@ -3927,6 +4109,42 @@ async function setRestAuto(on){
              :"Could not save that setting. It applies until you reload.");
 }
 
+/* ---- W12. The Diet segment. IT WRITES NOTHING - not the log, not prefs, not
+   a cookie. It only changes which set of targets is on screen, and the ENGINE
+   decides what may be said about today: switching to TRAINING DAY on a Sunday
+   shows 3,200/170/300/145 under the label `Training day`, never
+   `Today — high-carb training day`. The re-render is announced because the
+   numbers change without a navigation and the button he tapped is replaced. */
+function setDietView(view){
+  S.dietView=(view==="training"||view==="rest")?view:null;
+  render();
+  let said="";
+  try{
+    const v=PHAT.dietTargets(PHAT.localDate(),PHAT.PHAT_PLAN,S.dietView);
+    if(v&&v.label) said=v.label+". "+(v.text&&v.text.strip?v.text.strip:"");
+  }catch(err){ said=""; }
+  if(said) announce(said);
+}
+/* ---- W12. The protein habit tick. IT WRITES phat:v1:prefs AND NOTHING ELSE:
+   phat:v1:log, phat:v1:bw and phat:v1:draft are byte-identical across it -
+   the same guarantee setRestAuto holds, and here it is a coach ruling as well
+   as a data one. NO RULE MAY EVER READ THIS VALUE (addendum 8.6): it is
+   self-reported, unverifiable and one tap, and if it fed Rule W1 the app
+   would be adjusting his food off a checkbox. Storing the DATE rather than a
+   boolean is what keeps it out of the class of things that look like logged
+   data: it expires by itself and it is never summed, averaged or charted. */
+async function toggleProtein(){
+  const on=!proteinHit();
+  S.prefs.proteinDate=on?PHAT.localDate():"";
+  const ok=await save(PREFS,prefsPayload());
+  render();
+  /* A failed write is said out loud, for the same reason the rest-timer
+     preference says it: what is on screen now disagrees with the disk. */
+  const P=(PHAT.DIET_COPY&&PHAT.DIET_COPY.protein)||{};
+  announce(ok?((on?P.on||"Protein hit today":P.off||"Protein not yet hit")+".")
+             :"Could not save that. It applies until you reload.");
+}
+
 /* ---- W9. Onboarding's one commit. It writes ONE key and clears NOTHING.
    Rule 5 of §10.1: a failed flag write does not block — Home renders anyway
    and onboarding reappears next boot, which is a repeated question rather
@@ -4042,9 +4260,14 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   const rp=await readRaw(PREFS);
   if(rp.status==="ok"&&rp.value&&typeof rp.value==="object"){
     S.prefsMeta={};
-    Object.keys(rp.value).forEach(k=>{ if(k!=="restAuto"&&k!=="onboarded") S.prefsMeta[k]=rp.value[k]; });
+    Object.keys(rp.value).forEach(k=>{
+      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate") S.prefsMeta[k]=rp.value[k]; });
     S.prefs.restAuto = rp.value.restAuto===undefined ? true : !!rp.value.restAuto;
     S.prefs.onboarded = !!rp.value.onboarded;
+    /* A stored tick from any day but today reads as off. It is kept, not
+       cleared: clearing it would be a write on boot, and this key is never
+       written except by a tap. */
+    S.prefs.proteinDate = typeof rp.value.proteinDate==="string" ? rp.value.proteinDate : "";
   }else if(rp.status==="error"){
     console.warn("[phat] prefs unreadable:",rp.reason);
   }
