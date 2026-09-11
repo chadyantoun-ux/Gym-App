@@ -1580,12 +1580,23 @@
           cue: "Rest the heels on the rack without pushing through them." },
         { id: "d3c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l_cablerow",
           cue: "Keep the torso still, do not swing back with the weight." },
-        { id: "d3d", n: "DB row or shrug", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_dbrow", cut: 1,
+        /* B-65 (WO-005 §4.3), 2026-09-11. REVERSIBLE DEFAULT, chosen in Chady's
+           absence - this is the design's choice standing in for an answer, not
+           an answer. The slot carried a slash-name for two exercises, which is
+           one history describing two movements: the defect Rule A1 (§8.2)
+           already struck down for d2e. Defaulted to the DB row, the name the
+           signed-off cue was written for.
+           REVERT: exactly two strings, and it is a lookup, not a judgement -
+           `n` -> "Shrug" and the cue -> "Keep the arms straight, no rolling the
+           shoulders." (the coach wrote that revert cue, §10.5). NO OTHER FIELD
+           MOVES: s/lo/hi, k:"hyp", implement:"db", lift:"l_dbrow" and cut:1 are
+           correct either way - unlike d2e, where the revert also moved
+           `implement` and with it Rules Z2 and I2. The id is opaque, minted once
+           and never recomputed from a name (WO-004 C-6), so any logged history
+           stays attached to d3d whichever name wins. */
+        { id: "d3d", n: "DB row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_dbrow", cut: 1,
           /* Rule Q1 (addendum §10.2) - NEW. This slot carried no cue. Written for
-             the DB row, the design's current default. The slot's NAME is still
-             unresolved - Rule A1 (§8.2) classes DB row and shrug as TWO exercises
-             and requires the app to ask - so `n` still reads "DB row or shrug" and
-             is not this item's to change. The cue is written for the DB row.
+             the DB row, which B-65 above has now made the slot's name.
              REVERT (§10.5): if the slot becomes a shrug the cue is exactly
                "Keep the arms straight, no rolling the shoulders."
              and nothing else on the slot moves with it. */
