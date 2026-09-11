@@ -358,6 +358,49 @@
   .sess .sd{color:var(--faint); font-size:.78125rem; margin-top:2px}
   .sess .sv{color:var(--dim); font-family:var(--mono); font-size:.8125rem; flex:none}
 
+  /* ==== W8: THE SUMMARY SCREEN ===========================================
+     A READ of the draft and nothing else. Every rule below is about not
+     overflowing 400px, because the three things this screen prints - an
+     exercise name, a list of sets and a verdict sentence - are all
+     arbitrary-length strings the user and the engine own.
+       - the counters WRAP rather than squeeze (three 6rem cells do not fit
+         one 368px line at 200% text, so they become two lines and then
+         three; nothing shrinks);
+       - the set list is its OWN full-width line under the name, never beside
+         it. Nine sets beside a long name is the B-37 squeeze in a new place;
+       - the name and the note both get overflow-wrap:anywhere, because a
+         plan editor (W15) can produce a name with no spaces in it.
+     .vslot IS DELIBERATELY ABSENT from the verdict blocks here. That
+     reservation exists so the session card cannot grow under a thumb while
+     he types; nothing on this screen re-renders and nothing on it is an
+     input, so reserving 7.75rem nine times would only push SAVE SESSION off
+     the bottom of a phone. */
+  .sumhead{padding:var(--s4) var(--s4) 0}
+  .sumhead h3{overflow-wrap:anywhere}
+  .sumnums{display:flex; flex-wrap:wrap; gap:var(--s3); margin-top:14px;
+    border-top:2px solid var(--rule); padding-top:11px}
+  .sumnums>div{flex:1 1 6rem; min-width:6rem}
+  .sumnums .v{font-size:1.3125rem; font-weight:800; color:var(--bone);
+    letter-spacing:-.01em; margin-top:3px}
+  .sumcount{color:var(--dim); font-size:.8125rem; line-height:1.45; margin-top:10px}
+  .sumex{border-bottom:1px solid var(--line); padding:var(--s3) 0}
+  .sumex .nm{color:var(--bone); font-size:.9375rem; font-weight:800;
+    min-width:0; overflow-wrap:anywhere}
+  /* SKIPPED is a STATE, not a verdict, and it is never rendered as one: no
+     enclosure, no kicker, no arrow, and --dim rather than the .45 the
+     prototype used (spec 5.2, 0.5 - text may not go below --t55). */
+  .sumskip{color:var(--dim); font-size:.6875rem; font-weight:800;
+    letter-spacing:.12em; text-transform:uppercase; flex:none}
+  .sumsets{color:var(--dim); font-family:var(--mono); font-size:.8125rem;
+    line-height:1.5; margin-top:5px; overflow-wrap:anywhere}
+  .sumnote{color:var(--dim); font-size:.8125rem; line-height:1.45;
+    margin-top:6px; overflow-wrap:anywhere}
+  .sumex .advice,.sumex .refuse{margin-top:9px}
+  /* Spec 5.2 table: the commit is full width x 56. .navrow's 52 is the
+     session screen's number; Save is the one control on this screen and it
+     gets the larger one. */
+  #finish{min-height:56px}
+
   /* ==== W10: THE TREND SCREEN ============================================
      The week-6 card and four per-lift rows. NO HUE CARRIES MEANING ON ITS
      OWN here either: the card's red rule sits beside a sentence that opens
@@ -847,10 +890,17 @@ async function del(k){
    prefs    the settings store. restAuto is Rule R1's auto-start; onboarded is
             the one key spec 10.1 permits onboarding to write.
    exp      the last export's outcome, so success and failure are both VISIBLE
-            states on Settings and failure cannot look like success (B-16). */
+            states on Settings and failure cannot look like success (B-16).
+   sum      W8. True while the Summary screen is showing. IN MEMORY ONLY, and
+            deliberately NOT written into the draft payload: reaching the
+            summary must leave phat:v1:draft BYTE-IDENTICAL (W8 criterion 1),
+            and every draft write stamps a fresh savedAt, so a write of
+            "identical" content is not a byte-identical file. The cost is
+            that a reload from the summary lands on the last exercise
+            instead, one tap away, with every number intact. */
 const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
          problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
-         exIx:0,rest:null,undo:null,v1msg:"",v1added:null,
+         exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,
          stores:{log:"absent",bw:"absent"},prefs:{restAuto:true,onboarded:false},
          prefsMeta:{},exp:null};
 const logPayload=()=>Object.assign({},S.logMeta,
@@ -1638,9 +1688,10 @@ function vSession(){
   /* ---- the fix bar (§2.3 rule 3). It renders at FIRST PAINT of the screen he
      was sent to, so it is a navigation and not an appearance; it is fixed
      height and never disappears while a refusal stands. The full message lives
-     once, at the save point, on the last screen. */
-  const showMsg=(i===n-1);
-  if(S.problems.length&&!showMsg)
+     once, at the save point — and since W8 the save point is the SUMMARY, not
+     the last exercise, so the bar now rides EVERY exercise screen and
+     BACK TO SAVE is the only route to the message (§2.3 rule 4). */
+  if(S.problems.length)
     h+=`<div class="fixbar"><p id="fixtxt">${esc(fixText())}</p>
       <button id="backsave">Back to save</button></div>`;
 
@@ -1736,7 +1787,10 @@ function vSession(){
     h+=`<button class="ghostbtn mb12" id="undoset">Undo &mdash; put set ${S.undo.i+1} back</button>`;
   if(S.err) h+=`<div class="warn hi mb12" role="alert">
     <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div>`;
-  if(showMsg) h+=`<div id="bs-slot"></div>`;
+  /* `#bs-slot` IS GONE FROM THIS SCREEN and lives on the Summary (W8). One
+     save point, one refusal message. Do not re-add a second one here — two
+     copies of "Not saved. 3 sets need a fix." on two screens is two answers to
+     one question, and paintProblems() writes whichever it finds first. */
 
   /* ---- prev / next, then DISCARD SESSION as the last element in the scroll. */
   h+=`</div><div class="navrow">
@@ -1746,8 +1800,10 @@ function vSession(){
       kept: it is one arrow at one size and it reads, where the chevron
       alternative reads as "previous PAGE". If the subset is ever regenerated,
       add U+2190. */
+  /* W8: the last exercise no longer saves. It hands over to the Summary, which
+     is the reviewed path to the one commit in the app. */
   h+=(i===n-1)
-    ? `<button class="next" id="finish">Save session</button>`
+    ? `<button class="next" id="tosum">Finish session</button>`
     : `<button class="next" id="navnext">Next &mdash; ${esc(list[i+1].n)}</button>`;
   h+=`</div><div class="pad mt24"><button id="discard">DISCARD SESSION</button></div>`;
   return h;
@@ -1769,6 +1825,167 @@ function vOffer(C){
 }
 const fixText=()=>{const n=badRows().length;
   return n?(n===1?"1 set left to fix.":n+" sets left to fix."):"Nothing left to fix.";};
+
+/* ==== W8: THE SUMMARY SCREEN ============================================
+   THE SUMMARY IS A READ. Nothing in this function writes a storage key,
+   mutates S.draft, or schedules a draft save — reaching this screen, leaving
+   it and coming back leaves phat:v1:draft byte-identical, which is criterion 1
+   and is asserted on the serialized string rather than on the screen. That is
+   also why S.sum is in memory only: every draft write stamps a fresh savedAt,
+   so there is no such thing as an "identical" rewrite.
+
+   IT IS ALSO THE SINGLE COMMIT POINT. SAVE SESSION is the only control in the
+   app that writes phat:v1:log, and it renders from the DRAFT, not from the
+   rows below — built outside the try that builds them, so a rule that throws
+   costs its row and never the ability to save (spec 0.7).
+
+   NOTHING HERE IS RECOMPUTED. Every verdict is PHAT.verdict's, verbatim,
+   through the same verdictHtml() the session card uses. An unlogged exercise
+   reads SKIPPED, which is a STATE and is never dressed as a verdict.
+
+   WHICH EXERCISES ARE LISTED is what the SAVE will contain, not what the
+   session flow showed: validateDraft keeps every entry with a completed set
+   OR a typed note, including one Rule V1's tier hides, so the summary lists
+   those too. A screen that omits a set the save writes is a lie about the one
+   thing it exists to answer. */
+function sumRow(e,st,C){
+  const done=PHAT.completedSets(st.sets);
+  const note=String(st.note==null?"":st.note).trim();
+  let h=`<div class="sumex"><div class="row"><span class="nm">${esc(e.n)}</span>`;
+  /* spec 5.2: a state, not a verdict. No enclosure, no kicker, no arrow. */
+  h+=done.length?"":`<span class="sumskip">Skipped</span>`;
+  h+=`</div>`;
+  if(done.length){
+    /* Rule Z2 holds on this screen too: a rack chin reads `bodyweight × 10`.
+       No view in this app prints the string `0 kg` (B-32). */
+    h+=`<p class="sumsets">${esc(done.map(s=>
+      (s.w>0?String(r1(s.w)):PHAT.loadWord(0,e.implement))+" × "+s.r).join(" · "))}</p>`;
+  }
+  /* B-33: a typed note is data. It is counted separately, and it is SHOWN —
+     hiding the only thing an exercise holds is how a note gets deleted by
+     someone who could not see it. */
+  if(note) h+=`<p class="sumnote">${esc(note)}</p>`;
+  /* PER-ROW CATCH (spec 0.7). A thrown rule costs this row's verdict and
+     nothing else — not the row, not the counters, not Save. */
+  if(done.length){
+    let v=null, vh=null;
+    const dl=C.deload.active===true;
+    try{
+      v=PHAT.verdict({ex:e, sets:st.sets, prev:PHAT.lastFor(S.sessions,e.id),
+        note:st.note, deload:dl});
+      vh=verdictHtml(v,dl,"");
+    }catch(err){ vh=null; }
+    if(vh) h+=vh.html;
+    else if(e.k==="speed"){
+      let ins="";
+      try{ const sl=PHAT.speedLoad(S.sessions,e.id,C.today,speedSrcName(e.id),PHAT.PHAT_PLAN);
+           ins=sl?sl.instruction:""; }catch(err){ ins=""; }
+      if(ins) h+=`<div class="advice"><p class="kick">Speed work</p><p>${esc(ins)}</p></div>`;
+    }else{
+      /* Below the gate. The same sentence the card shows, because the gate is
+         the same gate and a second phrasing for one fact is a second fact. */
+      const rx=PHAT.deloadEx(e,C.deload.active===true);
+      h+=`<div class="advice"><p class="kick">Waiting</p>`+
+        `<p>Nothing to say until all ${rx.s} sets are in.</p></div>`;
+    }
+  }
+  return h+`</div>`;
+}
+/* An exercise by id from ANY day of the plan, because a draft can legitimately
+   hold an id today's day does not contain — a resumed draft is hydrated
+   verbatim from disk and the plan may have moved under it. Falls back to a
+   stub carrying the id as its name, so the row still renders and still names
+   something: an entry the summary cannot describe is still an entry the save
+   writes, and silently omitting it is the one thing this screen may not do. */
+function exAnywhere(id){
+  let out=null;
+  PROGRAM.forEach(d=>d.ex.forEach(x=>{ if(x.id===id&&!out) out=x; }));
+  return out||{id:id,n:id,s:0,lo:0,hi:0,k:""};
+}
+function sumBody(C){
+  const ents=S.draft.entries||{};
+  const has=id=>{const st=ents[id]; if(!st) return false;
+    return PHAT.completedSets(st.sets).length>0||String(st.note==null?"":st.note).trim()!==""; };
+  /* Today's day, in plan order — every exercise the flow showed, plus any the
+     tier hid that has numbers in it (those save, so they show). Then anything
+     left in the draft that is not in this day at all, appended rather than
+     dropped. */
+  const rows=C.day.ex.filter(e=>C.list.some(x=>x.id===e.id)||has(e.id))
+    .concat(Object.keys(ents).filter(k=>has(k)&&!C.day.ex.some(e=>e.id===k)).map(exAnywhere));
+
+  /* THE COUNTERS READ EVERY DRAFT ENTRY, not just the listed rows, so the
+     numbers can never describe less than the save writes. Volume INCLUDES
+     extra sets; the target counts do not change (W8, Rule X1). */
+  let nSets=0,nVol=0,nX=0,nEx=0,nNote=0;
+  Object.keys(ents).forEach(k=>{
+    const st=ents[k]||{};
+    const done=PHAT.completedSets(st.sets);
+    nSets+=done.length; nVol+=PHAT.vol(st.sets);
+    /* Decision 7 / B-33: an exercise COUNTS when it has at least one completed
+       set; a notes-only entry is named separately, never folded in, never
+       hidden. The same two counters vTrend prints, in the same words. */
+    if(done.length) nEx++;
+    else if(String(st.note==null?"":st.note).trim()!=="") nNote++;
+    const e=C.day.ex.find(x=>x.id===k)||exAnywhere(k);
+    try{ const r=PHAT.extraSets(st.sets,PHAT.deloadEx(e,C.deload.active===true));
+         if(r) nX+=r.count; }catch(err){}
+  });
+
+  const ag=PHAT.draftAge(S.draft.date,C.today);
+  let h=`<div class="sumhead"><h3>${esc(C.day.name)}</h3>`;
+  if(!ag.sameDay) h+=`<p class="sub">It saves under ${esc(fmtDay(S.draft.date,ag.ageDays))}, not today.</p>`;
+  h+=`<div class="sumnums">
+    <div><p class="lbl">Sets</p><p class="v">${esc(String(nSets))}</p></div>
+    <div><p class="lbl">Volume kg</p><p class="v">${esc(sep(nVol))}</p></div>
+    <div><p class="lbl">Extra sets</p><p class="v">${esc(String(nX))}</p></div></div>`;
+  h+=`<p class="sumcount">${esc(plural(nEx,"exercise"))}${
+    nNote?" &middot; "+esc(plural(nNote,"note")):""}</p></div>`;
+
+  if(!nSets&&!nNote) return h+`<div class="pad mt16"><p class="sub">Nothing logged yet.</p></div>`;
+  return h+`<section class="pad mt16" aria-labelledby="sum-h">
+    <p class="lbl secrule" id="sum-h">Per exercise</p>
+    ${rows.map(e=>sumRow(e,ents[e.id]||{sets:[],note:""},C)).join("")}</section>`;
+}
+function vSummary(){
+  const C=sessionCtx();
+  let body="";
+  /* THE WHOLE-SCREEN CATCH (spec 0.7). If the summary cannot be built, the
+     screen still says what is true and still offers the commit and the way
+     back. The sets are in the draft either way; the summary never held them. */
+  try{
+    body=C.day?sumBody(C)
+      :`<div class="pad mt16"><p class="sub">Nothing logged yet.</p></div>`;
+  }catch(err){
+    console.error("[phat] summary failed",err);
+    body=`<div class="pad mt16"><div class="refuse">
+      <p><span aria-hidden="true">! </span>Could not build the summary. Your sets are safe.</p>
+      </div></div>`;
+  }
+  const back=(C.list.length&&C.list[C.list.length-1])?C.list[C.list.length-1].n:"the session";
+  /* THE COMMIT BLOCK IS BUILT OUTSIDE THE TRY. #bs-slot is where a blocked
+     save renders (spec 2.2) — directly above SAVE SESSION, filled by
+     paintProblems(), which render() calls after this string is in the DOM.
+
+     S.err IS THE OTHER REFUSAL AND IT HAS TO LAND HERE TOO (spec 2.5, B-54).
+     A write that fails AFTER validation passed — the disk is full, the store
+     is blocked — is reported where Save is, in the same shape the session
+     screen uses for it, and the entries stay on screen. It is a different
+     shape from the blocked-save message on purpose: no `!`, no rows, nothing
+     to tap, because there is no set to point at. The two never stack —
+     finish() clears S.err when it refuses on validation, and save() clears it
+     on success. */
+  return `<div class="hd"><p class="kick">Session complete</p>
+    <p class="kick">${esc(fmt(S.draft.date))}</p></div>`
+    +body
+    +(S.err?`<div class="pad mt24"><div class="warn hi" role="alert">
+      <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div></div>`:"")
+    +`<div class="pad mt24"><div id="bs-slot"></div></div>
+      <div class="navrow"><button class="prev" id="sumback"
+        aria-label="Back to ${esc(back)}">&larr; Back</button>
+      <button class="next" id="finish">Save session</button></div>
+      <p class="tiny pad mt12">Nothing is judged here. The verdicts are arithmetic on your own numbers.</p>
+      <div class="pad mt24"><button id="discard">DISCARD SESSION</button></div>`;
+}
 
 /* ==== W10: THE TREND SCREEN =============================================
    THE INLINE STALL BLOCK IS GONE, AND IT WAS B-07. What stood here scanned
@@ -2135,7 +2352,11 @@ function render(keepScroll){
      the session he is in the middle of is never something he has to navigate
      back to. Settings is reached from Home, and Home is what a saved or
      discarded session returns to. */
-  v.innerHTML = S.tab==="train"  ? (S.draft?vSession():vTrain())
+  /* W8: the Summary is a state OF the open session, not a tab and not a
+     sub-view of Train — it exists only while there is a draft, and a draft is
+     what already wins the Train tab. S.sum is cleared by every path that ends
+     a session (finish, discard, startDay, resumeDraft). */
+  v.innerHTML = S.tab==="train"  ? (S.draft?(S.sum?vSummary():vSession()):vTrain())
               : S.tab==="trend"  ? vTrend()
               : S.tab==="weight" ? vWeight()
               : S.tab==="diet"   ? vDiet()
@@ -2153,6 +2374,44 @@ function render(keepScroll){
   renderOffer();
   if(!keepScroll) window.scrollTo(0,0);
 }
+/* ONE RENDERING OF ONE VERDICT OBJECT, and both screens that print a verdict
+   go through it — the session card (W7) and the summary row (W8). Two
+   renderings of the same engine output is how the same sentence ends up with
+   an arrow on one screen and not on the other, or how an ABSENT explanation
+   gets dressed as advice on the screen nobody re-read.
+
+   READ `.absent`, NEVER TRUTHINESS. verdict() returns null (nothing to say),
+   an ABSENT-shaped object (no verdict, and here is why), or a real verdict.
+   The ABSENT object is TRUTHY and carries empty t/x/x2, so `if (v)` paints an
+   empty advice block and `if (v.x)` collapses the slot. It renders as the
+   REFUSAL it is — never as advice with an arrow and a rule name (spec 0.1 #6).
+
+   → {html, say} for either object shape, or NULL when there is no verdict
+   object at all. The caller decides what silence looks like on its own
+   screen, because the two screens answer it differently: the session card
+   holds a reserved-height reminder, the summary prints SKIPPED or nothing.
+   `extra` is the caller's enclosure class — `vslot` reserves the card's
+   height so it cannot grow under a thumb; the summary passes nothing. */
+function verdictHtml(v,dlActive,extra){
+  const x=extra?" "+extra:"";
+  if(v&&v.absent===true){
+    const lines=(v.absentLines&&v.absentLines.length?v.absentLines:[v.absentLine]).filter(Boolean);
+    return {html:`<div class="refuse${x}">`+
+      lines.map((l,ix)=>`<p>${ix?"":'<span aria-hidden="true">! </span>'}${esc(l)}</p>`).join("")+
+      `</div>`, say:lines.join(" ")};
+  }
+  if(!v) return null;
+  /* `t` is a direction token, not a word. It drives a redundant glyph beside
+     the kicker, aria-hidden, and it is never the sole carrier - the sentence
+     carries the status (B-13, 4.7 rule 6). */
+  const dir=v.t==="up"?"&uarr;":v.t==="down"?"&darr;":"";
+  /* x2 is Rule I2's second LINE and is never appended to x's sentence. */
+  return {html:`<div class="advice${x}"><p class="kick">${dlActive?"Deload week":"Verdict"}`+
+    (dir?`<span class="dir" aria-hidden="true">${dir}</span>`:"")+`</p>`+
+    `<p>${esc(v.x)}</p>`+(v.x2?`<p>${esc(v.x2)}</p>`:"")+`</div>`,
+    say:v.x+(v.x2?" "+v.x2:"")};
+}
+
 /* THE ONLY CALLER OF THE ADVICE ENGINES. Every sentence on this screen comes
    out of logic.js. Nothing is assembled here: the design supplies the slot,
    never the sentence (C-4). The prototype's verdict() is gone entirely.
@@ -2273,23 +2532,9 @@ function paintAdvice(speak){
       note:st.note, deload:dl.active===true});
   }catch(err){ v=null; }
   let html="", say="";
-  if(v&&v.absent===true){
-    const lines=(v.absentLines&&v.absentLines.length?v.absentLines:[v.absentLine]).filter(Boolean);
-    html=`<div class="refuse vslot">`+
-      lines.map((l,ix)=>`<p>${ix?"":'<span aria-hidden="true">! </span>'}${esc(l)}</p>`).join("")+
-      `</div>`;
-    say=lines.join(" ");
-  }else if(v){
-    /* `t` is a direction token, not a word. It drives a redundant glyph beside
-       the kicker, aria-hidden, and it is never the sole carrier - the sentence
-       carries the status (B-13, 4.7 rule 6). */
-    const dir=v.t==="up"?"&uarr;":v.t==="down"?"&darr;":"";
-    /* x2 is Rule I2's second LINE and is never appended to x's sentence. */
-    html=`<div class="advice vslot"><p class="kick">${dl.active?"Deload week":"Verdict"}`+
-      (dir?`<span class="dir" aria-hidden="true">${dir}</span>`:"")+`</p>`+
-      `<p>${esc(v.x)}</p>`+(v.x2?`<p>${esc(v.x2)}</p>`:"")+`</div>`;
-    say=v.x+(v.x2?" "+v.x2:"");
-  }else if(e.k==="speed"){
+  const vh=verdictHtml(v,dl.active===true,"vslot");
+  if(vh){ html=vh.html; say=vh.say; }
+  else if(e.k==="speed"){
     /* There is ONE source for what to say on a speed card and it is
        speedLoad(): `text` for the load, `instruction` for how to move it. Both
        ungated, both permanent. verdict() returns null here by design. */
@@ -2507,6 +2752,11 @@ document.getElementById("view").addEventListener("click",async e=>{
      leak across a re-render. */
   if(e.target.closest("#navprev")){ goEx(S.exIx-1); return; }
   if(e.target.closest("#navnext")){ goEx(S.exIx+1); return; }
+  /* W8. FINISH SESSION does not save — it opens the Summary, which is the
+     reviewed path to the single commit. `‹ BACK` returns to the exercise he
+     came from. Neither writes anything (criterion 1). */
+  if(e.target.closest("#tosum")){ goSum(); return; }
+  if(e.target.closest("#sumback")){ leaveSum(); return; }
   if(e.target.closest("#addset")){ addSet(); return; }
   const rm=e.target.closest("#rmset");
   if(rm){ askRemoveSet(+rm.dataset.k); return; }
@@ -2937,7 +3187,10 @@ function gotoProblem(key){
      scrollTo(0,0). */
   const C=sessionCtx();
   const ix=C.list.findIndex(x=>x.id===r.exId);
-  if(ix>=0&&ix!==S.exIx){ S.exIx=ix; render(true); }
+  /* `||S.sum` — the message now lives on the Summary, so the common case is
+     that the row is on the screen he is NOT on even when the index already
+     matches. Without this the tap does nothing at all. */
+  if(ix>=0&&(ix!==S.exIx||S.sum)){ S.exIx=ix; S.sum=false; render(true); }
   const row=findRow(r.exId,r.i);
   if(!row) return;
   const f=(r.primary&&r.primary.field==="r")?"r":"w";
@@ -2971,7 +3224,11 @@ function clearSet(key){
   /* Focus cannot be left on a node that no longer exists, or the next Tab
      restarts at the top of the page. Land on whatever replaced it. */
   if(hadFocus){
-    const nx=document.getElementById("bs-head")||document.getElementById("finish");
+    /* `#backsave` is the middle link since W8: the message and `#finish` are
+       on the Summary, and clearing a set happens on an exercise screen, where
+       the fix bar is the thing that is certainly there. */
+    const nx=document.getElementById("bs-head")||document.getElementById("backsave")
+           ||document.getElementById("finish");
     if(nx){ try{ nx.focus({preventScroll:true}); }catch(e){ nx.focus(); } }
   }
 }
@@ -2981,9 +3238,17 @@ function clearSet(key){
    the input handler writes each keystroke - so nothing uncommitted is lost. */
 function goEx(ix){
   const C=sessionCtx();
-  if(ix<0||ix>=C.list.length||ix===S.exIx) return;
-  S.exIx=ix; flushDraft(); hideToast(); render();
+  if(ix<0||ix>=C.list.length||(ix===S.exIx&&!S.sum)) return;
+  S.exIx=ix; S.sum=false; flushDraft(); hideToast(); render();
 }
+/* W8 criterion 1: TO AND FROM THE SUMMARY, NOTHING IS WRITTEN. goEx() flushes
+   because it is leaving a card he may have been typing into; these two are
+   not, and must not be — flushDraft() stamps a new savedAt every time, so a
+   flush here would make "byte-identical throughout" false by construction.
+   An in-flight keystroke is already safe: focusout flushes before any click
+   handler runs, which is the same guarantee the stepper taps rely on. */
+function goSum(){ if(S.sum) return; S.sum=true; hideToast(); render(); }
+function leaveSum(){ if(!S.sum) return; S.sum=false; hideToast(); render(); }
 /* Rule X1: a row beyond ex.s is marked EXTRA, counts in volume, and does NOT
    change the target line. */
 function addSet(){
@@ -3038,12 +3303,12 @@ function undoRemove(){
   flushDraft(); render(true);
   toast("Set "+(u.i+1)+" restored.");
 }
-/* Spec 2.3 rule 4: BACK TO SAVE returns to the screen Save lives on, scrolled
-   to the refusal block, with NO scroll to top. */
+/* Spec 2.3 rule 4: BACK TO SAVE returns to the screen Save lives on — since
+   W8 that is the SUMMARY — scrolled to the refusal block, with NO scroll to
+   top. The exercise index is left exactly where he was, so cancelling out of
+   the summary puts him back on the row he was fixing. */
 function backToSave(){
-  const C=sessionCtx();
-  if(!C.list.length) return;
-  S.exIx=C.list.length-1; render(true); focusBlocked();
+  S.sum=true; render(true); focusBlocked();
 }
 /* Rule V1's answer. Add it adds ONE accessory and stamps the day; Not yet
    stamps the 7-day cooldown and nothing else. IGNORING IT STAMPS NOTHING and
@@ -3411,7 +3676,10 @@ function resumeDraft(withToast){
   S.dayId=stored.dayId; S.err=null; S.problems=[];
   S.exIx=hy.exIx; delete hy.exIx;          /* the index is S's, not the draft's */
   S.draft=hy;
-  S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
+  /* S.sum is not stored with the draft (W8 criterion 1), so a resume always
+     lands on the exercise screen the index points at — never on a Summary
+     built before the reload. */
+  S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
   S.offer=null;
   closeSheet(); render();
   if(withToast) toast("Resumed your unfinished session.");
@@ -3424,7 +3692,7 @@ async function doDiscard(then){
   if(!ok){ sheetErr("Could not discard. Nothing changed. Try again."); return false; }
   S.offer=null; S.draftRead={status:"none"};
   S.draft=null; S.dayId=null; S.err=null; S.problems=[];
-  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
+  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
   closeSheet(); toast("Discarded.");
   if(then) then(); else render();
   return true;
@@ -3494,7 +3762,7 @@ async function startDay(id){
   }
   const d=PROGRAM.find(x=>x.id===id);
   S.dayId=id; S.err=null; S.problems=[];
-  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
+  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
   S.draft={date:PHAT.localDate(),entries:{}};
   d.ex.forEach(e=>{S.draft.entries[e.id]={sets:Array.from({length:e.s},()=>({w:"",r:""})),note:""};});
   render();
@@ -3510,10 +3778,20 @@ async function finish(){
        loses his place (W4 §2.5, §2.9). */
     S.problems=v.problems;
     S.err=null;              // the two message shapes must never stack
+    /* The refusal renders on the screen Save is on, which since W8 is the
+       Summary. S.sum is already true — finish() is only reachable from there —
+       but it is set explicitly so a future caller cannot refuse a save onto a
+       screen with nowhere to render the refusal (B-54). */
+    S.sum=true;
     render(true); focusBlocked(); return;
   }
   S.problems=[];
-  if(!v.setCount){ toast("Nothing logged yet."); return; }
+  /* NOTHING LOGGED means nothing to save — NOT "no completed sets". A
+     notes-only entry is data: validateDraft deliberately keeps it, B-33 says
+     it is never deleted, and spec 5.3 says the session saves with `0 sets` on
+     the counters. The old `!v.setCount` gate threw the note away with a toast
+     that said the app had nothing, which was untrue and unrecoverable. */
+  if(!v.setCount&&!Object.keys(v.entries).length){ toast("Nothing logged yet."); return; }
   /* One builder, shared with the test harness, so the object that reaches
      save() is the object QA asserts on. It returns null rather than guessing:
      no dayId, no usable date, or a draft that does not validate. */
@@ -3547,7 +3825,7 @@ async function finish(){
   cancelDraftSave();             // a queued autosave must not resurrect the draft
   await clearDraft();
   S.draft=null; S.dayId=null; S.err=null;
-  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null;
+  S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
   S.offer=null; S.draftRead={status:"none"};
   render(); toast("Session saved.");
 }
