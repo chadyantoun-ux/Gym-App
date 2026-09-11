@@ -3414,6 +3414,352 @@ T("W7 - calorieAdvice reads the bodyweight store and writes nothing back", funct
   a.eq(P.bwWindows(e, TODAY).bCount, 5, "the rows are a fresh view, never shared with the store");
 });
 
+/* ============================================================ S18b - Rule W1h (WO-005)
+   THE HOLD NOBODY COULD SEE.
+
+   `calorieAdvice` sets `holdUntil` BEFORE the `tone === "act"` test, so a live
+   7-day calorie hold exists in the return value in EVERY band - but only
+   `cooldown` had a sentence for it. Stamp a change, let the rate drift into
+   `above` / `on-target` / `below`, and the hold became invisible and
+   unclearable while it went on suppressing the next add-or-cut instruction.
+   Suppression the user cannot see, cannot date and cannot undo is the app
+   lying by omission (addendum 14.2 Rationale). `holdNote` is the disclosure.
+
+   THE CLOCK. Addendum 14.7 works its eight examples against `today` =
+   11 Sep 2026, one day after this suite's TODAY, and every string the coach
+   signed off carries a literal date (`Hold ends 15 Sep`). Re-dating the
+   examples onto TODAY would mean re-deriving the coach's dates by hand, which
+   is exactly what a pin must not do. So this group keeps its own clock and the
+   strings below are transcribed from 14.7 character for character.
+   ------------------------------------------------------------------------ */
+group("S18b Rule W1h / hold note / WO-005");
+
+var HT = "2026-09-11";                       /* addendum 14.7's `today` */
+function HDA(n){ return P.dateAdd(HT, n); }
+/* The suite's RATE seed, on this group's clock, and relative to a day the
+   caller names - one test has to ask the same question on two consecutive
+   days, and a seed frozen to HT would fall out of the 14-day history gate
+   when read a day early. */
+function HRATE(r, today){
+  var out = [], i, t = today || HT;
+  for (i = 13; i >= 9; i--) out.push({ date: P.dateAdd(t, -i), kg: 85 });
+  for (i = 4;  i >= 0; i--) out.push({ date: P.dateAdd(t, -i), kg: 85 + r });
+  return out;
+}
+function HBW(offsets, kg){
+  var out = [], i;
+  for (i = 0; i < offsets.length; i++) out.push({ date: HDA(-offsets[i]), kg: kg });
+  return out;
+}
+/* The opening clause: everything up to and including the first full stop.
+   Used by the shared-clause test, which may not know the clause in advance -
+   the whole point is that ONE helper produces it in two places. */
+function clause1(s){ var i = String(s).indexOf("."); return i < 0 ? "" : String(s).slice(0, i + 1); }
+/* The six rates the sweep uses: three that instruct nothing (above /
+   on-target / below) and three that instruct a change (cut / flat / losing),
+   which a live hold resolves to state 7 instead. */
+var H_RATES = [0.62, 0.41, 0.25, 0.14, 0, -0.35];
+
+T("W1h / 14.7 row 1 - stamped TODAY, +0.41 above: the hold is stated and dated", function(a){
+  var r = P.calorieAdvice(HRATE(0.41), HT, HDA(0));
+  a.eq(r.state, "above", "a band that instructs nothing is not resolved to cooldown");
+  a.eq(r.rate, 0.41);
+  a.eq(r.daysAgo, 0);
+  a.eq(r.holdUntil, "2026-09-18");
+  a.eq(r.holdNote, "You changed calories today. Hold ends 18 Sep.",
+    "14.7 row 1, transcribed; agoWord's `today` and dayMon's `18 Sep`");
+  a.ok(r.text.indexOf("Change nothing.") >= 0, "the instruction is on the card one rank louder (14.1a)");
+  a.ne(r.tone, "act", "and the SET control - which keys off tone act - is not offered during a hold");
+});
+
+T("W1h / 14.7 row 2 - stamped 8 Sep, +0.25 on target: `You changed calories 3 days ago. Hold ends 15 Sep.`", function(a){
+  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(-3));
+  a.eq(r.state, "on-target");
+  a.eq(r.daysAgo, 3);
+  a.eq(r.holdUntil, "2026-09-15");
+  a.eq(r.holdNote, "You changed calories 3 days ago. Hold ends 15 Sep.",
+    "the signed-off sentence, 14.1 - not one character moves");
+  a.eq(r.text, "+0.25 kg per week. On target. Change nothing.",
+    "the card is identical to the no-hold card except for the note and the clear control");
+});
+
+T("W1h / 14.7 row 3 - BOUNDARY, last day of the hold: 6 days ago still renders", function(a){
+  var r = P.calorieAdvice(HRATE(0.14), HT, HDA(-6));
+  a.eq(r.state, "below");
+  a.eq(r.daysAgo, 6, "gap 6 < 7, so the hold is still active");
+  a.eq(r.holdUntil, "2026-09-12");
+  a.eq(r.holdNote, "You changed calories 6 days ago. Hold ends 12 Sep.");
+});
+
+/* BACKEND NAMED THIS ONE as the row it most wants pinned, and it is the sharp
+   edge of the wording: `Hold ends 15 Sep` promises the hold is GONE on the
+   15th, not that the 15th is its last day. `active = gap < 7`, so a stamp of
+   4 Sep prints `Hold ends 11 Sep` on the 10th and must render NOTHING on the
+   11th. Both days are asserted here, because the absence only means something
+   next to the presence it follows. */
+T("W1h / 14.7 row 4 - ABSENCE, first free day: the note does not render on the date it printed yesterday", function(a){
+  var y = P.calorieAdvice(HRATE(0.14, "2026-09-10"), "2026-09-10", "2026-09-04");
+  a.eq(y.holdUntil, "2026-09-11");
+  a.eq(y.holdNote, "You changed calories 6 days ago. Hold ends 11 Sep.",
+    "on 10 Sep the note names 11 Sep as the day the hold ends");
+  var r = P.calorieAdvice(HRATE(0.14), HT, "2026-09-04");
+  a.eq(r.state, "below", "the band is unchanged - only the hold expired");
+  a.eq(r.holdNote, "", "and on 11 Sep the note is GONE. The date it printed is not a day it renders on");
+  a.eq(r.holdUntil, null, "holdUntil is null, so the clear control goes with it");
+  a.eq(r.daysAgo, null);
+  a.eq(strOf(r).indexOf("Hold"), -1, "no field anywhere still mentions a hold");
+});
+
+T("W1h / 14.7 row 5 - ABSENCE, cooldown: `text` IS the disclosure, so the note is empty", function(a){
+  var r = P.calorieAdvice(HRATE(0.04), HT, HDA(-3));
+  a.eq(r.state, "cooldown", "+0.04 is flat, which instructs, so the hold resolves to state 7");
+  a.eq(r.text, "You changed calories 3 days ago. Hold until 15 Sep before changing again.");
+  a.eq(r.holdNote, "",
+    "TWO disclosures on one card is the bug W1h exists to prevent (14.7 row 5)");
+  a.eq(r.text.indexOf("Hold ends"), -1, "state 7 says `Hold until`; `Hold ends` belongs to the note alone");
+  a.eq(strOf(r).indexOf("200 kcal"), -1, "and the add instruction is still suppressed");
+});
+
+T("W1h / 14.7 row 6 - ABSENCE, thin window A: a screen with no rate does not explain a suppression", function(a){
+  var r = P.calorieAdvice(HBW([23, 13, 10, 4, 3, 2, 1, 0], 85), HT, HDA(-3));
+  a.eq(r.state, "thin-window-a");
+  a.eq(r.text, "Not enough daily weights. 2 of those 7 days logged; this needs 5.");
+  a.eq(r.holdNote, "", "the note is UNREACHABLE in every not-enough-data state and must stay so (14.2)");
+  a.eq(r.holdUntil, null, "the engine returns before the cooldown test, so there is no clear control either");
+  a.eq(r.daysAgo, null);
+  a.eq(strOf(r).indexOf("Hold"), -1);
+});
+
+/* THE ROW A FUTURE READER WILL FILE AS A BUG. IT IS NOT ONE - THE RULING IS HERE.
+   A stamp dated in the future keeps the hold active on purpose: clock skew or
+   a bad import must not open a window in which the app hands out a SECOND
+   calorie change (logic.js calCooldown). agoWord then returns `today` for a
+   negative gap, so a stamp of 18 Sep reads `You changed calories today. Hold
+   ends 25 Sep.` on 11 Sep.
+   `strength-coach` looked straight at that sentence in addendum 14.5 and
+   signed it off: "That is the behaviour I want - it is identical to what state
+   7 already prints in the same situation, and the alternative (`in 7 days`) is
+   a sentence about the future in a field that describes the past."
+   So: do not "fix" this. If it must change, it changes in agoWord, for both
+   sentences at once, and it goes back to strength-coach first. */
+T("W1h / 14.7 row 7 - EDGE, a future stamp reads `today`, and that is the signed-off behaviour", function(a){
+  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(7));      /* stamped 18 Sep */
+  a.eq(r.state, "on-target");
+  a.eq(r.daysAgo, -7, "a negative gap: the stamp is ahead of today");
+  a.eq(r.holdUntil, "2026-09-25", "the hold is still active - suppressing is the safe direction");
+  a.eq(r.holdNote, "You changed calories today. Hold ends 25 Sep.",
+    "14.5 / 14.7 row 7: signed off, marked do not fix");
+  var seven = P.calorieAdvice(HRATE(0), HT, HDA(7));
+  a.eq(seven.state, "cooldown");
+  a.eq(clause1(seven.text), clause1(r.holdNote),
+    "the note is not inventing this - state 7 has always printed the same clause on the same stamp");
+});
+
+T("W1h / 14.7 row 8 - ABSENCE, no stamp at all: no hold, no note", function(a){
+  var r = P.calorieAdvice(HRATE(0.41), HT, null);
+  a.eq(r.state, "above");
+  a.eq(r.holdNote, "");
+  a.eq(r.holdUntil, null);
+  a.eq(r.daysAgo, null);
+  a.eq(P.calorieAdvice(HRATE(0.41), HT, "").holdNote, "", "an empty stamp is not a hold");
+  a.eq(P.calorieAdvice(HRATE(0.41), HT, "2026-9-4").holdNote, "", "an unpadded date is not a date");
+  a.eq(P.calorieAdvice(HRATE(0.41), HT, "nope").holdNote, "", "and junk never holds");
+});
+
+/* THE RULE ITSELF, AS A SWEEP. One worked example proves one cell; the rule is
+   an IFF over the whole grid, and the defect it replaces was precisely a
+   condition that was right in one band and wrong in three. Six rates x stamps
+   from 3 days in the FUTURE to 9 days ago = 78 cases, of which exactly 30 are
+   the three non-instructing bands inside a live hold. */
+T("W1h - THE IFF, swept: holdNote is non-empty exactly when holdUntil is set and the state is not cooldown", function(a){
+  var i, g, r, cases = 0, nonEmpty = 0, bad = [];
+  for (i = 0; i < H_RATES.length; i++){
+    for (g = -3; g <= 9; g++){
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      cases++;
+      if (r.holdNote !== "") nonEmpty++;
+      if ((r.holdNote !== "") !== (r.holdUntil !== null && r.state !== "cooldown"))
+        bad.push("rate " + H_RATES[i] + " stamped " + g + "d -> state " + r.state +
+                 ", holdUntil " + r.holdUntil + ", note " + JSON.stringify(r.holdNote));
+    }
+  }
+  a.eq(bad.join(" | ") || "none", "none", "the IFF of addendum 14.2 broke somewhere in the grid");
+  a.eq(cases, 78, "six rates x thirteen stamps");
+  a.eq(nonEmpty, 30, "three non-instructing bands x ten days of live hold (gap -3..6)");
+});
+
+T("W1h - and exactly ONE hold disclosure is on screen whenever holdUntil is set", function(a){
+  var i, g, r, held = 0, bad = [], n;
+  for (i = 0; i < H_RATES.length; i++){
+    for (g = -3; g <= 9; g++){
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      if (r.holdUntil === null) continue;
+      held++;
+      n = (r.text.indexOf("Hold") >= 0 ? 1 : 0) + (r.holdNote !== "" ? 1 : 0);
+      if (n !== 1) bad.push("rate " + H_RATES[i] + " stamped " + g + "d -> " + n + " disclosures");
+    }
+  }
+  a.eq(bad.join(" | ") || "none", "none", "never two, never none");
+  a.eq(held, 60, "six rates x ten days of live hold");
+});
+
+/* THE COACH'S INSTRUCTION GUARD - addendum 14.2 invariant 2, quoted in the
+   message on purpose.
+
+   The note deliberately carries no imperative, and the ONLY reason that is
+   safe is that in all three states it can reach, `text` one rank above already
+   contains the literal `Change nothing.` If this goes red the card has stopped
+   instructing him: THE FIX IS NOT TO RELAX THIS ASSERTION. Rule W1h goes back
+   to `strength-coach`, because the note was written on the assumption it does
+   not have to instruct. */
+T("W1h - INSTRUCTION GUARD: every input yielding a note also yields `Change nothing.` in the text", function(a){
+  var i, g, r, checked = 0, bad = [];
+  for (i = 0; i < H_RATES.length; i++){
+    for (g = -3; g <= 9; g++){
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      if (r.holdNote === "") continue;
+      checked++;
+      if (r.text.indexOf("Change nothing.") < 0)
+        bad.push("rate " + H_RATES[i] + " stamped " + g + "d -> " + JSON.stringify(r.text));
+    }
+  }
+  a.eq(bad.join(" | ") || "none", "none",
+    "DO NOT RELAX THIS. A note with no imperative is only safe while the band sentence carries one. " +
+    "Red here means Rule W1h goes back to strength-coach (addendum 14.2, invariant 2)");
+  a.eq(checked, 30, "and it was actually asked of all thirty");
+});
+
+/* THE SHARED CLAUSE. `You changed calories {ago}` opens BOTH state 7's sentence
+   and the note, and for the same daysAgo the two must be byte-identical - he
+   should recognise the second as the line he has already read. Two matching
+   literals agree today and diverge on the next edit: that is the B-06 / B-51
+   failure class, one layer up. The helper is internal and unexported, so this
+   pins it through two calorieAdvice calls instead - which is the stronger
+   test anyway, because it fails for a copied literal too. */
+T("W1h - the opening clause is byte-identical between state 7's text and the band's note", function(a){
+  var days = [0, 1, 3, 6], i, stamp, cool, band, c;
+  for (i = 0; i < days.length; i++){
+    stamp = HDA(-days[i]);
+    cool = P.calorieAdvice(HRATE(0), HT, stamp);          /* flat -> instructs -> state 7 */
+    band = P.calorieAdvice(HRATE(0.25), HT, stamp);       /* on target -> band + note */
+    a.eq(cool.state, "cooldown", "seed check at daysAgo " + days[i]);
+    a.eq(band.state, "on-target", "seed check at daysAgo " + days[i]);
+    c = clause1(cool.text);
+    a.eq(c.indexOf("You changed calories"), 0, "state 7 still opens with the clause");
+    a.eq(clause1(band.holdNote), c,
+      "one helper, two sentences, at daysAgo " + days[i] + " - not two literals that match today");
+  }
+  a.eq(clause1(P.calorieAdvice(HRATE(0.25), HT, HDA(0)).holdNote), "You changed calories today.",
+    "daysAgo 0 is where a re-implemented clause would say `0 days ago`");
+  a.eq(clause1(P.calorieAdvice(HRATE(0.25), HT, HDA(-1)).holdNote), "You changed calories 1 day ago.",
+    "and 1 is where it would say `1 days ago`");
+});
+
+/* RANK 4 IS A FOOTNOTE. It may not grow into a second advisory: no kcal
+   figure, no rate, no imperative (addendum 14.2 Output copy, 14.1d). Asserted
+   inside holdNote SPECIFICALLY - `text` next to it legitimately carries both a
+   rate and `Change nothing.`, so an object-wide check would prove nothing. */
+T("W1h - the note never grows a figure: no `200 kcal`, no ` kg per week`, no imperative", function(a){
+  var i, g, r, checked = 0, bad = [];
+  for (i = 0; i < H_RATES.length; i++){
+    for (g = -3; g <= 9; g++){
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      if (r.holdNote === "") continue;
+      checked++;
+      if (r.holdNote.indexOf("200 kcal") >= 0) bad.push("kcal figure: " + r.holdNote);
+      if (r.holdNote.indexOf(" kg per week") >= 0) bad.push("rate: " + r.holdNote);
+      if (r.holdNote.indexOf("Change nothing") >= 0) bad.push("second imperative: " + r.holdNote);
+      if (r.holdNote.indexOf("Recheck") >= 0) bad.push("second kicker: " + r.holdNote);
+    }
+  }
+  a.eq(bad.join(" | ") || "none", "none");
+  a.eq(checked, 30);
+});
+
+T("W1h / B-44 - the note's date comes from dayMon, never Intl: `15 Sep`, never `Sept`", function(a){
+  var i, g, r, bad = [];
+  for (i = 0; i < H_RATES.length; i++){
+    for (g = -3; g <= 9; g++){
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      if (r.holdNote !== "" && r.holdNote.indexOf("Sept") >= 0) bad.push(r.holdNote);
+    }
+  }
+  a.eq(bad.join(" | ") || "none", "none", "en-GB short month on current ICU is `Sept` - B-44");
+  var note = P.calorieAdvice(HRATE(0.25), HT, HDA(-3)).holdNote;
+  a.eq(note.slice(-7), "15 Sep.", "the date is the last thing in the sentence");
+  a.eq(note.indexOf(P.dayMon("2026-09-15")) >= 0, true, "and it is dayMon's");
+});
+
+/* holdNote is initialised on the return object, so it exists on EVERY return
+   path - including the four that return before the cooldown test is reached.
+   `undefined` reaching a view is a rendered "undefined" or a silently skipped
+   slot, and which of the two it is depends on the template. Neither is
+   allowed. */
+T("W1h - holdNote is a string on every return path, never undefined", function(a){
+  var seeds = [
+    ["empty",          [],                                    null],
+    ["empty",          [],                                    HDA(-3)],
+    ["need-history",   HBW([7, 6, 5, 4, 3, 2, 1, 0], 85),     HDA(-3)],
+    ["thin-window-b",  HBW([21, 18, 15, 12, 9, 6, 3, 0], 85), HDA(-3)],
+    ["thin-window-a",  HBW([23, 13, 10, 4, 3, 2, 1, 0], 85),  HDA(-3)],
+    ["cut",            HRATE(0.62),                           null],
+    ["above",          HRATE(0.41),                           null],
+    ["on-target",      HRATE(0.25),                           null],
+    ["below",          HRATE(0.14),                           null],
+    ["flat",           HRATE(0),                              null],
+    ["losing",         HRATE(-0.35),                          null],
+    ["cooldown",       HRATE(0),                              HDA(-3)]
+  ], i, r, seen = {};
+  for (i = 0; i < seeds.length; i++){
+    r = P.calorieAdvice(seeds[i][1], HT, seeds[i][2]);
+    a.eq(r.state, seeds[i][0], "seed " + i + " lands in the state it says it does");
+    a.eq(typeof r.holdNote, "string", "holdNote is missing on the " + r.state + " path");
+    a.eq("holdNote" in r, true, "and the key is present, not merely undefined-valued");
+    seen[r.state] = true;
+  }
+  a.deep(Object.keys(seen).sort(),
+    ["above", "below", "cooldown", "cut", "empty", "flat", "losing", "need-history",
+     "on-target", "thin-window-a", "thin-window-b"],
+    "all eleven states carry the field");
+  a.eq(P.calorieAdvice(null, HT, HDA(-3)).holdNote, "", "and a non-array never throws its way past it");
+  a.eq(P.calorieAdvice(undefined, HT, undefined).holdNote, "");
+});
+
+T("W1h - the four not-enough-data states can never reach a hold at all", function(a){
+  var seeds = [
+    [[],                                    "empty"],
+    [HBW([7, 6, 5, 4, 3, 2, 1, 0], 85),     "need-history"],
+    [HBW([21, 18, 15, 12, 9, 6, 3, 0], 85), "thin-window-b"],
+    [HBW([23, 13, 10, 4, 3, 2, 1, 0], 85),  "thin-window-a"]
+  ], stamps = [HDA(0), HDA(-3), HDA(-6), HDA(-7), HDA(7)], i, j, r;
+  for (i = 0; i < seeds.length; i++){
+    for (j = 0; j < stamps.length; j++){
+      r = P.calorieAdvice(seeds[i][0], HT, stamps[j]);
+      a.eq(r.state, seeds[i][1]);
+      a.eq(r.holdNote, "", seeds[i][1] + " must not explain a suppression it cannot compute");
+      a.eq(r.holdUntil, null, seeds[i][1] + " returns before the cooldown test");
+      a.eq(r.daysAgo, null);
+    }
+  }
+});
+
+T("W1h - the note is additive: no other returned field moved to make room for it", function(a){
+  /* A new field is the cheap half; the expensive half is proving the rate, the
+     tone and the sub-line all came out of the change untouched. */
+  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(-3));
+  a.deep(Object.keys(r).sort(),
+    ["aCount", "bCount", "daysAgo", "holdNote", "holdUntil", "meanA", "meanB",
+     "rate", "state", "subline", "text", "tone"],
+    "twelve fields: the eleven that were there and holdNote");
+  a.eq(r.subline, "Target: +0.2 to +0.3 kg per week. Averages over 14 days.",
+    "the sub-line still renders under a hold - the hold suppresses an instruction, not the panel");
+  a.eq(r.rate, 0.25, "and the rate is still reported");
+  a.eq(r.tone, "ok", "a hold does not repaint a band's tone - only state 7 does that");
+  var e = HRATE(0.25), before = JSON.stringify(e);
+  P.calorieAdvice(e, HT, HDA(-3));
+  a.eq(JSON.stringify(e), before, "DATA LOSS: building the note changed the bodyweight rows");
+});
+
 /* ============================================================ S19 - Rule ST1 (W9 / B-07)
    Stall detection over two rolling 21-day blocks of estimated 1RM, with the
    counting ruling in addendum 6c and the deload-exclusion of Rule E2
@@ -8374,12 +8720,21 @@ T("B-43 - the floor checker fails on WIDTH alone: a 40 x 46 stepper is a failure
    owned by W10/W11/W12/W14 are recorded here but are THEIR item to re-measure;
    the session screen, the sheets, the toast, the dock and the Train tab are
    W6/W7's and are this group's. */
+/* RETIRED 2026-09-11, both lists: `Full volume checkbox  44 x 44`. The control
+   no longer exists - WO-004 C-1 / WO-005 W9 deleted it rather than relabelling
+   it, because an all-or-nothing toggle cannot express the per-session accessory
+   ramp (B-23). OBSERVED, not assumed: `grep -i "full volume" index.html` returns
+   nothing, and index.html:1555 reads "THE `S.includeCut` READ IS GONE WITH THE
+   CHECKBOX (C-1, B-23, Decision 6)". The stored `includeCut` KEY survives and is
+   still written back unchanged, so no store migrates; it is the widget that is
+   gone. A measured row for a control that cannot be tapped is a number nobody
+   can re-measure, which is worse than a gap. Counts below moved 20 -> 19 and
+   14 -> 13 with it; justification in docs/decisions.md. */
 var TAPS_400 = [
   { what: "stepper key (weight -/+, reps -/+)", w: 44,  h: 48 },
   { what: "weight input .w",                    w: 76,  h: 48 },
   { what: "reps input .r",                      w: 76,  h: 48 },
   { what: "note input .note",                   w: 366, h: 48 },
-  { what: "Full volume checkbox",               w: 44,  h: 44 },
   { what: "day button .daybtn",                 w: 368, h: 66 },
   { what: "movement & cue .showfig",            w: 400, h: 44 },
   { what: "+ Add set / - Remove set",           w: 179, h: 48 },
@@ -8409,7 +8764,6 @@ var TAPS_200 = [
   { what: "next exercise at 200% text",         w: 368, h: 52 },
   { what: "ghost/sheet buttons at 200% text",   w: 368, h: 56 },
   { what: "tab button at 200% text",            w: 80,  h: 72 },
-  { what: "Full volume checkbox at 200% text",  w: 44,  h: 44 },
   { what: "bodyweight stepper at 200% (W11)",   w: 48,  h: 48 },
   { what: "bodyweight input at 200% (W11)",     w: 268, h: 48 },
   { what: "LOG TODAY at 200% text (W11)",       w: 368, h: 64 }
@@ -8419,14 +8773,16 @@ T("B-43 / W6-AC3 - every control measured at 400 px clears 44 px on BOTH axes", 
   var bad = [], i, f;
   for (i = 0; i < TAPS_400.length; i++) { f = tapFail(TAPS_400[i]); if (f) bad.push(f); }
   a.eq(bad.join(" | ") || "none", "none");
-  a.eq(TAPS_400.length, 20, "the inventory shrank - a control was dropped from the measurement");
+  a.eq(TAPS_400.length, 19, "the inventory shrank - a control was dropped from the measurement. " +
+    "Was 20 until WO-005 C-1 DELETED the Full volume checkbox; see docs/decisions.md 2026-09-11");
 });
 
 T("B-43 / W6-AC2 - and again at 200 % text, where growth is the usual failure", function(a){
   var bad = [], i, f;
   for (i = 0; i < TAPS_200.length; i++) { f = tapFail(TAPS_200[i]); if (f) bad.push(f); }
   a.eq(bad.join(" | ") || "none", "none");
-  a.eq(TAPS_200.length, 14, "the inventory shrank - a control was dropped from the measurement");
+  a.eq(TAPS_200.length, 13, "the inventory shrank - a control was dropped from the measurement. " +
+    "Was 14 until WO-005 C-1 DELETED the Full volume checkbox; see docs/decisions.md 2026-09-11");
 });
 
 T("B-43 - the two controls B-43 names by name are the two this fixes", function(a){
@@ -9276,6 +9632,15 @@ contract("<b>migrateStore return shape - now settled.</b> The work order fixed t
 contract("<b>\" 5 \", \"5.\", \".5\", the NOW fallback, notes-only entries</b> are pinned in section S8 as " +
   "<em>judgement calls, not rulings</em>. Each pins current behaviour with the rationale on record. " +
   "Reversing one should be a deliberate edit to that test, never a silent change.");
+contract("<b>Rule W1h, the future stamp &mdash; signed off, and it will look like a bug.</b> A " +
+  "<code>calChangedAt</code> dated AHEAD of today keeps the hold active on purpose (clock skew or a bad " +
+  "import must not open a window for a second calorie change), and <code>agoWord</code> reads a negative " +
+  "gap as <code>today</code> &mdash; so a stamp of 18 Sep prints <code>You changed calories today. Hold " +
+  "ends 25 Sep.</code> on 11 Sep. <code>strength-coach</code> looked straight at that sentence in addendum " +
+  "&sect;14.5 and marked it DO NOT FIX: it is what state 7 has always printed on the same input, and the " +
+  "alternative (<code>in 7 days</code>) is a sentence about the future in a field that describes the past. " +
+  "Pinned in S18b as <em>14.7 row 7</em> with the ruling in the comment above it. If it must change it " +
+  "changes in <code>agoWord</code>, for both sentences at once, and it goes back to the coach first.");
 contract("<b>B-32 - the old KNOWN-BAD test is retired, not deleted.</b> It used to pin the wrong string " +
   "\"Stay at 0 kg until all 3 sets reach 10 reps\" for the record while <code>strength-coach</code> ruled. " +
   "He ruled (Rule Z2), so that string is now the thing the suite must REJECT. The two halves it carried " +
@@ -9858,7 +10223,23 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
     "200 % text); the run of 2026-09-11 is recorded under \"Already proven\" item 19. <b>Re-run it " +
     "whenever a token, a padding or a font-size changes.</b> The honest alternative &mdash; deploying " +
     "the harness and letting it fetch its own <code>index.html</code> over http &mdash; would make this " +
-    "page stop working from <code>file://</code>, which is the one thing it is for.</p>";
+    "page stop working from <code>file://</code>, which is the one thing it is for.</p>" +
+
+    "<p><b>WO-005 Rule W1h &mdash; the ENGINE half is pinned in S18b; the VIEW half is not " +
+    "built, and this page cannot see it.</b> <code>PHAT.calorieAdvice</code> now returns " +
+    "<code>holdNote</code> and all eight worked examples of addendum &sect;14.7 are asserted here. " +
+    "<b>Observed in the working tree on 2026-09-11 by reading the source:</b> <code>index.html</code> " +
+    "contains no reference to <code>holdNote</code> at all; its clear control at <code>:2239</code> " +
+    "still renders on <code>adv.state === \"cooldown\"</code> rather than on " +
+    "<code>adv.holdUntil !== null</code>; and the confirmation body at <code>:2819</code> is still the " +
+    "string addendum &sect;14.3 REJECTED (<code>No new calorie advice until {date}</code>, which is " +
+    "false in bands 2, 3 and 4). So on screen today a hold in <code>above</code> / " +
+    "<code>on-target</code> / <code>below</code> is still invisible and still unclearable &mdash; the " +
+    "defect is half closed, in the half a user cannot see. That is a frontend item (WO-004 W11 / " +
+    "&sect;7.5.1), not a gap in this suite: the harness has no <code>fetch</code> on a " +
+    "<code>file://</code> opaque origin and cannot read the view. <b>When it lands, the check is " +
+    "three taps in a browser:</b> stamp a calorie change, seed a +0.25 kg/week fortnight, and the card " +
+    "must show the note AND the clear control; tap clear and both must go.</p>";
 
   /* ---------------------------------------------------------------------
      The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a

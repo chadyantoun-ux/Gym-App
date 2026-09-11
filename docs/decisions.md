@@ -1326,3 +1326,35 @@ glute-ham raise costs three things — `n`, the cue, **and `implement` back to `
 flips Rule Z2's load word and switches Rule I2's increment line off. Both are free today only
 because the log is empty. `d2e` stops being free the first time it is logged, which makes it the one
 question worth answering before the next Lower Power session rather than whenever.
+
+### 2026-09-11 — Two tap-inventory rows retired, and the rule for retiring a measurement
+`tests.html` carries a hand-transcribed inventory of every tap target measured at 400 px and again
+at 200 % text, guarded by a length assertion so a row cannot be dropped quietly. Two rows named a
+control that no longer exists: `Full volume checkbox  44 x 44`, in both lists. WO-004 C-1 / WO-005
+W9 **deleted** that checkbox rather than relabelling it, because an all-or-nothing toggle cannot
+express the per-session accessory ramp (B-23).
+
+**Observed before removing them, not assumed:** `grep -i "full volume" index.html` returns nothing,
+and `index.html:1555` reads "THE S.includeCut READ IS GONE WITH THE CHECKBOX (C-1, B-23,
+Decision 6)". The stored `includeCut` key survives and is still written back unchanged, so no store
+migrates — it is the widget that is gone, not the data.
+
+**The two length assertions moved with the rows: 20 → 19 and 14 → 13.** That is a test changed to
+match the code, which this project does not do without writing down why, hence this entry. The why:
+a measured row for a control that cannot be tapped is a number nobody can re-measure, and the next
+person to run the inventory would either hunt a control that is not there or, worse, copy the row
+forward as evidence. The tripwire still works — it fires on the next silent drop, from 19 and 13.
+
+**The rule, generalised:** a measurement row is retired only by citing what was observed when the
+control went away, in the file, next to the list. Never by deleting a row to make a count agree.
+The same rule already governs the manual checklist, where an item is retired by automating it and
+citing what was seen.
+
+**Not chased, and the warning turned out to be stale:** the W1h work order flagged that
+`tests.html:563` asserts `SCHEMA_VERSION === 5` while "some `index.html` comments still say 4".
+The assertion is correct — `logic.js:43` is at 5 — and the literal is a tripwire that exists to
+force whoever bumps it to come and update B-04's importer list. **Checked rather than assumed:**
+`index.html` hardcodes no schema number anywhere. Every payload writes `PHAT.SCHEMA_VERSION`
+(lines 907, 909, 914, 3428, 3830) and the one prose mention, at :3783, already reads "schema 5".
+So there is nothing to chase and nothing to tidy; recorded so the next reader does not go hunting
+for a stale comment that is not there, or "fix" the right number to match a wrong one.
