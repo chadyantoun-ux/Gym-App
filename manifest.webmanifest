@@ -4,6 +4,7 @@
   "description": "Training log for a PHAT programme. Logs a full workout with no signal.",
   "lang": "en",
   "dir": "ltr",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

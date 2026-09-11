@@ -1,0 +1,11 @@
+# core.autocrlf is true on this machine, which rewrites line endings on
+# checkout. Two places that must not happen:
+
+# A shell script with CRLF fails at its shebang ("\r: command not found") on
+# every POSIX shell, including the git-bash this repo is driven from.
+*.sh text eol=lf
+
+# Belt and braces. Git already detects these as binary; saying so means a
+# future .gitattributes rule can never sweep them into text conversion and
+# corrupt an icon.
+*.png binary
