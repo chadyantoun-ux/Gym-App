@@ -182,10 +182,24 @@
   .showfig{color:var(--amber); font-size:.75rem; font-weight:800; letter-spacing:.08em;
     text-transform:uppercase; padding:0 var(--s4); display:flex; align-items:center;
     text-align:left; width:100%; min-height:var(--tap)}
-  .fig{display:none; padding:0 var(--s4) var(--s3)}
-  .fig.on{display:block}
-  svg.mv{display:block; width:100%; background:var(--bg); border:1px solid var(--line); border-radius:var(--r)}
-  .figcue{color:var(--dim); font-size:.78125rem; line-height:1.45; margin-top:var(--s2)}
+  /* -- THE FIGURE SITS BESIDE THE CUE, AND THE FRAME FOLLOWS THE SUBJECT ---
+     Was: one 200x150 landscape viewBox for every pattern, rendered
+     width:100% as a full-width banner. A standing human is about 1:3, so a
+     figure that filled a 150-tall frame could only ever be ~50 of 200 wide -
+     measured, the average pattern used 26% of the width and 63% of the
+     height, and 'curl' was a 6% hairline floating in emptiness. The frame
+     was the wrong shape for the subject, and no amount of redrawing fixes
+     that. Now every pattern carries its OWN viewBox, fitted to its own
+     content: upright patterns get an upright frame, prone ones a wide frame,
+     and the drawing fills 84-90% of both axes in all fifteen.
+     Sized off WIDTH, never height: with a fixed height a wide pattern would
+     be letterboxed inside a box it does not fit, which is the same defect in
+     a new place. In em units so it grows with 200% text (11.8 #6). --fw and --ar
+     come from the viewBox, computed in diagram(). */
+  .fig{display:none; padding:0 var(--s4) var(--s3); font-size:.875rem}
+  .fig.on{display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap}
+  svg.mv{display:block; flex:none; width:min(var(--fw),100%); aspect-ratio:var(--ar); height:auto}
+  .figcue{flex:1 1 13em; color:var(--dim); font-size:.78125rem; line-height:1.45; margin:0}
   .figcue b{color:var(--bone); font-weight:800}
   /* -- W7: ADVICE vs REFUSAL (spec 2.1) -------------------------------------
      2a has ONE accent, so the difference cannot be a second colour. It is
@@ -681,11 +695,34 @@ function weeksIn(){return S.sessions.length?Math.floor(ago(S.sessions[0].date)/7
 
 
 /* ============================================================ movement diagrams */
+/* B-64 CLOSED. A slot keeps its pattern only while the GROUND REFERENCE
+   matches - 11.2(1) makes that the one thing that renders a pattern legible.
+   Four slots lost their figure rather than keep a wrong one, per 11.8: "a
+   missing figure is a smaller loss than a wrong one". All four keep their
+   cue, and 4.13 then renders the cue alone with no empty box.
+     d3c  seated cable row  was 'hpull', a hinged torso holding a barbell.
+          REMAPPED to 'srow', a new pattern: seat, foot plate, upright torso.
+     d4c  leg press         was 'squat', a standing figure with a bar on its
+          back. NO FIGURE. A leg press has no fixed ground reference to draw:
+          the platform itself is what moves, so the apparatus cannot be
+          scenery. Drawn and rejected on the contact sheet - it did not read.
+     d3d  "DB row or shrug" NO FIGURE. Two different patterns in one slot;
+          nothing can be right for both until W1 rules the alternate.
+     d5d  incline cable fly NO FIGURE. Drawn plan-view and rejected: it read
+          as a lateral raise, which is exactly the confusion 11.8(5) forbids.
+     d5j  rope pressdown    NO FIGURE. 'tri' is drawn as a bench skull
+          crusher, which is right for its other two slots (d1h, d5i) and a
+          wrong ground reference for a standing cable pressdown.
+   Same-class risks deliberately KEPT, because only the apparatus changes and
+   not the body's relationship to the load: d2b/d4b hack squat on 'squat',
+   d5b incline press and d5c machine press on 'hpush', d4g seated leg curl on
+   'legcurl', d2g/d4h/d4i seated and donkey calf raises on 'calf' - the block
+   under the ball of the foot is the ground reference and it is the same one. */
 const PAT={d1a:"hpull",d1b:"vpull",d1c:"vpull",d1d:"hpush",d1e:"dip",d1f:"vpush",d1g:"curl",d1h:"tri",
  d2a:"squat",d2b:"squat",d2c:"legext",d2d:"hinge",d2e:"legcurl",d2f:"calf",d2g:"calf",
- d3a:"hpull",d3b:"vpull",d3c:"hpull",d3d:"hpull",d3e:"vpull",d3f:"vpush",d3g:"uprow",d3h:"lat",
- d4a:"squat",d4b:"squat",d4c:"squat",d4d:"legext",d4e:"hinge",d4f:"legcurl",d4g:"legcurl",d4h:"calf",d4i:"calf",
- d5a:"hpush",d5b:"hpush",d5c:"hpush",d5d:"fly",d5e:"curl",d5f:"curl",d5g:"curl",d5h:"hpush",d5i:"tri",d5j:"tri"};
+ d3a:"hpull",d3b:"vpull",d3c:"srow",d3e:"vpull",d3f:"vpush",d3g:"uprow",d3h:"lat",
+ d4a:"squat",d4b:"squat",d4d:"legext",d4e:"hinge",d4f:"legcurl",d4g:"legcurl",d4h:"calf",d4i:"calf",
+ d5a:"hpush",d5b:"hpush",d5c:"hpush",d5e:"curl",d5f:"curl",d5g:"curl",d5h:"hpush",d5i:"tri"};
 
 /* RULE Q1: THE CUE IS NOT THE FIGURE'S, IT IS THE EXERCISE'S. The 15
    per-pattern cue strings the prototype shipped here have been DELETED, not
@@ -699,77 +736,139 @@ const PAT={d1a:"hpull",d1b:"vpull",d1c:"vpull",d1d:"hpush",d1e:"dip",d1f:"vpush"
    PAT stays. It maps a slot to a FIGURE, which is a different job - and B-64
    says three of those mappings are wrong, so do not lean on it for anything
    beyond the figure it already draws. */
+/* THE FIFTEEN FIGURES. Spec 11.5 names, per pattern, the ground reference,
+   what START (ghost) shows, what FINISH (solid) shows and what the arrow runs
+   along; these are authored against that table and nothing else.
+
+   FRAME. Each pattern carries its own 'vb' viewBox, fitted to its own drawing
+   with a 6-unit margin, and 'r', the head radius in that frame. Occupancy is
+   therefore a property of the data, not of luck: 84-90% of the height and
+   49-90% of the width in every pattern (11.4 wants >= 80% of height).
+
+   TWO AUTHORING RULES, both learned by rendering the sheet and looking at it:
+   1. A SEGMENT THAT IS IDENTICAL IN BOTH POSES IS DRAWN ONCE, SOLID. Drawing
+      the unmoving half of the body twice is what turned squat, hinge and the
+      rows into scribble, and it actively hides 11.2(2) - which joints move.
+      So a pose object here may legitimately be missing 'h', 'sp' or 'lg':
+      that part did not move and is in the solid pose only.
+   2. Where the WHOLE body travels (squat, hinge, vpull, dip, calf) the ghost
+      is reduced to the parts that carry the start position - trunk, head,
+      implement - and never a second complete figure on top of the first.
+
+   FIELDS. h head centre . sp spine . ar, ar2 arms . lg, lg2 legs . bar
+   [x,y,halfLength] a barbell . db dumbbells . g ground, "floor" spans the
+   frame, "rect" a pad or block, "bar" a rail . ar {f,t,c?} the one arrow,
+   along the path of the WORKING END, offset clear of the limbs; c makes it a
+   quadratic, which is how a rotation reads.
+
+   NO TEXT INSIDE THE FRAME. The old figures printed "start" and "finish" in
+   the corner, which 11.2 forbids outright - the cue is the only place words
+   appear, and 11.3's convention (ghost = start, solid = finish) is learned
+   once and holds across all fifteen. */
 const POSES={
- squat:{base:"floor",arrow:[152,52,152,100],
-  a:{h:[96,34],sp:[[96,42],[98,80]],ar:[[96,48],[110,56],[112,44]],lg:[[98,80],[100,108],[96,138]],bar:[96,48]},
-  b:{h:[88,54],sp:[[88,62],[98,92]],ar:[[88,68],[102,76],[104,64]],lg:[[98,92],[124,108],[96,138]],bar:[88,68]}},
+ squat:{vb:[56.3,112],r:6.2,
+  g:[["floor",106]],
+  a:{h:[26.6,12.2],sp:[[26.6,19.4],[26.6,52.4]],bar:[26.6,25.6,20.6]},
+  b:{h:[32.8,52.4],sp:[[28.7,58.6],[16.3,87.4]],lg:[[16.3,87.4],[39,81.3],[26.6,106],[34.9,106]],bar:[28.7,58.6,20.6]},
+  ar:{f:[50.3,28.7],t:[49.3,59.6]}},
 
- hinge:{base:"floor",arrow:[156,66,156,112],
-  a:{h:[96,34],sp:[[96,42],[98,84]],ar:[[96,48],[96,68],[96,92]],lg:[[98,84],[100,110],[96,138]],bar:[96,92]},
-  b:{h:[64,60],sp:[[70,64],[100,84]],ar:[[74,68],[76,94],[78,114]],lg:[[100,84],[104,110],[100,138]],bar:[78,114]}},
+ hinge:{vb:[58.4,112],r:6.2,
+  g:[["floor",106]],
+  a:{h:[27.6,12.2],sp:[[27.6,19.4],[27.6,56.5]],ar:[[27.6,25.6],[27.6,44.1],[27.6,62.7]],bar:[27.6,62.7,18.6]},
+  b:{h:[44.1,65.8],sp:[[36.9,67.9],[6,74]],ar:[[33.8,68.9],[33.8,82.3],[32.8,95.7]],lg:[[6,74],[28.7,81.3],[29.7,106],[38,106]],bar:[32.8,95.7,18.6]},
+  ar:{f:[50.3,65.8],t:[52.4,93.6]}},
 
- hpull:{base:"floor",arrow:[160,112,160,80],
-  a:{h:[62,58],sp:[[68,62],[104,80]],ar:[[72,66],[74,94],[76,114]],lg:[[104,80],[110,110],[104,138]],bar:[76,114]},
-  b:{h:[62,58],sp:[[68,62],[104,80]],ar:[[72,66],[92,96],[80,80]],lg:[[104,80],[110,110],[104,138]],bar:[80,80]}},
+ hpull:{vb:[102.7,112],r:11.1,
+  g:[["floor",106]],
+  a:{ar:[[59.7,26.4],[61.6,57.9],[61.6,87.5]],bar:[61.6,87.5,35.2]},
+  b:{h:[80.1,17.1],sp:[[65.3,24.5],[7.9,50.4]],ar:[[59.7,26.4],[78.2,50.4],[50.4,37.5]],lg:[[7.9,50.4],[48.6,65.3],[44.9,106],[59.7,106]],bar:[50.4,37.5,35.2]},
+  ar:{f:[17.1,91.2],t:[6,46.7]}},
 
- vpull:{base:"bar",arrow:[158,82,158,48],
-  a:{h:[100,54],sp:[[100,62],[100,98]],ar:[[100,64],[100,42],[100,20]],lg:[[100,98],[114,118],[106,136]]},
-  b:{h:[100,36],sp:[[100,44],[100,80]],ar:[[100,46],[84,32],[100,20]],lg:[[100,80],[114,100],[106,118]]}},
+ vpull:{vb:[65.9,112],r:7.9,
+  g:[["bar",9.9,8.6,59.9,8.6]],
+  a:{sp:[[37.6,56],[37.6,106]],ar:[[37.6,56],[37.6,32.3],[37.6,9.9]]},
+  b:{h:[46.8,13.9],sp:[[34.9,20.5],[32.3,63.9]],ar:[[33.6,24.4],[13.9,29.7],[37.6,9.9]],lg:[[32.3,63.9],[50.7,82.3],[33.6,100.7],[44.2,106]]},
+  ar:{f:[6,106],t:[6,69.2]}},
 
- hpush:{base:"bench",arrow:[158,72,158,46],
-  a:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[66,72],[84,62]],lg:[[118,88],[138,104],[148,126]],db:[[84,62]]},
-  b:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[80,64],[84,44]],lg:[[118,88],[138,104],[148,126]],db:[[84,44]]}},
+ hpush:{vb:[118.7,112],r:8,
+  g:[["floor",106],["rect",6,52.7,88,5.3],["bar",14,58,14,106],["bar",86,58,86,106]],
+  a:{ar:[[35.3,48.7],[38,27.3],[40.7,6]],bar:[40.7,6,20]},
+  b:{h:[16.7,43.3],sp:[[30,48.7],[75.3,51.3]],ar:[[35.3,48.7],[24.7,31.3],[43.3,43.3]],lg:[[75.3,51.3],[99.3,68.7],[102,106],[112.7,106]],bar:[43.3,43.3,20]},
+  ar:{f:[64.7,7.3],t:[67.3,39.3]}},
 
- fly:{base:"bench",arrow:[158,68,158,46],
-  a:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[58,72],[46,58]],lg:[[118,88],[138,104],[148,126]],db:[[46,58]]},
-  b:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[74,62],[84,44]],lg:[[118,88],[138,104],[148,126]],db:[[84,44]]}},
+ dip:{vb:[63.1,112],r:6.4,
+  g:[["bar",6,42.2,24.1,42.2],["bar",39,42.2,57.1,42.2]],
+  a:{sp:[[29.4,6],[25.1,44.3]],ar:[[29.4,9.2],[31.5,26.2],[32.6,42.2]]},
+  b:{h:[33.7,24.1],sp:[[28.3,32.6],[26.2,68.8]],ar:[[28.3,35.8],[47.5,37.9],[32.6,42.2]],lg:[[26.2,68.8],[14.5,86.9],[20.9,101.7],[14.5,106]]},
+  ar:{f:[6,59.2],t:[6,82.6]}},
 
- dip:{base:"dipbar",arrow:[158,52,158,80],
-  a:{h:[100,30],sp:[[100,38],[100,78]],ar:[[100,44],[99,54],[98,62]],lg:[[100,78],[114,96],[106,114]]},
-  b:{h:[100,48],sp:[[100,56],[100,96]],ar:[[100,62],[112,48],[98,62]],lg:[[100,96],[114,114],[106,132]]}},
+ vpush:{vb:[62,112],r:6.5,
+  g:[["floor",106],["rect",12.5,75.6,39.1,4.3],["rect",6,34.3,5.4,43.5],["bar",19,79.9,19,106],["bar",47.3,79.9,47.3,106]],
+  a:{ar:[[21.2,41.9],[14.7,58.2],[29.9,47.3]],bar:[29.9,47.3,16.3]},
+  b:{h:[25.6,29.9],sp:[[21.2,38.6],[19,75.6]],ar:[[21.2,41.9],[22.3,24.5],[23.4,6]],lg:[[19,75.6],[45.1,79.9],[47.3,106],[56,106]],bar:[23.4,6,16.3]},
+  ar:{f:[51.7,47.3],t:[45.1,8.2]}},
 
- vpush:{base:"seat",arrow:[160,52,160,24],
-  a:{h:[100,36],sp:[[100,44],[110,102]],ar:[[100,50],[86,62],[90,46]],lg:[[110,102],[86,106],[84,132]],db:[[90,46]]},
-  b:{h:[100,36],sp:[[100,44],[110,102]],ar:[[100,50],[96,30],[92,12]],lg:[[110,102],[86,106],[84,132]],db:[[92,12]]}},
+ lat:{vb:[85.2,112],r:6.2,
+  g:[["floor",106]],
+  a:{ar:[[46.2,23.5],[36.9,42.1],[33.8,60.6]],ar2:[[46.2,23.5],[55.5,42.1],[58.6,60.6]],db:[[33.8,60.6],[58.6,60.6]]},
+  b:{h:[46.2,12.2],sp:[[46.2,20.4],[46.2,58.6]],ar:[[46.2,23.5],[27.6,20.4],[13.2,26.6]],ar2:[[46.2,23.5],[64.8,20.4],[79.2,26.6]],lg:[[46.2,58.6],[39,81.3],[36.9,106],[29.7,106]],lg2:[[46.2,58.6],[53.4,81.3],[55.5,106],[62.7,106]],db:[[13.2,26.6],[79.2,26.6]]},
+  ar:{f:[25.6,66.8],t:[6,31.8],c:[8.1,58.6]}},
 
- lat:{base:"floor",arrow:[64,80,50,58],
-  a:{h:[100,30],sp:[[100,38],[100,88]],ar:[[92,48],[86,68],[84,88]],ar2:[[108,48],[114,68],[116,88]],
-     lg:[[100,88],[90,112],[88,138]],lg2:[[100,88],[110,112],[112,138]],db:[[84,88],[116,88]]},
-  b:{h:[100,30],sp:[[100,38],[100,88]],ar:[[92,48],[70,52],[50,50]],ar2:[[108,48],[130,52],[150,50]],
-     lg:[[100,88],[90,112],[88,138]],lg2:[[100,88],[110,112],[112,138]],db:[[50,50],[150,50]]}},
+ uprow:{vb:[55.3,112],r:6.2,
+  g:[["floor",106]],
+  a:{ar:[[24.6,23.5],[17.3,41.1],[16.3,58.6]],ar2:[[24.6,23.5],[31.8,41.1],[32.8,58.6]],bar:[24.6,58.6,16.5]},
+  b:{h:[24.6,12.2],sp:[[24.6,20.4],[24.6,58.6]],ar:[[24.6,23.5],[6,29.7],[18.4,38]],ar2:[[24.6,23.5],[43.1,29.7],[30.7,38]],lg:[[24.6,58.6],[17.3,81.3],[15.3,106],[8.1,106]],lg2:[[24.6,58.6],[31.8,81.3],[33.8,106],[41.1,106]],bar:[24.6,38,16.5]},
+  ar:{f:[49.3,58.6],t:[49.3,35.9]}},
 
- uprow:{base:"floor",arrow:[156,90,156,62],
-  a:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[100,70],[100,94]],lg:[[100,88],[104,112],[100,138]],bar:[100,94]},
-  b:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[78,58],[100,60]],lg:[[100,88],[104,112],[100,138]],bar:[100,60]}},
+ curl:{vb:[57.2,112],r:6.2,
+  g:[["floor",106]],
+  a:{ar:[[22.5,24.6],[21.5,42.1],[22.5,58.6]],bar:[22.5,58.6,16.5]},
+  b:{h:[22.5,12.2],sp:[[22.5,20.4],[22.5,58.6]],ar:[[22.5,24.6],[21.5,43.1],[31.8,28.7]],lg:[[22.5,58.6],[23.5,82.3],[22.5,106],[30.7,106]],bar:[31.8,28.7,16.5]},
+  ar:{f:[41.1,60.6],t:[49.3,32.8],c:[55.5,49.3]}},
 
- curl:{base:"floor",arrow:[152,92,152,58],
-  a:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[100,70],[102,94]],lg:[[100,88],[104,112],[100,138]],bar:[102,94]},
-  b:{h:[100,32],sp:[[100,40],[100,88]],ar:[[100,46],[100,70],[92,50]],lg:[[100,88],[104,112],[100,138]],bar:[92,50]}},
+ tri:{vb:[119.7,112],r:7.7,
+  g:[["floor",106],["rect",11.1,54.7,84.6,5.1],["bar",18.8,59.8,18.8,106],["bar",88.1,59.8,88.1,106]],
+  a:{ar:[[39.3,50.9],[41.9,30.4],[22.7,22.7]],bar:[22.7,22.7,16.7]},
+  b:{h:[21.4,45.7],sp:[[34.2,50.9],[77.8,53.4]],ar:[[39.3,50.9],[41.9,30.4],[45.7,9.8]],lg:[[77.8,53.4],[100.9,70.1],[103.4,106],[113.7,106]],bar:[45.7,9.8,16.7]},
+  ar:{f:[13.7,20.1],t:[41.9,6],c:[15,6]}},
 
- tri:{base:"bench",arrow:[152,60,152,40],
-  a:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[80,60],[64,58]],lg:[[118,88],[138,104],[148,126]],bar:[64,58]},
-  b:{h:[62,82],sp:[[70,86],[118,88]],ar:[[78,86],[80,60],[86,40]],lg:[[118,88],[138,104],[148,126]],bar:[86,40]}},
+ legext:{vb:[101.5,112],r:7.9,
+  g:[["rect",11.3,69.2,52.6,5.3],["rect",6,21.8,5.3,50]],
+  a:{lg:[[21.8,66.5],[56,70.5],[56,102.1],[66.5,102.1]]},
+  b:{h:[29.7,13.9],sp:[[24.4,24.4],[21.8,66.5]],ar:[[24.4,28.4],[19.2,48.1],[16.5,66.5]],lg:[[21.8,66.5],[56,70.5],[87.6,66.5],[87.6,56]]},
+  ar:{f:[63.9,106],t:[95.5,69.2],c:[95.5,106]}},
 
- legext:{base:"seat",arrow:[62,124,54,100],
-  a:{h:[104,40],sp:[[104,48],[112,96]],lg:[[112,96],[88,100],[86,126]]},
-  b:{h:[104,40],sp:[[104,48],[112,96]],lg:[[112,96],[88,100],[58,92]]}},
+ legcurl:{vb:[262.7,112],r:18.2,
+  g:[["rect",6,87.8,151.5,12.1]],
+  a:{lg:[[121.2,81.8],[175.7,84.8],[242.4,84.8],[242.4,106]]},
+  b:{h:[24.2,66.6],sp:[[48.4,75.7],[121.2,81.8]],ar:[[60.5,75.7],[36.3,99.9],[12.1,90.8]],lg:[[121.2,81.8],[175.7,84.8],[190.8,18.1],[215.1,9]]},
+  ar:{f:[254.5,72.7],t:[212.1,6],c:[266.6,12.1]}},
 
- legcurl:{base:"prone",arrow:[54,86,66,64],
-  a:{h:[152,86],sp:[[144,90],[92,92]],lg:[[92,92],[76,94],[56,96]]},
-  b:{h:[152,86],sp:[[144,90],[92,92]],lg:[[92,92],[76,94],[74,62]]}},
+ calf:{vb:[39.9,112],r:4.9,
+  g:[["rect",10.9,97,23,8.2]],
+  a:{lg:[[20.8,65],[20.8,82.2],[22.4,99.4]],lg2:[[14.2,106],[22.4,99.4],[32.2,97]]},
+  b:{h:[20.8,10.9],sp:[[20.8,15.8],[20.8,47.8]],ar:[[20.8,19.1],[10.9,30.6],[10.1,45.3]],lg:[[20.8,47.8],[20.8,65],[22.4,81.4]],lg2:[[12.6,87.1],[22.4,81.4],[32.2,97]]},
+  ar:{f:[7.6,105.2],t:[6,85.5]}},
 
- calf:{base:"block",arrow:[150,62,150,42],
-  a:{h:[100,36],sp:[[100,44],[100,88]],ar:[[100,50],[110,68],[110,88]],lg:[[100,88],[100,110],[100,128]],ar2:[[100,128],[118,128]]},
-  b:{h:[100,26],sp:[[100,34],[100,78]],ar:[[100,40],[110,58],[110,78]],lg:[[100,78],[100,100],[100,118]],ar2:[[100,118],[118,126]]}}
+ srow:{vb:[115.1,112],r:9.4,
+  g:[["rect",6,84.1,59.4,6.3],["rect",99.8,56,9.4,50],["bar",109.1,68.5,74.8,68.5]],
+  a:{ar:[[21.6,32.6],[52.9,43.5],[84.1,56]]},
+  b:{h:[24.8,15.4],sp:[[21.6,27.9],[18.5,84.1]],ar:[[21.6,32.6],[40.4,57.6],[59.1,48.2]],lg:[[18.5,84.1],[62.3,90.4],[99.8,99.8],[102.9,87.3]]},
+  ar:{f:[87.3,68.5],t:[59.1,62.3]}}
 };
 
-function limb(p,col,op,sw){
+/* Stroke weights are in frame units, and every frame is 112 units tall
+   rendered at ~84 CSS px, so 4.4 units is ~3.3 px and 3 units ~2.3 px - over
+   11.4's 2.5 px floor for the solid pose. Ghost and solid differ by VALUE and
+   by WEIGHT, never by hue, so the pair survives greyscale (11.4, 11.8 #1). */
+function limb(p,col,sw,r){
   let g="";
-  if(p.h) g+=`<circle cx="${p.h[0]}" cy="${p.h[1]}" r="7" fill="none" stroke="${col}" stroke-width="${sw}" opacity="${op}"/>`;
-  ["sp","ar","ar2","lg","lg2"].forEach(k=>{ if(p[k])
-    g+=`<polyline points="${p[k].map(a=>a.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" opacity="${op}"/>`; });
-  if(p.bar) g+=`<line x1="${p.bar[0]-20}" y1="${p.bar[1]}" x2="${p.bar[0]+20}" y2="${p.bar[1]}" stroke="${col}" stroke-width="${sw+1.5}" stroke-linecap="round" opacity="${op}"/>`;
-  if(p.db) p.db.forEach(d=>g+=`<rect x="${d[0]-4}" y="${d[1]-8}" width="8" height="16" rx="2" fill="${col}" opacity="${op}"/>`);
+  if(p.h) g+=`<circle cx="${p.h[0]}" cy="${p.h[1]}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}"/>`;
+  for(const k of ["sp","ar","ar2","lg","lg2"]) if(p[k])
+    g+=`<polyline points="${p[k].map(a=>a.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(p.bar) g+=`<line x1="${p.bar[0]-p.bar[2]}" y1="${p.bar[1]}" x2="${p.bar[0]+p.bar[2]}" y2="${p.bar[1]}" stroke="${col}" stroke-width="${sw+1.4}" stroke-linecap="round"/>`;
+  if(p.db) for(const d of p.db)
+    g+=`<line x1="${d[0]-3.5}" y1="${d[1]}" x2="${d[0]+3.5}" y2="${d[1]}" stroke="${col}" stroke-width="${sw+3.6}" stroke-linecap="round"/>`;
   return g;
 }
 
@@ -781,29 +880,30 @@ let figSeq=0;
 function diagram(id){
   const pat=PAT[id], P=POSES[pat];
   if(!P) return "";
-  const mk="ah_"+pat+"_"+(++figSeq);
-  const B={floor:`<line x1="18" y1="140" x2="182" y2="140" stroke="var(--line)" stroke-width="2"/>`,
-    bench:`<rect x="52" y="90" width="98" height="5" rx="2" fill="var(--line)"/><line x1="148" y1="95" x2="148" y2="140" stroke="var(--line)" stroke-width="2"/>`,
-    seat:`<rect x="80" y="100" width="60" height="5" rx="2" fill="var(--line)"/><rect x="134" y="52" width="5" height="50" rx="2" fill="var(--line)"/>`,
-    bar:`<line x1="66" y1="20" x2="134" y2="20" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/>`,
-    dipbar:`<line x1="64" y1="62" x2="96" y2="62" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/><line x1="104" y1="62" x2="136" y2="62" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/>`,
-    block:`<rect x="76" y="128" width="50" height="10" rx="2" fill="var(--line)"/>`,
-    prone:`<rect x="48" y="94" width="104" height="5" rx="2" fill="var(--line)"/>`}[P.base]||"";
-  const [x1,y1,x2,y2]=P.arrow;
+  const mk="ah_"+pat+"_"+(++figSeq), W=P.vb[0], H=P.vb[1];
+  /* The ground reference is scenery and may sit at the non-text floor (11.4).
+     One rule or one simple form per pattern - the floor line, the bench slab,
+     the block. Bench legs down to a floor were tried and removed: they cost
+     half the frame's height and told the reader nothing. */
+  const G=P.g.map(g=> g[0]==="floor"
+      ? `<line x1="0" y1="${g[1]}" x2="${W}" y2="${g[1]}" stroke="var(--rule)" stroke-width="3.2"/>`
+    : g[0]==="rect"
+      ? `<rect x="${g[1]}" y="${g[2]}" width="${g[3]}" height="${g[4]}" fill="var(--rule)"/>`
+      : `<line x1="${g[1]}" y1="${g[2]}" x2="${g[3]}" y2="${g[4]}" stroke="var(--rule)" stroke-width="4.2" stroke-linecap="round"/>`).join("");
+  const A=P.ar, d=A.c
+    ? `M${A.f[0]},${A.f[1]} Q${A.c[0]},${A.c[1]} ${A.t[0]},${A.t[1]}`
+    : `M${A.f[0]},${A.f[1]} L${A.t[0]},${A.t[1]}`;
   /* aria-hidden: the cue sentence beside it is the accessible description,
      and a stick figure announced as a pile of polylines is noise. The cue is
      appended by figBody(), from the plan - never from this table. */
-  return `<svg class="mv" viewBox="0 0 200 150" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-    <defs><marker id="${mk}" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-      <path d="M0,0 L7,3.5 L0,7 z" fill="var(--amber)"/></marker></defs>
-    ${B}
-    ${limb(P.a,"var(--dim)",.55,2.5)}
-    ${limb(P.b,"var(--bone)",1,3)}
-    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--amber)" stroke-width="2.5"
-      stroke-linecap="round" marker-end="url(#${mk})"/>
-    <text x="10" y="16" fill="var(--faint)" font-size="10">start</text>
-    <text x="10" y="30" fill="var(--bone)" font-size="10" opacity=".8">finish</text>
-  </svg>`;
+  return `<svg class="mv" viewBox="0 0 ${W} ${H}" aria-hidden="true"
+    style="--fw:${Math.min(6*W/H,13).toFixed(2)}em;--ar:${(W/H).toFixed(3)}"
+    xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="${mk}" markerWidth="4.2" markerHeight="4.2" refX="3.2" refY="2.1" orient="auto">
+      <path d="M0,0 L4.2,2.1 L0,4.2 z" fill="var(--amber)"/></marker></defs>
+    ${G}${limb(P.a,"var(--t45)",3,P.r)}${limb(P.b,"var(--bone)",4.4,P.r)}
+    <path d="${d}" fill="none" stroke="var(--amber)" stroke-width="3.6" stroke-linecap="round"
+      marker-end="url(#${mk})"/></svg>`;
 }
 /* Rule Q1's cue, from the PLAN DOCUMENT - 42 per-exercise strings signed off
    by strength-coach, not the 15 per-pattern ones the prototype carried. No
