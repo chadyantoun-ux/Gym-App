@@ -2122,11 +2122,88 @@
     return pw.value * (1 + pr.value / 30);
   }
 
-  /* Rule S1 — the pain flag. The audit's regex, unchanged.
-     "no pain today" matches: an accepted false positive (audit §10), whose
-     whole cost is one held session. "painting" does not — \b sees the word.
-     Called on COMMIT only: per keystroke, "painting" passes through "pain". */
-  var PAIN_RE = /\b(pain|hurt|hurts|injur\w*|sharp|pinch\w*|tweak\w*|strain\w*)\b/i;
+  /* Rule S1b — the pain flag. Addendum §13.5, which REPLACES the audit's
+     eight-stem list with these 21 entries. Everything else in Rule S1 (audit
+     §10) is unchanged: the suppression scope, S1_LINES, S1a's clearing, the
+     per-exercise reach, the prohibitions.
+
+     "no pain today" matches: an accepted false positive (audit §10, reaffirmed
+     §13.5), whose whole cost is one held session. "painting" does not — \b
+     sees the word. Called on COMMIT only: per keystroke, "painting" passes
+     through "pain".
+
+     ONE REGEX, ONE BOOLEAN. §13.5 closes with "do not extend this into a
+     parser": no negation handling, no proximity, no body-part table, no
+     severity grading. The over-trigger is deliberate — a false positive costs
+     one held session and two lines of text, a false negative adds load to
+     something that hurts.
+
+     NO NOTICE-ONLY TIER. Every word below suppresses the increase AND shows
+     the notice. A notice that names a symptom and then says add 2.5 kg anyway
+     is the app commenting on his body and acting as if it had not (§13.5).
+
+     THE FIVE STEM HAZARDS. Every one is a word that appears in a real note,
+     and every one is the mistake made while "tidying" this list:
+        pain\w*  breaks on `painting`      -> pain|painful|painfully
+        numb\w*  breaks on `number`        -> numb|numbness
+        ach\w*   breaks on `achieve`       -> ach(?:e|es|ed|ing|y|ey)
+        stab\w*  breaks on `stability`     -> stabbing|stabbed
+        tear\w*  breaks on `teardrop`      -> tears?|tore|torn
+
+     `sore`/`soreness`/`DOMS` ARE REJECTED OUTRIGHT — on FREQUENCY, not
+     physiology (§13.5). Delayed-onset soreness is the expected result of a
+     five-day split in a surplus; a trigger that fires most weeks holds loads
+     that are progressing fine, suppresses V1's offer near-permanently through
+     painWindow, and teaches him to stop writing notes at all — which blinds
+     the other 20 words. The note field is the only recovery input the app has.
+     `ache` is in and `sore` is out for that reason alone. Do not "fix" this.
+
+     CONSIDERED AND EXCLUDED, do not add back without a coach ruling:
+        pop/popped/popping   "pop the hips" is a cue; painless noise is not a symptom
+        flare/flared         elbow flare is a bench form cue
+        shooting             "shooting for 5 reps"
+        grind*               a lift term — the speed copy says `never grinding`
+        locked/locking       `lockout`
+        tight/tightness      a coaching cue — "stay tight", "tight brace"
+        stiff, cramp*, burn/burning, pump, fatigue, tired, drained, beat up,
+        click*, crunch*, crepitus, unstable/instability, catch/catching,
+        bruise*, weird/odd/off, physio/doctor/MRI/cortisone
+     `pull`/`pulling` stay out (the movement pattern and half the program);
+     `pulled` is IN and is program-specific — this plan has no conventional
+     deadlift, so "pulled 200 today" is not a note he writes here, while
+     "pulled my hamstring" is. REVISIT THIS ONE ENTRY if a conventional
+     deadlift ever enters the plan.
+
+     Exported frozen as PHAT.PAIN_WORDS and compiled into the regex, so the
+     suite pins the LIST and not a regex literal (§13.6). §13.5 tabulates
+     **21 entries** and this array holds **30 fragments** — the table groups
+     spellings on one row (`pain`/`painful`/`painfully` is entry 1). Both
+     numbers are right; do not "correct" either to the other. Compiled, the
+     regex is character-identical to the one printed in §13.5. */
+  var PAIN_WORDS = Object.freeze([
+    "pain", "painful", "painfully",
+    "hurt", "hurts", "hurting",
+    "injur\\w*",
+    "sharp",
+    "pinch\\w*",
+    "tweak\\w*",
+    "strain\\w*",
+    "sprain\\w*",
+    "twinge[sd]?",
+    "ach(?:e|es|ed|ing|y|ey)",
+    "niggl\\w*",
+    "numb", "numbness",
+    "tingl\\w*",
+    "swollen", "swelling",
+    "impinge\\w*",
+    "inflam\\w*",
+    "stabbing", "stabbed",
+    "tears?", "tore", "torn",
+    "spasms?",
+    "pulled",
+    "g(?:ave|ives|iving) way"
+  ]);
+  var PAIN_RE = new RegExp("\\b(?:" + PAIN_WORDS.join("|") + ")\\b", "i");
   function painFlag(note) {
     return typeof note === "string" && PAIN_RE.test(note);
   }
@@ -2241,6 +2318,24 @@
     var m = C[0].w;
     for (var i = 1; i < C.length; i++) if (C[i].w < m) m = C[i].w;
     return m;
+  }
+  /* Rule P1.2a — the REPEAT TARGET. Addendum §13.1. The heaviest load held
+     for at least half the prescribed sets, rounded up: sort descending, take
+     the k-th largest where k = ceil(n / 2). The upper median.
+
+     NOT max — that prescribes a load he held once (that is the whole of B-08,
+     reintroduced on the repeat path). NOT min — that sends him backwards
+     after a near miss. NOT C[0].w — set order is not intent and the app must
+     not infer it, so 120/100/100 and 100/100/120 must return the same number.
+
+     Named repeatLoad, not `top` (CLAUDE.md §7: a top-level `top` collided
+     with window.top and black-screened the app) and not `mode` (it is not
+     the most frequent value). Sorts a COPY; C stays in logged order, because
+     the case 2 list is a record of what happened. */
+  function repeatLoad(C) {
+    if (!C || !C.length) return NaN;
+    var ws = C.map(function (x) { return x.w; }).sort(function (a, b) { return b - a; });
+    return ws[Math.ceil(ws.length / 2) - 1];
   }
   function sumR(C) {
     var t = 0;
@@ -2599,13 +2694,30 @@
 
   /* -------------------------------------------------------------- P1 */
 
-  /* Rule P1 — power-day progression (audit §3), with Z1/Z2/G1/I2/S1.
-     C is the first ex.s completed sets, already sliced by verdict(). */
+  /* Rule P1 — power-day progression (audit §3), with Z1/Z2/G1/I2/S1,
+     case 2 amended by Rule P1.2a (addendum §13.1).
+     C is the first ex.s completed sets, already sliced by verdict().
+
+     THE WORKING LOAD IS min(w in C) — B-08, unchanged. On top of it:
+       R       = repeatLoad(C), the upper median — case 2's target
+       backoff = R > load, i.e. at least one set fell BELOW R
+       mixed   = max > load, i.e. the loads were not all equal
+
+     `equal` is RETIRED as case 2's trigger. It fired on ANY inequality, so a
+     set ABOVE the working load read as a failed prescription: 100/100/120 at
+     5/5/5 earned a worse instruction than 100/100/100 at 5/5/5. Doing more
+     returned less — the B-07 failure class, the app punishing a good session.
+     A set above the working load is not a failure and case 2 must not see it.
+     `mixed` survives only as a COPY variant in cases 3 and 4, where the
+     sentence makes a claim about every set and has to stay true.
+
+     Float-tolerant on 0.01: 2.5 kg steps arriving as parsed strings. */
   function verdictPower(ex, C, pain) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
-    var load = minW(C), top = maxW(C);
-    var equal = (top - load) <= 0.01;
+    var load = minW(C), top = maxW(C), R = repeatLoad(C);
+    var backoff = (R - load) > 0.01;
+    var mixed = (top - load) > 0.01;
     var word = loadWord(load, im);
     var hold = mk("", "Stay at " + word + " until all " + s + " sets reach " + hi + " reps.", "", "P1.5");
 
@@ -2616,38 +2728,54 @@
       return mk(th.t, th.rule === "1" ? th.x + " next session." : th.x, "", "P1." + th.rule);
     }
 
-    /* 2 — the sets were not matched. Repeat the heaviest, which by
-       construction can never be 0: if it were, every set would be 0 and
-       `equal` would be true, so this branch could not have fired. */
-    if (!equal) {
+    /* 2 — the sets were not matched. Fires on `backoff` only: a set fell
+       BELOW the repeat target. Repeat at R, the load he did most of his sets
+       at, never the max.
+
+       Rule Z2's invariant HOLDS, for a new reason (§13.1 withdraws the old
+       sentence "the repeat target is max(weights in C)" but keeps its
+       conclusion): this branch runs only when R > load, and load >= 0 by Z1,
+       so R > 0 always. `0 kg` stays unreachable from every branch.
+
+       The list is rendered in LOGGED ORDER, never sorted — it is a record of
+       what happened, R is the instruction, and both are on screen on purpose
+       so he can see the app saw the odd set. */
+    if (backoff) {
       var list;
       if (anyZero(C)) {
         list = C.map(function (x) { return loadWord(x.w, im); }).join(" / ");
       } else {
         list = C.map(function (x) { return kg(x.w); }).join(" / ") + " kg";
       }
-      return mk("down", "Sets not matched: " + list + ". Repeat " + loadWord(top, im) +
+      return mk("down", "Sets not matched: " + list + ". Repeat " + loadWord(R, im) +
         " until all " + s + " sets reach " + hi + " reps.", "", "P1.2");
     }
 
     var mr = minRep(C);
 
     /* 3 — too light, by Rule G1's step. Suppressed by a pain note (Rule S1):
-       every increase downgrades to the hold. */
+       every increase downgrades to the hold.
+
+       `or above` on `mixed` (§13.1): the sentence claims he did EVERY set at
+       `word`, and on 100×7, 100×7, 120×7 one of them was 120. The step is
+       still computed off the working load — only the claim widens. */
     if (mr >= hi + 2) {
       if (pain) return hold;
       var step = g1Step(load, mr, hi);
-      var head3 = repWord(mr) + " at " + word + " on every set. Too light. ";
+      var head3 = repWord(mr) + " at " + word + (mixed ? " or above" : "") + " on every set. Too light. ";
       return mk("up", head3 + (load === 0 ? "Add " + kg(step) + " kg." : "Go to " + kg(load + step) + " kg."),
         incrementLine(ex), "P1.3");
     }
 
-    /* 4 — top of the range on every set. Also suppressed by a pain note. */
+    /* 4 — top of the range on every set. Also suppressed by a pain note.
+       The LOADED form is UNCHANGED even when `mixed` — it claims reps, not
+       load, and is already true. Only the zero form names a load for every
+       set, so only it takes ` or above` (§13.1). */
     if (mr >= hi) {
       if (pain) return hold;
       var inc = incOf(ex);
       return mk("up", load === 0
-        ? "Top of range on all " + s + " sets at " + word + ". Add " + kg(inc) + " kg next session."
+        ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + kg(inc) + " kg next session."
         : "Top of range on all " + s + " sets. Go to " + kg(load + inc) + " kg next session.",
         incrementLine(ex), "P1.4");
     }
@@ -6255,6 +6383,16 @@
     workingLoadStrict: workingLoadStrict,
     e1rm: e1rm,
     painFlag: painFlag,
+    /* Rule S1b — the word list itself, frozen, as regex-source fragments in
+       the order §13.5 tabulates them. Exported so the suite pins the LIST
+       rather than a regex literal: a test that asserts on PAIN_RE's source
+       passes whenever someone "tidies" a stem into \w*, and `numb\w*` matching
+       `number` is exactly the failure it would miss. Nothing may push onto it.
+       `sore` is absent DELIBERATELY — see the ruling above painFlag. */
+    PAIN_WORDS: PAIN_WORDS,
+    /* Rule P1.2a — the repeat target, exported alone so the upper median can
+       be tested without assembling a verdict string. */
+    repeatLoad: repeatLoad,
     loadWord: loadWord,
     incrementLine: incrementLine,
     g1Step: g1Step,
