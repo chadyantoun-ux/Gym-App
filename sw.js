@@ -36,7 +36,14 @@
 
 'use strict';
 
-var VERSION = 'v1';
+/* v2 (2026-09-11, WO-005 Wave 6a): first version any browser has ever seen,
+   because index.html gained its registration in the same commit - before it,
+   nothing called register() and v1 was never installed anywhere. Bumped
+   anyway, and the reason is the rule above: the SHELL FILE LIST changed under
+   v1 when B-68 added the four icons, so v1 and v2 do not describe the same
+   set of files. A version that was correct in the repo but stale in the file
+   list is exactly the thing this constant exists to discard. */
+var VERSION = 'v2';
 var PREFIX  = 'phat-shell-';
 var CACHE   = PREFIX + VERSION;
 

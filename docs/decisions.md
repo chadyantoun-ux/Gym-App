@@ -1427,3 +1427,42 @@ substrings of `docs/coach-audit-addendum.md` §8.6, checked off-harness against 
 (modulo the document's hard line wrapping) and then transcribed into S29 from the document rather
 than copied from the code, so the two cannot drift silently. Backend's report said 19; the true
 count is 22 — 18 in `DIET_COPY` and 4 in `DIET_LABEL`. No string differs.
+
+## 2026-09-11 — Two agents killed mid-run by a session rate limit; what was kept and why
+
+`frontend-engineer` (Home macro row + E-4 PWA wiring) and `backend-engineer`
+(the `wdOf` round-trip) both terminated on an API 429 before reporting or
+committing. Three files were left modified in a shared worktree, which is the
+state CLAUDE.md §4b and WO-005 §7.1 exist to prevent turning into lost work.
+
+**Assessed rather than assumed.** `index.html` and `sw.js` were complete —
+manifest link, apple-touch-icon, `theme-color` on the repo token `#1c1b1a`,
+the registration block, the macro row reading `dietTargets`, and `VERSION`
+bumped to `v2`. `logic.js` had landed the load-bearing half (`calDate`, and
+`wdOf` delegating to it) and **not** the smaller half (a `reason` code meaning
+"the date could not be read"). Kept all three: each is coherent on its own and
+reverting would have discarded a closed P2 to avoid an open one.
+
+**Verified by the main session, because neither agent survived to do it.**
+`node --check` on both scripts; `dietTargets` driven over the four impossible
+dates and all seven weekdays; the app booted from `file://` at 400 px with
+zero console errors and zero horizontal overflow; the suite re-run headless.
+
+**A test was changed, so it is justified here.** S29's *"a date that ROLLS OVER
+makes a confident claim about a day that does not exist"* was written by
+`qa-engineer` as OBSERVED — it asserted the bug (`wdOf("2026-02-30") === "Mon"`,
+`claimsToday === true`) and its own comment said *"when it is fixed, this test
+inverts."* It now asserts the corrected behaviour. **Two residuals were not
+fixed and remain pinned as OBSERVED inside the same test**, rather than deleted
+with it: `.date` still echoes the impossible string, and `reason` still reads
+`"manual"` when nothing was switched. Inverting the headline assertion while
+silently dropping the residuals would have been the exact failure the OBSERVED
+convention exists to stop.
+
+**A copy defect found by looking at the rendered screen, not by an assertion.**
+Onboarding printed `Logged as today's entry.` on a first run, where nothing has
+been logged. The sentence is `vWeight`'s, where it is gated on `mine` and is
+true. Pasted into onboarding it is a false claim on the first screen he ever
+sees — the same class as the hardcoded day type that cost 700 kcal: copy that
+was true where it was written and a lie where it was pasted. The suite was green
+across this the whole time; it cannot see the shell.

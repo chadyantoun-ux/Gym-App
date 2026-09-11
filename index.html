@@ -4,6 +4,28 @@
 <meta charset="utf-8">
 <title>PHAT Log</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!-- ==== E-4: PWA ==========================================================
+     The manifest is what makes this installable to the home screen instead of
+     a bookmark; the apple-touch-icon is the same job on iOS, which does not
+     read the manifest's icon list for the home-screen tile.
+     BOTH ARE INERT ON file://. A manifest that cannot be fetched costs the
+     install prompt and nothing else - it cannot stop a single line of this
+     page rendering, which is why they are safe to sit above the stylesheet.
+     The registration itself is at the FOOT of this file, after the app, and
+     is a hard no-op on file://. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-180.png">
+<!-- THE ONE COLOUR LITERAL OUTSIDE :root, AND IT IS NOT A STYLE CHOICE.
+     A meta attribute cannot read a custom property - the browser paints the
+     status bar and the task-switcher card from this string before any CSS
+     exists - so the token cannot be referenced here, only COPIED. It is
+     --bg, byte for byte. IF --bg MOVES, MOVE THIS AND manifest.webmanifest's
+     theme_color / background_color WITH IT; there is no mechanism that will
+     tell you. (Some older docs give #14100E. That value appears nowhere in
+     this codebase and is stale text, not a spec.) -->
+<meta name="theme-color" content="#1c1b1a">
+
 <!-- B-67/B-63. Archivo, the design face, as ONE @font-face with the woff2
      base64-inlined. No CDN and no @import: this app opens from file:// with
      the network off, so a fetch is not available to it. A separate file
@@ -659,6 +681,28 @@
      without renumbering a single stored id (C-5). */
   .daybtn .wd{color:var(--faint); font-size:.6875rem; font-weight:800;
     letter-spacing:.12em; text-transform:uppercase; display:block; margin-bottom:3px}
+
+  /* The Home macro strip (spec 13.7, B-29). It is NOT a control: the spec
+     gives it as cells, the control inventory has no row for it, and the Diet
+     tab is already one tap away in the dock. Nothing here is tappable, so it
+     adds nothing to the 44px inventory.
+     ONE LINE OF FIGURES, not the Diet tab's four cells, because the engine
+     ships `text.strip` for exactly this row and a joined string cannot be
+     re-spaced or re-rounded by a layout. The mono size is deliberately below
+     the Diet tab's 1.375rem - this is a reminder, and the tab is the screen
+     that owns the detail.
+     MEASURED at 400px: the longer of the two strings (the training day,
+     `3,200 · 170 g · 300 g · 145 g`) sets 271px inside a 334px content box -
+     one line, 63px spare - and 271px inside 327px at 393px. At 200% text it
+     wraps once, at its own separator, so no figure is split from its unit.
+     overflow-wrap is `anywhere` as a floor and not a plan: it can only fire
+     on a viewport narrower than a single figure. */
+  .mstrip{background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--r); padding:13px var(--s4)}
+  .mstrip .day{color:var(--bone); font-size:.875rem; font-weight:800; line-height:1.35}
+  .mstrip .key{margin-top:10px}
+  .mstrip .v{font-family:var(--mono); font-size:1.0625rem; color:var(--bone);
+    line-height:1.3; margin-top:4px; display:block; overflow-wrap:anywhere}
 
   /* ---- SETTINGS ---------------------------------------------------------
      Three sections and nothing else. What is NOT here is the point: the
@@ -1542,12 +1586,52 @@ function vHome(){
       <span class="chev" aria-hidden="true">&rsaquo;</span></button>`;
   });
   h+=`</div>`;
-  /* THE MACROS ROW IS DELIBERATELY ABSENT. Spec §13.7 requires it to share
-     the Diet screen's numbers — "if the two ever disagree, one of them is
-     lying" — and those numbers are W1's, which do not exist in logic.js and
-     are not mine to invent. Four fabricated cells on the first screen of the
-     app is worse than four missing ones. Reinstate it with W12, from the same
-     source, and re-measure the no-scroll budget when you do. */
+  /* THE MACRO STRIP (spec §13.7, B-29). W9 left this out because the numbers
+     did not exist in logic.js and four fabricated cells are worse than four
+     missing ones. W12 landed them, so it goes in now, from the same source.
+
+     TWO STRINGS, BOTH READ OFF THE ENGINE, NEITHER ASSEMBLED HERE:
+     `dietTargets().label` and `.text.strip`. `strip` exists in logic.js FOR
+     THIS ROW — "the Home row's joined form, exactly as the coach wrote it" —
+     so that no screen can re-space or re-round a coach-approved figure, and
+     `label` carries the engine's `claimsToday` decision rather than a guess
+     made here.
+
+     THIS IS THE LAST PLACE THE 700 kcal BUG COULD RE-ENTER. The design
+     prototype hardcoded the home strip to `Today — high-carb training day` /
+     3,200 / 300 g, so on a Wednesday or a Sunday — PHAT's two rest days — it
+     claimed a 700 kcal and 240 g surplus under the word "Today", on the two
+     days the low-carb floor exists to protect. So: no day type is assumed
+     here, no number is typed here, no label is built here, and **no view
+     argument is passed** — `S.dietView` is the Diet tab's segment and is a
+     view of some other day; Home always speaks about today or not at all.
+
+     SAME SOURCE AS THE DIET SCREEN (§13.7: "if the two ever disagree, one of
+     them is lying"). One function, one call each, no second table.
+
+     PLACEMENT: below the day list, which is where §13.1 puts it and also the
+     only place that spends none of the day list's no-scroll budget. See the
+     report for the re-measurement at 393 × 852.
+
+     FAIL SILENT, NEVER FAIL CONFIDENT (§0.7): a throw costs the strip, never
+     the day list, and there is no fallback set of macros in this file to fall
+     back to — inventing one is the exact defect above.
+
+     THE KEY LINE IS THE ONLY COPY THIS BLOCK OWNS. `strip` is four bare
+     figures and is unreadable, by eye or by screen reader, without saying
+     which is which; the Diet tab carries per-cell labels and this row cannot.
+     It sits ABOVE the figures so the reading order is key-then-numbers in
+     both. New copy — flagged for `ux-designer`. */
+  let dt=null;
+  try{ dt=PHAT.dietTargets(PHAT.localDate(),PHAT.PHAT_PLAN); }catch(err){ dt=null; }
+  if(dt&&dt.label&&dt.text&&typeof dt.text.strip==="string"&&dt.text.strip){
+    h+=`<div class="pad mt16"><span class="lbl secrule">Today's macros</span>
+      <div class="mstrip">
+        <p class="day">${esc(dt.label)}</p>
+        <span class="lbl key">Calories &middot; protein &middot; carbs &middot; fat</span>
+        <span class="v">${esc(dt.text.strip)}</span>
+      </div></div>`;
+  }
   return h;
 }
 
@@ -1581,8 +1665,15 @@ function vOnboard(){
         <input id="bwin" inputmode="decimal" placeholder="kg" value="">
         <button data-bwact="+" aria-label="Bodyweight up 0.1 kg">+</button></span>
     </div>
-    <p class="tiny mt12">Logged as today's entry. Weigh daily &mdash; the trend is what
-      the app reads. Optional: leaving it empty writes nothing.</p></div>
+    <!-- NOT "Logged as today's entry." here. That sentence is the Weight tab's
+         (vWeight, gated on `mine`) and it is TRUE there because something has
+         been logged. On first run nothing has, so onboarding stating it is a
+         false claim on the very first screen he sees - the same class as the
+         hardcoded day type that cost 700 kcal: copy that was true where it was
+         written and a lie where it was pasted. Found by looking at the rendered
+         screen, not by an assertion. -->
+    <p class="tiny mt12">Weigh daily &mdash; the trend is what the app reads.
+      Optional: leaving it empty writes nothing.</p></div>
   <div class="pad mt24" style="padding-bottom:var(--s6)">
     <button class="primary" id="ob-start">Start with an empty log</button></div>`;
 }
@@ -4323,6 +4414,74 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   clearTimeout(slow);
   render();
 })();
+})();
+</script>
+
+<!-- ================================================== E-4: the registration
+     DELIBERATELY THE LAST THING IN THIS FILE, in its own IIFE, after the app
+     has already been handed to the renderer. A service worker that caches a
+     half-finished shell persists on his phone, survives a reload, and cannot
+     be cleared from here - so it is wired after everything else, and it is
+     wired so that it cannot take the app down with it.
+
+     Five constraints, each with a reason, all of them enforced by what is
+     NOT in this block as much as by what is:
+
+     1. file:// IS A NO-OP, AND IT IS GUARDED BEFORE register(), NOT CAUGHT
+        AFTER IT. file:// stays the honest test path: opening index.html
+        directly must work with the network off and print nothing to the
+        console. A caught rejection still logs in some browsers, and an error
+        he learns to ignore on his primary test path is an error he will
+        ignore when it is real. Side benefit worth keeping: because no worker
+        runs on file://, opening the file always shows the bytes on disk and
+        can never show him a cached old build.
+     2. AFTER `load`, NEVER BEFORE. register() starts sw.js's install, which
+        fetches the whole shell. Competing with first paint makes the app
+        slower to open on exactly the connection it exists for.
+     3. NO location.reload(), ANYWHERE. The atomic-refresh ruling
+        (decisions.md, 2026-09-10) stands: a stale shell costs him one launch,
+        a reload under his thumb between sets costs him a set. There is no
+        `controllerchange` listener and no `updatefound` listener in this file
+        - not a disabled one, not a commented one. There is no code path to a
+        reload because there is no listener to write one in.
+     4. NO skipWaiting. Not called here, and never messaged to sw.js (it has a
+        SKIP_WAITING handler; nothing in this app sends it, and nothing should
+        start). A new worker waits for the old pages to close, so a fresh
+        index.html can never activate underneath a page already running the
+        old logic.js - this project's black-screen failure mode.
+     5. A FAILURE TO REGISTER MAY NOT COST HIM THE APP. try/catch around the
+        call and a rejection handler on the promise, covering private mode, a
+        blocked origin, a disabled worker and a 404 on sw.js. With no worker
+        at all this is still a complete offline logger against localStorage;
+        the worker only decides whether the SHELL survives a cold start with
+        the radio off. It is an upgrade, never a dependency.
+
+     NOTHING HERE RENDERS, ANNOUNCES OR TOASTS. An update is not an event he
+     has to be told about, and a UI that reacts to a background fetch is a UI
+     that can re-render mid-edit (B-19). console.info only. -->
+<script>
+(function(){
+  "use strict";
+  /* Constraint 1. Protocol first, capability second. */
+  var p = location.protocol;
+  if (p !== "https:" && p !== "http:") return;
+  if (!("serviceWorker" in navigator)) return;
+  /* Constraint 2. */
+  addEventListener("load", function(){
+    /* Constraint 5. Relative "./sw.js" so the same file is correct at the
+       domain root, on a Vercel preview URL and under a sub-path; the default
+       scope is sw.js's own directory, which is what we want and what sw.js's
+       abs() already assumes. */
+    try{
+      navigator.serviceWorker.register("./sw.js").then(function(reg){
+        console.info("[phat] sw registered, scope", reg.scope);
+      }, function(err){
+        console.info("[phat] sw not registered:", err && err.message);
+      });
+    }catch(err){
+      console.info("[phat] sw registration threw:", err && err.message);
+    }
+  });
 })();
 </script>
 </body>

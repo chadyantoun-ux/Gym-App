@@ -6101,15 +6101,48 @@
     return "";
   }
 
-  /* wdOf("2026-09-13") -> "Sun", or null for an unusable date.
+  /* calDate("2026-09-13") -> "2026-09-13". null for any string that is not a
+     day the calendar has ever had.
+
+     WHY A ROUND TRIP AND NOT A SHAPE CHECK. DATE_RE proves the SHAPE of a
+     string and nothing about the day it names, and Date.parse does not close
+     the gap: V8 does NOT reject "2026-02-30T12:00:00", it rolls the day
+     forward into Monday 2 March and returns a perfectly good timestamp. So a
+     regex plus an isNaN check passes a date that has never existed, and every
+     rule downstream then speaks about it confidently. The parsed date is
+     therefore formatted back out through localDate() and required to equal
+     what came in. "2026-02-30", "2026-02-29" (2026 is not a leap year),
+     "2026-04-31" and "2026-00-10" all fail that. "2026-13-45" fails earlier,
+     in Date.parse. No real calendar day can fail it, which is the point:
+     1,095 consecutive dates and 12 timezones are pinned on the other side.
+
+     Local noon like dateAdd/draftAge/wdOf, and localDate() reads local
+     components, so the comparison is like for like in every zone. No zone on
+     earth skips noon, so no DST shift can make a real date fail the trip.
+     Never toISOString(): that is UTC and would fail every date west of
+     Greenwich after lunch (B-03).
+
+     Deliberately NOT exported. `wdOf(d) !== null` already answers "is this a
+     real day", and one answer is better than two that can drift apart. */
+  function calDate(dateStr) {
+    if (typeof dateStr !== "string") return null;
+    var s = dateStr.trim();
+    if (!DATE_RE.test(s)) return null;
+    var t = Date.parse(s + "T12:00:00");
+    if (isNaN(t)) return null;
+    return localDate(new Date(t)) === s ? s : null;
+  }
+
+  /* wdOf("2026-09-13") -> "Sun", or null for any date that is not real.
      Anchored at local noon like dateAdd/weekStart/draftAge, so a DST shift
      moves the hour and never the day. Never toISOString(): that is UTC and
-     would put Chady's Sunday on a Saturday for half the year (B-03). */
+     would put Chady's Sunday on a Saturday for half the year (B-03).
+     A rolled-over date answers null rather than the weekday it rolled into:
+     "2026-02-30" is not a Monday, it is not a day. */
   function wdOf(dateStr) {
-    if (typeof dateStr !== "string" || !DATE_RE.test(dateStr.trim())) return null;
-    var t = Date.parse(dateStr.trim() + "T12:00:00");
-    if (isNaN(t)) return null;
-    return WD_BY_DAY[new Date(t).getDay()] || null;
+    var s = calDate(dateStr);
+    if (s === null) return null;
+    return WD_BY_DAY[new Date(Date.parse(s + "T12:00:00")).getDay()] || null;
   }
 
   /* planTrainingWeekdays(plan) -> ["Mon","Tue","Thu","Fri","Sat"] for PHAT.

@@ -10193,22 +10193,30 @@ function(a){
 });
 
 T("DT1 / a date that ROLLS OVER makes a confident claim about a day that does not exist", function(a){
-  /* The sibling backend did not name, and the worse of the two. 2026-02-30
-     also passes DATE_RE, but Date.parse does NOT return NaN for it - V8 rolls
-     it into 2 March, a Monday - so the app says the training-day sentence
-     about a date that has never existed, with .date reading 2026-02-30. Same
-     class as the above, one step worse because the output is confident.
-     P2, backend: wdOf could round-trip the parse (format the parsed date and
-     require it to equal the input) and return null, which closes both this
-     and the .date echo in one change.
-     OBSERVED, not correct. When it is fixed, this test inverts. */
-  a.ok(!isNaN(Date.parse("2026-02-30T12:00:00")), "V8 parses it rather than rejecting it");
-  a.eq(P.wdOf("2026-02-30"), "Mon", "OBSERVED: it rolls into Monday 2 March");
+  /* INVERTED 2026-09-11 (WO-005). This test was pinned OBSERVED asserting the
+     bug - wdOf returned "Mon" for 2026-02-30 and the app stated the
+     training-day sentence about a day that has never existed. logic.js now
+     round-trips the parse in calDate(): the parsed date is formatted back out
+     through localDate() and required to equal the input, so a date V8 rolls
+     forward answers null instead of the weekday it rolled into.
+     The assertions below are now the CORRECT behaviour, not the observed one.
+     Two residuals survive and stay OBSERVED at the foot of this test - they
+     are cosmetic next to the confident claim, which is closed. */
+  a.ok(!isNaN(Date.parse("2026-02-30T12:00:00")), "V8 parses it rather than rejecting it - which is WHY the round trip is needed");
+  a.eq(P.wdOf("2026-02-30"), null, "FIXED: a day the calendar never had has no weekday");
   var r = P.dietTargets("2026-02-30");
-  a.eq(r.claimsToday, true, "OBSERVED: the app claims today off a date that does not exist (P2, backend)");
-  a.eq(r.label, DT_TRAIN_TODAY, "OBSERVED");
-  a.eq(r.date, "2026-02-30", "OBSERVED: and echoes the impossible date");
-  a.eq(P.wdOf("2026-02-29"), "Sun", "OBSERVED: 2026 has no 29 February and this rolls into 1 March");
+  a.eq(r.claimsToday, false, "FIXED: the app makes no claim about a date that does not exist");
+  a.eq(r.label, "Training day", "FIXED: no `Today -` prefix");
+  a.ok(r.label.indexOf("Today") === -1, "FIXED: the word Today appears nowhere in the label");
+  a.eq(P.wdOf("2026-02-29"), null, "FIXED: 2026 has no 29 February, and it no longer rolls into 1 March");
+  /* RESIDUAL 1, OBSERVED: .date still hands the impossible string to a
+     renderer, though the function already knows it could not read it.
+     RESIDUAL 2, OBSERVED: reason reads "manual" when nothing was switched -
+     there is still no code meaning "the date could not be read". Both P2,
+     backend; neither can produce a wrong number, only a wrong label on a
+     path no shipping caller reaches. */
+  a.eq(r.date, "2026-02-30", "OBSERVED residual: still echoes the impossible date");
+  a.eq(r.reason, "manual", "OBSERVED residual: still says manual when nothing was switched");
   /* the real leap day, which is not a defect at all */
   a.eq(P.wdOf("2024-02-29"), "Thu", "a real leap day reads correctly");
   a.eq(P.dietTargets("2024-02-29").dayType, "training", "and lands on the day type Thursday says");
