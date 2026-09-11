@@ -1,6 +1,10 @@
 # WO-004 · W5 — UX spec: the nine screens on the new visual language
 
 Author: `ux-designer` · Date: 2026-09-10 · Status: ready for `frontend-engineer`
+**Amended 2026-09-11 (WO-005).** Three questions that blocked real fixes are ruled: the invisible
+calorie hold (§7.5.1), the figures' pose convention (§11.2, §11.3, §11.5, §11.8) and the
+advice-enclosure colour (§2.1.1). Every amendment is listed in **§17**, which is the section to read
+if you only want what changed tonight.
 Implements: WO-004 §W5 · Consumed by: W6 (foundation), W7 (session), W8 (summary), W9 (train +
 onboarding), W10 (trend), W11 (weight), W12 (diet), W13 (settings + demo), W14 (plans), W15 (editor)
 Reads: `docs/design/PHAT App.dc.html`, `docs/design/_ds/modernist-…/styles.css`,
@@ -322,8 +326,9 @@ Chady's palette. So the distinction is carried by **form**, four ways at once:
 | | Advice | Refusal |
 |---|---|---|
 | Enclosure | 3 px rule on the **left edge only** | **2 px border on all four sides** |
+| Rule colour | **`--dim`, in every state, on every screen** (§2.1.1) | `--red-hi` |
 | Glyph | none | a literal `!`, `aria-hidden` |
-| Headline | the kicker (`VERDICT`, `WAITING`, `SPEED WORK`) | `Not saved.` / `Could not …` |
+| Headline | the kicker (`VERDICT`, `WAITING`, `SPEED WORK`, `CALORIE DECISION`) | `Not saved.` / `Could not …` |
 | Contents | text only | **tappable rows** — the only block in the app that has them |
 
 Greyscale it and all four survive. If W6 wants a token for the refusal border, it must measure
@@ -332,6 +337,42 @@ carrier, so the app is correct with or without it.
 
 **Advice may never borrow the refusal treatment.** The one exception, unchanged from WO-003 §2.2
 rule 6: the **pain notice** may use it, because there the app really is declining to do something.
+
+### 2.1.1 The enclosure colour — ruled once, app-wide (WO-005)
+
+**Ruled: the advice rule is `--dim`. Amber does not come back.** W11 shipped `--dim`; that is correct
+and it is now the rule rather than an engineer's call at 3 a.m. `wo-003-train-weight.md` §3.8 and the
+design prototype specify amber and are **superseded on this point**.
+
+State it once, here, so no screen re-litigates it:
+
+| | |
+|---|---|
+| Advice enclosure, everywhere | 3 px `--dim` left rule · kicker · no glyph · no border · **the same in every state of every block** |
+| Refusal enclosure, everywhere | 2 px `--red-hi` on four sides · `!` · refusal headline |
+| Amber | Reserved for **the live thing**: the primary action fill, the current pip, the target number, the figure's arrow, a selected segment, the focus ring. Never the enclosure of a paragraph |
+| Changing this | An edit to this section, reviewed here. Not a decision a view makes |
+
+Four reasons, in the order that decides it:
+
+1. **§4.7 rule 6 already forbids it.** Status is never carried by colour, so one enclosure has to
+   render `VERDICT` and `WAITING` identically. Whatever hue that enclosure wears, it wears while
+   saying `Nothing to say until all 3 sets are in.` A colour that is present when there is nothing to
+   say is by construction not a signal — it is decoration that has borrowed the accent.
+2. **The palette has exactly one accent and it is already spent.** Amber means *here, now, act on
+   this*. The sentence most often rendered inside this enclosure is `Change nothing.` Spending the
+   accent on a static paragraph devalues it on every control that uses it to mean something.
+3. **§3.8's normative content survives, and it was never the hue.** What that line required was "the
+   same colour in all seven states — nothing on this screen is encoded in hue." `--dim` satisfies it
+   completely. §3.8 is additionally marked `[REF]` against a build that no longer exists.
+4. **Contrast does not decide it.** `--dim` is `--t70` — comfortably over the 3 : 1 non-text floor as
+   a 3 px rule on both grounds; amber is 7.9 : 1. Both pass. This is a meaning decision, not a
+   measurement one, which is why it is ruled rather than measured.
+
+**Binding on:** the verdict slot in all four kickers (§4.7), the speed flag (§4.9), the pain notice
+where it does *not* take the refusal treatment (§4.8), the reintroduction offer (§4.11), the deload
+banner (§13.6), the calorie decision (§7.3), and export success (§10.4). One shape, one colour,
+seven screens.
 
 ## 2.2 Blocked save — the screen
 
@@ -1000,10 +1041,18 @@ Everything in `wo-003-train-weight.md` Flow 3 binds unchanged. The design's own 
 7-day average (with its day count)  ← the biggest thing on the screen
 change vs last week, uncoloured
 calorie decision card               ← PHAT.calorieAdvice, verbatim
-  acknowledgement control            ← only in tone "act"
+  advice sentence   adv.text         ← the loudest line in the card
+  sub-line          adv.subline
+  hold note         adv.holdNote      ← only while a hold is on AND a band is showing (§7.5.1)
+  set control                         ← only in tone "act"
+  clear control                       ← whenever adv.holdUntil is set (§7.5.1)
 entry stepper + LOG TODAY / UPDATE
 last 7 entries
 ```
+
+**The set control and the clear control can never both render.** `tone === "act"` and
+`holdUntil !== null` are mutually exclusive in the engine: a hold plus an act band resolves to
+`cooldown`, whose tone is `"hold"`. A screen offering both at once is a bug, not a state.
 
 ## 7.2 The average
 
@@ -1044,10 +1093,164 @@ Absent from the design; `setCalChanged` / `clearCalChanged` are built.
 | When | Only when `calorieAdvice().tone === "act"` — the three states that instruct a change |
 | Where | Inside the advice block, directly under the instruction, answerable without scrolling |
 | Set | `I changed my calories today` → a **modal confirmation** (`Changed your calories today?` / `This starts a 7-day hold. No new calorie advice until {date}.` / `Yes, changed today` / `Not yet` lowest / 300 ms arm) → toast `Recorded.` |
-| Clear | `I did not change anything` — **one tap, no confirmation.** Clearing restores advice, so the cheap direction is the safe direction |
+| Clear | `I did not change anything` — **one tap, no confirmation.** Clearing restores advice, so the cheap direction is the safe direction. **Renders whenever `adv.holdUntil` is set — not only in state `cooldown`** (§7.5.1) |
 | Announced | Both, through the persistent region |
 
 All strings **NEW**, from `wo-003-train-weight.md` §3.5, still pending coach sign-off.
+
+### 7.5.1 The hold that nobody can see — ruled (WO-005)
+
+```
+Flow:   Disclosing and clearing an active calorie hold
+Entry:  A hold is on disk (calChangedAt within 7 days) and the rate has since drifted into
+        above / on-target / below, so PHAT.calorieAdvice returns that band, not state cooldown.
+Exit:   The hold expires on its own, or he clears it.
+```
+
+**The defect, stated plainly.** State 7 does not outrank bands 2, 3 and 4 — correct, they instruct
+nothing. But the clear control was keyed to `state === "cooldown"`, so in exactly those three bands
+the hold rendered nothing and offered nothing while still suppressing the next add-or-cut
+instruction. The screen whose one job is *am I eating right* was silently holding back the only
+answer it exists to give. It self-heals in under seven days, so it is not data loss — it is a lie of
+omission, and the app does not get to make those.
+
+**Ruling, three parts.**
+
+1. **The clear control renders if and only if `adv.holdUntil` is non-null.** Not `state`, not `tone`.
+   `holdUntil` is the engine's own statement that a hold is live, and it is set in every band as well
+   as in `cooldown` (`logic.js` sets `out.holdUntil` before the `tone === "act"` test).
+2. **Exactly one hold disclosure is on screen whenever `adv.holdUntil` is non-null**, never two:
+   - `state === "cooldown"` → `adv.text` already *is* the disclosure. Nothing is added.
+   - any band → the new **hold note**, below the sub-line.
+3. **The hold note is a state disclosure, not a second instruction.** It carries no imperative, no
+   kcal number and no rate, so it cannot argue with the band sentence above it.
+
+**Copy — ONE new sentence. `strength-coach` must sign this off before it ships (§7.5.2).**
+
+```
+You changed calories {ago}. Hold ends {date}.
+```
+
+`{ago}` is the engine's existing `agoWord` — `today` · `1 day ago` · `3 days ago`. `{date}` is
+`PHAT.dayMon`, never `Intl` (B-44). Rendered:
+
+```
+You changed calories today. Hold ends 18 Sep.
+You changed calories 1 day ago. Hold ends 17 Sep.
+You changed calories 3 days ago. Hold ends 15 Sep.
+```
+
+**Why this sentence and not another.** It opens with the same clause as state 7
+(`You changed calories 3 days ago.`) because it is the same fact, and he should recognise it as the
+line he has seen before rather than read it as news. It then drops state 7's second clause
+(`Hold until 15 Sep before changing again.`) because that clause is an instruction, and an
+instruction under `Change nothing. Recheck in 7 days.` is a second voice on one card. `Hold ends
+{date}` states when, and nothing else. `Hold` is not a new word to him: the confirmation he tapped
+through to create this said `This starts a 7-day hold.`
+
+**Hierarchy — where it sits, and what it must not outrank.**
+
+```
+[REF] the advice block during a hold, with a band showing
+
+  7-DAY AVERAGE (6 OF 7 DAYS)                          ← still the biggest thing on the screen
+  84.6 kg
+  Change vs last week            +0.41 kg
+
+│▌ CALORIE DECISION                                    kicker, --faint, 11 px
+│▌ +0.41 kg per week. Above target, inside the         .lead, --bone, 14.5 px   ← the answer
+│▌ margin. Change nothing. Recheck in 7 days.
+│▌ Target: +0.2 to +0.3 kg per week. Averages          sub-line, --dim, 13 px
+│▌ over 14 days.
+│▌ You changed calories 3 days ago. Hold ends          hold note, --dim, 13 px  ← same rank as
+│▌ 15 Sep.                                                                        the sub-line
+│▌ ┌─────────────────────────────────────────┐
+│▌ │        I did not change anything        │        ghostbtn, full × 48
+│▌ └─────────────────────────────────────────┘
+```
+
+| Rank | Element | Why there |
+|---|---|---|
+| 1 | The 7-day average | Unchanged. It is the number he came for and the only one he is asked to trust |
+| 2 | The band sentence, `adv.text` | The answer to the screen's question. Nothing below it may be louder, and the hold note is not |
+| 3 | The sub-line | How the answer was computed |
+| 4 | **The hold note** | Same size, weight and token as the sub-line — **never bolder, never `--bone`, never its own kicker, never its own rule.** It is footnote rank: true, needed, not the point |
+| 5 | The clear control | Directly under the note it refers to, so the disclosure and its exit read as one thing |
+
+**One enclosure, not two.** The hold note lives *inside* the existing advice block. A second rule, a
+second kicker or a second card would read as a competing instruction, which is the failure this
+ruling exists to avoid (§2.1).
+
+**Interactions**
+
+| Tap | What changes |
+|---|---|
+| `I did not change anything`, band showing | One tap, no confirmation. `calChangedAt` clears. Re-render: the hold note and the control are both gone; **the average, the change row, the band sentence and the sub-line are all identical to before.** Toast `Hold cleared.` Announced |
+| `I did not change anything`, cooldown showing | Unchanged from §3.5: the hold sentence is replaced by the band sentence the hold was suppressing, and the set control returns in tone `act`. Toast `Hold cleared.` Announced |
+| Nothing at all | The hold expires on its date. The note and the control disappear on the next render. No toast, no notice — he was never told it would end with a ceremony |
+
+**On the band case, the honest note for the engineer:** clearing while a band is showing changes
+almost nothing visible, and that is correct. Do not animate it, do not flash the advice block, do not
+add a "calorie advice is back" line. The toast plus the disappearance of the control is the whole
+feedback, because the whole effect is on a *future* instruction. Dressing it up would be the app
+claiming credit for something it did not do yet.
+
+**States**
+
+| State | Present |
+|---|---|
+| No hold | No hold note, no clear control. `holdUntil` is null |
+| Hold + band 2 / 3 / 4 | Band sentence · sub-line · hold note · clear control. **No set control** |
+| Hold + band 1 / 5 / 6 | Engine returns `cooldown`: hold sentence · sub-line · clear control. **No hold note** (it would duplicate the sentence) and no set control |
+| Hold + not-enough-data (A / B / C) | `holdUntil` is null in those states — the engine never reaches the cooldown test. So **no hold note and no clear control**, and the hold is unreachable until the windows fill. Deliberate: a screen that cannot compute a rate must not start explaining suppression rules |
+| Hold + empty log | As above. Nothing |
+| Clearing fails to write | The existing storage-failure line (§2.5). The hold note and the control both **stay**, because the hold is still on disk. Never both fail and look fine |
+| Error — `calorieAdvice` throws | Fail silent on advice: the average with its count and nothing else, hold note included (`wo-003-train-weight.md` §3.6) |
+| Offline | Identical |
+| Demo | Identical. The hold is a real-log fact and demo mode does not write it |
+
+**A11y**
+
+- The clear control's accessible name is its visible label. Do not invent a longer one; instead
+  `aria-describedby` points it at the hold note's element, so a screen reader reads
+  `I did not change anything` followed by `You changed calories 3 days ago. Hold ends 15 Sep.` No new
+  string is created to make that work.
+- The hold note is plain text in DOM order between the sub-line and the control. No `aria-live` on
+  it — `render()` recreates the block, and the block is already announced through the persistent
+  region after an entry or a clear (`wo-003-train-weight.md` §3.7).
+- **Focus.** Clearing removes the focused control. Focus moves to the advice block's container
+  (`tabindex="-1"`), never to `<body>`. The toast is announced through the persistent region, so the
+  announcement does not depend on where focus lands.
+- Contrast: the hold note uses the sub-line's token and size. Alpha never below `.55` (§0.5) and, on
+  `--surface`, never `.50`.
+
+**Dependency — `backend-engineer`, and it is blocking.** The sentence must come from the engine as a
+field, not be assembled in the view (§12.1: no sentence is assembled in a view, and `{ago}` needs
+`agoWord`). Required: `PHAT.calorieAdvice` returns **`holdNote`**, a string that is non-empty
+**exactly when `holdUntil` is non-null and `state !== "cooldown"`**, and `""` otherwise. Built from
+the existing `agoWord` and `dayMon` helpers, no new formatting. That gives QA two assertions instead
+of a judgement: `holdNote !== ""` implies `holdUntil !== null`, and `state === "cooldown"` implies
+`holdNote === ""`.
+
+**Out of scope.** Changing who outranks whom — state 7 still does not outrank bands 2, 3 and 4, and
+this ruling exists *because* that is right. Any change to the 7-day length. A countdown ("4 days
+left"), which is a number that ticks and therefore a number he reads (§4.7). A hold history. Letting
+the hold be set from a band state — the set control still renders only in tone `act`.
+
+### 7.5.2 Sign-off required — `strength-coach`
+
+**`You changed calories {ago}. Hold ends {date}.` is NOT signed off and I am not signing it.** It
+discloses an app state rather than prescribing anything, but it sits directly under a calorie band
+sentence and it is the app's account of why a change instruction is being withheld — close enough to
+a training claim that the coach rules on it, not me. It ships only with that sign-off; until then the
+clear control still renders on `holdUntil` (that part is a defect fix and needs no copy) and the note
+slot renders nothing.
+
+**A related finding for the same review, not a change I am making:** the confirmation body already in
+the build reads `This starts a 7-day hold. No new calorie advice until {date}.` In bands 2, 3 and 4
+calorie advice **does** still render during a hold, so that promise is imprecise. It is invisible in a
+modal and visible on the card, which is why I did not reuse its wording for the note. Whether it
+should be tightened is the coach's call with the rest of §3.5's strings.
 
 ## 7.6 States
 
@@ -1056,7 +1259,8 @@ All strings **NEW**, from `wo-003-train-weight.md` §3.5, still pending coach si
 | Empty | Entry control + `Same time, same conditions, every morning. The daily number is noise. The weekly average is the signal.` *(existing)*. No panel, no zeroes, no placeholder chart |
 | Thin history | State A / B / C copy verbatim. Average may show with its count |
 | Populated | Average · change row · one of states 1–6 · sub-line · control in tones "act" |
-| Cooldown | State 7 · `I did not change anything` |
+| Cooldown | State 7 · sub-line · `I did not change anything` |
+| **Hold, band showing** | Band 2 / 3 / 4 · sub-line · **hold note** · `I did not change anything`. No set control (§7.5.1) |
 | Error | Fail silent on advice; average only |
 | Write failed | §2.5 |
 | Offline | Identical |
@@ -1362,8 +1566,11 @@ Four things, in this order of importance:
    pad, calf block. The ground reference is what makes a hinge legible as a hinge and not a squat.
 2. **Which joints move.** A hinge shows a closed hip and a near-fixed knee; a squat shows both
    closing. This is the single most common thing a bad diagram loses.
-3. **The direction of the working (concentric) phase**, as one arrow drawn along the path of the
-   working end — the bar, the handle, the dumbbell, or the body itself.
+3. **The direction of travel**, as one arrow drawn along the path of the working end — the bar, the
+   handle, the dumbbell, or the body itself. It runs **ghost → solid** and points at the position he
+   has to reach. **It is not a claim about which phase is the concentric** (§11.3, ruled WO-005): a
+   64 px drawing should not be making that claim, and for five of the fifteen patterns it would put
+   the emphasis on the pose nobody gets wrong.
 4. **The implement and where it is held.** A bar across the back, a bar at arm's length, two
    dumbbells, a handle, nothing.
 
@@ -1371,16 +1578,61 @@ Four things, in this order of importance:
 speed, a face, muscle shading, or anything that reads as a safety claim. The cue is the only place
 words appear.
 
-## 11.3 The start/finish convention — one convention, all fifteen
+## 11.3 The two poses — one convention, all fifteen
+
+**Ruled 2026-09-11 (WO-005). The shipped convention is right; this section was wrong and is
+rewritten. No figure is redrawn.**
+
+What it used to say — START is "the lengthened / loaded position", FINISH is "the end of the
+concentric", the FINISH pose is solid — contradicted §11.5, which gives `squat`, `hinge`, `hpush`,
+`fly` and `dip` the descent. It also contradicted **itself in a single sentence**: the lengthened
+position of a squat *is* the bottom, and the same clause called standing the start. An engineer
+could not obey both halves, and the rebuild (`615c4e5`) correctly obeyed the one that was drawn
+fifteen times.
+
+**The start/finish vocabulary is deleted from this brief.** It described a rep phase, which is not
+something a 64 px two-pose drawing can assert and not something this app needs to assert. What
+replaces it is what the artwork already does:
 
 | | |
 |---|---|
-| Two poses per figure | **START** and **FINISH** |
-| START | The position the working rep begins from — **the lengthened / loaded position** for every pattern (bottom of a squat's descent is *not* the start; the start is standing). Stated per pattern in §11.5 so nobody has to infer it |
-| FINISH | The end of the concentric — the position the arrow points at |
-| Which is solid | **The FINISH pose is always the solid one.** The START pose is the ghost. Consistent across all fifteen, without exception, so he learns it once |
-| The arrow | Exactly one, from START to FINISH, along the path of the **working end**, not the joint |
+| Two poses per figure | **SOLID** and **GHOST** |
+| SOLID | **The pose the arrow points at** — the position he has to reach, the end the movement is judged on, and the one people get wrong. Named per pattern in §11.5 so nobody has to infer it |
+| GHOST | The other end of the same rep |
+| Which is solid | The arrowhead pose, always. All fifteen, without exception, so he learns it once |
+| The arrow | Exactly one, ghost → solid, along the path of the **working end**, not the joint |
 | Overlap | The two poses share a frame and a ground reference. They are the same figure at two moments, never two figures side by side |
+
+**Why the arrowhead pose and not the end of the concentric.** The figure's job (§11.1, §11.8 test 2)
+is *what does this look like where it matters*. On a squat, a hinge, a press, a fly and a dip that is
+the bottom — depth, shin angle, elbow path, stretch, dip depth. Drawing the concentric end solid
+would make those five resolve to a person standing still holding a bar, which is the least
+informative pose in the pattern and makes the `squat`/`hinge` pair — the one §11.5 says must not look
+alike — nearly indistinguishable, since everything that separates them lives in the bottom position.
+The cost of the alternative is also real and concrete: re-authoring five of fifteen patterns and
+re-running §11.8 against all of them, to end up with weaker figures.
+
+**The per-pattern choice of which end is solid is coach-adjacent** where it is not obvious. The
+fifteen already drawn are ruled as shipped. **A sixteenth pattern's solid end goes to
+`strength-coach`** with the slot's cue, because "the one people get wrong" is a coaching judgement.
+
+**The words `start` and `finish` stay out of the frame, and out of the disclosure label too —
+ruled.** §11.2 forbids text inside the frame and the rebuild removed them correctly. The question
+raised was whether `› MOVEMENT & CUE` should grow to carry the convention instead. It should not:
+
+1. **The arrow already carries the whole relationship.** Two poses joined by one arrow read as one
+   movement, and the arrow says which end is being pointed at. Faint-then-solid is not a convention
+   he has to be taught; it is how a before/after is drawn.
+2. **The label serves the audience that cannot see the figure.** The figure is `aria-hidden` (§11.6)
+   and the cue is its accessible carrier. Adding a legend about ghost and solid poses to a 44 px
+   control makes a screen reader announce a description of artwork it is deliberately not being
+   shown.
+3. **The words are what caused this contradiction.** Naming the poses re-imports the rep-phase claim
+   §11.5 disagreed with for five patterns. Deleting the vocabulary removes the conflict rather than
+   relocating it into a label.
+
+This is a claim about legibility, so it is **verified, not asserted**: §11.8 test 7 exists to fail if
+the convention is not self-evident without text.
 
 ## 11.4 Rendering — how it reads at 64 px on a dark ground
 
@@ -1396,10 +1648,16 @@ words appear.
 
 ## 11.5 The fifteen patterns, and what each must show
 
-Mapped across all 42 slots today by `PAT` (`index.html:374`). The map is correct and is kept; only
-the artwork changes.
+Mapped across all 42 slots today by `PAT` (`index.html:374`). ~~The map is correct and is kept~~ —
+**struck: B-64 found three wrong mappings and they are resolved there, not here.** Only the artwork
+changes.
 
-| Pattern | Slots it serves | Ground | START (ghost) | FINISH (solid) | Arrow along |
+**Column headers renamed by the WO-005 ruling (§11.3); every cell below is unchanged and no figure is
+redrawn.** `START (ghost)` → `GHOST`, `FINISH (solid)` → `SOLID`. Read `SOLID` as *the position to
+reach*, and note that in every row it is already the pose the arrow points at — which is the whole
+evidence that the shipped convention, not the old §11.3, is the one the table was written against.
+
+| Pattern | Slots it serves | Ground | GHOST (the other end) | SOLID (the position to reach) | Arrow along |
 |---|---|---|---|---|---|
 | `squat` | d2a d2b d4a d4b d4c | floor | Standing, bar on the back | Bottom, hips below knee height, both joints closed | the bar, downward |
 | `hinge` | d2d d4e | floor | Standing, bar at arm's length | Hips pushed back, shins near-vertical, bar against the legs | the bar, downward and back |
@@ -1454,6 +1712,10 @@ upper arm* is the shared point and must be visibly fixed in both) · `legext`/`l
 4. Cover the figure: the cue is still a complete, correct instruction.
 5. Put `squat` and `hinge` side by side: nobody confuses them. Same for the other three pairs.
 6. At 200 % text the figure and the cue both grow and neither clips.
+7. **With no text anywhere — frame, label or cue — a person can say which of the two poses they are
+   being told to reach.** Added by the WO-005 ruling (§11.3). It is the test that makes "the
+   convention is self-evident after one exposure" a checkable claim instead of an assumption, and it
+   is what would have to fail before the words `start` and `finish` come back anywhere near a figure.
 
 If (1) and (2) fail, the figure does not ship. **A missing figure is a smaller loss than a wrong
 one** — the cue survives alone, and §4.13 already specifies that state.
@@ -1565,6 +1827,7 @@ From your last session on this.
 Back in from this session.
 Deload week. This set is above the prescription.
 I changed my calories today / Changed your calories today? / This starts a 7-day hold. No new calorie advice until {date}. / Yes, changed today / Recorded. / I did not change anything / Hold cleared.
+You changed calories {ago}. Hold ends {date}.        [WO-005, §7.5.1 — blocked on coach sign-off, §7.5.2]
 End it early
 Pick your day
 A training week is a week with three or more logged sessions.
@@ -1705,6 +1968,8 @@ two ever disagree, one of them is lying. Numbers are **W1's**.
 | 12 | A persisted plan working copy under its own key | frontend + backend (W15) | Yes — §9.6 |
 | 13 | `volumeTier` flagging hidden-but-populated exercises rather than omitting them | backend | Yes — §4.11; already in its criteria |
 | 14 | Sample data in its own store with `demo:true` | frontend + release (W13) | Yes — §3 |
+| 15 | `PHAT.calorieAdvice` returns `holdNote` — non-empty exactly when `holdUntil !== null && state !== "cooldown"` | backend | Yes — §7.5.1. The clear-control fix ships without it; the note does not |
+| 16 | Sign-off on `You changed calories {ago}. Hold ends {date}.` | coach | Yes — §7.5.2. Until then the note slot renders nothing |
 
 ---
 
@@ -1729,6 +1994,24 @@ two ever disagree, one of them is lying. Numbers are **W1's**.
 8. **B-05 gets worse with this release, again.** Ten screens now read that history confidently and
    the Plan Editor lets him reinterpret it. Nothing here fixes it. It should be the next work order.
 
+**Added 2026-09-11 (WO-005):**
+
+9. **An active calorie hold could render nothing and be uncleavable** — worth a backlog id. The
+    engine was right, the state ranking was right, and the *control* was keyed to the wrong field
+    (`state === "cooldown"` instead of `holdUntil !== null`). Ruled in §7.5.1. Note the shape of it
+    for the next screen: a control was gated on a **rendered state** rather than on the **fact** it
+    acts upon, and the two diverged legitimately. Anywhere else a control is keyed to a state name,
+    check it is not really keyed to a fact.
+10. **This spec contradicted itself on the figures for a month and nobody could obey both halves**
+    (§11.3 versus §11.5). The contradiction was *inside one sentence* of §11.3, which is why review
+    missed it. Ruled in favour of the shipped artwork; no redraw. My error, recorded as mine.
+11. **The advice enclosure was being decided per screen.** Ruled once in §2.1.1, app-wide, `--dim`.
+    `wo-003-train-weight.md` §3.8's amber line is superseded and should be marked as such if that
+    file is ever edited again — it is `[REF]` against a build that no longer exists.
+12. **A promise in the build is imprecise:** `This starts a 7-day hold. No new calorie advice until
+    {date}.` Calorie advice does still render in bands 2, 3 and 4 during a hold. Left open for
+    `strength-coach` with the rest of §3.5's unsigned strings (§7.5.2). Not changed tonight.
+
 ## 16. Decisions that are not mine
 
 Rest durations and the ready/cap table · every verdict, band, trigger and window · `REINTRO_ORDER`,
@@ -1740,3 +2023,28 @@ The **visual direction** — palette, type, rules, zero radius, flush-left label
 screen, five tabs — is **Chady's**. Where this spec moves something, it is because a measurement
 (44 px, a contrast ratio), a state (silence, refusal, empty) or a data-integrity rule required it,
 and each such change says which.
+
+---
+
+# 17. Amendments — WO-005, 2026-09-11
+
+Three questions blocked three real fixes. All three are ruled. **Nothing else in this file changed**,
+and no copy was written beyond the one sentence in ruling 1.
+
+| # | Question | Ruling | Where | Cost to implement |
+|---|---|---|---|---|
+| 1 | An active calorie hold can render nothing and be unclearable | The clear control keys off `adv.holdUntil`, never `state`. A new **hold note** discloses the hold when a band is showing. One new sentence, **coach sign-off required** | §7.1, §7.5, **§7.5.1**, §7.5.2, §7.6 | One condition changed in the view, one field added to `calorieAdvice` |
+| 2 | §11.3 and §11.5 give opposite instructions on which pose is solid | **The shipped convention wins.** Solid = the pose the arrow points at = the position to reach. §11.3 was wrong *and self-contradictory* and is rewritten; start/finish vocabulary deleted; **no figure is redrawn**. The disclosure label does **not** grow to carry the convention; a new acceptance test proves it does not need to | §11.2(3), **§11.3**, §11.5 headers, §11.8(7) | Zero code, zero artwork. Spec only |
+| 3 | Advice enclosure — amber rule or dim rule | **`--dim`, app-wide, in every state.** W11 was right. Amber stays reserved for the live thing. Stated once so no screen re-litigates it | **§2.1.1**, §2.1 table | Zero. The build already does this |
+
+**What is still blocked, and on whom.**
+
+| Item | Owner | Until then |
+|---|---|---|
+| `You changed calories {ago}. Hold ends {date}.` | `strength-coach` (§7.5.2) | The hold note slot renders nothing. **The clear-control fix ships anyway** — it is a defect fix that needs no new copy, and it is the half that stops the hold being unclearable |
+| `PHAT.calorieAdvice().holdNote` | `backend-engineer` (§14 #15) | Same |
+| `This starts a 7-day hold. No new calorie advice until {date}.` — imprecise in bands 2 / 3 / 4 | `strength-coach` (§15 #12) | Unchanged. Not a defect I am fixing by inventing a replacement tonight |
+
+**Deliberately left open, per the stop condition.** Nothing else. Every question raised tonight was
+answerable from this spec, `wo-003-train-weight.md`, `logic.js` and the handoff brief, except the one
+sentence above, which is a sign-off and not a gap.
