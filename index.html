@@ -355,6 +355,48 @@
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
     padding:var(--s3) var(--s4); margin-bottom:var(--s2)}
 
+  /* ==== W11: THE WEIGHT SCREEN ============================================
+     ORDER IS NORMATIVE (spec 7.1): average, change, calorie decision, entry,
+     last 7. The AVERAGE is the biggest thing on the screen - it is the
+     question this tab answers - so the screen title is a .hd kicker pair and
+     not an h1. That also retires the one measured horizontal overflow on this
+     tab: at 200% text the old `<h1>Bodyweight</h1>` was 432px of min-content
+     in a 353px column.
+     NOTHING HERE IS ENCODED IN HUE (spec 3.1 rule 3). The rate is --bone, in
+     every band, good or bad; the sentence under it is the carrier. The old
+     build coloured it green/red off a band that was itself wrong, so the
+     colour and the advice could disagree - and the --red it used measured
+     2.8:1 on --surface. Greyscale this screen and every state still reads. */
+  .bwavg{padding:18px var(--s4) 0}
+  /* 52px, over the 38px h1, so it is unambiguously the primary. Its own line:
+     at 200% text a 104px number and a 32px unit on one baseline row is 6px of
+     horizontal scroll, measured. */
+  .bwbig{font-size:3.25rem; font-weight:800; letter-spacing:-.03em; line-height:.95;
+    color:var(--bone); margin-top:var(--s1)}
+  .bwbig .u{font-size:1.125rem; letter-spacing:0; margin-left:.1em}
+  .bwchg{margin-top:10px}
+  .bwchg span:first-child{color:var(--dim); font-size:.84375rem}
+  /* --bone, never --green / --red. See the block comment above. */
+  .bwchg .v{font-family:var(--mono); font-size:1.0625rem; color:var(--bone); flex:none}
+  /* The calorie decision reuses W7's ADVICE enclosure (spec 2.1): 3px rule on
+     the left edge only, a kicker that names the block, no glyph. One advice
+     shape in the app, and it is not the refusal shape. The rule stays --dim
+     in all eleven states - amber is the accent for "actionable", and the
+     sentence that most often renders here says "Change nothing." */
+  .advice .lead{color:var(--bone); font-size:.90625rem; line-height:1.45}
+  .advice .ghostbtn{margin-top:var(--s3)}
+  /* Entry. 48 x 48 keys here, not the session row's 44 x 48 (control
+     inventory row 27) - there is only one stepper on this screen and no row
+     arithmetic to satisfy. Wraps rather than shrinks at 200% text. */
+  .bwentry{display:flex; gap:var(--s3); align-items:stretch; flex-wrap:wrap; margin-top:6px}
+  .bwentry .stepper{flex:1 1 9rem; min-width:9rem}
+  .bwentry .stepper button{min-width:var(--key)}
+  .bwentry .primary{flex:1 1 8.25rem; width:auto; min-width:8.25rem; min-height:var(--key)}
+  .bwrow{display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3);
+    border-bottom:1px solid var(--line); padding:10px 0}
+  .bwrow .d{color:var(--dim); font-size:.78125rem}
+  .bwrow .k{font-family:var(--mono); font-size:.84375rem; color:var(--bone); flex:none}
+
   /* -- THE DOCK -------------------------------------------------------------
      #dock is the bottom-anchored stack so the offer sheet sits above nav with
      no magic offset to keep in sync. fixed, not absolute: absolute pinned it
@@ -1302,49 +1344,129 @@ function vTrend(){
   return h;
 }
 
-function vWeight(){
-  const b=S.bw.slice().sort((x,y)=>x.date.localeCompare(y.date));
-  const mine=b.find(e=>e.date===PHAT.localDate());
-  let stats=null;
-  if(b.length>=2){
-    const avg=a=>a.reduce((s,x)=>s+x.kg,0)/a.length;
-    const l7=b.slice(-7),p7=b.slice(-14,-7);
-    stats={cur:avg(l7),delta:p7.length?avg(l7)-avg(p7):null};
-  }
-  let advice="Two weeks of daily entries and this turns into a calorie decision instead of a guess.";
-  let ok=false;
-  if(stats&&stats.delta!==null){
-    const d=stats.delta;
-    if(d>=.2&&d<=.35){advice="On target. Change nothing.";ok=true;}
-    else if(d<.2) advice="Gaining too slowly. Add 200 kcal to your training days.";
-    else advice="Gaining too fast — that surplus is going to fat. Cut 200 kcal from training days.";
-  }
-  let h=`<div class="pad" style="padding-top:26px;padding-bottom:16px">
-    <h1>Bodyweight</h1><p class="sub">Same time, same conditions, every morning.
-    The daily number is noise. The weekly average is the signal.</p></div>
-    <div class="pad"><div class="panel">
-      <label class="lbl" for="bwin" style="margin-bottom:6px">Today's weight kg</label>
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <span class="grp"><span class="stepper"><button data-bwact="-" aria-label="Bodyweight down 0.1 kg">&minus;</button>
-        <input class="bw" id="bwin" inputmode="decimal" placeholder="0" value="${mine?mine.kg:""}">
-        <button data-bwact="+" aria-label="Bodyweight up 0.1 kg">+</button></span></span>
-      <button class="primary" id="logbw" style="flex:1 1 8.25rem;width:auto">${mine?"Update today":"Log today"}</button>
-    </div>${S.err?`<p style="color:var(--red);font-size:.8125rem;margin-top:10px">${esc(S.err)}</p>`:""}</div></div>`;
+/* ============================================================ W11: weight
+   B-06 and C-9, closed. EVERY NUMBER AND EVERY SENTENCE ON THIS SCREEN COMES
+   OUT OF logic.js — PHAT.bwWindows for the average, PHAT.calorieAdvice for
+   the decision — and not one of them is assembled here. That is the whole
+   point of the item, because the version this replaces assembled both and got
+   both wrong:
 
-  if(stats){
-    h+=`<div class="pad mt12"><div class="panel">
-      <div class="row"><span style="color:var(--dim);font-size:.84375rem">7-day average</span>
-        <span class="big">${r1(stats.cur)} kg</span></div>`;
-    if(stats.delta!==null)
-      h+=`<div class="row" style="margin-top:8px"><span style="color:var(--dim);font-size:.84375rem">Change vs last week</span>
-        <span style="font-family:var(--mono);font-size:1.125rem;color:${ok?"var(--green)":"var(--red)"}">
-        ${stats.delta>0?"+":""}${r1(stats.delta)} kg</span></div>`;
-    h+=`<p style="color:var(--dim);font-size:.8125rem;margin-top:14px;padding-top:13px;border-top:1px solid var(--line);line-height:1.5">${advice}</p>
-      <p class="tiny" style="margin-top:7px">Target: 0.2–0.3 kg per week.</p></div></div>`;
+     - it averaged the last 7 ENTRIES (`b.slice(-7)`), so eight weigh-ins
+       spread over 24 days printed a confident "kg per week" that spanned most
+       of a month, and it fired from TWO entries;
+     - its bands were `>=.2 && <=.35` on target, `<.2` add, else cut — the
+       exact bands coach-audit §2 struck down. It cut 200 kcal at +0.36 where
+       the brief says do nothing below +0.5, and it printed "Gaining too
+       slowly" while he was LOSING weight;
+     - and it printed "Target: 0.2–0.3 kg per week" directly under logic that
+       treated 0.34 as on target.
+
+   The engine's eleven states, its insufficient-data gates and its sub-line
+   now render verbatim, trailing "Recheck in 7 days." included. If you find
+   yourself building a sentence in this function, that is the bug.
+
+   NOTHING ON THIS TAB WRITES TO STORAGE ON RENDER (spec §3.1 rule 7). */
+function vWeight(){
+  const today=PHAT.localDate();
+  const b=S.bw.slice().sort((x,y)=>String(x.date).localeCompare(String(y.date)));
+  const mine=b.find(e=>e.date===today);
+  /* FAIL SILENT ON ADVICE (spec §3.6). The average is arithmetic over one
+     window and may still show if it is computable; a partial or guessed
+     calorie instruction may never appear. Two try blocks, not one, so a throw
+     in the band ladder cannot also take the average down with it. */
+  let W=null, adv=null;
+  try{ W=PHAT.bwWindows(S.bw,today); }catch(err){ W=null; }
+  try{ adv=PHAT.calorieAdvice(S.bw,today,S.logMeta&&S.logMeta.calChangedAt); }catch(err){ adv=null; }
+  const n=b.length;
+
+  let h=`<div class="hd"><span class="kick">Bodyweight</span>
+    <span class="kick">${n?(n===1?"1 entry":n+" entries"):"No entries"}</span></div>`;
+
+  /* ---- the average, and its sample size. The count is NEVER omitted, not
+     even at 7 of 7 (spec §3.4): a label that only admits its sample size when
+     the sample is thin is a label he learns to stop reading. */
+  /* ONE decimal on the average, TWO on the rate, deliberately. The scale is
+     0.1 kg (CLAUDE.md §3.5) so 86.42 kg is precision he cannot weigh; the
+     rate's bands are compared in hundredths, so +0.50 and +0.5049 are
+     different instructions and it must print what it banded. The two numbers
+     cannot be checked against each other in any case — window A's mean is
+     never on screen, which is why logic.js rounds the rate once from the
+     unrounded means. */
+  if(W&&W.bCount>=PHAT.BW_WINDOW_MIN&&W.meanB!==null){
+    h+=`<div class="bwavg"><span class="lbl">7-day average (${W.bCount} of 7 days)</span>
+      <p class="bwbig">${r1(W.meanB).toFixed(1)}<span class="u"> kg</span></p>`;
+    /* Rule W1 rule 1: the rate is null unless BOTH windows hold 5 dated
+       entries, so this row cannot render off a month of scattered weigh-ins.
+       Uncoloured, always — see the CSS block comment. */
+    if(W.rate!==null)
+      h+=`<div class="row bwchg"><span>Change vs last week</span>
+        <span class="v">${W.rate<0?"-":"+"}${Math.abs(W.rate).toFixed(2)} kg</span></div>`;
+    h+=`</div>`;
   }
-  const rows=b.slice(-30).map(e=>({date:fmt(e.date),kg:e.kg}));
-  const svg=linechart(rows,[{n:"kg",c:"var(--amber)"}],190);
-  if(svg) h+=`<div style="padding:14px 8px 0">${svg}</div>`;
+
+  /* ---- the calorie decision. Verbatim, and the ONLY place a kg-per-week
+     instruction may appear. In the four not-enough-data states adv.subline is
+     "" and adv.tone is "none", so no sub-line and no acknowledgement control
+     render without a further test here — the engine already decided. */
+  if(adv&&adv.state!=="empty"){
+    h+=`<div class="pad mt16"><div class="advice">
+      <span class="kick">Calorie decision</span>
+      <p class="lead">${esc(adv.text)}</p>`;
+    if(adv.subline) h+=`<p>${esc(adv.subline)}</p>`;
+    /* tone === "act" is EXACTLY the three states that instruct a change, so
+       the view never re-derives that list (logic.js says so in as many
+       words). Acknowledging "I changed my intake" under "Change nothing."
+       would mean nothing, and a control that is always present is a control
+       that gets tapped absently. */
+    if(adv.tone==="act")
+      h+=`<button class="ghostbtn" id="calset">I changed my calories today</button>`;
+    /* The way back out. One tap, no confirmation: clearing RESTORES advice,
+       so the cheap direction is the safe direction (spec §0.1 rule 8). */
+    if(adv.state==="cooldown")
+      h+=`<button class="ghostbtn" id="calclear">I did not change anything</button>`;
+    h+=`</div></div>`;
+  }
+  /* State D, the true empty state (spec §3.3): the entry control and this
+     sentence. No panel, no zeroes, no placeholder chart. It earns its place
+     because it says what to do. */
+  else if(adv&&adv.state==="empty"){
+    h+=`<p class="sub pad mt16">Same time, same conditions, every morning.
+      The daily number is noise. The weekly average is the signal.</p>`;
+  }
+
+  /* ---- entry. 0.1 kg steps (CLAUDE.md §3.5). Logging twice on one local
+     calendar date UPDATES one row and never creates two — that guarantee is
+     in the handler, which keys off PHAT.localDate() and never a UTC slice
+     (B-03). `value` is re-rendered from the store, so it is escaped like any
+     other interpolated string even though it should be a number. */
+  h+=`<div class="pad mt16">
+    <label class="lbl" for="bwin">Today's weight</label>
+    <div class="bwentry">
+      <span class="stepper"><button data-bwact="-" aria-label="Bodyweight down 0.1 kg">&minus;</button>
+        <input id="bwin" inputmode="decimal" placeholder="0" value="${mine?esc(mine.kg):""}">
+        <button data-bwact="+" aria-label="Bodyweight up 0.1 kg">+</button></span>
+      <button class="primary" id="logbw">${mine?"Update today":"Log today"}</button>
+    </div>`;
+  if(mine) h+=`<p class="tiny mt12">Logged as today's entry. Weigh daily &mdash; the trend is what the app reads.</p>`;
+  /* Refusal, not advice: the four-sided enclosure, so a failed write can
+     never be mistaken for a sentence about his diet (spec §2.1, §2.5). The
+     number stays on screen. It must never both fail and look fine. */
+  if(S.err) h+=`<div class="refuse mt12" role="alert"><p>${esc(S.err)}</p></div>`;
+  h+=`</div>`;
+
+  /* ---- the last 7, newest first. Raw entries, not window B: this is the
+     receipt for what he typed, so a row the engine ignores is still shown
+     rather than silently dropped. */
+  if(n){
+    h+=`<div class="pad mt24"><span class="lbl secrule">Last 7 entries</span>`;
+    b.slice(-7).reverse().forEach(e=>{
+      /* fmt() hands back the raw string when PHAT.dayMon cannot parse it, so
+         a malformed stored date reaches innerHTML verbatim unless it is
+         escaped here. Nothing interpolated skips esc(), including a date. */
+      h+=`<div class="bwrow"><span class="d">${e.date===today?"Today":esc(fmt(e.date))}</span>
+        <span class="k">${r1(+e.kg||0).toFixed(1)} kg</span></div>`;});
+    h+=`</div>`;
+  }
   return h;
 }
 
@@ -1758,14 +1880,61 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.id==="logbw"){
     const v=parseFloat(document.getElementById("bwin").value);
     if(!(v>30&&v<300)){ toast("Enter a weight between 30 and 300 kg."); return; }
+    /* B-03's guarantee, and the reason it holds at 23:59 and again at 00:01
+       in any zone: the key is PHAT.localDate(), built from local date parts,
+       never toISOString().slice(0,10). Every row carrying today's date is
+       filtered out before the new one is appended, so a second entry on one
+       calendar date UPDATES and can never create a second row. */
     const dt=PHAT.localDate();
     S.bw=[...S.bw.filter(x=>x.date!==dt),{date:dt,kg:r1(v)}];
     /* On a failed write the number stays on screen and S.err says it failed —
        it must never both fail and look fine. */
     const ok=await save(BWK,bwPayload());
-    render(); if(ok) toast("Weight logged."); return;
+    render(); if(ok) announceWeight("Weight logged."); return;
   }
+  /* ---- W11: the calorie-change acknowledgement (spec §3.5). Two deliberate
+     taps to SET, because a stamp silences calorie advice for seven days; one
+     tap to CLEAR, because clearing restores it. Both delegated from #view
+     like everything else. */
+  if(e.target.id==="calset"){ askCalChanged(); return; }
+  if(e.target.id==="calclear"){ await setCalStamp(false); return; }
 });
+
+/* The advice block changes without a navigation, so it is announced through
+   the persistent region (#bs-live, outside #view) after every write on this
+   tab — one sentence, not two, because a second announce() overwrites the
+   first before a screen reader reaches it. The receipt goes to the toast
+   {quiet}, since this has already said it. */
+function announceWeight(receipt){
+  let line="";
+  try{
+    const a=PHAT.calorieAdvice(S.bw,PHAT.localDate(),S.logMeta&&S.logMeta.calChangedAt);
+    if(a&&a.text) line=" "+a.text;
+  }catch(err){}
+  announce(receipt+line);
+  toast(receipt,true);
+}
+/* Variant B, the existing modal: scrim, 300 ms arm, safe action LOWEST and in
+   the slot the trigger occupied. `Not yet` is the cheapest tap. */
+function askCalChanged(){
+  const until=PHAT.dateAdd(PHAT.localDate(),PHAT.CAL_COOLDOWN_DAYS);
+  askSheet({headline:"Changed your calories today?",
+    body:"This starts a 7-day hold. No new calorie advice until "+fmt(until)+".",
+    danger:"Yes, changed today", safe:"Not yet", back:"calset",
+    onDanger:()=>{ closeSheet(); setCalStamp(true); }});
+}
+/* setCalChanged / clearCalChanged return a NEW state object and never mutate;
+   they return null on a non-object, and the caller MUST NOT write null over
+   the store. S.logMeta carries every key of the log store this build does not
+   own, so stamping through it cannot drop one. */
+async function setCalStamp(on){
+  const next=on?PHAT.setCalChanged(S.logMeta,PHAT.localDate()):PHAT.clearCalChanged(S.logMeta);
+  if(!next) return;
+  S.logMeta=next;
+  const ok=await save(LOG,logPayload());
+  render();
+  if(ok) announceWeight(on?"Recorded.":"Hold cleared.");
+}
 
 document.getElementById("view").addEventListener("input",e=>{
   if(e.target.classList.contains("note")){
