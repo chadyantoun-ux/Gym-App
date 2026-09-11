@@ -1466,3 +1466,31 @@ true. Pasted into onboarding it is a false claim on the first screen he ever
 sees — the same class as the hardcoded day type that cost 700 kcal: copy that
 was true where it was written and a lie where it was pasted. The suite was green
 across this the whole time; it cannot see the shell.
+
+## 2026-09-11 — A backtick in a comment broke the whole shell, and nothing caught it
+
+Writing the fix for the onboarding copy defect above, the main session put
+backticks around an identifier inside an HTML comment. That comment sits
+**inside a template literal**, so the backtick ended the string and `index.html`
+stopped parsing: `Unexpected identifier`. The app rendered its static tabs and
+nothing else — no day list, no way to start a session.
+
+**It was committed.** Three things independently failed to catch it:
+
+1. The `file://` boot check had been run **before** the edit, and was not re-run
+   after. A verification is only evidence about the bytes it actually loaded.
+2. `tests.html` was 556/556/0 throughout, because **the suite never loads
+   `index.html`.** This is the standing lesson, recorded again: *a green suite is
+   evidence about the engine, never about the screen.*
+3. The commit message asserted "App boots from file:// with no console error".
+   That sentence was true when measured and false when written.
+
+**What now exists so it cannot repeat silently.** `scripts/offline-check.mjs`
+serves the tree over `http://127.0.0.1`, installs the service worker, goes
+offline, **cold reloads**, logs a set, reloads offline again and asserts the
+number is still on disk — then fails on any page error. It is the acceptance
+test for the product in one command, and it is what found this. Node is a dev
+dependency here, never the app's: this is a checked-in tool, not a build step,
+and the app still opens by double-clicking the file.
+
+Run it before any deploy, after the suite, not instead of it.

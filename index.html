@@ -1666,12 +1666,15 @@ function vOnboard(){
         <button data-bwact="+" aria-label="Bodyweight up 0.1 kg">+</button></span>
     </div>
     <!-- NOT "Logged as today's entry." here. That sentence is the Weight tab's
-         (vWeight, gated on `mine`) and it is TRUE there because something has
-         been logged. On first run nothing has, so onboarding stating it is a
-         false claim on the very first screen he sees - the same class as the
-         hardcoded day type that cost 700 kcal: copy that was true where it was
-         written and a lie where it was pasted. Found by looking at the rendered
-         screen, not by an assertion. -->
+         (vWeight, gated on its "mine" check) and it is TRUE there because
+         something has been logged. On first run nothing has, so onboarding
+         stating it is a false claim on the very first screen he sees - the same
+         class as the hardcoded day type that cost 700 kcal: copy that was true
+         where it was written and a lie where it was pasted. Found by looking at
+         the rendered screen, not by an assertion.
+         NO BACKTICKS IN THIS COMMENT. It sits inside a template literal, so a
+         backtick here ends the string and the whole shell stops parsing. That
+         is exactly how it broke the first time. -->
     <p class="tiny mt12">Weigh daily &mdash; the trend is what the app reads.
       Optional: leaving it empty writes nothing.</p></div>
   <div class="pad mt24" style="padding-bottom:var(--s6)">
