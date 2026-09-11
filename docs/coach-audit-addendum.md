@@ -2993,8 +2993,11 @@ Output copy:  the string in §10.2. One sentence, imperative, second person, <= 
               Forbidden, per §11.7 and enforced here: a rep range, a kilogram figure or a
               percentage, a tempo prescription, a safety claim, "if it hurts", a named substitute
               exercise, any assessment of the set or the lifter.
-              A setup ANGLE is not a load and is not a tempo. `Set the bench to 30-35 degrees, no
-              steeper.` is permitted and is the only number in the 42.
+              A setup ANGLE is not a load and is not a tempo. `Set the bench to 30–35°, no steeper.`
+              is permitted and is the only number in the 42.
+              [Corrected 2026-09-11 to match §10.2's table, which is the copy of record. This line
+              previously read `Set the bench to 30-35 degrees, no steeper.` — a paraphrase, never a
+              second candidate string. See §12.2.]
               "Do not bounce out of the bottom position." is an error correction, not a tempo
               prescription. The line is: a tempo prescription names a duration or a count
               ("pause a beat", "slow return", "three seconds down"). Naming a technique fault does
@@ -3316,3 +3319,331 @@ keys on `d2e` and `d3d`. QA's assertion is mechanical and worth pinning, because
 of a cue a test can check: **every slot in `PHAT_PLAN` has a `cue`; every cue is <= 90 characters;
 no cue contains `!`, a digit other than `d5b`'s `30–35`, `%`, `kg`, `rep range`, or the substring
 `if it hurts`.** The `d5b` exemption is deliberate and is the only one.
+
+---
+
+# 12. Overnight rulings — 2026-09-11 (WO-005)
+
+Three questions accumulated while the rebuild ran. All three are copy or mapping questions; none
+changes a load, a rep range, a rest period or a calorie number, and nothing here touches an engine.
+
+**Why §12 and not §11.** Every line below cites `wo-004-screens.md` §11.2 / §11.5 / §11.8. Two live
+"§11"s in one conversation is a transcription hazard of exactly the kind that produced §12.2, so the
+number is skipped deliberately. In this section a bare `§11.x` always means the **screens spec**.
+
+## 12.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | `d5b` — §10.1 prose vs §10.2 table | **The table is correct.** `Set the bench to 30–35°, no steeper.` The prose was a paraphrase. §10.1 **corrected in place** today; see §12.2. |
+| 2 | `d5c` machine chest press on `hpush` | **Drop to cue-only.** Fails Rule F1.1 and F1.2. This reverses my own §10.7 line calling it acceptable, and I say why. |
+| 2 | `d2b` / `d4b` hack squat on `squat` | **Keep.** Feet on fixed ground, load on the shoulders, hips and knees closing, body descending. Apparatus only. |
+| 2 | `d4g` seated leg curl on `legcurl` | **Drop to cue-only.** Fails F1.1 and F1.2 — the arrow points the wrong way in the frame. |
+| 2 | `d2g` / `d4h` / `d4i` calf raises on `calf` | **Keep all three.** The block under the ball of the foot is the ground reference and the load path is vertical in every one. `d4h` is the boundary case and passes only because its cue names the hip bend. |
+| 3 | `S1_LINES` | **Confirmed: exactly two strings, in order, both mine** (audit §10). Three things that must NOT be folded into it, listed in §12.4 — one of which is already marked wrongly in `logic.js`. |
+
+---
+
+## 12.1 Scope, and what I deliberately did not answer
+
+Written while he was asleep, so the bar for "answer it anyway" is higher than usual. Everything below
+is decidable from `docs/context/handoff-brief.md`, `docs/coach-audit.md` or this file. Two things
+adjacent to these questions are **left open on purpose**, and neither blocks anything tonight:
+
+- **`B-65` / `d3d`'s name and the `d2e` alternate.** Still Chady's, still unasked. §12.3 gives the
+  mechanical consequence for the figure in each direction so nobody has to come back to me.
+- **`B-45`, `fail → deload → fail`.** Unchanged and still deliberately deferred. §12.4 says why again,
+  since the `S1_LINES` question walks right past it.
+
+Nothing below touches `index.html`, `logic.js`, `tests.html`, `sw.js` or any other document. The two
+implementation consequences — two `PAT` keys and one stale code comment — are specified here for their
+owners, not made here.
+
+---
+
+## 12.2 `d5b` — the table is correct, the prose was the paraphrase
+
+**The shipped string is right. Nothing about the app's behaviour needs to change.** `[Certain]`
+
+Three references existed, and they were 2 : 1 for the table:
+
+| Where | String | |
+|---|---|---|
+| §10.1, Output copy block | `Set the bench to 30-35 degrees, no steeper.` | ASCII hyphen, the word "degrees" |
+| **§10.2, `d5b` row** | **`Set the bench to 30–35°, no steeper.`** | en dash U+2013, degree sign U+00B0 |
+| §10.8, the QA assertion | *"a digit other than `d5b`'s `30–35`"* | en dash |
+
+**Four pieces of evidence, any one of which settles it.** `[Certain]` on all four — these are checkable
+facts about the file, not judgements.
+
+1. **The table's own character count proves which string it was counting.** §10.2 states `36`.
+   `Set the bench to 30–35°, no steeper.` is 36 characters. The prose form is 42. A count that matches
+   the table and not the prose is the authored artifact.
+2. **§10.2 carries a transcription note written for that exact string** — *"`d5b` contains an en dash
+   (U+2013) and a degree sign (U+00B0)"*. Nobody writes a transcription note for a paraphrase.
+3. **§10.8's QA assertion whitelists the en-dash form.** The prose form contains `30-35` with an ASCII
+   hyphen and would trip the whitelist it is supposed to be exempt from — i.e. the prose version cannot
+   pass the test §10.8 specifies.
+4. **It already shipped, and correctly.** `logic.js:1637` reads `cue: "Set the bench to 30–35°, no
+   steeper."`. `decisions.md` (2026-09-10) records the call and asked for my confirmation. Confirmed.
+
+**House style agrees, so this is not merely a coin-toss resolved by seniority.** `[Opinion]` The app
+already writes ranges with an en dash everywhere else — `8–12`, `3–5`, `65–70%`, `0.2–0.3 kg` — so
+`30–35°` is the form that matches every other range he reads. It is also six characters shorter, and
+§11.7's budget is 90 characters on a 400 px screen at 200 % text.
+
+**What to change, plainly: the prose. And it is done.** §10.1's Output copy block now carries the
+table's string verbatim, with a bracketed note recording what it used to say. **The table was not
+touched, `logic.js` was not touched, no test moves.** The permitted-content rule the prose was stating
+is unchanged: a setup angle is not a load and is not a tempo, and `d5b` remains the only numeric
+exemption in the 42.
+
+**The general point, because it will happen again.** Rule text that quotes a copy string is a second
+copy of that string, and a second copy drifts. The addendum's preamble already ranks a worked example
+above a copy line (WO-003 Decision 5); extend it: **where prose and a copy table disagree, the table
+governs, always.** Prose illustrates a rule; a table is the artifact that ships. Anyone transcribing
+copy takes it from §10.2, never from §10.1.
+
+---
+
+## 12.3 Rule F1 — when a slot may share another exercise's movement figure
+
+The rebuild asked for six slots. They need one rule, not six opinions, or the next plan edit reopens
+all of them. The rule below is the rebuild's own ground-reference ruling, kept and made testable, plus
+the two clauses that decide the cases the ground-reference test alone leaves ambiguous.
+
+```
+Rule: F1 — figure reuse across slots
+Applies to:   the slot -> pattern map (`PAT`) for every slot in a plan document, all roles
+              (power | hyp | speed). Session screen, MOVEMENT & CUE disclosure only. No engine
+              reads the map, no advice depends on it, and no stored data references it.
+Inputs:       the exercise; the pattern's authored START/FINISH poses and ground reference
+              (§11.5); the slot's signed-off cue (§10.2). All static. No history, no minimum
+              data, no clock.
+Logic:        A slot may render a pattern authored for a DIFFERENT exercise only if all three
+              hold. Fail any one and the slot renders CUE ONLY.
+
+              F1.1  GROUND REFERENCE AND LOAD PATH.
+                    The surface the body is fixed against, and the body's orientation to the
+                    direction the load travels, are the same. The APPARATUS may change freely:
+                    a barbell, a dumbbell, a pin stack, a plate-loaded sled and a cable are the
+                    same figure, because none of them changes where the body is braced or which
+                    way the resistance acts.
+                    (This is the rebuild's rule, unchanged, and it is the one that does most of
+                    the work. §11.2(1) already makes the ground reference the thing that renders
+                    a pattern legible.)
+
+              F1.2  THE ARROW READS CORRECTLY IN THE FRAME.
+                    The working end travels in the same direction WITHIN THE FRAME, not merely
+                    relative to the torso. An arrow that runs up the frame on a movement whose
+                    working end travels down the frame fails, whatever the joint is doing.
+                    (§11.8(3) — "cover the cue: the figure still answers which way am I
+                    pushing" — is the only acceptance test the spec applies to the figure alone.
+                    This clause is that test, stated so it can be checked from the pose data.)
+
+              F1.3  THE CUE CORRECTS ANY POSITION THE FIGURE GETS WRONG — but only where the
+                    lifter could actually adopt the drawn position.
+                    Where the figure draws a body position the slot requires to be otherwise:
+                      - if the apparatus makes the drawn position impossible, no correction is
+                        needed. A figure cannot teach a position a machine physically prevents.
+                      - if he could adopt the drawn position, the slot's own cue must name that
+                        position and correct it. A figure the cue corrects is under-specified;
+                        a figure nothing corrects is wrong.
+                    CONSEQUENCE, and it must be written down next to the cue table: rewriting a
+                    cue can break a figure mapping. TWO slots currently pass F1 only because of
+                    their cue - `d5b` (the cue names the bench angle) and `d4h` (the cue names
+                    the hip bend). Both are pinned as test assertions below.
+Output copy:  none. F1 decides whether a figure renders, never what anything says. A slot that
+              fails renders its cue alone - no box, no placeholder, no label (§4.13, §11.6
+              "Fallback"). The cue is unaffected in every case; no cue is added, removed or
+              reworded by this rule.
+Not enough data: not applicable - F1 is a decision about authored data, not a measurement.
+              The analogous state is "no pattern is authored for this movement", and the answer
+              is the same as a failure: cue only. That is already §11.8's rule - a missing
+              figure is a smaller loss than a wrong one.
+```
+
+### The six referred slots, one line each
+
+**`d5c` Machine chest press on `hpush` — DROP TO CUE-ONLY.** `[Certain]`
+A supine bench press figure on a seated machine press fails F1.1 (bench under the whole trunk versus a
+vertical back pad; pressing up against gravity versus pressing forward against a stack) and F1.2 (the
+arrow runs vertically in the frame; his hands travel horizontally), and it fails §11.8(2) outright —
+copy that finish position and you are lying down. The tell is in the cue: `Set the seat so the handles
+line up with mid-chest.` names a **seat** and **handles**, neither of which exists anywhere in the
+`hpush` drawing. **The figure and the cue are describing two different machines.** The rebuild called
+it the weakest of these and the rebuild is right.
+
+**This reverses my own §10.7.** I wrote there that `d5c` on `hpush` was acceptable — *"same body
+orientation, same joint action, same ground reference class."* The joint action clause was right and
+the body-orientation clause was simply wrong: a seated press is upright and a bench press is supine.
+I made that call against the old artwork and without a frame to look at. `[Certain]` that it was wrong;
+§12.3 supersedes §10.7 on `d5c` and nothing else in §10.7 moves.
+
+**`d2b` / `d4b` Hack squat on `squat` — KEEP.** `[Likely]`
+The feet stay planted on a fixed platform, the load sits on the shoulders, both hips and knees close,
+and the body descends: F1.1 and F1.2 both pass, and the only difference is a sled and a back pad —
+apparatus. F1.3 does not bite, because he cannot adopt the drawn free-standing trunk inside the
+machine. It will not mislead him about how to perform the lift; the one instruction the picture gives
+that he might act on is depth, and depth is the same instruction on both.
+
+**`d4g` Seated leg curl on `legcurl` (prone) — DROP TO CUE-ONLY.** `[Certain]`
+Fails F1.1 (prone pad with the trunk horizontal and the hips extended, versus a seat with the hips
+flexed about 90°) and fails F1.2 decisively: **the arrow points the wrong way.** The prone figure
+draws the heel travelling up the frame; on a seated curl the heel travels down and back under the
+seat. Cover the cue and the figure answers "which way am I pulling" with the opposite of the truth,
+which is the one thing §11.8(3) exists to catch. And the cue, `Set the lap pad tight enough that the
+hips cannot lift.`, names a lap pad the drawing does not contain, so F1.3 cannot rescue it either.
+Note this is not a hypothetical confusion: `d4f` lying leg curl and `d4g` seated leg curl sit two
+slots apart in the same session, and the hip angle is the entire reason the programme carries both.
+
+**`d2g` / `d4i` Seated calf raise on `calf` — KEEP.** `[Likely]`
+**BOUNDARY, and the one I spent longest on.** The block under the ball of the foot is the ground
+reference and it is identical; the load travels vertically through the foot in both; the heel rises up
+the frame in both. F1.1 and F1.2 pass. F1.3 is where it could have failed — the figure draws a
+straight knee and the seated version is knee-flexed by definition — but **the thigh pad makes the drawn
+position physically impossible to adopt**, so there is nothing to correct and no error to teach. What
+he takes from the picture is "drive through the ball of the foot, heel high", which is correct for
+both. Accepted cost, stated plainly: the figure carries no information about which calf raise this is.
+The exercise **name** does that job, and §10.3 already ruled that variants of one pattern are not the
+confusable pairs §11.8(5) is about — `d2g` and `d4i` already share one cue, on the same reasoning.
+
+**`d4h` Donkey calf raise on `calf` — KEEP, and it is the weakest thing I am signing off tonight.**
+`[Likely]`
+Same ground reference, same vertical load path, same knee state (straight, which is correct here),
+so F1.1 and F1.2 pass. It survives F1.3 **only** because its cue names the hip: `Keep the hips bent at
+the same angle for every rep.` He could stand upright — the apparatus does not prevent it — so without
+that clause the figure would be teaching the wrong trunk position and the slot would drop.
+**Pin this to the cue.** If `d4h`'s cue is ever reworded so that it stops naming the hip bend, the
+figure goes with it. That dependency is F1.3's consequence clause and this is its live example.
+
+### One more in the same class, not referred, ruled so it is not re-raised
+
+**`d1d` / `d5a` Flat DB press and `d5h` Close-grip bench on `hpush`, which draws a barbell — KEEP.**
+`[Certain]` Supine on a bench, pressing vertically, weight descending: F1.1 and F1.2 pass and only the
+implement differs, which F1.1 explicitly permits. `d5b` incline DB press likewise keeps it, via F1.3 —
+the figure draws a flat bench, he can absolutely set it flat, and the cue corrects it by naming the
+angle. That is the same dependency as `d4h`, and it is the second reason §12.2 matters: the cue that
+saves `d5b`'s figure is the cue whose two versions disagreed.
+
+### Contingency, if Chady answers B-65 or the `d2e` alternate the other way
+
+`[Certain]` Mechanical, not a judgement, so it can be applied without coming back to me:
+
+- **`d2e` becomes a glute-ham raise** → it loses the `legcurl` figure. On a GHR the heel is anchored
+  and the **trunk** is the working end travelling up; on a prone curl the trunk is still and the heel
+  travels. F1.2 fails. Cue-only.
+- **`d3d` becomes a shrug** → it stays cue-only, which is what it already is. No change.
+
+### What changes, exactly
+
+Two keys are deleted from `PAT` in `index.html`. **Nothing else in the file, and nothing at all in
+`logic.js`, `PHAT_PLAN` or the cue data.**
+
+```
+PAT: delete d5c, delete d4g.
+Result: 36 of 42 slots render a figure; 6 render the cue alone.
+The 6: d3d · d4c · d4g · d5c · d5d · d5j
+       (d4g and d5c are new tonight; the other four were dropped with B-60/B-64.)
+```
+
+| Assertion for QA | |
+|---|---|
+| `PAT.d5c === undefined` and `PAT.d4g === undefined` | the drop happened |
+| `hasFig("d5c") === false`, `hasFig("d4g") === false` | and `hasFig` agrees |
+| `Object.keys(PAT).length === 36` | snapshot, and it moves only with a ruling |
+| the six cue-only slots each still render their §10.2 cue, with **no** empty box and no placeholder | §4.13 — the drop must not take the cue with it |
+| `hasFig("d2b") && hasFig("d4b") && hasFig("d2g") && hasFig("d4h") && hasFig("d4i") && hasFig("d5b")` | the six kept mappings, pinned so a future tidy-up does not quietly delete them too |
+| `d4h`'s cue contains `hips bent` and `d5b`'s contains `30–35°` | **F1.3 dependencies.** These two assertions are the only reason those two figures ship. Name them in the test so a copy edit fails loudly instead of silently making a figure wrong |
+
+`[Opinion]` I am not asking anyone to draw anything tonight. If the figure set is ever extended, the
+cheapest additions by slots-per-pattern are a seated-calf pattern (would not change my ruling, since
+the shared one already passes) and a seated leg curl (1 slot). Neither is worth an overnight. A
+seated machine press is 1 slot and I would not draw it at all.
+
+---
+
+## 12.4 `S1_LINES` — confirmed for export, and three things that must stay out of it
+
+**Exporting it is right.** `[Opinion]` Rule S1's copy is the most constrained text in the app — it is
+the only place the app speaks near medical territory — and one named constant that the view and the
+suite both read is how it stays verbatim. Approve.
+
+### The exact set. Two strings, this order, nothing else. `[Certain]`
+
+```
+S1_LINES[0]  You logged pain on this. Not something this app can assess.
+S1_LINES[1]  Holding the weight. If it is sharp, or it repeats, stop the exercise and see a physio or a doctor.
+```
+
+**Both are mine, both signed off, both unchanged since.** Source: `docs/coach-audit.md` §10, the
+"Output copy (fixed string, no interpolation, no softening)" block, 2026-09-09. I have compared them
+character for character against what `logic.js:4094-4097` already holds: **identical.** No line in
+`S1_LINES` is anyone else's, and nothing in it is new tonight.
+
+Byte notes for the export, so "verbatim" is checkable: ASCII only — no en dash, no curly apostrophe,
+no degree sign. No leading or trailing space. `[0]` is two sentences, `[1]` is two sentences. They join
+with a **single space** for `painState().text`, which is what is built today.
+
+### Three things that must NOT be folded in
+
+**1. `From your last session on this.` — mine, approved, but NOT S1 copy.** `[Certain]`
+It is approved: addendum **§9.6**, 2026-09-10, *"approve the line and approve shipping it in its own
+field"*. It is a **provenance label**, not part of the refusal, and §9.6 approved it **on the condition
+that it stays in its own field and is never joined into the approved text** — which is exactly how
+`S1_PROVENANCE` is built. Keep it a separate constant. It must not enter `S1_LINES`, must not enter
+`.text`, and must not be announced as part of the notice.
+
+> **Stale comment, for backend to fix when it next touches that block.** `logic.js:4098-4100` says
+> *"UX spec 4.8, marked NEW and PENDING COACH REVIEW there"*. It is no longer pending — I approved it
+> in §9.6 the same day. The comment is now the only thing in the tree still calling it unreviewed, and
+> a "pending coach review" marker on approved copy is how approved copy gets held back or quietly
+> dropped. `wo-004-screens.md:744` and `:1564` carry the same stale marker. Copy change: none. Comment
+> only. **And §9.6's forward condition stands: when PE1 lands, that field's content becomes
+> epoch-dependent** (`100 × 5, under the old 3 × 3–5. Pick a weight for 8–12.`), which is another
+> reason it can never live inside `S1_LINES` — S1's copy is fixed and that field's is not.
+
+**2. The S1a 21-day restatement — mine, correct as built, and a REPLACEMENT, not a member.**
+`[Certain]` `logic.js:4177-4180` matches addendum §9.7 verbatim. But it *replaces* `out.lines`; it is
+never rendered alongside them. If it were added to the exported constant, the likeliest implementation
+error is rendering both — and the app would then tell him it is `Holding the weight` on an exercise he
+has not logged for three weeks, which is a claim about a session that did not happen. Leave it inline
+in `painState`. Do not export it as a third line of anything.
+
+**3. Nothing else. There is no third line and I am not writing one.** `[Certain]`
+Not a severity word, not a duration, not "ease off", not "try a lighter weight", not "consider a
+deload", not "it may just be DOMS", and not a dismissal control. Audit §10's standing limit is
+unchanged and §3's restatement of it holds: the app may say §10's fixed string, S2b's
+`You logged pain in the last 7 days.`, and S1a's 21-day restatement. That is the whole of what this
+app may say about pain. **B-45 stays deliberately open on the same ground** — `fail → deload → fail`
+still has no sentence and still will not get one from me until there is real logged history.
+
+### Assertions worth pinning
+
+| | |
+|---|---|
+| `S1_LINES.length === 2` and both strings match §10 character for character | the export is the copy |
+| `painState(...).text === S1_LINES.join(" ")` when `active && !stale` | one source, not two |
+| `S1_LINES` cannot be mutated through the export | **this is the real hazard of exporting it.** A plain array on `window.PHAT` lets any caller `push` a line onto the app's medical copy from anywhere. `painState` already returns `.slice(0)`; the *export* needs the same protection — freeze it, or export a function returning a fresh copy. `[Certain]` on the hazard; `[Opinion]` that freezing is the cheaper of the two |
+| `S1_LINES.join(" ")` contains none of: `deload`, `rest`, `lighter`, `stretch`, `probably`, `should be fine` | §10's prohibitions, as a test rather than a promise |
+| the stale path's text is **not** in `S1_LINES` and never renders beside it | item 2 above |
+
+---
+
+## 12.5 Verdict
+
+**Sign off with changes**, three of them, all small and all already specified above:
+
+1. **§10.1's prose corrected in place** to the table's string. Done in this commit. No shipped string
+   moves; the table was already right and `logic.js` already carries it.
+2. **Two keys deleted from `PAT`** — `d5c` and `d4g`. Both fail §11.8's own acceptance tests, one of
+   them by drawing the arrow backwards, and both keep their cue. The other four referred mappings are
+   kept, two of them conditionally on their cue, and the condition is now written down and testable.
+3. **`S1_LINES` confirmed as exactly two strings**, both mine, with the provenance label and the
+   21-day restatement held deliberately outside it, and one stale `PENDING COACH REVIEW` comment to
+   retire.
+
+Nothing here changes a load, a rep, a rest period, a week gate or a calorie number, and no engine is
+touched. **The one standing item is unchanged and I will keep saying it:** this is the fourth night of
+work on the tool and the log is still empty. The measure of all of it is one logged Upper Power session
+with a correct verdict under it.
