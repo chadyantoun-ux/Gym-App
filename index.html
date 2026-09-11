@@ -32,7 +32,7 @@
     --t70:rgba(var(--bone-rgb),.70);             /*  7.8:1 bg .  7.0:1 surface */
     --t55:rgba(var(--bone-rgb),.55);             /*  5.3:1 bg .  4.9:1 surface */
     --t45:rgba(var(--bone-rgb),.45);             /*  4.0:1 bg .  3.8:1 surface */
-    --t40:rgba(var(--bone-rgb),.40);             /*  3.5:1 bg .  3.3:1 surface */
+    --t40:rgba(var(--bone-rgb),.40);             /*  3.4:1 bg .  3.2:1 surface */
     --dim:var(--t70);        /* secondary text  */
     --faint:var(--t55);      /* tertiary text - the floor, not below it       */
     --line:var(--t45);       /* control boundaries: 3.8:1, over the 3:1 floor */
@@ -508,6 +508,118 @@
   label.check input:checked::after{content:""; width:17px; height:9px; display:block;
     border:3px solid var(--bg); border-top:0; border-right:0; transform:rotate(-45deg) translateY(-3px)}
   /* A screen W7 onward has not built yet. It says so; it does not pretend. */
+  /* ==== W9: HOME, and W13a: SETTINGS =====================================
+     ORDER ON HOME IS NORMATIVE (spec 13.1): header, then the ONE attention
+     slot (storage notice / deload banner - the draft-restore offer is the
+     third claimant and lives in #dock), then the next-session block, then the
+     cycle line, then the rollback line, then the day list.
+     THE BINDING MEASUREMENT: the day list must be reachable WITHOUT SCROLLING
+     at 393 x 852. Measured on the real page - see the report. Nothing may be
+     added above the day list without re-measuring it. */
+
+  /* The one top-corner control the spec permits (0.4): non-destructive and
+     infrequent. 88 x 44 of hit area, per control-inventory rows 7 and 43. The
+     painted label is smaller than the box; the BOX is what takes the tap. */
+  .topbtn{color:var(--amber); font-size:.6875rem; font-weight:800; letter-spacing:.08em;
+    text-transform:uppercase; min-height:var(--tap); min-width:88px; flex:none;
+    display:flex; align-items:center; justify-content:flex-end; padding:0}
+  .topbtn.back{justify-content:flex-start; gap:var(--s1)}
+
+  /* THE NEXT-SESSION BLOCK. The screen's question is "what do I train now",
+     and this is the answer, so it is the only amber field in the app - amber
+     means actionable and nothing on Home is more actionable than this. Text on
+     it is --bg (9.3:1). START SESSION inverts back to amber-on-bg inside it so
+     the button still reads as the accent and not as a hole in the panel.
+     Full-bleed inside the column: the button spans the block's own padding, so
+     it is the widest target on the screen. */
+  .nextblk{background:var(--amber); color:var(--bg); padding:16px var(--s4) 0; margin-top:var(--s3)}
+  .nextblk .nk{font-size:.6875rem; font-weight:800; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--bg); opacity:.8; display:block}
+  .nextblk h2{font-size:2.125rem; font-weight:800; letter-spacing:-.025em; line-height:1.02;
+    margin:7px 0 0; color:var(--bg); overflow-wrap:anywhere}
+  .nextblk .nm2{font-size:.8125rem; margin-top:9px; padding-bottom:var(--s4); color:var(--bg)}
+  #start-next{display:block; width:calc(100% + var(--s4) * 2); margin:0 calc(var(--s4) * -1);
+    background:var(--bg); color:var(--amber); border-radius:var(--r);
+    min-height:56px; padding:var(--s4); font-size:.9375rem; font-weight:800;
+    letter-spacing:.04em; text-transform:uppercase; text-align:left;
+    display:flex; align-items:center; justify-content:space-between; gap:var(--s3)}
+
+  /* The cycle line (C-10). EXACTLY ONE of these renders, ever. `divergence`
+     and `explain` are part of the SAME block and are not a second state line -
+     they are indented under it by nothing but type size, so they cannot be
+     mistaken for a second claim about the week. */
+  .cycle{padding:var(--s4) var(--s4) 0}
+  .cycle p{color:var(--bone); font-size:.875rem; line-height:1.45}
+  .cycle .div{color:var(--dim); font-size:.8125rem; line-height:1.45; margin-top:6px}
+  .cycle .exp{color:var(--faint); font-size:.75rem; line-height:1.5; margin-top:3px}
+  .cycle .ghostbtn{margin-top:10px}
+
+  /* The D1 banner. Advice, not refusal, so it takes the 3px left rule and no
+     glyph (spec 2.1) - a deload is a recommendation and must not wear the
+     shape the app uses to refuse a save. Answerable where it stands: both
+     buttons are inside it, full width, 48px, and `Not now` is LOWEST and
+     therefore the closer tap. Never in a top corner. */
+  .dbanner{background:var(--surface); border-left:3px solid var(--dim);
+    border-radius:var(--r); margin:var(--s3) var(--s4) 0; padding:14px var(--s4)}
+  .dbanner p{color:var(--bone); font-size:.875rem; line-height:1.45}
+  .dbanner p+p{margin-top:7px}
+  .dbanner .btns{margin-top:var(--s3)}
+  /* BOTH ANSWERS ARE GHOST BUTTONS, matching Rule V1's offer on the session
+     screen (vOffer). Deliberately NOT an amber primary on either: amber means
+     actionable, and painting `Not now` amber would make the app's loudest
+     control point at doing nothing, while painting `Start deload week` amber
+     would push a recommendation the spec says is recommended and never
+     imposed. Two equal-weight answers, `Not now` lowest and therefore the
+     closer tap. */
+  .dbanner .btns button{width:100%; min-height:var(--key)}
+  .dbanner .btns button+button{margin-top:var(--s3)}
+
+  /* The day list. `{wd} . {day}` - B-31. The weekday is the label the brief
+     fixes (Mon/Tue/Thu/Fri/Sat) and it is what makes the rest day legible
+     without renumbering a single stored id (C-5). */
+  .daybtn .wd{color:var(--faint); font-size:.6875rem; font-weight:800;
+    letter-spacing:.12em; text-transform:uppercase; display:block; margin-bottom:3px}
+
+  /* ---- SETTINGS ---------------------------------------------------------
+     Three sections and nothing else. What is NOT here is the point: the
+     volume toggle (C-1, B-23), the weight-increment segment (C-3, B-58) and
+     the empty-log switch (spec 2.4 item 9) are DELETED, not moved and not
+     resized. None of the three exists in this file in any state. */
+  .seg{display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:11px}
+  .seg button{flex:1 1 7.5rem; min-width:7.5rem; min-height:var(--key);
+    border:2px solid var(--line); border-radius:var(--r); color:var(--bone);
+    font-size:.75rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    display:flex; align-items:center; justify-content:center; gap:var(--s2); padding:0 var(--s2)}
+  /* Selection is never colour alone (B-13), and MEASURED ON SCREEN the amber
+     border alone was not enough: at 400 px the 2px border reads as "this one
+     is styled differently", not as "this one is on", and in greyscale the two
+     borders are near-identical. So the carrier is a MARK WITH TWO FORMS -
+     empty outline vs solid fill - the same pair label.check already uses for
+     a checkbox, at identical size in both states so nothing reflows on a tap.
+     aria-pressed is the accessible carrier; amber is the third signal and the
+     only one that needs colour.
+     A TICK GLYPH WAS CONSIDERED AND REJECTED: U+2713 is outside the inlined
+     Archivo unicode-range, so it would fall back per-glyph at a different
+     size and baseline - precisely the defect B-67 closed for U+2304. The mark
+     is DRAWN, so there is no glyph to fall back. Check any new glyph against
+     the range at the foot of archivo-inline.css. */
+  .seg .mk{width:14px; height:14px; flex:none; border:2px solid var(--line);
+    border-radius:var(--r); display:block}
+  .seg button[aria-pressed="true"]{border-color:var(--amber); color:var(--amber)}
+  .seg button[aria-pressed="true"] .mk{background:var(--amber); border-color:var(--amber)}
+  .setsec{padding:20px var(--s4) 0}
+  .setsec .ghostbtn{margin-top:11px}
+  .setsec .tiny{margin-top:11px}
+  /* Export's two outcomes, and they do not look alike (B-16, spec 10.4).
+     Success is the advice enclosure; failure is the four-sided refusal. */
+  .setsec .advice,.setsec .refuse{margin-top:11px}
+
+  /* ---- ONBOARDING (spec 10.1) -------------------------------------------
+     Writes exactly one key and clears nothing. START WITH AN EMPTY LOG sets a
+     flag; it is not an erase and cannot become one. */
+  .obplan{background:var(--surface); border-left:3px solid var(--amber);
+    border-radius:var(--r); padding:14px var(--s4); margin-top:var(--s2)}
+  .obplan .pn{font-size:1rem; font-weight:800; color:var(--bone)}
   .todo{padding:var(--s6) var(--s4)}
   .todo p{color:var(--dim); font-size:.875rem; line-height:1.55; margin-top:var(--s3); max-width:32em}
   .mb12{margin-bottom:var(--s3)} .mt12{margin-top:var(--s3)}
@@ -620,7 +732,14 @@ const KEY_LIFTS=(PHAT.KEY_LIFTS||[]).map(l=>({
 /* ============================================================ storage */
 /* One seam. window.storage and localStorage are two separate stores — the
    adapter picks one at boot and NOTHING may write around it (CLAUDE.md §7). */
-const LOG="phat:v1:log", BWK="phat:v1:bw", DRAFT="phat:v1:draft";
+/* W13a. SETTINGS GET THEIR OWN STORE and never ride on the log. Two reasons,
+   both data criteria: the onboarding flag must be writable on a first run
+   where the log store is deliberately still absent (spec 10.1 rule 2 - "it
+   writes exactly one key and clears nothing"), and W12's criterion that a
+   preference write leaves phat:v1:log and phat:v1:bw BYTE-IDENTICAL is only
+   provable if a preference never touches them. Absence-tolerant: a missing
+   store is the default prefs, which is how every existing install boots. */
+const LOG="phat:v1:log", BWK="phat:v1:bw", DRAFT="phat:v1:draft", PREFS="phat:v1:prefs";
 const hasNative = typeof window.storage!=="undefined" && window.storage && window.storage.get;
 /* readRaw distinguishes the three outcomes load() used to collapse into null:
    absent (nothing stored), ok (parsed), error (the read threw, or the stored
@@ -674,13 +793,32 @@ async function del(k){
    R1's one absolute timestamp, never persisted, never in the save path), undo
    (C-12's removed row, live for the whole session), and v1msg / v1added (Rule
    V1's answer, in place, for this session). */
-const S={tab:"train",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
+/* W9/W13a add:
+   sub      the Train tab's sub-screen: "" (Home) | "settings" | "onboard".
+            NOT a sixth tab - Settings and onboarding are Train, which is what
+            keeps the dock's five tabs and nav's aria-current honest.
+   stores   what the BOOT READ found for each store: "absent" | "ok" |
+            "error". Onboarding gates on "absent", never on "the array is
+            empty" - WO-001's readRaw distinction, and the whole reason a
+            failed read and a first run must not look the same.
+   prefs    the settings store. restAuto is Rule R1's auto-start; onboarded is
+            the one key spec 10.1 permits onboarding to write.
+   exp      the last export's outcome, so success and failure are both VISIBLE
+            states on Settings and failure cannot look like success (B-16). */
+const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
          problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
-         exIx:0,rest:null,undo:null,v1msg:"",v1added:null};
+         exIx:0,rest:null,undo:null,v1msg:"",v1added:null,
+         stores:{log:"absent",bw:"absent"},prefs:{restAuto:true,onboarded:false},
+         prefsMeta:{},exp:null};
 const logPayload=()=>Object.assign({},S.logMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,sessions:S.sessions,includeCut:S.includeCut});
 const bwPayload=()=>Object.assign({},S.bwMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,entries:S.bw});
+/* prefsMeta carries every key of the stored object this build does not own,
+   the same contract logMeta/bwMeta hold: a write never drops a key it did not
+   understand. */
+const prefsPayload=()=>Object.assign({},S.prefsMeta,
+  {schemaVersion:PHAT.SCHEMA_VERSION,restAuto:!!S.prefs.restAuto,onboarded:!!S.prefs.onboarded});
 
 /* ============================================================ utils */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1036,35 +1174,301 @@ function linechart(rows,series,h){
 }
 
 /* ============================================================ views */
+/* ==== W9: HOME, ONBOARDING · W13a: SETTINGS ==============================
+   The Train tab is a router, not a screen. Four destinations and exactly one
+   renders: the session (a draft is open), onboarding (first run), Settings,
+   or Home.
+
+   WHAT WENT AWAY HERE, AND WHY IT IS NOT SOMEWHERE ELSE:
+     - The full-volume checkbox (C-1, B-23). An all-or-nothing toggle cannot
+       express Rule V1's per-session ramp, and its own helper text described
+       the ramp it could not perform. The tier's STATUS now lives on the cycle
+       line and the OFFER lives on the session screen, which is where an
+       accessory is actually added. Nothing reads it any more; the stored
+       `includeCut` key is still WRITTEN BACK unchanged so no existing store
+       loses a field it had.
+     - The Export button and the storage sentence. Both moved to Settings,
+       in the same pass, so there was never a build with no way to export.
+     - The `Week {n}` h1. A CALENDAR week beside a TRAINING week is two
+       numbers called "Week" on one screen (B-52). The header kicker is now
+       `{n} sessions logged` and the week is the cycle line's alone (C-10). */
 function vTrain(){
-  const w=weeksIn();
-  let h=`<div class="pad" style="padding-top:26px;padding-bottom:16px">
-    <h1>${S.sessions.length?"Week "+w:"Start here"}</h1>
-    <p class="sub">${S.sessions.length
-      ? S.sessions.length+" session"+(S.sessions.length===1?"":"s")+" logged. Pick today's day."
-      : "Pick a day and log your first session. Every number you enter makes the next one easier."}</p></div>
-    <div class="pad">`;
-  PROGRAM.forEach(d=>{
-    const l=lastDay(d.id), a=l?ago(l):null, stale=a!==null&&a>=8;
-    h+=`<button class="daybtn${stale?" stale":""}" data-day="${d.id}">
-      <span><span class="nm">${esc(d.name)}</span>
-      <span class="ago" style="display:block">${l?(a===0?"Done today":a+" days ago"):"Never logged"}</span></span>
-      <span class="chev">&rsaquo;</span></button>`;
+  if(S.sub==="onboard") return vOnboard();
+  if(S.sub==="settings") return vSettings();
+  return vHome();
+}
+
+/* Which day is offered next: the one gone longest without a session, with a
+   never-logged day beating every logged one. Ties keep PLAN ORDER, because
+   Array#sort is stable and PROGRAM is the plan document's own order - so on a
+   fresh log the offer is day one, which is the day the cycle line also names. */
+function nextDay(){
+  const rows=PROGRAM.map((d,i)=>{
+    const l=lastDay(d.id);
+    return {d:d, i:i, ago:l===null?null:ago(l)};
   });
-  h+=`</div><div class="pad mt24">
-    <div class="panel"><label class="check">
-      <input type="checkbox" id="cut" ${S.includeCut?"checked":""}>
-      <span><span style="font-size:.90625rem;font-weight:600">Full volume</span>
-      <span style="color:var(--dim);font-size:.8125rem;display:block;margin-top:3px;line-height:1.45">
-      Adds the extra accessory work back in. Leave this off for the first four weeks.</span></span>
-    </label></div>
-    <button class="ghostbtn mt12" id="export">Export everything as JSON</button>
-    <p class="tiny mt12">Your log is saved on this device. Export once a month so nothing costs you the history.</p>
-    </div>`;
-  /* Storage-level failure notice, State 1I included: bottom of the Train tab,
-     above the nav, --bone text with a --red-hi rule (--red fails on --surface). */
+  rows.sort((a,b)=>{
+    const av=a.ago===null?Infinity:a.ago, bv=b.ago===null?Infinity:b.ago;
+    return bv===av?a.i-b.i:bv-av;
+  });
+  return rows[0]||null;
+}
+/* `{n} exercises · {n} sets` for a day AS PRESCRIBED THIS WEEK: volumeTier
+   decides which exercises are in (never the deleted checkbox) and deloadEx
+   decides how many sets each one is. Both are read, neither is recomputed —
+   a meta line that disagrees with the session screen is the app lying about
+   its own prescription. Fails open to the day's full list. */
+function dayMeta(day){
+  if(!day) return {ex:0,sets:0};
+  const today=PHAT.localDate();
+  let list=day.ex;
+  try{
+    const t=PHAT.volumeTier({dayId:day.id, program:PROGRAM, sessions:S.sessions,
+      state:S.logMeta, todayStr:today, draft:null, plan:PHAT.PHAT_PLAN});
+    if(t&&Array.isArray(t.exerciseIds)&&t.exerciseIds.length)
+      list=day.ex.filter(e=>t.exerciseIds.indexOf(e.id)>=0);
+  }catch(err){}
+  let dl=false;
+  try{ dl=PHAT.deloadStatus(S.logMeta,today).active===true; }catch(err){}
+  let sets=0;
+  list.forEach(e=>{ let rx=e; try{ rx=PHAT.deloadEx(e,dl)||e; }catch(err){ rx=e; }
+    sets+=(typeof rx.s==="number"&&rx.s>0)?rx.s:0; });
+  return {ex:list.length, sets:sets};
+}
+/* KEY_LIFTS joined to the week's PROGRAM, which is the shape deloadCheck and
+   stallReport both ask for: {id, n, s, lo}. Joined to the PROGRAMME and never
+   to the deloaded prescription — deloadCheck refuses to answer off a deloaded
+   ladder and says so (`reason:"deloaded-lifts"`), and that refusal is a bug
+   report about this function, not about his training. */
+function keyLiftRows(){
+  const out=[];
+  KEY_LIFTS.forEach(l=>{
+    let ex=null;
+    PROGRAM.forEach(d=>d.ex.forEach(x=>{ if(x.id===l.id) ex=x; }));
+    if(ex) out.push({id:l.id, n:l.n, s:ex.s, lo:ex.lo});
+  });
+  return out;
+}
+/* The D1 banner (Rule D1, spec 13.6). EVERY string is deloadCheck's, verbatim;
+   nothing here assembles a sentence and `reason` is never rendered — it is a
+   developer signal and has no honest reading (addendum §7.11).
+   Below training week 6 deloadCheck returns trigger:null, so THE WORD
+   "deload" CANNOT REACH THE DOM from here, which is this screen's half of
+   W9's assertion across trainingWeeks 0–5. */
+function deloadBanner(){
+  let d=null;
+  try{
+    const today=PHAT.localDate(), kl=keyLiftRows();
+    let sr=null;
+    try{ sr=PHAT.stallReport(S.sessions,today,kl,S.logMeta); }catch(err){ sr=null; }
+    d=PHAT.deloadCheck({sessions:S.sessions, todayStr:today, stallReport:sr,
+      keyLifts:kl, state:S.logMeta, plan:PHAT.PHAT_PLAN});
+  }catch(err){ return ""; }
+  if(!d||!d.trigger||!d.text) return "";
+  /* T2 pairs with Rule V1's rollback line as a SECOND PARAGRAPH, never joined
+     to the first (addendum §7.1). rollbackReintro is PURE — it returns a new
+     state and writes nothing — so calling it here previews the name of the
+     exercise that would come out without stripping an accessory per paint. */
+  let roll="";
+  if(d.rollback){
+    try{
+      const nx=PHAT.rollbackReintro(S.logMeta,PROGRAM,PHAT.localDate(),S.sessions,PHAT.PHAT_PLAN);
+      const nm=nx&&nx.lastRollback?nx.lastRollback.name:"";
+      roll=nm?PHAT.rollbackLine(nm):"";
+    }catch(err){ roll=""; }
+  }
+  /* Buttons ≥ 44 px, inside the banner so it is answerable where it stands,
+     never in a top corner, and `Not now` LOWEST — the closer tap is the one
+     that changes nothing. Ignoring is not declining: nothing here dismisses
+     on a scroll, and declining does not re-ask until a session is saved
+     (declineDeload snapshots the training-day count, not a date). */
+  return `<section class="dbanner" aria-labelledby="dl-h">
+    <p id="dl-h">${esc(d.text)}</p>
+    ${d.x2?`<p>${esc(d.x2)}</p>`:""}
+    ${roll?`<p>${esc(roll)}</p>`:""}
+    <div class="btns">
+      <button class="ghostbtn" id="dl-start">Start deload week</button>
+      <button class="ghostbtn" id="dl-no">Not now</button>
+    </div></section>`;
+}
+
+function vHome(){
+  const n=S.sessions.length;
+  /* THE HEADER. One top-corner control, and it is the one §0.4 permits:
+     neither destructive nor frequent. The kicker is a count, not a week. */
+  let h=`<div class="hd"><span class="kick">${n?(n===1?"1 session logged":n+" sessions logged"):"Nothing logged yet"}</span>
+    <button class="topbtn" id="settings-open">Settings</button></div>`;
+
+  /* §13.5 PRECEDENCE — the worst fact wins (B-40), and never two at once.
+       1  storage blocked / read failed   the refusal notice
+       2  the draft-restore offer         Variant A, in #dock (WO-001 Flow 1)
+       3  the deload banner
+     Implemented as: the notice takes the slot at the top of this view and the
+     banner is suppressed; the banner is ALSO suppressed while a draft offer
+     stands, because a recommendation about accumulated fatigue on top of an
+     unfinished session is the app talking over itself.
+     ONE DELIBERATE DEPARTURE, and it is a data decision: the draft offer is
+     never suppressed by the notice. Hiding the only route back to an
+     unfinished session in order to satisfy a layout rule would be a data-loss
+     path, and no layout rule outranks CLAUDE.md §3.3. */
   if(S.err) h+=`<div class="pad mt12"><div class="warn hi" role="alert">
     <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div></div>`;
+  else if(!S.offer) h+=deloadBanner();
+
+  /* THE NEXT-SESSION BLOCK. The answer to the screen's question, above the
+     fold, one tap. START SESSION routes through startDay(), so a day that
+     already carries an unsaved draft OFFERS it and never overwrites it. */
+  const nx=nextDay();
+  if(nx){
+    const m=dayMeta(nx.d);
+    h+=`<section class="nextblk" aria-labelledby="nx-h">
+      <span class="nk">${nx.ago===null?"Never logged &mdash; start here"
+        :(nx.ago===0?"Logged today":nx.ago===1?"1 day since this day":nx.ago+" days since this day")}</span>
+      <h2 id="nx-h">${esc(nx.d.name)}</h2>
+      <p class="nm2">${m.ex} exercise${m.ex===1?"":"s"} &middot; ${m.sets} set${m.sets===1?"":"s"}</p>
+      <button id="start-next" data-day="${esc(nx.d.id)}">
+        <span>Start session</span><span aria-hidden="true">&rsaquo;</span></button>
+    </section>`;
+  }
+
+  /* EXACTLY ONE PROGRAMME-STATE LINE (C-10 / B-52), and it is cycleLine's.
+     `divergence` and `explain` belong to the SAME block — they answer the one
+     line above them and are not a second claim about the week. The week-6
+     countdown does NOT appear beside it; it lives on Trend (§6). */
+  let cl=null;
+  try{ cl=PHAT.cycleLine({sessions:S.sessions, todayStr:PHAT.localDate(),
+    state:S.logMeta, program:PROGRAM, plan:PHAT.PHAT_PLAN}); }catch(err){ cl=null; }
+  if(cl&&cl.text){
+    h+=`<div class="cycle"><p>${esc(cl.text)}</p>`;
+    if(cl.divergence) h+=`<p class="div">${esc(cl.divergence)}</p>`;
+    if(cl.divergence&&cl.explain) h+=`<p class="exp">${esc(cl.explain)}</p>`;
+    /* The way out of a deload, one tap and no confirmation: ending it
+       RESTORES sets rather than removing them, so the cheap direction is the
+       safe direction (spec §0.1 rule 8). */
+    if(cl.deload&&cl.deload.active)
+      h+=`<button class="ghostbtn" id="dl-end">End it early</button>`;
+    h+=`</div>`;
+  }
+  /* The rollback line, when live. Under the cycle line, and it may coexist
+     with anything — it is a receipt for something that already happened, not
+     a claim on the top of the screen. */
+  let rn=null;
+  try{ rn=PHAT.rollbackNotice(S.logMeta,S.sessions,PHAT.localDate()); }catch(err){ rn=null; }
+  if(rn&&rn.show&&rn.text) h+=`<div class="cycle"><p class="div">${esc(rn.text)}</p></div>`;
+
+  /* THE DAY LIST. B-31: `{wd} · {day}`, the weekday from the plan document's
+     own `wd`, which is what makes the rest day legible without renumbering a
+     single stored id (C-5). This block must be reachable WITHOUT SCROLLING at
+     393 × 852 — nothing above it may grow without re-measuring. */
+  h+=`<div class="pad mt16"><span class="lbl secrule">Or pick any day</span>`;
+  PROGRAM.forEach(d=>{
+    const l=lastDay(d.id), a=l===null?null:ago(l), stale=a!==null&&a>=8;
+    h+=`<button class="daybtn${stale?" stale":""}" data-day="${esc(d.id)}">
+      <span><span class="wd">${esc(d.wd||"")}</span>
+      <span class="nm">${esc(d.name)}</span>
+      <span class="ago" style="display:block">${l===null?"Never logged"
+        :a===0?"Done today":a===1?"1 day ago":a+" days ago"}</span></span>
+      <span class="chev" aria-hidden="true">&rsaquo;</span></button>`;
+  });
+  h+=`</div>`;
+  /* THE MACROS ROW IS DELIBERATELY ABSENT. Spec §13.7 requires it to share
+     the Diet screen's numbers — "if the two ever disagree, one of them is
+     lying" — and those numbers are W1's, which do not exist in logic.js and
+     are not mine to invent. Four fabricated cells on the first screen of the
+     app is worse than four missing ones. Reinstate it with W12, from the same
+     source, and re-measure the no-scroll budget when you do. */
+  return h;
+}
+
+/* ---- ONBOARDING (spec §10.1) --------------------------------------------
+   IT WRITES EXACTLY ONE KEY (phat:v1:prefs.onboarded) AND CLEARS NOTHING.
+   `START WITH AN EMPTY LOG` sets a flag. It is not an erase, it cannot become
+   one, and there is no control on this screen or any other that empties the
+   real log (spec §2.4 item 9).
+   It renders only when BOTH stores read "absent" and neither read failed —
+   see boot. An absent store and an unreadable one must never look the same.
+   The design's `Height cm` field is deleted: no engine reads height, no screen
+   shows it, and every field on first run is a tax paid before the first set. */
+function vOnboard(){
+  const plan=PHAT.PHAT_PLAN, nd=(plan&&Array.isArray(plan.days))?plan.days.length:0;
+  return `<div class="pad" style="padding-top:26px">
+    <span class="kick">First run</span>
+    <h1 style="margin-top:10px">Nothing<br>logged yet</h1>
+    <p class="sub">This app has one job: make logging a set faster than a spreadsheet.
+      It has no streaks, no badges and no encouragement. It shows you last session's
+      numbers and gets out of the way.</p></div>
+  <div class="pad mt24"><span class="lbl">Your plan</span>
+    <div class="obplan">
+      <p class="pn">${esc(plan&&plan.name?plan.name:"PHAT")}${nd?" &mdash; "+nd+" days":""}</p>
+      <p class="sub">Two power days, three hypertrophy days. Loaded at reduced volume
+        for the first weeks.</p>
+    </div></div>
+  <div class="pad mt24">
+    <label class="lbl" for="bwin">Today's weight</label>
+    <div class="bwentry">
+      <span class="stepper"><button data-bwact="-" aria-label="Bodyweight down 0.1 kg">&minus;</button>
+        <input id="bwin" inputmode="decimal" placeholder="kg" value="">
+        <button data-bwact="+" aria-label="Bodyweight up 0.1 kg">+</button></span>
+    </div>
+    <p class="tiny mt12">Logged as today's entry. Weigh daily &mdash; the trend is what
+      the app reads. Optional: leaving it empty writes nothing.</p></div>
+  <div class="pad mt24" style="padding-bottom:var(--s6)">
+    <button class="primary" id="ob-start">Start with an empty log</button></div>`;
+}
+
+/* ---- SETTINGS (spec §10.2–10.5) -----------------------------------------
+   THREE SECTIONS. What is not here is the point, and it is not here in ANY
+   state: no volume toggle (C-1, B-23), no weight-increment segment (C-3,
+   B-58), no control that empties the real log (§2.4 item 9). The increment is
+   the rule's and not a setting's; the tier's status is the cycle line's.
+   The demo sandbox (W13b) is out of scope tonight and leaves NO dead control
+   behind — there is no disabled button and no "coming soon" row. */
+function vSettings(){
+  const auto=!!S.prefs.restAuto;
+  let h=`<div class="hd"><button class="topbtn back" id="settings-back">
+      <span aria-hidden="true">&lsaquo;</span> Back</button>
+    <span class="kick">Settings</span></div>`;
+  /* The store notice outranks everything on this screen too (§10.5), and it
+     is the reason export is refused below. */
+  if(S.err) h+=`<div class="pad mt12"><div class="warn hi" role="alert">
+    <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div></div>`;
+
+  /* REST TIMER. aria-pressed is the accessible carrier; the inset bar is the
+     non-colour one. The helper says what actually happens: Rule R1 rule 2
+     fires on COMMIT — a reps stepper tap or a reps field leaving focus — and
+     never on a keystroke. The design's "the moment reps are entered" would be
+     a promise the code deliberately does not keep, because typing the 1 of 12
+     must not start a countdown. */
+  h+=`<div class="setsec"><span class="lbl secrule">Rest timer</span>
+    <div class="seg" role="group" aria-label="Rest timer">
+      <button id="rest-auto" aria-pressed="${auto?"true":"false"}">
+        <span class="mk" aria-hidden="true"></span>Auto-start</button>
+      <button id="rest-manual" aria-pressed="${auto?"false":"true"}">
+        <span class="mk" aria-hidden="true"></span>Manual</button>
+    </div>
+    <p class="tiny">Auto-start begins the countdown when a set's reps are entered.
+      On manual the countdown does not run.</p></div>`;
+
+  /* EXPORT. Its two outcomes are both VISIBLE and they do not share a shape:
+     success is the advice enclosure, failure is the four-sided refusal with a
+     literal "!" (B-16, spec §2.1). A failure can never be mistaken for a
+     receipt. Both are announced through #bs-live, which is outside #view. */
+  h+=`<div class="setsec"><span class="lbl secrule">Export</span>
+    <button class="ghostbtn" id="export">Export everything as JSON</button>`;
+  if(S.exp&&S.exp.ok){
+    h+=`<div class="advice"><span class="kick">Exported</span>
+      <p>Exported ${S.exp.n} session${S.exp.n===1?"":"s"} and ${S.exp.m} weight${S.exp.m===1?"":"s"}.</p></div>`;
+  }else if(S.exp&&!S.exp.ok){
+    h+=`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>Could not export.
+      Nothing changed on this device.</p></div>`;
+  }
+  /* §10.4, RULED AND VERBATIM. The design's "Export monthly so nothing costs
+     you the history" is a false safety claim while there is no importer, and
+     a false safety claim is worse than no claim. This line is replaced by the
+     design's — and an IMPORT control appears beside EXPORT — when WO-002
+     lands. Not before. */
+  h+=`<p class="tiny">Your log lives on this device. Export writes a copy you can keep.
+      This version cannot read one back in yet.</p></div>`;
   return h;
 }
 
@@ -1084,11 +1488,12 @@ function sessionCtx(){
   }catch(err){ tier=null; }
   let ids=(tier&&Array.isArray(tier.exerciseIds)&&tier.exerciseIds.length)
     ? tier.exerciseIds.slice() : all.slice();
-  /* The Full-volume checkbox is B-23 / C-1 and WO-004 W13 DELETES it. Until
-     then it is still on the Train tab, and an inert control is its own lie, so
-     while it is ticked it still forces the whole day. Nothing else reads it,
-     and Rule V1 owns the default. */
-  if(S.includeCut) ids=all.slice();
+  /* THE `S.includeCut` READ IS GONE WITH THE CHECKBOX (C-1, B-23, Decision 6).
+     Rule V1 owns which exercises are in, for every day, with no override —
+     the offer to add one back is made on the session screen, one at a time,
+     which is the only shape the brief's ramp actually has. The stored key is
+     still written back untouched so no existing store loses a field; NOTHING
+     READS IT. Do not reintroduce a read here. */
   /* Spec §2.3 rule 6: a row a refusal points at must be reachable even when
      the tier hides it. A refusal pointing at an unreachable row is the worst
      state in the spec. */
@@ -1508,6 +1913,10 @@ function pipStrip(i,n){
    (W4 §2.5). Every other caller passes nothing and scrolls as before. */
 function render(keepScroll){
   const v=document.getElementById("view");
+  /* An open draft still wins the Train tab over Home, Settings and onboarding:
+     the session he is in the middle of is never something he has to navigate
+     back to. Settings is reached from Home, and Home is what a saved or
+     discarded session returns to. */
   v.innerHTML = S.tab==="train"  ? (S.draft?vSession():vTrain())
               : S.tab==="trend"  ? vTrend()
               : S.tab==="weight" ? vWeight()
@@ -1774,6 +2183,14 @@ function paintRest(){
    Rule 1: one timer for the whole app; a commit on another exercise restarts
    it with that exercise's thresholds. */
 function restStart(exId,k){
+  /* W13a. The gate is here, at the single entry point, rather than at each of
+     the two call sites — so there is one place that decides and no route that
+     can miss it. Both call sites are already COMMIT-only (a reps stepper tap,
+     or focusout of a reps field): neither is reachable from `input`, so the
+     setting changes whether a committed rep count starts a countdown and
+     never changes what counts as a commit. Typing the 1 of 12 starts nothing
+     in either mode. */
+  if(!S.prefs.restAuto) return;
   const key=exId+"|"+k;
   if(S.rest&&S.rest.key===key) return;
   S.rest={key:key,exId:exId,at:Date.now(),said:{}};
@@ -1786,9 +2203,25 @@ function restStart(exId,k){
    survives. */
 function renderRest(){
   const box=document.getElementById("rest-box"); if(!box) return;
-  const want=!!S.draft, have=!!document.getElementById("rest");
+  /* THREE CONDITIONS, and the last two are fixes.
+     S.draft        the band is a session thing.
+     S.tab==="train"  FIXED HERE: the band used to render off the draft alone,
+       so with a session open it printed `Rest timer starts when you log a
+       set.` under the Trend, Weight, Diet and Plan tabs — session-specific
+       copy on four screens that have no sets on them. Found during the B-66
+       run.
+     prefs.restAuto   on MANUAL nothing can start a countdown, so a permanent
+       idle band would be dead chrome making a promise the setting has just
+       switched off.
+     S.rest IS NOT CLEARED WHEN THE BAND GOES AWAY unless the draft itself
+     went. Rule R1 rule 4 keeps one absolute timestamp, so crossing to the
+     Weight tab to log bodyweight and coming back reads the true elapsed —
+     clearing it here would silently reset a running rest. */
+  const want=!!S.draft && S.tab==="train" && !!S.prefs.restAuto;
+  const have=!!document.getElementById("rest");
   if(want&&!have){ box.innerHTML=`<div id="rest"><p id="rest-txt"></p></div>`; restNode=null; }
-  if(!want&&have){ box.innerHTML=""; restNode=null; S.rest=null; }
+  if(!want&&have){ box.innerHTML=""; restNode=null; }
+  if(!S.draft) S.rest=null;
   restLoop(want);
   if(want) paintRest();
 }
@@ -1796,10 +2229,21 @@ function renderRest(){
 /* ============================================================ events */
 document.querySelector("nav").addEventListener("click",e=>{
   const b=e.target.closest("button[data-tab]"); if(!b)return;
+  /* Tapping Train is the second way out of Settings, and the one his thumb
+     can already reach — the header's `‹ BACK` is a top corner and a top
+     corner is the hardest place on the screen. Onboarding is NOT dismissed
+     this way: it is a state of the app, not a page, and it ends by being
+     answered. The export receipt is dropped on the way out; it is a receipt
+     for a tap, not a fact about the log. */
+  if(b.dataset.tab==="train"&&S.sub==="settings"){ S.sub=""; S.exp=null; }
   S.tab=b.dataset.tab; render();
 });
 
 document.getElementById("view").addEventListener("click",async e=>{
+  /* W9. START SESSION and every day row take the SAME route, so the draft
+     guarantee is stated once: startDay() never overwrites a readable draft —
+     its own day resumes, any other day asks first, and an unreadable one
+     fails closed. `#start-next` carries data-day, so it matches here. */
   const day=e.target.closest("[data-day]");
   if(day){ await startDay(day.dataset.day); return; }
 
@@ -1808,6 +2252,18 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.id==="discard"){ askDiscard(filledSets(S.draft),"discard"); return; }
   if(e.target.id==="finish"){ await finish(); return; }
   if(e.target.id==="export"){ exportAll(); return; }
+
+  /* ---- W9 / W13a. Navigation, the deload answer, onboarding and the rest
+     mode. All delegated from #view like everything else — no per-node
+     listeners to leak across a re-render. */
+  if(e.target.closest("#settings-open")){ S.sub="settings"; S.exp=null; render(); return; }
+  if(e.target.closest("#settings-back")){ S.sub=""; S.exp=null; render(); return; }
+  if(e.target.closest("#rest-auto")){ await setRestAuto(true); return; }
+  if(e.target.closest("#rest-manual")){ await setRestAuto(false); return; }
+  if(e.target.closest("#ob-start")){ await finishOnboarding(); return; }
+  if(e.target.closest("#dl-start")){ await answerDeload("start"); return; }
+  if(e.target.closest("#dl-no")){ await answerDeload("no"); return; }
+  if(e.target.closest("#dl-end")){ await answerDeload("end"); return; }
 
   const fb=e.target.closest("[data-fig]");
   if(fb){
@@ -1967,10 +2423,13 @@ document.getElementById("view").addEventListener("focusout",e=>{
   }
 });
 
-document.getElementById("view").addEventListener("change",async e=>{
-  if(e.target.id==="cut"){ S.includeCut=e.target.checked;
-    await save(LOG,logPayload()); }
-});
+/* THE `change` LISTENER ON #view IS GONE with the full-volume checkbox — it
+   was its only subscriber. It wrote the whole log store on a tick of a control
+   no engine read (C-1, B-23). Nothing in the app now writes phat:v1:log from
+   a settings-shaped action; preferences go to phat:v1:prefs and nowhere else.
+   Do not re-add a blanket `change` handler: `input`, `focusout` and `click`
+   are the three commit seams this app has, and a fourth is a fourth way for a
+   number to move without a commit. */
 
 /* Two more delegated roots, same pattern as #view and nav: one listener on a
    container that outlives every node inside it. No per-node listeners. */
@@ -2561,8 +3020,10 @@ window.addEventListener("pagehide",()=>flushDraft());
 
 /* ============================================================ restore offer (W4 §1)
    {n} — filled sets: w OR r non-empty. Counts complete, incomplete and
-   malformed; skips blank. Counts exercises the Full volume toggle hides, since
-   they are still in the draft. One function, every caller, per W4 §0.3. */
+   malformed; skips blank. Counts exercises Rule V1's tier HIDES, since they
+   are still in the draft — a set he typed before the tier changed is a set,
+   and a count that omits it understates what a discard would cost. One
+   function, every caller, per W4 §0.3. */
 function filledSets(d){
   let n=0;
   if(!d||typeof d!=="object") return 0;
@@ -2872,13 +3333,121 @@ async function finish(){
   S.offer=null; S.draftRead={status:"none"};
   render(); toast("Session saved.");
 }
+/* EXPORT HAS TWO VISIBLE OUTCOMES AND THEY DO NOT LOOK ALIKE (B-16, §10.4).
+   Success prints what left the device, counted — a receipt with no numbers in
+   it is indistinguishable from a receipt for nothing. Failure wears the
+   refusal shape and says the device is unchanged, which is the fact he needs.
+   WHAT THIS DOES AND DOES NOT CATCH, stated plainly: a throw anywhere on the
+   path is caught and reported. The other half of B-16 — a WebView where a
+   synthetic a.click() silently does nothing and throws nothing — CANNOT be
+   detected from here and is still open. It belongs with the clipboard/share
+   fallback in WO-002. Do not let the success line grow a claim this function
+   cannot stand behind. */
 function exportAll(){
-  const payload=Object.assign({},S.logMeta,{schemaVersion:PHAT.SCHEMA_VERSION,dateBasis:"local",
-    exportedAt:PHAT.localDate(),sessions:S.sessions,bodyweight:S.bw,includeCut:S.includeCut});
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download="phat-log-"+PHAT.localDate()+".json"; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  const n=S.sessions.length, m=S.bw.length;
+  let url=null;
+  try{
+    const payload=Object.assign({},S.logMeta,{schemaVersion:PHAT.SCHEMA_VERSION,dateBasis:"local",
+      exportedAt:PHAT.localDate(),sessions:S.sessions,bodyweight:S.bw,includeCut:S.includeCut});
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const a=document.createElement("a");
+    if(typeof a.download!=="string") throw new Error("no download attribute");
+    url=URL.createObjectURL(blob);
+    a.href=url; a.download="phat-log-"+PHAT.localDate()+".json"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    S.exp={ok:true,n:n,m:m};
+    announce("Exported "+n+" session"+(n===1?"":"s")+" and "+m+" weight"+(m===1?"":"s")+".");
+  }catch(err){
+    if(url){ try{ URL.revokeObjectURL(url); }catch(e2){} }
+    console.warn("[phat] export failed",err);
+    S.exp={ok:false,n:n,m:m};
+    announce("Could not export. Nothing changed on this device.",true);
+  }
+  /* Rendering here is safe and B-19 does not apply: Settings holds no
+     uncommitted input. There is no text field on this screen to lose. */
+  if(S.sub==="settings") render(true);
+}
+
+/* ---- W13a. The rest-timer mode. Writes its OWN store and nothing else:
+   phat:v1:log, phat:v1:bw and phat:v1:draft are byte-identical across this. */
+async function setRestAuto(on){
+  if(!!S.prefs.restAuto===!!on){ render(); return; }
+  S.prefs.restAuto=!!on;
+  /* On MANUAL a running rest is stopped as well as hidden: leaving a live
+     timestamp behind would restart a countdown the moment he switched back. */
+  if(!on) S.rest=null;
+  const ok=await save(PREFS,prefsPayload());
+  render();
+  /* A failed preference write is said out loud, because the setting on screen
+     now disagrees with the one on disk and the next boot will disagree with
+     both. Nothing about the log changed either way. */
+  announce(ok?("Rest timer "+(on?"auto-start.":"manual."))
+             :"Could not save that setting. It applies until you reload.");
+}
+
+/* ---- W9. Onboarding's one commit. It writes ONE key and clears NOTHING.
+   Rule 5 of §10.1: a failed flag write does not block — Home renders anyway
+   and onboarding reappears next boot, which is a repeated question rather
+   than a locked door. The bodyweight field is optional; empty writes nothing.
+   The two writes are independent: a bodyweight that fails to save does not
+   cost him the flag, and vice versa. */
+async function finishOnboarding(){
+  const inp=document.getElementById("bwin");
+  const raw=inp?String(inp.value||"").trim():"";
+  const v=raw===""?null:parseFloat(raw);
+  let said="";
+  if(v!==null&&v>30&&v<300){
+    const dt=PHAT.localDate();
+    S.bw=[...S.bw.filter(x=>x.date!==dt),{date:dt,kg:r1(v)}];
+    said=(await save(BWK,bwPayload()))?" Weight logged.":" Could not save that weight.";
+  }else if(raw!==""){
+    /* A number he typed that cannot be a bodyweight is refused rather than
+       rounded into range or silently dropped. He stays on this screen. */
+    toast("Enter a weight between 30 and 300 kg."); return;
+  }
+  S.prefs.onboarded=true;
+  await save(PREFS,prefsPayload());
+  S.sub=""; render();
+  announce("Ready."+said);
+}
+
+/* ---- W9. The deload answer (Rule D1). Every one of these is a PURE setter
+   in logic.js returning a NEW state object; the only key any of them writes
+   is `deload`. Sessions, notes and bodyweight come out byte-identical — W19's
+   data-loss criterion. A null return is a refusal to guess and is never
+   written over the store. */
+async function answerDeload(what){
+  const today=PHAT.localDate();
+  let next=null;
+  try{
+    next = what==="start" ? PHAT.startDeload(S.logMeta,today,deloadTrigger())
+         : what==="no"    ? PHAT.declineDeload(S.logMeta,today,S.sessions)
+         :                  PHAT.endDeload(S.logMeta,today);
+  }catch(err){ next=null; }
+  if(!next){ toast("Could not record that. Nothing changed."); return; }
+  S.logMeta=next;
+  const ok=await save(LOG,logPayload());
+  render();
+  if(!ok) return;                       /* save() has already set S.err */
+  /* `Noted. Asked again after the next session.` is D1_DECLINED, logic.js's
+     own string, and it is the honest one: declining does not silence the
+     check, it defers it until there is new evidence. */
+  announce(what==="start"?"Deload week started."
+          :what==="no"?"Noted. Asked again after the next session."
+          :"Deload ended.");
+}
+/* Which trigger fired, recorded with the deload so the week can be attributed
+   later. Recomputed rather than stashed on S: a value cached at paint time is
+   a value that can be stale by the tap. */
+function deloadTrigger(){
+  try{
+    const kl=keyLiftRows(), today=PHAT.localDate();
+    let sr=null;
+    try{ sr=PHAT.stallReport(S.sessions,today,kl,S.logMeta); }catch(err){}
+    const d=PHAT.deloadCheck({sessions:S.sessions, todayStr:today, stallReport:sr,
+      keyLifts:kl, state:S.logMeta, plan:PHAT.PHAT_PLAN});
+    return d&&d.trigger?d.trigger:null;
+  }catch(err){ return null; }
 }
 
 /* ============================================================ boot */
@@ -2914,9 +3483,29 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   let notice=null, rank=-1;
   const setNotice=(msg,r)=>{ if(msg&&r>rank){ notice=msg; rank=r; } };
   const rl=await readRaw(LOG), rb=await readRaw(BWK);
+  /* THE STATUS IS KEPT, NOT JUST THE VALUE. Onboarding gates on "absent" and
+     must never gate on "the sessions array came back empty" — a store that
+     failed to parse also yields an empty array, and showing a first-run
+     screen over a log that is really there is how a real history gets treated
+     as a fresh start (WO-001's readRaw distinction). */
+  S.stores={log:rl.status, bw:rb.status};
   if(rl.status==="error") setNotice(await preserveUnreadable(LOG,rl),S.blockWrites[LOG]?2:0);
   if(rb.status==="error") setNotice(await preserveUnreadable(BWK,rb),S.blockWrites[BWK]?2:0);
   const rawLog=rl.value, rawBw=rb.value;
+  /* Preferences. A missing store is the default prefs and is not an error:
+     every install before tonight has no prefs key and must boot unchanged.
+     A store that will not parse is treated as defaults too and is NOT given a
+     notice of its own — losing a rest-timer preference costs nothing, and a
+     third claimant on the notice slot would push a real one off it (B-40). */
+  const rp=await readRaw(PREFS);
+  if(rp.status==="ok"&&rp.value&&typeof rp.value==="object"){
+    S.prefsMeta={};
+    Object.keys(rp.value).forEach(k=>{ if(k!=="restAuto"&&k!=="onboarded") S.prefsMeta[k]=rp.value[k]; });
+    S.prefs.restAuto = rp.value.restAuto===undefined ? true : !!rp.value.restAuto;
+    S.prefs.onboarded = !!rp.value.onboarded;
+  }else if(rp.status==="error"){
+    console.warn("[phat] prefs unreadable:",rp.reason);
+  }
   /* Non-destructive, idempotent, never throws. No date value is rewritten. */
   const m=PHAT.migrateStore(rawLog,rawBw);
   if(m.log&&typeof m.log==="object"){
@@ -2952,6 +3541,20 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      startDay()'s fail-closed retry — the offer must not paper over it. */
   if(S.draftRead.status==="ok") S.offer=S.draftRead.draft;
   if(notice) S.err=notice;   // set last: a successful save() clears S.err
+  /* ---- W9. FIRST RUN (spec §10.1 rule 1). Four conditions, and each one is
+     a way the screen could otherwise lie:
+       both stores read "absent"   not "the arrays are empty". A read that
+         FAILED is not a first run, and the two must not look the same.
+       no notice                   with storage blocked the STORE NOTICE WINS
+         and onboarding does not render (B-40's ordering rule). Offering to
+         "start with an empty log" on a device whose log could not be read is
+         the app inviting him to walk past his own history.
+       not already onboarded       the flag, so answering it once is enough.
+       no draft on disk            an unfinished session is evidence of use
+         whatever the log store says; restoring it outranks introducing the
+         app. */
+  if(S.stores.log==="absent" && S.stores.bw==="absent" &&
+     !notice && !S.prefs.onboarded && !S.offer) S.sub="onboard";
   clearTimeout(slow);
   render();
 })();
