@@ -51,7 +51,8 @@
 <body>
 
 <h1>Phat Gym Track - test harness</h1>
-<p class="sub">Pure-function regression suite for WO-001 (B-01 / B-02 / B-03 / B-21) and WO-003 (the advice batch).
+<p class="sub">Pure-function regression suite for WO-001 (B-01 / B-02 / B-03 / B-21), WO-003 (the advice batch)
+and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
 <b>Today: no failures and no skips.</b> The one deliberate red is cleared.
@@ -89,7 +90,18 @@ and the <b>row-number / completed-set-ordinal divergence</b> in <code>extraSets<
 <code>Set N</code> copy, written with both readings named. Since <code>42e6f96</code> the gate
 returns an <b>ABSENT-shaped object</b> rather than <code>null</code>: <code>t</code>/<code>x</code>/
 <code>x2</code> empty, <code>rule</code> null, <code>absent:true</code> and the coach's refusal copy
-in <code>absentLine</code>. <code>null</code> still means <em>no verdict and nothing to say</em>;
+in <code>absentLine</code>. <b>S27</b> is WO-004 W6 and W7 &mdash; <b>C-11</b> (the verdict gate is
+<code>completedSets &gt;= ex.s</code> against the <em>prescription</em>: remove two sets from a
+3 &times; 3&ndash;5, complete the one left, no verdict &mdash; and the test shows the design's
+<code>min(ex.s, sets.length)</code> firing on the same input), <b>C-12</b> (remove-set and undo,
+asserted on the bytes the shipping app wrote to <code>phat:v1:draft</code>), <b>C-15</b> (the note
+field), <b>B-43</b> (the 44 px floor on <em>width</em> as well as height) and <b>B-59</b> (the
+contrast floor, with the session pips and the inactive tab labels named). <b>Read S27's two
+disclaimers</b>: its tap and contrast inventories are transcribed from a browser measurement, not
+read out of <code>index.html</code>, and C-12's decision functions are still in
+<code>index.html</code> and are a standing extraction request. Both are spelled out under "not
+testable in this harness"; the runs behind them are items 17&ndash;20 under "already proven".
+<code>null</code> still means <em>no verdict and nothing to say</em>;
 the object means <em>no verdict, and here is why</em>. <b>Test <code>.absent</code>, never
 truthiness</b> &mdash; both meanings are asserted separately, on purpose, because that is the
 distinction a future tidy-up would collapse. Seven tests in S26 that pinned wrong behaviour on
@@ -413,6 +425,16 @@ function PREV(setList, note){ return { sets: setList, note: note || "" }; }
 
 /* Real PROGRAM exercises, plus the `implement` tag that Rule I1 (W2/W11) adds.
    Kept here as data so a change to PROGRAM shows up as one edit, not thirty. */
+/* A NOTE ON NAMES IN FIXTURES. The authoritative slot names live in
+   PHAT.PHAT_PLAN and are pinned there, not here. `d3d` was updated from
+   "DB row or shrug" to "DB row" on 2026-09-11 to follow the plan document
+   (B-65, defaulted in WO-005 §4.3); no assertion moved, because no test reads
+   that string - it was a stale copy, and a stale copy of a name is how a
+   fixture starts disagreeing with the app it is standing in for. `d2e` is
+   knowingly left as "Glute-ham raise or lying leg curl" / implement
+   "bodyweight": index.html's own PROGRAM copy still says that and the plan
+   document says "Lying leg curl" / "machine". That disagreement IS B-66 and
+   changing the fixture would hide it. */
 var EX = {
   squat:    { id: "d2a", n: "Squat",             s: 3, lo: 3, hi: 5,  k: "power", implement: "bb" },
   row:      { id: "d1a", n: "Bent-over row",     s: 3, lo: 3, hi: 5,  k: "power", implement: "bb" },
@@ -2994,7 +3016,7 @@ function strOf(o){
       { id: "d3a", implement: "bb", n: "Row \u2014 speed work", s: 6, lo: 3, hi: 3, k: "speed" },
       { id: "d3b", implement: "bodyweight", n: "Rack chin", s: 3, lo: 8, hi: 12, k: "hyp" },
       { id: "d3c", implement: "cable", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp" },
-      { id: "d3d", implement: "db", n: "DB row or shrug", s: 2, lo: 12, hi: 15, k: "hyp", cut: 1 },
+      { id: "d3d", implement: "db", n: "DB row", s: 2, lo: 12, hi: 15, k: "hyp", cut: 1 },
       { id: "d3e", implement: "cable", n: "Close-grip pulldown", s: 2, lo: 15, hi: 20, k: "hyp" },
       { id: "d3f", implement: "db", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp" },
       { id: "d3g", implement: "bb", n: "Upright row", s: 2, lo: 12, hi: 15, k: "hyp", cut: 1 },
@@ -8039,6 +8061,610 @@ T("W5 / PE1 - the v5 gate names V_RX, and here is what makes that observable at 
   a.ok(n[0].indexOf("Schema 5:") === 0, "the v5 note names V_RX: " + JSON.stringify(n));
 });
 
+/* ============================================================ S27 - WO-004 W6 + W7
+   The shell, the accessibility floors, and the session screen.
+
+   WHAT IS PURE AND WHAT IS OBSERVED, stated up front so nothing here reads as
+   more than it is.
+
+   - C-11 is entirely pure: the gate lives inside PHAT.verdict and nothing in
+     index.html can loosen it. Asserted here, and confirmed once in the real
+     app (see "Already proven" item 17).
+   - C-12's DECISION functions (`blankSet`, `removeTarget`, `doRemoveSet`,
+     `undoRemove`) are still in index.html and still read `S`. They are NOT
+     callable from this page. What is asserted here is the DATA invariant the
+     undo depends on, against the byte strings actually written to
+     `phat:v1:draft` by the shipping app on 2026-09-11, replayed through
+     PHAT.classifyDraftPayload and PHAT.validateDraft. The extraction request
+     is in the untestable list (B-20).
+   - The 44 px and contrast floors: the CHECKERS are pure and are asserted
+     against the exact pre-fix numbers, so neither can pass vacuously. The
+     INVENTORY they run over is a transcription of a measurement taken on
+     2026-09-11 against this commit of index.html, at a true 400 px viewport
+     and again at 200 % text, with Playwright + headless Chromium enumerating
+     getBoundingClientRect and getComputedStyle over six routable screens and
+     seven transient states. A file:// page cannot read index.html's stylesheet
+     (no fetch, no XHR, no cross-document iframe on an opaque origin), so the
+     transcription boundary is real and is named in the untestable list. */
+group("S27 WO-004 W6+W7 / C-11 / C-12 / C-15 / B-43 / B-59 / B-65");
+
+/* ---------------- C-11 / B-50 - the gate is the PRESCRIPTION, not the rows */
+
+/* The prototype's predicate, written out so the test can show it firing while
+   PHAT.verdict stays silent. docs/design/PHAT App.dc.html:
+     v.hasVerdict = !!vd && filled >= Math.min(e.s, st.sets.length) */
+function protoGate(ex, setList){
+  var filled = P.completedSets(setList).length;
+  return filled >= Math.min(ex.s, setList.length);
+}
+
+T("C-11 / B-50 / W7 - remove two sets from a 3 x 3-5, complete the one left: NO verdict", function(a){
+  /* B-24 reopened through a new door. Removing rows must not buy a verdict:
+     a recommendation off one set is a recommendation about work he has not
+     done. The draft really does end up with a one-element `sets` array - the
+     shipping app wrote
+       "d1a":{"sets":[{"w":"100","r":"5"}],"note":""}
+     after two taps of REMOVE - so this shape is reachable, not theoretical. */
+  needFns(a, "verdict", "completedSets");
+  var oneRow = SETS(100, 5);
+  a.eq(oneRow.length, 1, "the fixture is the post-removal draft: one row, not three");
+  a.eq(protoGate(EX.row, oneRow), true,
+    "the design's min(ex.s, sets.length) gate WOULD fire here - that is the bug");
+  var v = P.verdict(VCTX(EX.row, oneRow, PREV(SETS(100, 5, 100, 5, 100, 5))));
+  a.eq(v, null, "the prescription is 3 sets; one completed set gets no verdict, ever");
+});
+
+T("C-11 - two rows left of three is still no verdict, and three rows is", function(a){
+  needFns(a, "verdict");
+  var prev = PREV(SETS(100, 5, 100, 5, 100, 5));
+  a.eq(protoGate(EX.row, SETS(100, 5, 100, 5)), true, "the design would fire on two rows too");
+  a.eq(P.verdict(VCTX(EX.row, SETS(100, 5, 100, 5), prev)), null, "two of three: silent");
+  a.ne(P.verdict(VCTX(EX.row, SETS(100, 5, 100, 5, 100, 5), prev)), null,
+    "and the gate is not stuck shut: the full prescription does produce a verdict");
+});
+
+T("C-11 - the answer is identical whether the rows were removed or left blank", function(a){
+  /* The gate counts COMPLETED SETS against ex.s. Two rows removed and two
+     rows left empty are the same fact about the training, so they must give
+     the same answer - and a difference would mean the row count leaked in. */
+  needFns(a, "verdict");
+  var removed = SETS(100, 5);
+  var blanked = [{ w: "100", r: "5" }, { w: "", r: "" }, { w: "", r: "" }];
+  a.eq(P.verdict(VCTX(EX.row, removed, null)), P.verdict(VCTX(EX.row, blanked, null)));
+  a.eq(P.verdict(VCTX(EX.row, blanked, null)), null);
+});
+
+T("C-11 - the gate does not move for hyp, for speed, or under a deload", function(a){
+  /* One row left on each of the three roles, and on a deload week, where the
+     rule set changes but the gate may not. */
+  needFns(a, "verdict");
+  a.eq(P.verdict(VCTX(EX.cablerow, SETS(60, 10), PREV(SETS(60, 10, 60, 10, 60, 10)))), null,
+    "hypertrophy, 1 row of a 3-set prescription");
+  a.eq(P.verdict(VCTX(EX.speedrow, SETS(60, 3), null)), null,
+    "speed, 1 row of a 6-set prescription");
+  var dctx = VCTX(EX.row, SETS(100, 5), null); dctx.deload = true;
+  a.eq(P.verdict(dctx), null, "a deload week does not lower the gate");
+  var full = VCTX(EX.speedrow, SETS(60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3), null);
+  a.eq(P.verdict(full), null, "speed work returns null at FULL count too - by design, not by gate");
+});
+
+T("C-11 - one row of a 2-set prescription is silent; one row of a 1-set one is not", function(a){
+  /* The boundary. ex.s === 1 is the only case where a single row IS the whole
+     prescription, and there the verdict must arrive - otherwise the gate has
+     stopped being about the prescription and started being about the number 1. */
+  needFns(a, "verdict");
+  a.eq(P.verdict(VCTX(EX.rackchin, SETS(0, 10), null)), null, "2-set rack chin, one row");
+  var one = { id: "x1", n: "Single", s: 1, lo: 3, hi: 5, k: "power", implement: "bb" };
+  a.ne(P.verdict(VCTX(one, SETS(100, 5), null)), null, "a 1-set prescription is satisfied by 1 set");
+});
+
+/* ---------------- C-12 - remove-set, asserted against the draft ON DISK */
+
+/* The exact bytes `phat:v1:draft` held during the observed run on 2026-09-11.
+   Day 1, exercise d1a (3 x 3-5), all three rows filled, then REMOVE on set 3.
+   Only the d1a entry is reproduced; the other seven entries and the envelope
+   are unchanged throughout and are asserted separately below. */
+var RM_BEFORE = '{"sets":[{"w":"100","r":"5"},{"w":"100","r":"5"},{"w":"120","r":"5"}],"note":""}';
+var RM_AFTER  = '{"sets":[{"w":"100","r":"5"},{"w":"100","r":"5"}],"note":""}';
+
+T("C-12 / B-48 - the undo restores the removed set BYTE-IDENTICALLY", function(a){
+  /* Observed: REMOVE on set 3 wrote RM_AFTER; "Undo - put set 3 back" wrote
+     RM_BEFORE again, character for character. This pins the property that
+     makes the undo worth having - not "a set came back" but "that set came
+     back", with its raw typed strings intact. A re-coerced 120 would read
+     "120" either way; a re-coerced "7.5.0" would not survive, which is why
+     the raw-string case is asserted too. */
+  needFns(a, "classifyDraftPayload");
+  var before = JSON.parse(RM_BEFORE), after = JSON.parse(RM_AFTER);
+  a.eq(after.sets.length, before.sets.length - 1, "exactly one set left");
+  var gone = before.sets[2];
+  var undone = { sets: after.sets.concat([{ w: gone.w, r: gone.r }]), note: after.note };
+  a.eq(JSON.stringify(undone), RM_BEFORE, "the undo is a splice-back, not a rebuild");
+  a.eq(typeof undone.sets[2].w, "string", "the raw typed STRING is restored, not a coerced number");
+  a.eq(undone.sets[2].w, "120");
+  a.eq(undone.sets[2].r, "5");
+});
+
+T("C-12 - the pre-removal and post-undo drafts are the same draft to the loader", function(a){
+  /* Everything downstream of the draft has to agree, or "byte-identical" is
+     only true of the string. classifyDraftPayload reads it back as ok, and
+     validateDraft builds the same entry from both. */
+  needFns(a, "classifyDraftPayload", "validateDraft");
+  var env = function(d1a){
+    return '{"schemaVersion":5,"dayId":"d1","date":"2026-09-11","entries":{"d1a":' + d1a +
+           '},"exIx":0,"savedAt":1789102554000}';
+  };
+  var b = P.classifyDraftPayload(env(RM_BEFORE)), u = P.classifyDraftPayload(env(RM_BEFORE));
+  var m = P.classifyDraftPayload(env(RM_AFTER));
+  a.eq(b.status, "ok"); a.eq(m.status, "ok");
+  a.eq(JSON.stringify(b.draft), JSON.stringify(u.draft), "the round trip is stable");
+  a.deep(P.validateDraft(b.draft).entries, P.validateDraft(u.draft).entries,
+    "pre-removal and post-undo validate to the same entries");
+  a.eq(P.validateDraft(m.draft).entries.d1a.sets.length, 2, "the removal really removed one");
+  a.eq(P.validateDraft(b.draft).entries.d1a.sets.length, 3);
+});
+
+T("C-12 - removing a set removes ONLY that set: no other entry is touched", function(a){
+  /* The observed draft carried all eight d1 entries. The removal changed one
+     key. A splice that rebuilt `entries` would be invisible on screen and
+     catastrophic on disk. */
+  needFns(a, "classifyDraftPayload");
+  var others = '"d1b":{"sets":[{"w":"","r":""},{"w":"","r":""}],"note":""},' +
+               '"d1d":{"sets":[{"w":"60","r":"8"},{"w":"","r":""},{"w":"","r":""}],"note":"felt strong"}';
+  var pre  = P.classifyDraftPayload('{"schemaVersion":5,"dayId":"d1","date":"2026-09-11","entries":{"d1a":' +
+    RM_BEFORE + ',' + others + '},"exIx":0,"savedAt":1}').draft;
+  var post = P.classifyDraftPayload('{"schemaVersion":5,"dayId":"d1","date":"2026-09-11","entries":{"d1a":' +
+    RM_AFTER + ',' + others + '},"exIx":0,"savedAt":2}').draft;
+  a.eq(JSON.stringify(pre.entries.d1b), JSON.stringify(post.entries.d1b), "d1b changed");
+  a.eq(JSON.stringify(pre.entries.d1d), JSON.stringify(post.entries.d1d), "d1d changed");
+  a.eq(post.entries.d1d.note, "felt strong", "a note on another exercise survived the removal");
+  a.eq(pre.dayId, post.dayId); a.eq(pre.date, post.date); a.eq(pre.exIx, post.exIx);
+  a.eq(Object.keys(pre.entries).join(","), Object.keys(post.entries).join(","), "key set changed");
+});
+
+T("C-12 - a removed set is gone from the SAVED session, and the kept ones are unchanged", function(a){
+  /* The point of the whole rule: what reaches the log. */
+  needFns(a, "buildSession");
+  var mk = function(d1a){
+    return P.buildSession({ date: "2026-09-11", entries: { d1a: JSON.parse(d1a) } }, "d1", "2026-09-11", "s1");
+  };
+  var full = mk(RM_BEFORE), cut = mk(RM_AFTER);
+  a.eq(full.entries.d1a.sets.length, 3);
+  a.eq(cut.entries.d1a.sets.length, 2);
+  a.eq(JSON.stringify(cut.entries.d1a.sets), JSON.stringify(full.entries.d1a.sets.slice(0, 2)),
+    "the two survivors are byte-identical to what they were before the third was removed");
+});
+
+/* ---------------- C-15 - the note field */
+
+T("C-15 / B-53 - the note is part of the draft and survives the reload round trip", function(a){
+  /* Observed 2026-09-11: typed into #exnote, blurred, reloaded, Resume - the
+     field came back with the same string and `phat:v1:draft` was unchanged
+     except for `savedAt`. Here: the same payload through the pure path. */
+  needFns(a, "classifyDraftPayload", "validateDraft");
+  var note = "right elbow twinge on set 2";
+  var raw = '{"schemaVersion":5,"dayId":"d1","date":"2026-09-11","entries":' +
+    '{"d1a":{"sets":[{"w":"100","r":"5"},{"w":"","r":""},{"w":"","r":""}],"note":' +
+    JSON.stringify(note) + '}},"exIx":0,"savedAt":1789102554000}';
+  var r = P.classifyDraftPayload(raw);
+  a.eq(r.status, "ok");
+  a.eq(r.draft.entries.d1a.note, note, "the note came back off the wire unchanged");
+  a.eq(r.draft.exIx, 0, "and exIx rides with it - coming back on exercise 1 of 9 is a loss too");
+  a.eq(P.validateDraft(r.draft).entries.d1a.note, note);
+  a.eq(JSON.stringify(P.classifyDraftPayload(raw).draft), JSON.stringify(r.draft), "stable");
+});
+
+T("C-15 - a note that is the ONLY thing typed is kept, and is not a training day", function(a){
+  /* validateDraft deliberately keeps a notes-only entry (decisions.md,
+     2026-09-09): a typed note is data. Removing the field would have removed
+     that path entirely, which is half of why C-15 was a defect and not a
+     style note. */
+  needFns(a, "validateDraft", "sessionHasCompletedSet");
+  var v = P.validateDraft({ date: "2026-09-11",
+    entries: { d1a: { sets: [{ w: "", r: "" }, { w: "", r: "" }], note: "shoulder felt off" } } });
+  a.eq(v.ok, true, "a notes-only entry is not a refusal");
+  a.ok(v.entries.d1a, "the entry survived");
+  a.eq(v.entries.d1a.note, "shoulder felt off");
+  a.eq(v.entries.d1a.sets.length, 0, "and it carries no fabricated sets");
+  a.eq(P.sessionHasCompletedSet({ entries: v.entries }), false, "a note alone is not a training day");
+});
+
+T("C-15 - the note is Rule S1's only input, so losing the field loses the suppression", function(a){
+  /* Why the field is load-bearing and not decorative: with the note gone
+     there is no way for painFlag to ever be true, and every load increase in
+     the app stops being suppressible. */
+  needFns(a, "verdict", "painFlag");
+  var sets = SETS(100, 7, 100, 7, 100, 7);          /* min rep hi+2 -> Rule P1.3, an increase */
+  var clean = vtext(P.verdict(VCTX(EX.row, sets, null, "")));
+  var hurt  = vtext(P.verdict(VCTX(EX.row, sets, null, "sharp pain in the left elbow")));
+  a.ne(clean, hurt, "the note has to change the answer, or S1 has no input");
+  a.ok(clean.indexOf("Go to") >= 0, "without a note the rule adds load: " + JSON.stringify(clean));
+  a.eq(hurt.indexOf("Go to"), -1, "with a pain note the increase is suppressed: " + JSON.stringify(hurt));
+  a.eq(P.painFlag(""), false, "and an empty note is not a pain note");
+});
+
+T("C-15 - the note survives punctuation, quotes, newlines and emoji byte for byte", function(a){
+  /* It is free text typed with chalky thumbs. Whatever lands in it has to
+     come back out, or the field is a trap. */
+  needFns(a, "classifyDraftPayload", "validateDraft", "buildSession");
+  var odd = 'RIR 1 "belt on" 100% \\ / <b> — é 👍\nsecond line';
+  var raw = JSON.stringify({ schemaVersion: 5, dayId: "d1", date: "2026-09-11",
+    entries: { d1a: { sets: [{ w: "100", r: "5" }], note: odd } }, exIx: 0, savedAt: 1 });
+  var d = P.classifyDraftPayload(raw).draft;
+  a.eq(d.entries.d1a.note, odd);
+  a.eq(P.validateDraft(d).entries.d1a.note, odd);
+  a.eq(P.buildSession(d, "d1", "2026-09-11", "s1").entries.d1a.note, odd,
+    "and it reaches the saved session unchanged");
+});
+
+/* ---------------- the 44 px floor, on WIDTH as well as height (B-43) */
+
+var TAP = 44;
+/* The checker. B-43 exists because the previous one was `h >= 44`. */
+function tapFail(c){
+  var bad = [];
+  if (!(c.w >= TAP)) bad.push("w " + c.w);
+  if (!(c.h >= TAP)) bad.push("h " + c.h);
+  return bad.length ? (c.what + ": " + bad.join(", ")) : null;
+}
+
+T("B-43 - the floor checker fails on WIDTH alone: a 40 x 46 stepper is a failure", function(a){
+  /* The regression IS the checker. Every number in this test is a real
+     measurement from a real build, and a height-only check passes all four. */
+  a.ne(tapFail({ what: "stepper (B-43, measured pre-fix)", w: 40, h: 46 }), null,
+    "40 px wide and 46 tall - the exact figure B-43 was filed for");
+  a.ne(tapFail({ what: "redesign stepper", w: 38, h: 46 }), null, "the design's is 38 px wide, worse");
+  a.ne(tapFail({ what: ".showfig pre-fix", w: 351, h: 26 }), null, "26 px tall");
+  a.ne(tapFail({ what: "redesign tab", w: 78, h: 32 }), null, "tabs at ~32 px");
+  a.ne(tapFail({ what: "editor minus", w: 16, h: 16 }), null);
+  a.eq(tapFail({ what: "exactly the floor", w: 44, h: 44 }), null, "44 x 44 is a pass, not a near miss");
+  a.ne(tapFail({ what: "one pixel under", w: 43.9, h: 44 }), null, "and 43.9 is not");
+  a.ne(tapFail({ what: "one pixel under", w: 44, h: 43.9 }), null);
+});
+
+/* MEASURED 2026-09-11 against this commit of index.html, headless Chromium at
+   a true 400 x 820 viewport, `getBoundingClientRect` over every focusable
+   element on six routable screens (Train, Trend, Weight, Diet, Plan, Session)
+   and seven transient states (verdict painted, EXTRA row, malformed set,
+   exercise 2, remove-set confirm, discard confirm, restore offer, undo toast).
+   The smallest instance of each control class is the one recorded.
+
+   THE ASSERTION IS THE FLOOR, NOT THE NUMBER. `tapFail` only asks >= 44 on
+   both axes, so a control that grows does not fail this page and a control
+   that shrinks under the floor does. The numbers are here so a regression
+   reads as "it was 44 x 48" rather than as "it is too small now". Two of them
+   already moved while this was being written - W11 relaid the Weight screen
+   mid-run and LOG TODAY went 159 x 56 -> 172 x 52 and the bodyweight input
+   71 x 48 -> 84 x 48, both re-measured, both still over the floor. Screens
+   owned by W10/W11/W12/W14 are recorded here but are THEIR item to re-measure;
+   the session screen, the sheets, the toast, the dock and the Train tab are
+   W6/W7's and are this group's. */
+var TAPS_400 = [
+  { what: "stepper key (weight -/+, reps -/+)", w: 44,  h: 48 },
+  { what: "weight input .w",                    w: 76,  h: 48 },
+  { what: "reps input .r",                      w: 76,  h: 48 },
+  { what: "note input .note",                   w: 366, h: 48 },
+  { what: "Full volume checkbox",               w: 44,  h: 44 },
+  { what: "day button .daybtn",                 w: 368, h: 66 },
+  { what: "movement & cue .showfig",            w: 400, h: 44 },
+  { what: "+ Add set / - Remove set",           w: 179, h: 48 },
+  { what: "previous exercise .prev",            w: 56,  h: 52 },
+  { what: "next exercise .next",                w: 304, h: 52 },
+  { what: "DISCARD SESSION",                    w: 368, h: 48 },
+  { what: "sheet danger button",                w: 368, h: 48 },
+  { what: "sheet safe button (.primary)",       w: 368, h: 52 },
+  { what: "restore-offer Discard",              w: 368, h: 48 },
+  { what: "undo control #undoset",              w: 368, h: 48 },
+  { what: "export button",                      w: 368, h: 48 },
+  { what: "tab button (each of five)",          w: 80,  h: 52 },
+  /* W11's Weight screen, re-measured after it landed mid-run. */
+  { what: "bodyweight stepper key (W11)",       w: 48,  h: 48 },
+  { what: "bodyweight input (W11)",             w: 84,  h: 48 },
+  { what: "LOG TODAY (W11)",                    w: 172, h: 52 }
+];
+/* The same enumeration with html{font-size:32px}, i.e. 200 % text. */
+var TAPS_200 = [
+  { what: "stepper key at 200% text",           w: 44,  h: 48 },
+  { what: "weight input at 200% text",          w: 252, h: 48 },
+  { what: "reps input at 200% text",            w: 274, h: 48 },
+  { what: "note input at 200% text",            w: 366, h: 56 },
+  { what: "day button at 200% text",            w: 368, h: 97 },
+  { what: "movement & cue at 200% text",        w: 400, h: 44 },
+  { what: "previous exercise at 200% text",     w: 56,  h: 52 },
+  { what: "next exercise at 200% text",         w: 368, h: 52 },
+  { what: "ghost/sheet buttons at 200% text",   w: 368, h: 56 },
+  { what: "tab button at 200% text",            w: 80,  h: 72 },
+  { what: "Full volume checkbox at 200% text",  w: 44,  h: 44 },
+  { what: "bodyweight stepper at 200% (W11)",   w: 48,  h: 48 },
+  { what: "bodyweight input at 200% (W11)",     w: 268, h: 48 },
+  { what: "LOG TODAY at 200% text (W11)",       w: 368, h: 64 }
+];
+
+T("B-43 / W6-AC3 - every control measured at 400 px clears 44 px on BOTH axes", function(a){
+  var bad = [], i, f;
+  for (i = 0; i < TAPS_400.length; i++) { f = tapFail(TAPS_400[i]); if (f) bad.push(f); }
+  a.eq(bad.join(" | ") || "none", "none");
+  a.eq(TAPS_400.length, 20, "the inventory shrank - a control was dropped from the measurement");
+});
+
+T("B-43 / W6-AC2 - and again at 200 % text, where growth is the usual failure", function(a){
+  var bad = [], i, f;
+  for (i = 0; i < TAPS_200.length; i++) { f = tapFail(TAPS_200[i]); if (f) bad.push(f); }
+  a.eq(bad.join(" | ") || "none", "none");
+  a.eq(TAPS_200.length, 14, "the inventory shrank - a control was dropped from the measurement");
+});
+
+T("B-43 - the two controls B-43 names by name are the two this fixes", function(a){
+  /* Named individually so a regression on either is a test with its name on
+     it, not one line inside a loop. */
+  var st = null, fig = null, i;
+  for (i = 0; i < TAPS_400.length; i++) {
+    if (TAPS_400[i].what.indexOf("stepper key") === 0) st = TAPS_400[i];
+    if (TAPS_400[i].what.indexOf("movement & cue") === 0) fig = TAPS_400[i];
+  }
+  a.ok(st, "the stepper key is in the inventory");
+  a.ok(fig, "the movement & cue control is in the inventory");
+  a.eq(tapFail(st), null, "stepper key measured 44 x 48; B-43 filed it at 40 wide");
+  a.eq(tapFail(fig), null, "movement & cue measured 400 x 44; B-43 filed it at 26 tall");
+  a.ok(st.w > 40, "the width is the half that was never checked");
+  a.ok(fig.h > 26);
+});
+
+T("B-43 - five tabs fit the floor at 400 px, which is what kept the fifth tab", function(a){
+  /* WO-004's named risk: five tabs at 393 px is 78 px each with 9 px labels,
+     and the design's were ~32 px tall. If they could not clear the floor the
+     Diet tab folds back into Weight. They clear it. */
+  var tab = null, i;
+  for (i = 0; i < TAPS_400.length; i++) if (TAPS_400[i].what.indexOf("tab button") === 0) tab = TAPS_400[i];
+  a.eq(tapFail(tab), null);
+  a.ok(tab.w * 5 <= 400, "five of them still fit the viewport: " + (tab.w * 5) + " px");
+});
+
+/* ---------------- the contrast floor (B-59) */
+
+function chan(v){ v = v / 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+function relLum(c){ return 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2]); }
+/* A translucent foreground is composited over its OWN ground before measuring.
+   Skipping this is how .lbl at .50 passed an audit: measured on --bg it is
+   4.6, on --surface it is 4.3, and only one of those is where it renders. */
+function over(fg, alpha, bg){
+  return [fg[0] * alpha + bg[0] * (1 - alpha),
+          fg[1] * alpha + bg[1] * (1 - alpha),
+          fg[2] * alpha + bg[2] * (1 - alpha)];
+}
+function cr(fg, bg){
+  var a = relLum(fg), b = relLum(bg);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+function cr1(x){ return Math.round(x * 10) / 10; }
+
+var BG = [28, 27, 26];        /* --bg      #1c1b1a */
+var SURF = [42, 40, 39];      /* --surface #2a2827 */
+var HI = [53, 50, 49];        /* --hi      #353231 */
+var BONE = [240, 238, 234];   /* --bone-rgb */
+var AMBER = [245, 179, 43];   /* --amber   #f5b32b */
+var GREEN = [124, 192, 94];   /* --green   #7CC05E */
+var RED = [227, 112, 92];     /* --red     #E3705C */
+
+T("B-59 - the contrast engine is right before anything is measured with it", function(a){
+  a.eq(cr1(cr([255, 255, 255], [0, 0, 0])), 21, "black on white is 21:1");
+  a.eq(cr1(cr(BG, BG)), 1, "a colour on itself is 1:1");
+  a.eq(cr1(cr([255, 255, 255], [255, 255, 255])), 1);
+  a.eq(cr1(cr(BONE, BG)), cr1(cr(BG, BONE)), "the ratio is symmetric");
+  a.eq(cr1(cr(over(BONE, 1, BG), BG)), cr1(cr(BONE, BG)), "alpha 1 composites to the colour itself");
+  a.eq(cr1(cr(over(BONE, 0, BG), BG)), 1, "alpha 0 composites to the ground");
+  a.ok(cr(over(BONE, 0.7, BG), BG) > cr(over(BONE, 0.55, BG), BG), "more alpha is more contrast");
+});
+
+T("B-59 - the two MEASURED failures still fail under this checker", function(a){
+  /* If a checker cannot reproduce the bug it was written for, it is a test of
+     nothing. These are the exact values from the prototype. */
+  a.eq(cr1(cr(over(BONE, 0.42, BG), BG)), 3.7, "inactive tab labels at .42 - B-59's first failure");
+  a.ok(cr(over(BONE, 0.42, BG), BG) < 4.5, "and 3.7 is below the 4.5 text floor");
+  a.eq(cr1(cr(over(BONE, 0.18, BG), BG)), 1.7, "session pips at .18 - B-59's second failure");
+  a.ok(cr(over(BONE, 0.18, BG), BG) < 3, "and 1.7 is below the 3 non-text floor");
+  a.ok(cr(over(BONE, 0.50, SURF), SURF) < 4.5, ".lbl at .50 on --surface - the third, found in W6");
+  a.eq(cr1(cr(over(BONE, 0.50, SURF), SURF)), 4.3);
+  a.ok(cr(over(BONE, 0.50, BG), BG) >= 4.5,
+    "and it PASSES on --bg at 4.6, which is exactly how it got through: one ground was measured");
+});
+
+T("B-59 / W6 - the named alpha steps match the ratios index.html's :root claims", function(a){
+  /* The token block quotes a ratio per ground beside every alpha. An arithmetic
+     slip there is a wrong number that looks authoritative. */
+  a.eq(cr1(cr(BONE, BG)), 14.8, "--bone on --bg");
+  a.eq(cr1(cr(BONE, SURF)), 12.7, "--bone on --surface");
+  a.eq(cr1(cr(over(BONE, 0.70, BG), BG)), 7.8, "--t70 on --bg");
+  a.eq(cr1(cr(over(BONE, 0.70, SURF), SURF)), 7.0, "--t70 on --surface");
+  a.eq(cr1(cr(over(BONE, 0.55, BG), BG)), 5.3, "--t55 on --bg");
+  a.eq(cr1(cr(over(BONE, 0.55, SURF), SURF)), 4.9, "--t55 on --surface");
+  a.eq(cr1(cr(over(BONE, 0.45, BG), BG)), 4.0, "--t45 on --bg");
+  a.eq(cr1(cr(over(BONE, 0.45, SURF), SURF)), 3.8, "--t45 on --surface");
+  /* The one number in that block that is wrong: index.html quotes --t40 on
+     --bg as 3.5 : 1 and it computes to 3.4498, which rounds to 3.4. No
+     rendered consequence - --rule carries section rules and clears the 3 : 1
+     non-text floor either way - but a ratio quoted beside a token is what the
+     next change is judged against, so the arithmetic is pinned here and the
+     comment is filed as a contract question. */
+  a.eq(cr1(cr(over(BONE, 0.40, BG), BG)), 3.4, "--t40 on --bg: 3.4498, not the 3.5 the comment claims");
+  a.ok(cr(over(BONE, 0.40, BG), BG) >= 3, "still over the non-text floor, which is why it is a comment bug");
+  a.eq(cr1(cr(over(BONE, 0.40, SURF), SURF)), 3.3, "--t40 on --surface");
+  a.eq(cr1(cr(AMBER, BG)), 9.3, "--amber on --bg");
+  a.eq(cr1(cr(AMBER, SURF)), 7.9, "--amber on --surface");
+  a.eq(cr1(cr(BG, AMBER)), 9.3, "--bg ON amber, which is how the primary button renders");
+  a.eq(cr1(cr(GREEN, BG)), 7.8, "--green on --bg");
+  a.eq(cr1(cr(GREEN, SURF)), 6.7);
+  a.eq(cr1(cr(RED, BG)), 5.5, "--red on --bg");
+  a.eq(cr1(cr(RED, SURF)), 4.7);
+});
+
+T("B-59 / W6 - THE RULE: no text alpha below .55, on either ground", function(a){
+  /* Stated as a rule rather than as a list of current values, because the next
+     change is an alpha, not an element. */
+  var floor = 0.55, step;
+  for (step = 0.50; step >= 0.30; step -= 0.05) {
+    a.ok(cr(over(BONE, step, SURF), SURF) < 4.5,
+      "alpha " + step.toFixed(2) + " must be below the text floor on --surface");
+  }
+  a.ok(cr(over(BONE, floor, BG), BG) >= 4.5, ".55 clears 4.5 on --bg");
+  a.ok(cr(over(BONE, floor, SURF), SURF) >= 4.5, ".55 clears 4.5 on --surface - by 0.4, not by much");
+});
+
+/* MEASURED 2026-09-11, same run as the tap inventory: every distinct
+   colour/ground/size triple that rendered real text across the six screens and
+   seven states. `lg` marks WCAG large text (>= 24 px, or >= 18.66 px at 700+),
+   whose floor is 3 : 1.
+   W11's Weight screen landed mid-run and was re-measured: nine text pairs, all
+   passing, and NOT ONE of them is a new colour/ground combination -
+   `.bwbig` is bone-on-bg like an h1, `.lead` and `.k` are bone-on-bg, `.kick`
+   is the .55-on-bg row already here as the inactive tab label, `.d` is .70 on
+   bg. That is what a named token set buys: a new screen adds no new pair. */
+var TEXT_PAIRS = [
+  { what: "h1 'Start here'",              fg: BONE,  al: 1,    bg: BG,   px: 38,   lg: true },
+  { what: "h3 exercise name",             fg: BONE,  al: 1,    bg: BG,   px: 25,   lg: true },
+  { what: ".sub body copy",               fg: BONE,  al: 0.70, bg: BG,   px: 14 },
+  { what: ".kick 'Waiting'",              fg: BONE,  al: 0.70, bg: BG,   px: 13 },
+  { what: "verdict sentence",             fg: BONE,  al: 0.70, bg: BG,   px: 13 },
+  { what: ".ago 'Never logged'",          fg: BONE,  al: 0.70, bg: SURF, px: 12.5 },
+  { what: ".det 'It holds 100 x 5.'",     fg: BONE,  al: 0.70, bg: SURF, px: 14 },
+  { what: ".tiny storage line",           fg: BONE,  al: 0.55, bg: BG,   px: 12 },
+  { what: "INACTIVE TAB LABEL",           fg: BONE,  al: 0.55, bg: BG,   px: 11 },
+  { what: ".prev arrow",                  fg: BONE,  al: 0.55, bg: BG,   px: 12 },
+  { what: ".lbl 'Note' on a card",        fg: BONE,  al: 0.55, bg: SURF, px: 11 },
+  { what: ".idx set number",              fg: BONE,  al: 0.55, bg: SURF, px: 13 },
+  { what: ".unit 'kg'",                   fg: BONE,  al: 0.55, bg: SURF, px: 10 },
+  { what: ".gtxt GHOST HINT (B-37)",      fg: BONE,  al: 0.55, bg: SURF, px: 12.5 },
+  { what: ".nm day name",                 fg: BONE,  al: 1,    bg: SURF, px: 16 },
+  { what: ".xtra EXTRA badge",            fg: BONE,  al: 1,    bg: SURF, px: 11 },
+  { what: "sheet h2 'Remove set 3?'",     fg: BONE,  al: 1,    bg: SURF, px: 17 },
+  { what: "stepper glyph on --hi",        fg: BONE,  al: 1,    bg: HI,   px: 18 },
+  { what: "ACTIVE TAB LABEL (amber)",     fg: AMBER, al: 1,    bg: BG,   px: 11 },
+  { what: ".target '3 x 3-5'",            fg: AMBER, al: 1,    bg: BG,   px: 13 },
+  { what: ".showfig 'movement & cue'",    fg: AMBER, al: 1,    bg: BG,   px: 12 },
+  { what: ".chev on a day button",        fg: AMBER, al: 1,    bg: SURF, px: 22 },
+  { what: "primary button label",         fg: BG,    al: 1,    bg: AMBER, px: 15 },
+  { what: "next-exercise button label",   fg: BG,    al: 1,    bg: AMBER, px: 12 },
+  { what: "toast message",                fg: BG,    al: 1,    bg: AMBER, px: 13 },
+  { what: "danger button 'Remove set 3'", fg: RED,   al: 1,    bg: SURF, px: 13 }
+];
+
+T("B-59 / W6-AC4 - every text pair on screen measures at or above its floor", function(a){
+  var bad = [], i, t, ratio, floor;
+  for (i = 0; i < TEXT_PAIRS.length; i++) {
+    t = TEXT_PAIRS[i];
+    ratio = cr(over(t.fg, t.al, t.bg), t.bg);
+    floor = t.lg ? 3 : 4.5;
+    if (ratio < floor) bad.push(t.what + " = " + cr1(ratio) + " : 1, floor " + floor);
+  }
+  a.eq(bad.join(" | ") || "none", "none");
+  a.eq(TEXT_PAIRS.length, 26, "the inventory shrank - a pair was dropped from the measurement");
+});
+
+T("B-59 - the inactive tab label, named: .55 on --bg is 5.3 : 1", function(a){
+  /* Named explicitly because W6's criterion names it. It was .42 / 3.7 : 1. */
+  var i, t = null;
+  for (i = 0; i < TEXT_PAIRS.length; i++) if (TEXT_PAIRS[i].what === "INACTIVE TAB LABEL") t = TEXT_PAIRS[i];
+  a.ok(t, "the inactive tab label is in the measured inventory");
+  a.eq(t.al, 0.55, "the alpha is the floor token --t55, not a one-off");
+  a.eq(cr1(cr(over(t.fg, t.al, t.bg), t.bg)), 5.3);
+  a.ok(cr(over(t.fg, t.al, t.bg), t.bg) >= 4.5, "at 11 px it is small text, so 4.5 applies, not 3");
+  a.ok(cr1(cr(over(BONE, 0.42, BG), BG)) < 4.5, "and the value it replaced does not clear it");
+});
+
+/* The pips. Resolved by FORM, not by alpha: raising an upcoming pip to a
+   passing alpha would make it look completed, which erases the only thing the
+   strip is for. So the strip is aria-hidden redundant graphics with
+   `Exercise 3 of 7` as .sr-only text beside it, and the three states differ in
+   FILL vs OUTLINE and in HEIGHT as well as in value. Measured on exercise 3 of
+   7 at 400 px: two done, one now, four next. */
+var PIPS = [
+  { what: ".pip.done  filled bar", fg: BONE,  al: 0.45, bg: BG, h: 4, form: "fill" },
+  { what: ".pip.now   amber, double height", fg: AMBER, al: 1, bg: BG, h: 8, form: "fill" },
+  { what: ".pip.next  outline only", fg: BONE, al: 0.45, bg: BG, h: 4, form: "outline" }
+];
+
+T("B-59 - the session pips, named: all three states clear the 3 : 1 non-text floor", function(a){
+  var bad = [], i, p, ratio;
+  for (i = 0; i < PIPS.length; i++) {
+    p = PIPS[i];
+    ratio = cr(over(p.fg, p.al, p.bg), p.bg);
+    if (ratio < 3) bad.push(p.what + " = " + cr1(ratio) + " : 1");
+  }
+  a.eq(bad.join(" | ") || "none", "none");
+  a.eq(cr1(cr(over(BONE, 0.45, BG), BG)), 4.0, "done and next are drawn at --t45");
+  a.eq(cr1(cr(AMBER, BG)), 9.3, "the current pip is amber");
+  a.ok(cr(over(BONE, 0.18, BG), BG) < 3, "the .18 they replaced is 1.7 : 1 and still fails");
+});
+
+T("B-59 - and the pips are legible with the colour taken away", function(a){
+  /* The greyscale criterion, expressed as the property that survives it: the
+     three states must differ in something other than value. They differ in
+     form (fill vs outline) and in height (4 vs 8), and the position is also
+     carried in text that is not a pip at all. */
+  var forms = {}, heights = {}, i;
+  for (i = 0; i < PIPS.length; i++) { forms[PIPS[i].form] = 1; heights[PIPS[i].h] = 1; }
+  a.ok(Object.keys(forms).length >= 2, "fill and outline are both used");
+  a.ok(Object.keys(heights).length >= 2, "and the current pip is a different height");
+  a.eq(PIPS[1].h, 8, "current is double height");
+  a.eq(PIPS[0].h, 4);
+});
+
+T("B-59 - meaning-carrying non-text: control edges and the refusal border", function(a){
+  /* --line is what tells a stepper from the card behind it and a day button
+     from the page. Measured 4.0 : 1 on --bg and 3.8 : 1 on --surface. */
+  var edges = [
+    { what: ".daybtn border --line on --bg",   fg: BONE, al: 0.45, bg: BG },
+    { what: ".ghostbtn border --line on --bg", fg: BONE, al: 0.45, bg: BG },
+    { what: "sheet button border on --surface", fg: BONE, al: 0.45, bg: SURF },
+    { what: "danger button border --red",      fg: RED,  al: 1,    bg: SURF },
+    { what: "section rule --rule on --bg",     fg: BONE, al: 0.40, bg: BG }
+  ], bad = [], i, r;
+  for (i = 0; i < edges.length; i++) {
+    r = cr(over(edges[i].fg, edges[i].al, edges[i].bg), edges[i].bg);
+    if (r < 3) bad.push(edges[i].what + " = " + cr1(r) + " : 1");
+  }
+  a.eq(bad.join(" | ") || "none", "none");
+  a.eq(cr1(cr(over(BONE, 0.45, SURF), SURF)), 3.8, "the tightest of them, and it clears 3");
+});
+
+/* ---------------- B-65 - d3d is "DB row", and no slot names an alternate */
+
+T("B-65 - PHAT_PLAN slot d3d is 'DB row', and the slash-name is gone", function(a){
+  /* Rule A1 (addendum 8.2): two exercises in one slot is two histories, and
+     one history cannot describe both. Defaulted in WO-005 4.3 to the DB row.
+     Reversible at a cost of two strings; this test is the lookup that says
+     which one shipped. */
+  var plan = P.PHAT_PLAN, d3d = null, i, j, d;
+  a.ok(plan && plan.days, "the plan document is exported");
+  for (i = 0; i < plan.days.length; i++) {
+    d = plan.days[i];
+    for (j = 0; j < d.ex.length; j++) if (d.ex[j].id === "d3d") d3d = d.ex[j];
+  }
+  a.ok(d3d, "slot d3d still exists and did not move");
+  a.eq(d3d.n, "DB row");
+  a.eq(d3d.implement, "db", "the four fields that are correct for EITHER name are untouched");
+  a.eq(d3d.lift, "l_dbrow");
+  a.eq(d3d.k, "hyp");
+  a.eq(d3d.cut, 1);
+  a.eq(JSON.stringify(plan).indexOf("DB row or shrug"), -1,
+    "the forbidden slash-name must not survive anywhere in the plan document");
+});
+
+T("B-65 / A1 - no exercise in the plan names two movements in one slot", function(a){
+  /* d2e was resolved on this ground; d3d was the last one left. The rule, not
+     the instance, so a new slot cannot reintroduce it. */
+  var plan = P.PHAT_PLAN, offenders = [], i, j, d, n;
+  for (i = 0; i < plan.days.length; i++) {
+    d = plan.days[i];
+    for (j = 0; j < d.ex.length; j++) {
+      n = String(d.ex[j].n || "");
+      if (/\bor\b/i.test(n) || n.indexOf("/") >= 0) offenders.push(d.ex[j].id + " " + JSON.stringify(n));
+    }
+  }
+  a.eq(offenders.join(" | ") || "none", "none",
+    "a slot naming two movements has one history and cannot describe both");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -8394,6 +9020,46 @@ contract("<b>SUPERSEDED (42e6f96) &mdash; &sect;9.8's zero-session line used to 
   "with a deload-precedence test proving the count line cannot swallow the one row that changes what he " +
   "does today.");
 
+/* ---------------------------------------------------- WO-004 W6/W7 (S27) --- */
+contract("<b>WO-004 W6 &mdash; one ratio in <code>index.html</code>'s <code>:root</code> block is " +
+  "wrong. <code>frontend-engineer</code>.</b> The token comment quotes <code>--t40</code> as " +
+  "<b>3.5 : 1</b> on <code>--bg</code>; composited and measured it is <b>3.4498</b>, which rounds to " +
+  "<b>3.4</b>. Every other quoted figure in that block checks out to one decimal (asserted, sixteen of " +
+  "them, in S27 <em>the named alpha steps match the ratios index.html's :root claims</em>). No rendered " +
+  "consequence &mdash; <code>--rule</code> carries section rules, a non-text element, and 3.4 clears the " +
+  "3 : 1 floor &mdash; but the number beside a token is what the next alpha change is judged against, " +
+  "and the whole point of naming the steps was that nobody re-derives them. <b>One character.</b>");
+contract("<b>Rule P1.2 says \"repeat the heaviest\", and the heaviest is not always the working load. " +
+  "<code>strength-coach</code>.</b> B-08's acceptance case is <code>100 / 100 / 95</code>, where the " +
+  "heaviest happens to equal the min of the first three sets, so the pinned string is right for two " +
+  "different reasons and the suite cannot tell them apart. Reverse the order &mdash; " +
+  "<code>100 / 100 / 120</code> at <code>5 / 5 / 5</code> on a 3 &times; 3&ndash;5 &mdash; and the " +
+  "shipping rule returns <code>Sets not matched: 100 / 100 / 120 kg. Repeat 120 kg until all 3 sets " +
+  "reach 5 reps.</code> while <code>workingLoad</code> returns <b>100</b>. That is a recommendation to " +
+  "load a weight he held for one set of three, which is the sentence B-08 was filed about. It may well " +
+  "be the right coaching call (the top set proves the strength is there and the instruction is to match " +
+  "it, not to add), and the code matches its own comment, so <b>this is a question, not a defect " +
+  "report</b>. Observed in the shipping app on 2026-09-11, not just in the engine. <b>Not pinned</b>: " +
+  "pinning it would cement an answer nobody has given.");
+contract("<b><code>painFlag</code> does not fire on <em>twinge</em>, <em>sore</em> or <em>ache</em>. " +
+  "<code>strength-coach</code>.</b> <code>PAIN_RE</code> is " +
+  "<code>pain|hurt|hurts|injur*|sharp|pinch*|tweak*|strain*</code>. Typed into the note on the real " +
+  "session screen, <code>right elbow twinge on set 2</code> produced <b>no</b> pain notice and did " +
+  "<b>not</b> suppress a load increase &mdash; observed 2026-09-11. The word list is a coaching " +
+  "decision and the false-positive cost was already weighed once (audit &sect;10 accepts " +
+  "<em>no pain today</em> firing), so QA is not proposing words. Flagging only that the three commonest " +
+  "gym words for \"something is wrong but I can still lift\" are outside the rule that exists to catch " +
+  "them. S16's word-match tests are untouched.");
+contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing changed, so " +
+  "<code>savedAt</code> is the time of the last WRITE, not of the last typed number.</b> Measured: " +
+  "back-date <code>savedAt</code> 14 hours, reload with a live session in memory, and the restore offer " +
+  "reads <em>saved just now</em>. <b>QA's assessment: not a defect.</b> The write really did happen just " +
+  "then, the copy says \"saved\", every set and the note survive byte-identically (only " +
+  "<code>savedAt</code> moves), and the path that fires is the phone-lock flush that makes B-01's " +
+  "promise true &mdash; taking it away to keep a timestamp honest would be the wrong trade. Recorded " +
+  "because the next person to measure it will think they found something. The one real cost is a " +
+  "storage write on an unchanged draft, which is one more chance to hit a full disk (B-39).");
+
 /* ============================================================ render */
 (function render(){
   var i, r, pass = 0, fail = 0, skip = 0, ms = Date.now() - T0, rows = "";
@@ -8577,10 +9243,49 @@ contract("<b>SUPERSEDED (42e6f96) &mdash; &sect;9.8's zero-session line used to 
     "Those are the four items above. <b>Struck from this list on 2026-09-09, because they were observed:</b> " +
     "the phone lock (<code>visibilitychange</code> flush, measured), a browser kill and relaunch (proven up to " +
     "the OS boundary), and a real device timezone change (driven through " +
-    "<code>Emulation.setTimezoneOverride</code> at UTC-7, UTC+3 and UTC+14). Pinch-zoom needs no check " +
-    "either: <code>index.html</code> still ships " +
-    "<code>&lt;meta name=\"viewport\" content=\"...,maximum-scale=1\"&gt;</code>, which is B-13 by " +
-    "inspection - reading the tag settles it, tapping at the screen does not.</li></ul>";
+    "<code>Emulation.setTimezoneOverride</code> at UTC-7, UTC+3 and UTC+14). <b>Corrected 2026-09-11:</b> " +
+    "this line used to say pinch-zoom needed no check because <code>index.html</code> \"still ships " +
+    "<code>maximum-scale=1</code>\". It does not. W6 removed it; line 6 now reads " +
+    "<code>&lt;meta name=\"viewport\" content=\"width=device-width, initial-scale=1, " +
+    "viewport-fit=cover\"&gt;</code> and there is no <code>user-scalable</code> either. Settled by " +
+    "inspection, the same way, in the opposite direction.</li></ul>" +
+
+    "<p><b>WO-004 W7 / C-12 &mdash; the remove-set DECISION is still in <code>index.html</code> and " +
+    "still reads <code>S</code>. Extraction requested (B-20), <code>frontend</code> or " +
+    "<code>backend</code>.</b> Four things decide whether a typed number survives a tap on " +
+    "<code>&minus; REMOVE</code>, and none of them is callable from this page: " +
+    "<code>blankSet(s)</code> (<code>index.html:1031</code>), <code>removeTarget(sets)</code> " +
+    "(<code>:1032</code>, the \"prefer the last BLANK row\" rule that keeps the common case away from " +
+    "data), <code>doRemoveSet(exId, k)</code> (the splice plus the <code>S.undo</code> record, plus the " +
+    "re-indexing of any standing refusal marks below the removed row) and <code>undoRemove()</code> " +
+    "(the splice-back). All four are pure decisions over a sets array; three of them take <code>S</code> " +
+    "only to find it. <b>Wanted: <code>PHAT.removeTarget(sets)</code>, " +
+    "<code>PHAT.removeSet(sets, k)</code> &rarr; <code>{sets, undo}</code> and " +
+    "<code>PHAT.restoreSet(sets, undo)</code>.</b> That turns the C-12 rule into eight lines here " +
+    "instead of the data-invariant tests S27 carries plus a browser run. It is the same argument that " +
+    "got <code>classifyDraftPayload</code> and <code>buildSession</code> extracted in WO-001, and the " +
+    "same class of bug: this is the control that deletes a completed set. <b>What S27 does assert</b> " +
+    "is the invariant the undo depends on, against the byte strings the shipping app actually wrote to " +
+    "<code>phat:v1:draft</code> on 2026-09-11, replayed through <code>classifyDraftPayload</code>, " +
+    "<code>validateDraft</code> and <code>buildSession</code>. What it cannot assert is that those are " +
+    "the bytes the app will write tomorrow. See \"Already proven\" item 18 for the run.</p>" +
+
+    "<p><b>WO-004 W6 &mdash; the 44 px and contrast inventories in S27 are TRANSCRIBED, and that " +
+    "boundary is real.</b> The checkers are pure and are asserted against the exact pre-fix numbers, so " +
+    "neither can pass vacuously: the tap checker is required to FAIL a 40 &times; 46 stepper (which is " +
+    "the whole of B-43 &mdash; only the height was ever checked), and the contrast engine is required to " +
+    "reproduce B-59's 3.7 : 1 and 1.7 : 1. What this page cannot do is read " +
+    "<code>index.html</code>'s stylesheet: there is no <code>fetch</code>, no <code>XMLHttpRequest</code> " +
+    "and no scriptable cross-document iframe on a <code>file://</code> opaque origin, which is the same " +
+    "constraint that keeps the storage layer out of here. <b>So a change to an alpha step or a control's " +
+    "padding in <code>index.html</code> does not fail this page by itself</b> &mdash; it fails when the " +
+    "measurement is re-run. The measurement is thirty seconds with a headless browser " +
+    "(<code>getBoundingClientRect</code> over every focusable element, <code>getComputedStyle</code> " +
+    "over every text node, six routable screens and seven transient states, at 400 px and again at " +
+    "200 % text); the run of 2026-09-11 is recorded under \"Already proven\" item 19. <b>Re-run it " +
+    "whenever a token, a padding or a font-size changes.</b> The honest alternative &mdash; deploying " +
+    "the harness and letting it fetch its own <code>index.html</code> over http &mdash; would make this " +
+    "page stop working from <code>file://</code>, which is the one thing it is for.</p>";
 
   /* ---------------------------------------------------------------------
      The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a
@@ -8633,9 +9338,16 @@ contract("<b>SUPERSEDED (42e6f96) &mdash; &sect;9.8's zero-session line used to 
     "with the hand you would actually have free. Then look at it outdoors or under gym lights.<br>" +
     "<span class=\"skipmsg\">Why a phone: geometry at 400 px is measured (no overflow, dock stays in the " +
     "viewport, tap targets listed below). But iOS Dynamic Type and the Android font scale are applied by the " +
-    "OS, not by CSS, and \"can I reach it\" and \"can I read it\" are judgements. Known open and already " +
-    "measured, so no need to hunt for them: <b>B-37</b>, the last-session ghost hint renders 6.9 px wide; the " +
-    "stepper buttons are 40 px across, under the 44 px rule; the \"movement &amp; cue\" line is 26 px tall.</span></li>" +
+    "OS, not by CSS, and \"can I reach it\" and \"can I read it\" are judgements. " +
+    "<b>The three things this item used to tell you to expect are fixed and re-measured on " +
+    "2026-09-11</b> &mdash; it said the ghost hint rendered 6.9 px wide (B-37), the stepper buttons were " +
+    "40 px across (B-43) and \"movement &amp; cue\" was 26 px tall. Observed now, at a true 400 px: the " +
+    "ghost is on its own full-width row and renders <b>67 px</b> of text in a 366 px box, not clipped, " +
+    "at 4.9 : 1; the stepper keys are <b>44 &times; 48</b>; \"movement &amp; cue\" is " +
+    "<b>400 &times; 44</b>. Nothing on any of the six screens is under 44 px on either axis, at 400 px " +
+    "or at 200 % text. <b>So look for what a measurement cannot answer</b> &mdash; whether the reach is " +
+    "comfortable with one hand and whether the 11 px tab labels and the .55 grey are readable under gym " +
+    "lights &mdash; and not for the three numbers above.</span></li>" +
 
     "<li><b>Turn the screen reader on, once.</b> VoiceOver or TalkBack. Paste <code>7.5.0</code> into a weight " +
     "field and tap Save - it should speak <i>Not saved. 1 set needs a fix.</i> and land you on that row. " +
@@ -8658,7 +9370,14 @@ contract("<b>SUPERSEDED (42e6f96) &mdash; &sect;9.8's zero-session line used to 
     "iframe driving the real app, headless Chrome. Not checked in - a suite that needs a server stops being a " +
     "file you can double-click. Re-run it, or these items, when the storage layer changes. The seventeenth, " +
     "\"draft survives a kill\", is proven up to the point where the operating system takes over, which is why " +
-    "it is item 1 above. Three items below carry a named residue; nothing else does.</p><ol>" +
+    "it is item 1 above. Three items below carry a named residue; nothing else does.</p>" +
+    "<p><b>Items 17&ndash;20 are new and are from a second run, 2026-09-11</b>, covering WO-004 W6 (the " +
+    "shell and the accessibility floor) and W7 (the session screen). Rig: Playwright driving headless " +
+    "Chromium against the real <code>index.html</code> from <code>file://</code> at a true " +
+    "400 &times; 820 viewport - no server needed this time, because nothing in these four reads across " +
+    "a document boundary. Also not checked in, for the same reason. <b>Re-run items 18 and 19 whenever " +
+    "a token, a padding, a font-size or the draft shape changes</b>; they are the two that measure " +
+    "rather than assert.</p><ol>" +
 
     "<li><b>Draft survives a lock.</b> <span class=\"skipmsg\">Proven: a <code>visibilitychange</code> to " +
     "hidden wrote <code>{w:\"100\",r:\"5\"}</code> to <code>phat:v1:draft</code> with no blur and without " +
@@ -8748,6 +9467,75 @@ contract("<b>SUPERSEDED (42e6f96) &mdash; &sect;9.8's zero-session line used to 
     "rendered, and the notice shown was the <i>worst</i> fact, not the draft one - <i>Your saved log could not " +
     "be read and could not be copied aside. Nothing will be written to it. Reload before logging.</i> Tapping " +
     "a day refused: still on the Train tab, zero set rows. The old wording of this item was stale.</span></li>" +
+
+    /* ---- 2026-09-11: WO-004 W6 and W7, driven for real ---- */
+    "<li><b>C-11 &mdash; removing sets does not buy a verdict.</b> <span class=\"skipmsg\">Observed " +
+    "2026-09-11, headless Chromium at 400 &times; 820 against the shipping <code>index.html</code> from " +
+    "<code>file://</code>. Day 1, <i>Bent-over row</i>, 3 &times; 3&ndash;5. Verdict slot at first paint: " +
+    "<i>WAITING / Nothing to say until all 3 sets are in.</i> Tapped <code>&minus; REMOVE SET 3</code> " +
+    "(3 rows &rarr; 2), then <code>&minus; REMOVE SET 2</code> (2 &rarr; 1); the control then disappeared, " +
+    "which is correct - an exercise is skipped by leaving it blank, not by removing its last row. Typed " +
+    "<code>100</code> / <code>5</code> into the one remaining row and blurred. <b>The slot still read " +
+    "<i>Nothing to say until all 3 sets are in.</i></b> and <code>phat:v1:draft</code> held " +
+    "<code>\"d1a\":{\"sets\":[{\"w\":\"100\",\"r\":\"5\"}],\"note\":\"\"}</code>. The design's " +
+    "<code>min(ex.s, sets.length)</code> gate would have fired here; asserted in S27, and five injected " +
+    "mutants of the gate were killed.</span></li>" +
+
+    "<li><b>C-12 &mdash; remove-set confirmation and undo, read off the disk.</b> " +
+    "<span class=\"skipmsg\">Same rig, same day. With all three rows filled " +
+    "(<code>100&times;5 / 100&times;5 / 120&times;5</code>) the control read " +
+    "<code>&minus; REMOVE SET 3</code> and the tap raised a modal: <i>Remove set 3? / It holds " +
+    "120 &times; 5.</i> with <code>Remove set 3</code> (368 &times; 48) above <code>KEEP IT</code> " +
+    "(368 &times; 52), the safe button lowest. <b>Keep it</b> &rarr; <code>phat:v1:draft</code> " +
+    "byte-identical, 3 rows. <b>Remove set 3</b> &rarr; 2 rows, disk " +
+    "<code>[{\"w\":\"100\",\"r\":\"5\"},{\"w\":\"100\",\"r\":\"5\"}]</code>, toast <i>Set 3 removed. " +
+    "UNDO</i>, and a standing <code>Undo &mdash; put set 3 back</code> in the bottom stack. <b>Undo</b> " +
+    "&rarr; 3 rows and the draft byte-identical to before the removal. Then the blank case: added a row, " +
+    "the control retargeted to it (<code>&minus; REMOVE SET 4</code> while set 3 held numbers - it " +
+    "prefers the last BLANK row), and the tap removed it with <b>no modal</b>, back to the pre-add " +
+    "bytes, undo still offered. Every claim above is a read of <code>phat:v1:draft</code>, not of the " +
+    "screen.</span></li>" +
+
+    "<li><b>The 44 px floor and the contrast floor, measured.</b> <span class=\"skipmsg\">Same rig. " +
+    "<code>getBoundingClientRect</code> over every focusable element and <code>getComputedStyle</code> " +
+    "over every text node, on Train / Trend / Weight / Diet / Plan / Session plus seven transient states " +
+    "(verdict painted, EXTRA row, exercise 2, remove-set confirm, discard confirm, restore offer, undo " +
+    "toast). At 400 &times; 820: <b>0 of 38 controls under 44 px on either axis</b>, 0 of 26 text pairs " +
+    "under their floor, 0 non-text elements under 3 : 1, no horizontal scroll on any screen. Repeated " +
+    "with <code>html{font-size:32px}</code> (200 % text): <b>0 under 44, no horizontal scroll</b>. " +
+    "<b>Re-run the same day after W11 relaid the Weight screen mid-pass:</b> still 0 under 44 and 0 " +
+    "contrast failures, at both sizes; two figures moved (LOG TODAY 159 &times; 56 &rarr; " +
+    "172 &times; 52, the bodyweight input 71 &times; 48 &rarr; 84 &times; 48) and the inventory follows " +
+    "them. Also checked in the same pass: <b>0 unnamed controls</b> on all six screens (no " +
+    "<code>aria-label</code>, no <code>&lt;label&gt;</code> and no text on none of them), exactly " +
+    "<b>one</b> live region (<code>#bs-live</code>, <code>role=status</code>, outside " +
+    "<code>#view</code>) and it is the SAME DOM node after six renders and a navigation, " +
+    "<code>phat:v1:log</code> / <code>bw</code> / <code>draft</code> byte-identical across boot plus " +
+    "five tab renders, <b>no <code>Sept</code> anywhere</b> with a 2025 session rendering as " +
+    "<code>11 Dec 2025</code> and a 2026 one as <code>4 Sep</code> (B-14, B-35, B-44), and a single " +
+    "SVG marker id <code>ah_hpull_1</code> - instance-suffixed, no duplicate DOM ids at all (B-15). " +
+    "Smallest controls: stepper key <b>44 &times; 48</b>, Full-volume checkbox <b>44 &times; 44</b>, " +
+    "tabs <b>80 &times; 52</b> (72 at 200 %), <i>movement &amp; cue</i> <b>400 &times; 44</b>, " +
+    "<i>previous exercise</i> <b>56 &times; 52</b>. Tightest text pairs: <code>.lbl</code> / " +
+    "<code>.idx</code> / <code>.unit</code> / the ghost hint at <b>4.91 : 1</b> on <code>--surface</code>, " +
+    "the danger button at <b>4.71 : 1</b>, inactive tab labels at <b>5.33 : 1</b>. Pips measured " +
+    "individually on exercise 3 of 7: <code>.done</code> 4.01 : 1 filled, <code>.now</code> 9.31 : 1 " +
+    "amber at double height, <code>.next</code> 4.01 : 1 outline, the strip <code>aria-hidden</code> " +
+    "with <i>Exercise 3 of 7</i> beside it. <b>B-37 is fixed:</b> the ghost renders on its own 366 px " +
+    "row, 67 px of text, <code>scrollWidth === clientWidth</code>, on every row. One discrepancy, filed " +
+    "as a contract question: the <code>:root</code> comment quotes <code>--t40</code> on <code>--bg</code> " +
+    "as 3.5 : 1 and it is 3.4498.</span></li>" +
+
+    "<li><b>C-15 &mdash; the note is back, and it survives a reload.</b> <span class=\"skipmsg\">Same " +
+    "rig. The note is the last input on the card, labelled, 366 &times; 48. Typed <i>right elbow twinge " +
+    "on set 2</i>, blurred: on disk inside 800 ms. Reloaded: the restore offer read <i>UNFINISHED " +
+    "SESSION / Upper power &middot; Friday, 11 Sep / 3 sets logged &middot; saved just now</i>, and the " +
+    "draft on disk was unchanged except for <code>savedAt</code>. RESUME gave back the note verbatim, " +
+    "all three rows, and <code>exIx</code>. <b>One thing that did not happen:</b> no pain notice " +
+    "appeared and the load recommendation was not suppressed &mdash; <code>painFlag</code>'s word list " +
+    "has no <i>twinge</i>. Raised as a contract question for <code>strength-coach</code>; it is a word " +
+    "list, not a wiring fault, and the wiring was confirmed separately (<i>sharp pain</i> in the same " +
+    "field does suppress).</span></li>" +
     "</ol>";
 })();
 </script>
