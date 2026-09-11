@@ -3257,9 +3257,25 @@
     return n === 1 ? "1 day ago" : n + " days ago";
   }
 
+  /* changedClause(daysAgo) -> "You changed calories 3 days ago."
+
+     ONE string in ONE place. This clause opens BOTH state 7's sentence and the
+     hold note (Rule W1h), and for the same daysAgo the two must be byte-
+     identical - it is the same fact, and he should recognise the second as the
+     line he has already read rather than parse it as news (addendum 14.2).
+
+     Two matching literals would agree today and diverge on the next edit, most
+     obviously at daysAgo === 0 and on a future stamp, where agoWord has
+     deliberate behaviour nobody re-implementing it by instinct reproduces.
+     That divergence is the B-06 / B-51 failure class: two places computing one
+     coach-owned sentence. Hence a helper, not a copy. */
+  function changedClause(daysAgo) {
+    return "You changed calories " + agoWord(daysAgo) + ".";
+  }
+
   /* calorieAdvice(entries, todayStr, calChangedAt)
        -> {state, rate, text, subline, tone, aCount, bCount, meanA, meanB,
-           daysAgo, holdUntil}
+           daysAgo, holdUntil, holdNote}
 
      state, one of eleven:
        "empty"          no usable entry at all. text "" - the tab keeps its own
@@ -3292,6 +3308,26 @@
      say add or cut - and does NOT outrank 2, 3 and 4, which instruct nothing.
      So a cooldown while the rate reads +0.34 still prints the +0.34 line.
 
+     RULE W1h - holdNote (addendum 14.2). The hold is set in EVERY band, not
+     only in cooldown, so in bands 2/3/4 it used to suppress the next add-or-cut
+     instruction while rendering nothing and offering nothing to clear. holdNote
+     is that missing disclosure:
+
+       holdNote !== ""  IFF  holdUntil !== null AND state !== "cooldown"
+
+     i.e. exactly the three bands above / on-target / below during a live hold.
+     In cooldown `text` IS the disclosure and holdNote is "" - one disclosure on
+     screen, never two. In the four not-enough-data states holdUntil is null
+     because this function returns before the cooldown test, so the note is
+     UNREACHABLE there and must stay so: a screen that cannot compute a rate
+     does not get to explain why it is suppressing one.
+
+     The note carries NO imperative, NO kcal figure, NO rate and NO day count.
+     It does not need an imperative: in all three states it can reach, `text`
+     one rank above already contains the literal clause "Change nothing." That
+     dependency is an invariant, not a coincidence - if it ever goes false the
+     card has stopped instructing him and W1h goes back to strength-coach.
+
      Pure: reads `entries`, writes nothing, touches no storage, and stamping
      the cooldown is a separate explicit call (setCalChanged). */
   function calorieAdvice(entries, todayStr, calChangedAt) {
@@ -3300,7 +3336,7 @@
     var out = {
       state: "empty", rate: null, text: "", subline: "", tone: "none",
       aCount: W.aCount, bCount: W.bCount, meanA: W.meanA, meanB: W.meanB,
-      daysAgo: null, holdUntil: null
+      daysAgo: null, holdUntil: null, holdNote: ""
     };
 
     var rows = bwRows(entries, today);
@@ -3370,10 +3406,14 @@
       if (tone === "act") {
         out.state = "cooldown";
         out.tone = "hold";
-        out.text = "You changed calories " + agoWord(cd.daysAgo) +
-                   ". Hold until " + dayMon(cd.holdUntil) + " before changing again.";
-        return out;
+        out.text = changedClause(cd.daysAgo) +
+                   " Hold until " + dayMon(cd.holdUntil) + " before changing again.";
+        return out;           /* holdNote stays "" - `text` is the disclosure */
       }
+      /* Bands 2/3/4 under a live hold: `text` says nothing about the hold, so
+         the note does. Same opening clause as state 7, from the same helper. */
+      out.holdNote = changedClause(cd.daysAgo) +
+                     " Hold ends " + dayMon(cd.holdUntil) + ".";
     }
 
     out.state = band;
