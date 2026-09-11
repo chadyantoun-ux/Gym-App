@@ -107,7 +107,23 @@ truthiness</b> &mdash; both meanings are asserted separately, on purpose, becaus
 distinction a future tidy-up would collapse. Seven tests in S26 that pinned wrong behaviour on
 purpose were inverted when <code>fae1fd7</code> and <code>42e6f96</code> fixed them; each keeps the
 account of what it used to pin and asserts the old string is gone, because a fix is only provable
-against the thing it fixed.</p>
+against the thing it fixed.<br>
+<b>S28</b> is <code>docs/coach-audit-addendum.md</code> &sect;13 &mdash; the two rulings the coach handed
+down on 2026-09-11 after QA raised them as questions and refused to pin an answer. <b>Rule P1.2a</b>: the
+mismatch branch fired on <code>!equal</code>, so a set <em>above</em> the working load read as a failed
+prescription and <code>100/100/120</code> at <code>5/5/5</code> earned a worse instruction than
+<code>100/100/100</code>; and its target was the max, which prescribes a load held once. All ten of
+&sect;13.2's worked examples are pinned as exact strings, each row naming which wrong rule it kills
+(<code>max</code> / <code>min</code> / <code>C[0].w</code> / ruled), with rows 3 and 4 also asserted as
+<b>negatives</b> &mdash; <code>Repeat</code>, <code>120 kg</code> and <code>Sets not matched</code> absent
+from every copy field, because asserting only the positive passes on a rule that prints
+<code>Repeat 100 kg</code>. <b>Rule S1b</b>: the pain list, 8 stems to 21 entries, pinned through the frozen
+<code>PHAT.PAIN_WORDS</code> export rather than a regex literal, with the five stem hazards
+(<code>number</code>, <code>achieve</code>, <code>stability</code>, <code>teardrop</code>,
+<code>painting</code>) and the whole exclusion table asserted <b>false</b>. <b>A two-set slot cannot
+discriminate</b> a repeat target &mdash; at <code>s = 2</code>, <code>k = 1</code> and <code>R</code>
+<em>is</em> the max &mdash; so every discriminating case uses three, four or five sets, and that fact is
+itself asserted.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -2748,12 +2764,31 @@ T("Z2 delta 3 - a mixed-load mismatch lists each load in full", function(a){
 });
 
 T("Z2 - INVARIANT: the repeat target in the not-matched case can never be 0", function(a){
-  /* If max(weights in C) were 0 every set would be 0, `equal` would be true,
-     and case 2 could not have fired. Worth asserting because a bug here prints
-     "Repeat 0 kg", which is the B-32 failure wearing a different sentence. */
+  /* THE ASSERTIONS BELOW HAVE NOT MOVED. THE REASONING UNDER THEM HAS.
+     This used to read: "if max(weights in C) were 0 every set would be 0,
+     `equal` would be true, and case 2 could not have fired." The coach
+     WITHDREW that sentence on 2026-09-11 (addendum 13.1): the repeat target is
+     no longer max(weights in C), it is R, the upper median, and case 2 no
+     longer fires on `equal`. The CONCLUSION stands, for a new reason - case 2
+     now runs only when R > load, and load >= 0 by Z1, so R > 0 always. The
+     string "0 kg" is still unreachable from every branch. Arithmetic, not
+     coincidence, in both regimes.
+     Nothing here was changed to match the code: the expected values are the
+     same values they were before 7d64165. Only this comment moved.
+     Worth asserting because a bug here prints "Repeat 0 kg", which is the B-32
+     failure wearing a different sentence.
+     The third case below (100/100/95) is B-08's old shape and cannot
+     discriminate a target - see S28, which does. */
   needFns(a, "verdict");
   var cases = [[EX.rackchin, SETS(2.5, 8, 0, 10)], [EX.rackchin, SETS(0, 10, 5, 8)],
-               [EX.squat, SETS(100, 5, 100, 5, 95, 5)]], i, out;
+               [EX.squat, SETS(100, 5, 100, 5, 95, 5)],
+               /* Added with 13.1: the only shape where R itself is 0 - two of
+                  three sets at zero load. Under the old rule max was 2.5 and
+                  case 2 fired; under P1.2a R equals the working load, backoff
+                  is false, and case 2 is unreachable. Same invariant, new
+                  proof, and this is the case that exercises it. */
+               [{ id: "d1b", n: "Weighted pull-up", s: 3, lo: 3, hi: 5, k: "power",
+                  implement: "bodyweight" }, SETS(2.5, 5, 0, 5, 0, 5)]], i, out;
   for (i = 0; i < cases.length; i++) {
     out = vtext(P.verdict(VCTX(cases[i][0], cases[i][1], null)));
     a.eq(out.indexOf("Repeat 0 kg"), -1, "case " + i);
@@ -8665,6 +8700,539 @@ T("B-65 / A1 - no exercise in the plan names two movements in one slot", functio
     "a slot naming two movements has one history and cannot describe both");
 });
 
+/* ============================================================ S28 - Rule P1.2a and Rule S1b
+   coach-audit-addendum section 13, ruled at 19f8ab9, implemented at 7d64165.
+   Two live wrong-advice fixes, and BOTH halves are pinned here: the strings
+   the app must print, and the strings it must never print again.
+
+   WHY THE NEGATIVES ARE HALF OF THIS GROUP. B-08's existing regression case is
+   100 / 100 / 95, where the max, C[0].w and the ruled upper median are all the
+   same number - 100. It passed under the broken rule and it passes under the
+   correct one, so it proved nothing about the target. QA reported that as an
+   open QUESTION on 2026-09-11 and deliberately did not pin an answer. The coach
+   then found a second defect nobody had reported: case 2 fired on `!equal`, so
+   a set ABOVE the working load read as a failed prescription and 100/100/120 at
+   5/5/5 earned a WORSE instruction than 100/100/100 at 5/5/5. Doing more
+   returned less - the B-07 failure class.
+
+   A positive-only assertion cannot tell those apart. So every row below names
+   which wrong rule it kills, and rows 3 and 4 assert the absence of `Repeat`,
+   `120 kg` and `Sets not matched` in every copy field, not just the presence of
+   the right sentence.
+
+   AND DO NOT DISCRIMINATE ON A TWO-SET SLOT. At s = 2, k = ceil(2/2) = 1, so R
+   IS the max and the ruled rule and the old one agree by construction. d1b, d1c
+   and d1e are all two-set slots; a test on those alone proves nothing about the
+   target. The discriminating rows use three, four and five sets.
+--------------------------------------------------------------------------- */
+group("S28 Rule P1.2a / Rule S1b / addendum 13");
+
+/* The fixture IS the programme. These slots are read out of PHAT_PLAN rather
+   than copied, so a rep range cannot be changed in the app and leave a stale
+   duplicate here asserting against an exercise that no longer exists. */
+function PLANEX(id){
+  var plan = P.PHAT_PLAN, i, j, d;
+  if (!plan || !Array.isArray(plan.days)) return null;
+  for (i = 0; i < plan.days.length; i++){
+    d = plan.days[i];
+    if (!d || !Array.isArray(d.ex)) continue;
+    for (j = 0; j < d.ex.length; j++) if (d.ex[j].id === id) return d.ex[j];
+  }
+  return null;
+}
+/* Weights only, in the {w, r} shape repeatLoad reads. Reps are constant and
+   irrelevant: repeatLoad must not look at them. */
+function WS(){
+  var out = [], i;
+  for (i = 0; i < arguments.length; i++) out.push({ w: arguments[i], r: 5 });
+  return out;
+}
+function isNaNum(v){ return typeof v === "number" && v !== v; }
+
+T("P1.2a / 13.2 - the ten worked examples, each row naming the wrong rule it kills", function(a){
+  needFns(a, "verdict");
+  /* Section 13.2 row 8 writes `d1b Weighted pull-up {s:3, lo:3, hi:5}`. The
+     real d1b is 2 x 6-10, asserted below so this note cannot go stale. The
+     ruling is about the SHAPE - a three-set bodyweight power slot finishing at
+     the top of its range - so the fixture carries the shape and is NOT a claim
+     about PROGRAM. See "or above cannot appear on a two-set slot" further down:
+     on the shipping programme this exact sentence is unreachable, and that is
+     reported rather than hidden. */
+  var BW3 = { id: "d1b", n: "Weighted pull-up", s: 3, lo: 3, hi: 5, k: "power", implement: "bodyweight" };
+  var realD1b = PLANEX("d1b");
+  a.ok(realD1b && realD1b.s === 2 && realD1b.lo === 6 && realD1b.hi === 10,
+    "the real d1b is a 2 x 6-10 slot; BW3 above is 13.2's shape, not the programme's");
+
+  var rows = [
+    { n: "row 1 - 100x5, 100x5, 95x5, B-08's own case, kept as it is",
+      ex: EX.squat, sets: SETS(100, 5, 100, 5, 95, 5),
+      x: "Sets not matched: 100 / 100 / 95 kg. Repeat 100 kg until all 3 sets reach 5 reps.",
+      kills: "min, and NOTHING else. max and C[0].w both print 100 here too, which is exactly why this " +
+             "row must never be cited as evidence for the target. Character-identical to audit 3 example 2" },
+
+    { n: "row 2 - 100x5, 95x5, 90x5, THE DISCRIMINATOR",
+      ex: EX.squat, sets: SETS(100, 5, 95, 5, 90, 5),
+      x: "Sets not matched: 100 / 95 / 90 kg. Repeat 95 kg until all 3 sets reach 5 reps.",
+      kills: "max (100), min (90) AND C[0].w (100), all three at once. Three different numbers, and only " +
+             "the ruled upper median prints 95. This is the test B-08 should have had" },
+
+    { n: "row 3 - 100x5, 100x5, 120x5, a set ABOVE the working load",
+      ex: EX.squat, sets: SETS(100, 5, 100, 5, 120, 5),
+      x: "Top of range on all 3 sets. Go to 102.5 kg next session.",
+      kills: "the `!equal` TRIGGER. The shipped rule fired case 2 and printed `Repeat 120 kg`; C[0].w " +
+             "would print `Repeat 100 kg`, which is right for the wrong reason. The ruled rule does not " +
+             "reach case 2 at all" },
+
+    { n: "row 4 - 120x5, 100x5, 100x5, the same session logged the other way round",
+      ex: EX.squat, sets: SETS(120, 5, 100, 5, 100, 5),
+      x: "Top of range on all 3 sets. Go to 102.5 kg next session.",
+      kills: "C[0].w, which prints `Repeat 120 kg` here and `Repeat 100 kg` on row 3 - the same session, " +
+             "two instructions. Set order is not intent and the app must not infer it. Also kills max" },
+
+    { n: "row 5 - 100x5, 100x5, 120x4, upward outlier one rep short",
+      ex: EX.squat, sets: SETS(100, 5, 100, 5, 120, 4),
+      x: "Stay at 100 kg until all 3 sets reach 5 reps.",
+      kills: "any rule where a heavy set buys a missed rep. One rep short is still one rep short" },
+
+    { n: "row 6 - rack chin 5x8, 2.5x8, the two-set slot",
+      ex: EX.rackchin, sets: SETS(5, 8, 2.5, 8),
+      x: "Sets not matched: 5 / 2.5 kg. Repeat 5 kg until all 2 sets reach 10 reps.",
+      kills: "nothing, and it is here to say so. At s = 2, k = 1, so R IS the max: the ruled rule agreeing " +
+             "with max here is a consequence, not an exception. A two-set slot cannot discriminate" },
+
+    { n: "row 7 - 120x2, 100x5, 100x5, case 1 still beats case 2",
+      ex: EX.squat, sets: SETS(120, 2, 100, 5, 100, 5),
+      x: "2 reps at 120 kg. Below the range. Drop to 115 kg next session.",
+      kills: "a cap on case 1's drop at R, considered and rejected in 13.4 because it prints `Drop to " +
+             "90 kg` on 100x2, 90x4, 90x5 where the right answer is plainly 95" },
+
+    { n: "row 8 - three-set bodyweight slot, 2.5x5, 0x5, 0x5, R is 0 and case 2 cannot fire",
+      ex: BW3, sets: SETS(2.5, 5, 0, 5, 0, 5),
+      x: "Top of range on all 3 sets at bodyweight or above. Add 2.5 kg next session.",
+      x2: "If 2.5 kg is not available, add reps up to 7 first, then jump.",
+      kills: "max, which fires case 2 and prescribes `Repeat 2.5 kg` off one set. It also carries Z2's " +
+             "invariant on its NEW reason: R is 0 here, and case 2 is unreachable precisely because " +
+             "backoff is false when R equals load" },
+
+    { n: "row 9 - rack chin 2.5x8, 0x10, Z2 example 5",
+      ex: EX.rackchin, sets: SETS(2.5, 8, 0, 10),
+      x: "Sets not matched: 2.5 kg / bodyweight. Repeat 2.5 kg until all 2 sets reach 10 reps.",
+      kills: "min, which prints `Repeat bodyweight`. Character-identical to addendum Z2 example 5 - the " +
+             "ruling moved no pinned string" },
+
+    { n: "row 10 - 100x7, 100x7, 120x7, the ` or above` variant",
+      ex: EX.squat, sets: SETS(100, 7, 100, 7, 120, 7),
+      x: "7 reps at 100 kg or above on every set. Too light. Go to 105 kg.",
+      kills: "the unqualified copy, which claimed every set was at 100 kg when one of them was 120. " +
+             "G1's step is still computed off the working load: 100 x 0.025 x 2 = 5, so 105" }
+  ];
+
+  var i, r, v;
+  for (i = 0; i < rows.length; i++){
+    r = rows[i];
+    v = P.verdict(VCTX(r.ex, r.sets, null));
+    a.ok(v !== null && v !== undefined, r.n + ": no verdict was produced at all");
+    a.eq(v.x, r.x, r.n + "  ||  kills: " + r.kills);
+    a.eq(v.x2 || "", r.x2 || "", r.n + ": the Rule I2 appendix");
+  }
+});
+
+T("P1.2a / 13.2 rows 3 and 4 - THE NEGATIVE: no Repeat, no 120 kg, no Sets not matched, anywhere", function(a){
+  /* Asserting only the positive passes on a rule that prints `Repeat 100 kg`,
+     which is how B-08's existing test ended up passing for two different
+     reasons. Every copy field is checked, not just `x`: vtext walks the whole
+     returned object, so a field nobody has named yet cannot smuggle the string
+     onto the screen. */
+  needFns(a, "verdict");
+  var cases = [
+    ["100 / 100 / 120 at 5/5/5, logged ascending", SETS(100, 5, 100, 5, 120, 5)],
+    ["120 / 100 / 100 at 5/5/5, logged descending", SETS(120, 5, 100, 5, 100, 5)]
+  ];
+  var banned = ["Repeat", "120 kg", "Sets not matched"];
+  var i, j, v, all;
+  for (i = 0; i < cases.length; i++){
+    v = P.verdict(VCTX(EX.squat, cases[i][1], null));
+    a.eq(v.x, "Top of range on all 3 sets. Go to 102.5 kg next session.", cases[i][0] + ": the ruled line");
+    a.eq(v.rule, "P1.4", cases[i][0] + ": it is case 4, not case 2 wearing the right sentence");
+    all = vtext(v);
+    for (j = 0; j < banned.length; j++){
+      a.eq(String(v.x).indexOf(banned[j]), -1,
+        cases[i][0] + ": `" + banned[j] + "` must be absent from the verdict line");
+      a.eq(String(v.x2 || "").indexOf(banned[j]), -1,
+        cases[i][0] + ": `" + banned[j] + "` must be absent from the I2 appendix");
+      a.eq(all.indexOf(banned[j]), -1,
+        cases[i][0] + ": `" + banned[j] + "` must be absent from EVERY copy field the verdict returns");
+    }
+  }
+});
+
+T("P1.2a - set order is not intent: the 120/100/100 and 100/100/120 verdicts are the same object", function(a){
+  needFns(a, "verdict");
+  var asc  = P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 120, 5), null));
+  var desc = P.verdict(VCTX(EX.squat, SETS(120, 5, 100, 5, 100, 5), null));
+  var mid  = P.verdict(VCTX(EX.squat, SETS(100, 5, 120, 5, 100, 5), null));
+  a.eq(desc.x, asc.x, "the explicit equality 13.2 asks for: the heavy set first or last is the same session");
+  a.eq(mid.x, asc.x, "and in the middle");
+  a.eq(desc.t, asc.t, "the tone token moves with it or the badge disagrees with the sentence");
+  a.eq(desc.rule, asc.rule, "and the same case fired");
+  a.eq(vtext(desc), vtext(asc), "every copy field, not just x");
+
+  /* On a case 2 session the INSTRUCTION is order-blind and the LIST is not:
+     13.1 renders the list in logged order on purpose, because it is a record
+     of what happened while R is the instruction. Both are on screen. */
+  var l1 = P.verdict(VCTX(EX.squat, SETS(100, 5, 95, 5, 90, 5), null));
+  var l2 = P.verdict(VCTX(EX.squat, SETS(90, 5, 100, 5, 95, 5), null));
+  a.ok(l1.x.indexOf("Repeat 95 kg until all 3 sets reach 5 reps.") > 0, "instruction, ascending log");
+  a.ok(l2.x.indexOf("Repeat 95 kg until all 3 sets reach 5 reps.") > 0, "instruction, shuffled log");
+  a.eq(l1.x.indexOf("Sets not matched: 100 / 95 / 90 kg."), 0, "the list is his log, in his order");
+  a.eq(l2.x.indexOf("Sets not matched: 90 / 100 / 95 kg."), 0, "never sorted");
+});
+
+T("P1.2a / repeatLoad - the upper median: the k-th largest, k = ceil(n / 2)", function(a){
+  a.isFn(P.repeatLoad, "repeatLoad");
+  a.eq(P.repeatLoad(WS(100, 100, 95)), 100, "13.2 row 1");
+  a.eq(P.repeatLoad(WS(100, 95, 90)), 95, "13.2 row 2 - not 100 (max), not 90 (min), not 100 (C[0].w)");
+  a.eq(P.repeatLoad(WS(5, 2.5)), 5, "13.2 row 6 - n = 2 gives k = 1, so R IS the max. A consequence, not an exception");
+  a.eq(P.repeatLoad(WS(2.5, 0, 0)), 0, "13.2 row 8 - R may be 0. It is case 2 that can never PRINT 0, " +
+    "because backoff is false when R equals the working load");
+  a.eq(P.repeatLoad(WS(100, 95, 90, 85)), 95, "FOUR sets: k = ceil(4/2) = 2, the SECOND largest. " +
+    "Not 100, not 85, and not the arithmetic median 92.5 - this is not an average and must never become one");
+  a.eq(P.repeatLoad(WS(85, 100, 90, 95)), 95, "the same four loads shuffled");
+  a.eq(P.repeatLoad(WS(100, 100, 95, 90, 85)), 95, "five sets: k = 3");
+  a.eq(P.repeatLoad(WS(60)), 60, "one set");
+  a.eq(P.repeatLoad(WS(0, 0)), 0, "all at zero load");
+
+  var c = WS(100, 95, 90), before = JSON.stringify(c);
+  P.repeatLoad(c);
+  a.eq(JSON.stringify(c), before, "DATA LOSS: repeatLoad sorted the sets he typed instead of a copy of them");
+
+  a.ok(isNaNum(P.repeatLoad([])), "no sets is NaN, never 0 - a load of 0 is a real answer and must not be faked");
+  a.ok(isNaNum(P.repeatLoad(null)), "and null is NaN too, not a throw");
+});
+
+T("P1.2a - ` or above` appears only where the sentence claims a load for EVERY set", function(a){
+  needFns(a, "verdict");
+  var calf = PLANEX("d2f"); /* 3 x 6-10, machine - the reachable zero-load shape */
+  a.ok(calf && calf.s === 3 && calf.k === "power" && calf.implement === "machine",
+    "d2f is the three-set machine slot the zero-load variants are reachable on");
+  var v;
+
+  /* PRESENT - the claim is about load, and one set was heavier */
+  v = P.verdict(VCTX(EX.squat, SETS(100, 7, 100, 7, 120, 7), null));
+  a.eq(v.x, "7 reps at 100 kg or above on every set. Too light. Go to 105 kg.", "case 3, loaded, mixed");
+  v = P.verdict(VCTX(calf, SETS(2.5, 12, 0, 12, 0, 12), null));
+  a.eq(v.x, "12 reps at zero load or above on every set. Too light. Add 2.5 kg.", "case 3, zero, mixed");
+  v = P.verdict(VCTX(calf, SETS(2.5, 10, 0, 10, 0, 10), null));
+  a.eq(v.x, "Top of range on all 3 sets at zero load or above. Add 2.5 kg next session.", "case 4, zero, mixed");
+
+  /* ABSENT - and this is the half that catches the leak */
+  v = P.verdict(VCTX(EX.squat, SETS(100, 7, 100, 7, 100, 7), null));
+  a.eq(v.x, "7 reps at 100 kg on every set. Too light. Go to 105 kg.",
+    "THE FLAT CASE: unmixed loads must not gain the qualifier. The sentence is already true");
+  a.eq(v.x.indexOf(" or above"), -1, "and specifically the substring is absent");
+
+  v = P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 120, 5), null));
+  a.eq(v.x, "Top of range on all 3 sets. Go to 102.5 kg next session.",
+    "case 4 LOADED, mixed: unchanged on purpose - it claims REPS, not load, and is already true");
+  a.eq(v.x.indexOf(" or above"), -1, "13.1 pins this one as UNCHANGED; ` or above` here would be a leak");
+
+  v = P.verdict(VCTX(calf, SETS(0, 10, 0, 10, 0, 10), null));
+  a.eq(v.x, "Top of range on all 3 sets at zero load. Add 2.5 kg next session.", "case 4, zero, UNMIXED");
+
+  v = P.verdict(VCTX(EX.squat, SETS(100, 5, 100, 5, 120, 4), null));
+  a.eq(v.x.indexOf(" or above"), -1, "case 5, the hold: an instruction, not a claim about what happened");
+  v = P.verdict(VCTX(EX.squat, SETS(100, 5, 95, 5, 90, 5), null));
+  a.eq(v.x.indexOf(" or above"), -1, "case 2: the list already names every load in full");
+  v = P.verdict(VCTX(EX.squat, SETS(120, 2, 100, 5, 100, 5), null));
+  a.eq(v.x.indexOf(" or above"), -1, "case 1: it names one set, C[0], and says so");
+});
+
+T("P1.2a - ` or above` is unreachable on a two-set slot, so `bodyweight or above` cannot ship today", function(a){
+  /* At s = 2, k = ceil(2/2) = 1, so R IS the max. `mixed` (max > load) then
+     implies `backoff` (R > load), case 2 always wins, and cases 3 and 4 - the
+     only two carrying ` or above` - are unreachable with unequal loads.
+
+     EVERY implement:"bodyweight" POWER slot in PROGRAM is a two-set slot, so
+     13.1's ruled string `at bodyweight or above` cannot be produced by the
+     shipping programme at all. NOT A DEFECT and nothing here is red: the
+     string is correct for the shape it describes, the `zero load` form IS
+     reachable on the three-set machine slots (asserted above), and the copy
+     becomes live the day a three-set bodyweight slot exists. Pinned so nobody
+     deletes it as dead copy, and REPORTED to strength-coach and the PM on
+     2026-09-11 so the reach of the ruling is his call and not an engineer's. */
+  needFns(a, "verdict");
+  var plan = P.PHAT_PLAN, i, j, d, e, bw = [], two = [], v;
+  for (i = 0; i < plan.days.length; i++){
+    d = plan.days[i];
+    for (j = 0; j < d.ex.length; j++){
+      e = d.ex[j];
+      if (e.k !== "power") continue;
+      if (e.implement === "bodyweight") bw.push(e.id + " s=" + e.s);
+      if (e.s === 2) two.push(e);
+    }
+  }
+  a.ok(bw.length > 0, "the programme still has bodyweight power slots");
+  a.eq(bw.join(" ").replace(/s=2/g, ""), bw.join(" ").replace(/s=2/g, ""), "fixture guard");
+  for (i = 0; i < bw.length; i++)
+    a.ok(bw[i].indexOf("s=2") > 0, "every bodyweight power slot is two sets: " + bw.join(", "));
+
+  /* Exhaustive over the two-set power slots: a mixed-load, top-of-range
+     session lands in case 2 every time and never takes the qualifier. */
+  for (i = 0; i < two.length; i++){
+    e = two[i];
+    v = P.verdict(VCTX(e, [{ w: 2.5, r: e.hi }, { w: 0, r: e.hi }], null));
+    a.eq(v.rule, "P1.2", e.id + ": a two-set slot with mixed loads is always case 2");
+    a.eq(vtext(v).indexOf(" or above"), -1, e.id + ": and can never print the qualifier");
+  }
+});
+
+T("H1 (13.3) - signed off UNCHANGED: hypertrophy has no mismatch branch and did not gain one", function(a){
+  /* Unequal loads across a 3 x 12-20 lateral raise are ordinary execution of a
+     high-rep set, not a failed prescription. H1 must never print `Sets not
+     matched`, never print `Repeat`, and never take the ` or above` variant -
+     it does not claim a load for every set in the first place. */
+  needFns(a, "verdict");
+  var lat = PLANEX("d3h");
+  a.ok(lat && lat.k === "hyp" && lat.s === 3 && lat.lo === 12 && lat.hi === 20,
+    "d3h is the 3 x 12-20 lateral raise 13.3 names");
+  var cases = [
+    ["lateral raise, last set lighter, inside the range",
+      lat, SETS(10, 20, 10, 20, 8, 20), PREV(SETS(10, 18, 10, 18, 10, 18))],
+    ["lateral raise, last set lighter, every set above the range",
+      lat, SETS(10, 21, 10, 21, 8, 21), PREV(SETS(10, 18, 10, 18, 10, 18))],
+    ["cable row, last set lighter and short",
+      EX.cablerow, SETS(30, 12, 30, 12, 25, 10), PREV(SETS(30, 12, 30, 12, 30, 12))],
+    ["bodyweight chin, one loaded set among two at bodyweight",
+      EX.chinhyp, SETS(2.5, 12, 0, 12, 0, 12), PREV(SETS(0, 10, 0, 10, 0, 10))],
+    ["first time logged, mixed loads", lat, SETS(10, 20, 10, 20, 8, 20), null]
+  ];
+  var banned = ["Sets not matched", "Repeat", " or above"];
+  var i, j, v, all;
+  for (i = 0; i < cases.length; i++){
+    v = P.verdict(VCTX(cases[i][1], cases[i][2], cases[i][3]));
+    a.ok(v !== null, cases[i][0] + ": no verdict at all");
+    a.ok(String(v.rule).charAt(0) === "H", cases[i][0] + ": a hyp slot must not reach a P1 branch");
+    all = vtext(v);
+    for (j = 0; j < banned.length; j++)
+      a.eq(all.indexOf(banned[j]), -1, cases[i][0] + ": `" + banned[j] + "` leaked into a hypertrophy verdict");
+  }
+  /* Not vacuous: H1 case 2 still names a load, and it is minW - the
+     conservative end - which 13.3 signs off as correct as built. */
+  v = P.verdict(VCTX(lat, SETS(10, 21, 10, 21, 8, 21), PREV(SETS(10, 18, 10, 18, 10, 18))));
+  a.eq(v.x, "All sets above 20. Go to 10.5 kg next session.",
+    "H1.2 steps off minW (8), not off the 10 he held twice. Conservative, and deliberate");
+});
+
+/* ---------------------------------------------------------- Rule S1b --- */
+
+T("S1b / 13.5 - the 21 ruled entries, one assertion each, in a note a person would type", function(a){
+  needFns(a, "painFlag");
+  var rows = [
+    [ 1, "left knee pain on set 2",            "existing"],
+    [ 2, "elbow hurts on the last rep",        "existing"],
+    [ 3, "injured this shoulder last year",    "existing"],
+    [ 4, "sharp catch at the bottom",          "existing"],
+    [ 5, "pinching in the front of the hip",   "existing"],
+    [ 6, "tweaked my lower back racking it",   "existing"],
+    [ 7, "strained something in the groin",    "existing"],
+    [ 8, "sprained wrist from Saturday",       "NEW"],
+    [ 9, "right elbow twinge on set 2",        "NEW - the note QA typed by hand, and the one that proved the list too short"],
+    [10, "shoulder aches after set 3",         "NEW"],
+    [11, "niggle in the hip all session",      "NEW"],
+    [12, "fingers went numb on the last set",  "NEW"],
+    [13, "tingling down the forearm",          "NEW"],
+    [14, "knee looks swollen tonight",         "NEW"],
+    [15, "impingement feeling overhead",       "NEW"],
+    [16, "elbow is inflamed again",            "NEW"],
+    [17, "stabbing feeling under the kneecap", "NEW"],
+    [18, "felt something tear in the hamstring", "NEW"],
+    [19, "calf spasm between sets",            "NEW"],
+    [20, "pulled my hamstring on the last rep", "NEW - program-specific: this plan has no conventional deadlift"],
+    [21, "the knee gave way on the second rep", "NEW"]
+  ];
+  var i;
+  for (i = 0; i < rows.length; i++)
+    a.eq(P.painFlag(rows[i][1]), true,
+      "13.5 entry " + rows[i][0] + " (" + rows[i][2] + "): " + JSON.stringify(rows[i][1]));
+  a.eq(rows.length, 21, "13.5 tabulates twenty-one entries; adding a word without a ruling changes this count");
+});
+
+T("S1b / 13.5 - every spelling the table groups onto one row", function(a){
+  needFns(a, "painFlag");
+  var words = ["painful", "painfully", "hurt", "hurting", "injury", "injuries",
+               "pinched", "tweaks", "strains", "sprains",
+               "twinges", "twinged", "ache", "aches", "ached", "aching", "achy", "achey",
+               "niggling", "numbness", "tingle", "tingles", "swelling",
+               "impinged", "inflammation", "stabbing", "stabbed",
+               "tears", "tore", "torn", "spasms", "gives way", "giving way"];
+  var i;
+  for (i = 0; i < words.length; i++)
+    a.eq(P.painFlag("felt " + words[i] + " on the last set"), true, "spelling: " + words[i]);
+  a.eq(P.painFlag("HURT"), true, "case-insensitive, as it always was");
+});
+
+T("S1b / 13.5 example 3 - THE FIVE STEM HAZARDS: every one is a real note and every one is false", function(a){
+  /* This is the half of the suite that never gets written and it is the half
+     that catches the next well-meaning \w*. Each phrase below is a sentence a
+     lifter types, and each breaks a stem an engineer is tempted to shorten. */
+  needFns(a, "painFlag");
+  a.eq(P.painFlag("rep number 3 felt fast"), false,      "numb\\w* would match `number`");
+  a.eq(P.painFlag("achieve 5 reps"), false,              "ach\\w* would match `achieve`");
+  a.eq(P.painFlag("stability work after"), false,        "stab\\w* would match `stability`");
+  a.eq(P.painFlag("teardrop finally showing"), false,    "tear\\w* would match `teardrop`");
+  a.eq(P.painFlag("painting the garage tomorrow"), false, "pain\\w* would match `painting`");
+  /* The same five stems, one word further out, so a partial fix is caught too */
+  a.eq(P.painFlag("number of sets was wrong"), false);
+  a.eq(P.painFlag("achieved the top of the range"), false);
+  a.eq(P.painFlag("stabilise the core first"), false);
+  a.eq(P.painFlag("teardrops showing on both legs"), false);
+  a.eq(P.painFlag("painted the hallway"), false);
+});
+
+T("S1b / 13.5 - `sore`, `soreness` and `DOMS` are NOT triggers, and the reason is frequency", function(a){
+  /* Rejected outright, on frequency and not physiology. Delayed-onset soreness
+     is the expected result of a five-day split in a surplus; a trigger that
+     fires most weeks holds loads that are progressing fine, suppresses V1's
+     offer near-permanently through painWindow, and teaches him to stop writing
+     notes at all - which blinds the other twenty words. 13.5 names this as the
+     ruling most likely to be undone by someone reading QA's original report
+     and "helpfully" adding the word back. */
+  needFns(a, "painFlag");
+  a.eq(P.painFlag("legs sore from Tuesday"), false, "13.5 example 5, the deliberate silence");
+  a.eq(P.painFlag("sore"), false);
+  a.eq(P.painFlag("soreness in the quads"), false);
+  a.eq(P.painFlag("DOMS is brutal today"), false);
+  a.eq(P.painFlag("not sore at all"), false, "and dropping `sore` removed this false positive for free");
+  a.eq(P.painFlag("less sore than last week"), false);
+
+  /* Accepted costs, pinned so they are not "fixed" either */
+  a.eq(P.painFlag("less achy than last week"), true, "`ache` is IN. The coach accepts this one by name");
+  a.eq(P.painFlag("no pain today, felt strong"), true,
+    "13.5: negation is NOT handled. A false positive costs one held session; a false negative adds load " +
+    "to something that hurts. Do not build a parser here");
+  a.eq(P.painFlag("no pain in the knee but the shoulder is sharp"), true,
+    "and the sentence that would break any cheap negation scan");
+  a.eq(P.painFlag("pulled my hamstring on the last rep"), true, "the word `pulled` is worth stopping for");
+  a.eq(P.painFlag("pulled 140 for a triple"), true,
+    "and so is the false positive it brings: accepted in 13.5 because this plan has no conventional " +
+    "deadlift. REVISIT THIS ONE ENTRY if one ever enters the plan");
+});
+
+T("S1b - PAIN_WORDS is the pinned list: thirty fragments, twenty-one entries, frozen, no `sore`", function(a){
+  /* Pinned as the LIST and not as a regex literal (13.6). A test that asserts
+     on a compiled regex passes whenever someone "tidies" a stem into \w*, and
+     `numb\w*` matching `number` is exactly the failure it would miss. */
+  var W = P.PAIN_WORDS, i;
+  a.ok(Array.isArray(W), "PHAT.PAIN_WORDS is exported as an array");
+  a.eq(W.length, 30, "13.5 tabulates 21 ENTRIES and this array holds 30 FRAGMENTS - the table groups " +
+    "spellings on one row (pain/painful/painfully is entry 1). Both numbers are right; do not " +
+    "'correct' either one to the other");
+  a.eq(Object.isFrozen(W), true, "a plain array on window.PHAT is an array any caller can push onto, " +
+    "and what it would be pushing onto is the app's pain trigger");
+  try { W.push("sore"); } catch (e) { /* strict mode throws; sloppy mode ignores */ }
+  a.eq(W.length, 30, "and the push did not take");
+  a.eq(W.indexOf("sore"), -1, "`sore` is absent DELIBERATELY (13.5), not by oversight");
+  for (i = 0; i < W.length; i++)
+    a.eq(/sore|doms/i.test(W[i]), false, "no fragment reaches `sore` or `DOMS`: " + W[i]);
+
+  /* The compiled source, character-identical to the regex printed in 13.5.
+     One regex, one place, case-insensitive, word-bounded. */
+  a.eq("\\b(?:" + W.join("|") + ")\\b",
+    "\\b(?:pain|painful|painfully|hurt|hurts|hurting|injur\\w*|sharp|pinch\\w*|tweak\\w*|strain\\w*|" +
+    "sprain\\w*|twinge[sd]?|ach(?:e|es|ed|ing|y|ey)|niggl\\w*|numb|numbness|tingl\\w*|swollen|swelling|" +
+    "impinge\\w*|inflam\\w*|stabbing|stabbed|tears?|tore|torn|spasms?|pulled|g(?:ave|ives|iving) way)\\b",
+    "the compiled list must match the regex the coach printed in 13.5, character for character");
+});
+
+T("S1b / 13.5 - the excluded words stay excluded, each with the reason it was excluded for", function(a){
+  /* "Do not add these back without a ruling." Several are coaching cues, and a
+     cue that suppresses a load increase is the app misreading its own copy. */
+  needFns(a, "painFlag");
+  var rows = [
+    ["pop the hips off the floor",        "`pop the hips` is a standard cue"],
+    ["heard a pop in the hip",            "painless joint noise is not a symptom"],
+    ["shooting for 5 reps next week",     "`shooting for` is the commonest false positive of all"],
+    ["stay tight through the brace",      "`tight` is a coaching cue"],
+    ["tightness in the hamstrings",       "same word, same reason"],
+    ["ground out the last rep, grinding", "a lift term - the speed copy itself says `never grinding`"],
+    ["locked out every rep",              "`lockout`"],
+    ["do not let the elbows flare",       "elbow flare is a bench form cue"],
+    ["stiff in the morning",              "normal"],
+    ["cramp in the calf on set 3",        "benign at 15-20 reps"],
+    ["good burn on the last set",         "the burn is the deliberate product of the high-rep slots"],
+    ["big pump, felt tired and drained",  "recovery words, not symptoms - and NOT deload inputs"],
+    ["beat up after yesterday",           "same"],
+    ["knee clicking, painless",           "painless joint noise; and `crunch` is an exercise"],
+    ["crunches after the session",        "the exercise"],
+    ["dumbbells felt unstable",           "describes equipment as often as a joint"],
+    ["catching my breath between sets",   "a lift term and a breath term"],
+    ["bar bruising on the shins",         "cosmetic on RDLs and hack squats"],
+    ["felt weird, a bit off",             "too vague to defend in either direction"],
+    ["physio appointment on Thursday",    "a real signal, but indirect - this list is words about the body"],
+    ["pulling hard off the floor",        "`pull` and `pulling` are the movement pattern and half the programme"],
+    ["spain",                             "`pain` inside another word"],
+    ["painless today",                    "`pain` with a suffix is not the word"],
+    ["restrained the bar path",           "`strain` inside another word"],
+    ["sharpie mark on the plate",         "`sharp` inside another word"]
+  ];
+  var i;
+  for (i = 0; i < rows.length; i++)
+    a.eq(P.painFlag(rows[i][0]), false, JSON.stringify(rows[i][0]) + " - " + rows[i][1]);
+});
+
+T("S1b / 13.5 example 1 - the regression: a twinge note now holds the weight on that exercise", function(a){
+  /* The exact case QA observed in the shipping app on 2026-09-11: typed into
+     the note on the real session screen, `right elbow twinge on set 2`
+     produced no notice and did not suppress the increase. */
+  needFns(a, "verdict", "painFlag");
+  var curl = PLANEX("d1g");
+  a.ok(curl && curl.n === "Cambered bar curl" && curl.s === 3 && curl.hi === 10, "d1g, as 13.5 names it");
+  var clean = P.verdict(VCTX(curl, SETS(30, 10, 30, 10, 30, 10), null));
+  a.eq(clean.x, "Top of range on all 3 sets. Go to 32.5 kg next session.", "with no note: the increase");
+  var held = P.verdict(VCTX(curl, SETS(30, 10, 30, 10, 30, 10), null, "right elbow twinge on set 2"));
+  a.eq(held.x, "Stay at 30 kg until all 3 sets reach 10 reps.", "with the note: the hold");
+  a.eq(vtext(held).indexOf("32.5"), -1, "no increased load survives anywhere in the copy");
+  a.eq(vtext(held).indexOf("Go to"), -1, "and no increase verb either");
+  /* And the ruling's other half, in the same test so they cannot drift apart */
+  var sore = P.verdict(VCTX(curl, SETS(30, 10, 30, 10, 30, 10), null, "biceps sore from Tuesday"));
+  a.eq(sore.x, "Top of range on all 3 sets. Go to 32.5 kg next session.",
+    "and `sore` does NOT hold the weight - 13.5's deliberate silence");
+  /* A drop is never suppressed: reducing load is always allowed */
+  var drop = P.verdict(VCTX(EX.squat, SETS(100, 2, 90, 4, 90, 5), null, "right elbow twinge on set 2"));
+  a.ok(drop.x.indexOf("95") >= 0, "a DROP is never suppressed by a pain note");
+});
+
+T("S1b BLAST RADIUS - the wider list reaches painWindow (V1's offer) and painState (the S1 notice)", function(a){
+  /* 13.5 states these consequences and calls them all intended. They are the
+     behaviour change most likely to surprise, so they are asserted in both
+     directions: the new word must reach them, and `sore` must not. */
+  needFns(a, "painWindow", "painState", "volumeTier");
+  var twinge = "right elbow twinge on set 2", soreNote = "legs sore from Tuesday";
+
+  /* S2b - the 7-day accessory suppression */
+  var sessT = TFILL(5, MON).concat([TSESS(DA(-2), "p", "d5b", SETS(30, 10), twinge)]);
+  var sessS = TFILL(5, MON).concat([TSESS(DA(-2), "p", "d5b", SETS(30, 10), soreNote)]);
+  a.eq(P.painWindow(sessT, TODAY, 7).active, true, "a twinge inside 7 days is in the window");
+  a.eq(P.painWindow(sessS, TODAY, 7).active, false, "soreness is not");
+
+  var vT = P.volumeTier(V1CTX({ dayId: "d5", state: STORE({ reintro: { d5: 1 } }), sessions: sessT }));
+  a.eq(vT.blocked, "pain", "V1 offers no new exercise this week");
+  a.eq(vT.offer, null);
+  a.eq(vT.blockedLine, "No new exercise this week. You logged pain in the last 7 days.",
+    "S2b's copy does NOT change with the word list (13.5): one string, one category name for the class");
+  var vS = P.volumeTier(V1CTX({ dayId: "d5", state: STORE({ reintro: { d5: 1 } }), sessions: sessS }));
+  a.eq(vS.blocked, null, "and a sore note blocks nothing");
+  a.ok(vS.offer !== null, "the accessory offer still renders");
+
+  /* S1/S1a - the per-exercise notice, which is what the 21-day restatement ages */
+  var psT = P.painState([TSESS(DA(-2), "p", "d1g", SETS(30, 10), twinge)], "d1g", TODAY);
+  a.eq(psT.active, true, "the notice now fires on a twinge");
+  a.eq(psT.lines.length, 2, "and S1_LINES is unchanged - two lines, no third");
+  var psS = P.painState([TSESS(DA(-2), "p", "d1g", SETS(30, 10), soreNote)], "d1g", TODAY);
+  a.eq(psS.active, false, "and not on soreness");
+  a.eq(psS.text, "");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -9029,27 +9597,32 @@ contract("<b>WO-004 W6 &mdash; one ratio in <code>index.html</code>'s <code>:roo
   "consequence &mdash; <code>--rule</code> carries section rules, a non-text element, and 3.4 clears the " +
   "3 : 1 floor &mdash; but the number beside a token is what the next alpha change is judged against, " +
   "and the whole point of naming the steps was that nobody re-derives them. <b>One character.</b>");
-contract("<b>Rule P1.2 says \"repeat the heaviest\", and the heaviest is not always the working load. " +
-  "<code>strength-coach</code>.</b> B-08's acceptance case is <code>100 / 100 / 95</code>, where the " +
-  "heaviest happens to equal the min of the first three sets, so the pinned string is right for two " +
-  "different reasons and the suite cannot tell them apart. Reverse the order &mdash; " +
-  "<code>100 / 100 / 120</code> at <code>5 / 5 / 5</code> on a 3 &times; 3&ndash;5 &mdash; and the " +
-  "shipping rule returns <code>Sets not matched: 100 / 100 / 120 kg. Repeat 120 kg until all 3 sets " +
-  "reach 5 reps.</code> while <code>workingLoad</code> returns <b>100</b>. That is a recommendation to " +
-  "load a weight he held for one set of three, which is the sentence B-08 was filed about. It may well " +
-  "be the right coaching call (the top set proves the strength is there and the instruction is to match " +
-  "it, not to add), and the code matches its own comment, so <b>this is a question, not a defect " +
-  "report</b>. Observed in the shipping app on 2026-09-11, not just in the engine. <b>Not pinned</b>: " +
-  "pinning it would cement an answer nobody has given.");
-contract("<b><code>painFlag</code> does not fire on <em>twinge</em>, <em>sore</em> or <em>ache</em>. " +
-  "<code>strength-coach</code>.</b> <code>PAIN_RE</code> is " +
-  "<code>pain|hurt|hurts|injur*|sharp|pinch*|tweak*|strain*</code>. Typed into the note on the real " +
-  "session screen, <code>right elbow twinge on set 2</code> produced <b>no</b> pain notice and did " +
-  "<b>not</b> suppress a load increase &mdash; observed 2026-09-11. The word list is a coaching " +
-  "decision and the false-positive cost was already weighed once (audit &sect;10 accepts " +
-  "<em>no pain today</em> firing), so QA is not proposing words. Flagging only that the three commonest " +
-  "gym words for \"something is wrong but I can still lift\" are outside the rule that exists to catch " +
-  "them. S16's word-match tests are untouched.");
+contract("<b>ANSWERED (19f8ab9, addendum &sect;13.1) &mdash; Rule P1.2's repeat target was wrong, and so " +
+  "was its trigger.</b> The open question here was that B-08's acceptance case, <code>100 / 100 / 95</code>, " +
+  "has the heaviest set and the working load at the same number, so the pinned string was right for two " +
+  "different reasons and the suite could not tell them apart; reversed to <code>100 / 100 / 120</code> at " +
+  "<code>5 / 5 / 5</code>, the shipping rule returned <code>Repeat 120 kg</code>. <b>The coach rejected it " +
+  "and found a second, worse defect QA had not reported:</b> the branch fired on <code>!equal</code>, so a " +
+  "set <em>above</em> the working load read as a failed prescription and <code>100/100/120</code> earned a " +
+  "worse instruction than <code>100/100/100</code> &mdash; doing more returned less, the B-07 failure " +
+  "class. Rule <b>P1.2a</b>: the trigger is <code>backoff</code> (<code>R &gt; load</code>) and the target " +
+  "is <b>R, the upper median</b>, not the max. Implemented at <code>7d64165</code>. Now pinned in <b>S28</b> " +
+  "&mdash; all ten worked examples as exact strings, rows 3 and 4 as negative assertions, the order-blindness " +
+  "equality, and <code>repeatLoad</code> directly. Verified red against <code>19f8ab9</code>'s " +
+  "<code>logic.js</code> and green against <code>7d64165</code>'s.");
+contract("<b>ANSWERED (19f8ab9, addendum &sect;13.5) &mdash; <code>painFlag</code>'s word list was too " +
+  "short, and <code>sore</code> is deliberately not on the new one.</b> The open question was that " +
+  "<code>right elbow twinge on set 2</code>, typed into the note on the real session screen, produced no " +
+  "notice and did not suppress a load increase (observed 2026-09-11). <b>Ruled: 8 stems &rarr; 21 entries</b> " +
+  "(Rule S1b), no notice-only tier, no negation handling, and <code>sore</code>/<code>soreness</code>/" +
+  "<code>DOMS</code> rejected <em>on frequency</em> &mdash; a trigger that fires most weeks on a five-day " +
+  "split in a surplus would suppress V1's accessory offer near-permanently and teach him to stop writing " +
+  "notes, which blinds the other twenty words. Implemented at <code>7d64165</code>, with the list exported " +
+  "frozen as <code>PHAT.PAIN_WORDS</code>. Now pinned in <b>S28</b>: one assertion per ruled entry, the five " +
+  "stem hazards (<code>number</code>, <code>achieve</code>, <code>stability</code>, <code>teardrop</code>, " +
+  "<code>painting</code>) as <b>false</b>, the exclusion table as false, the <code>sore</code> non-trigger, " +
+  "and the blast radius through <code>painWindow</code> and <code>painState</code>. S16's word-match tests " +
+  "are untouched and still pass.");
 contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing changed, so " +
   "<code>savedAt</code> is the time of the last WRITE, not of the last typed number.</b> Measured: " +
   "back-date <code>savedAt</code> 14 hours, reload with a live session in memory, and the restore offer " +
