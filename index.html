@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <title>PHAT Log</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- B-67/B-63. Archivo, the design face, as ONE @font-face with the woff2
+     base64-inlined. No CDN and no @import: this app opens from file:// with
+     the network off, so a fetch is not available to it. A separate file
+     rather than another 47 KB inside this one, because sw.js precaches it
+     and the browser caches it independently of the shell. If the file is
+     missing the --sans stack below falls back and nothing waits on it. -->
+<link rel="stylesheet" href="assets/archivo-inline.css">
 <style>  /* == TOKENS ===============================================================
      Direction 2a - graphite & signal amber, from docs/design/PHAT App.dc.html.
      EVERY colour literal in this file is in this block. Nothing below may name
@@ -38,11 +45,19 @@
                                 the two names are one colour now; the alias
                                 stays so no refusal code has to be touched.   */
     --scrim:rgba(28,27,26,.82);
-    /* Archivo is the design's face. The DS pulls it from Google Fonts with an
-       @import; that import does not ship - this app opens from file:// with
-       the network off, so the family is NAMED and falls back to the platform
-       grotesque. The device renders Archivo if it has it, the system face if
-       it does not, and nothing waits on a request either way.                */
+    /* Archivo is the design's face and it SHIPS - assets/archivo-inline.css,
+       linked above, is one variable woff2 (wght 100-900) inlined as base64.
+       The DS pulls it from Google Fonts with an @import; that import does not
+       ship, because this app opens from file:// with the network off. The
+       fallbacks stay: if the asset is missing from a partial deploy the app
+       renders in the platform grotesque instead of waiting on it.
+       "Archivo Expanded" is kept ahead of system-ui only for a device that
+       has that face installed; the inlined file is the standard width.
+       ONE GLYPH THIS APP PRINTS IS OUTSIDE THE SUBSET: U+2190, the previous-
+       exercise arrow, which falls back per-glyph and was checked on screen.
+       Everything else is in range - U+00D7 x, U+2212 minus, U+203A rsaquo,
+       U+2013 en dash, U+00B0 degree, U+2039 lsaquo. CHECK ANY NEW GLYPH
+       against the unicode-range at the foot of archivo-inline.css.       */
     --sans:"Archivo","Archivo Expanded",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     --mono:ui-monospace,SFMono-Regular,"DejaVu Sans Mono",Menlo,monospace;
     --r:0;             /* the DS radius scale is 0px at every step            */
@@ -182,6 +197,14 @@
   .showfig{color:var(--amber); font-size:.75rem; font-weight:800; letter-spacing:.08em;
     text-transform:uppercase; padding:0 var(--s4); display:flex; align-items:center;
     text-align:left; width:100%; min-height:var(--tap)}
+  /* B-67. The open state used to be U+2304, which the inlined Archivo subset
+     does not carry - so once the face shipped, closed drew in Archivo and
+     open drew in the platform font, one glyph, mismatched size and baseline.
+     Both states are now the SAME glyph (U+203A, in range) and the open state
+     is a rotation. Do not put a literal arrow back: check any new glyph
+     against the unicode-range in assets/archivo-inline.css first. */
+  .showfig .chv{display:inline-block; width:1em; text-align:center; line-height:1}
+  .showfig[aria-expanded="true"] .chv{transform:rotate(90deg)}
   /* -- THE FIGURE SITS BESIDE THE CUE, AND THE FRAME FOLLOWS THE SUBJECT ---
      Was: one 200x150 landscape viewBox for every pattern, rendered
      width:100% as a full-width banner. A standing human is about 1:3, so a
@@ -504,58 +527,53 @@ if(!window.PHAT){
     'index.html and logic.js.</p></div>';
   return;
 }
-/* ============================================================ program */
-const PROGRAM = [
- {id:"d1",name:"Upper power",ex:[
-  {id:"d1a",implement:"bb",n:"Bent-over row",s:3,lo:3,hi:5,k:"power"},
-  {id:"d1b",implement:"bodyweight",n:"Weighted pull-up",s:2,lo:6,hi:10,k:"power"},
-  {id:"d1c",implement:"bodyweight",n:"Rack chin",s:2,lo:6,hi:10,k:"power",cut:1},
-  {id:"d1d",implement:"db",n:"Flat DB press",s:3,lo:3,hi:5,k:"power"},
-  {id:"d1e",implement:"bodyweight",n:"Weighted dip",s:2,lo:6,hi:10,k:"power"},
-  {id:"d1f",implement:"db",n:"Seated DB shoulder press",s:3,lo:6,hi:10,k:"power"},
-  {id:"d1g",implement:"bb",n:"Cambered bar curl",s:3,lo:6,hi:10,k:"power"},
-  {id:"d1h",implement:"bb",n:"Skull crusher",s:3,lo:6,hi:10,k:"power"}]},
- {id:"d2",name:"Lower power",ex:[
-  {id:"d2a",implement:"bb",n:"Squat",s:3,lo:3,hi:5,k:"power"},
-  {id:"d2b",implement:"machine",n:"Hack squat",s:2,lo:6,hi:10,k:"power"},
-  {id:"d2c",implement:"machine",n:"Leg extension",s:2,lo:6,hi:10,k:"power",cut:1},
-  {id:"d2d",implement:"bb",n:"Stiff-leg deadlift",s:3,lo:5,hi:8,k:"power"},
-  {id:"d2e",implement:"bodyweight",n:"Glute-ham raise or lying leg curl",s:2,lo:6,hi:10,k:"power"},
-  {id:"d2f",implement:"machine",n:"Standing calf raise",s:3,lo:6,hi:10,k:"power"},
-  {id:"d2g",implement:"machine",n:"Seated calf raise",s:2,lo:6,hi:10,k:"power"}]},
- {id:"d3",name:"Back & shoulders",ex:[
-  {id:"d3a",implement:"bb",n:"Row — speed work",s:6,lo:3,hi:3,k:"speed"},
-  {id:"d3b",implement:"bodyweight",n:"Rack chin",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d3c",implement:"cable",n:"Seated cable row",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d3d",implement:"db",n:"DB row or shrug",s:2,lo:12,hi:15,k:"hyp",cut:1},
-  {id:"d3e",implement:"cable",n:"Close-grip pulldown",s:2,lo:15,hi:20,k:"hyp"},
-  {id:"d3f",implement:"db",n:"Seated DB press",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d3g",implement:"bb",n:"Upright row",s:2,lo:12,hi:15,k:"hyp",cut:1},
-  {id:"d3h",implement:"db",n:"Lateral raise",s:3,lo:12,hi:20,k:"hyp"}]},
- {id:"d4",name:"Lower hypertrophy",ex:[
-  {id:"d4a",implement:"bb",n:"Squat — speed work",s:6,lo:3,hi:3,k:"speed"},
-  {id:"d4b",implement:"machine",n:"Hack squat",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d4c",implement:"machine",n:"Leg press",s:2,lo:12,hi:15,k:"hyp",cut:1},
-  {id:"d4d",implement:"machine",n:"Leg extension",s:3,lo:15,hi:20,k:"hyp"},
-  {id:"d4e",implement:"bb",n:"Romanian deadlift",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d4f",implement:"machine",n:"Lying leg curl",s:2,lo:12,hi:15,k:"hyp"},
-  {id:"d4g",implement:"machine",n:"Seated leg curl",s:2,lo:15,hi:20,k:"hyp",cut:1},
-  {id:"d4h",implement:"machine",n:"Donkey calf raise",s:4,lo:10,hi:15,k:"hyp"},
-  {id:"d4i",implement:"machine",n:"Seated calf raise",s:3,lo:15,hi:20,k:"hyp"}]},
- {id:"d5",name:"Chest & arms",ex:[
-  {id:"d5a",implement:"db",n:"Flat DB press — speed work",s:6,lo:3,hi:3,k:"speed"},
-  {id:"d5b",implement:"db",n:"Incline DB press",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d5c",implement:"machine",n:"Machine chest press",s:3,lo:12,hi:15,k:"hyp"},
-  {id:"d5d",implement:"cable",n:"Incline cable fly",s:2,lo:15,hi:20,k:"hyp",cut:1},
-  {id:"d5e",implement:"bb",n:"Cambered bar preacher curl",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d5f",implement:"db",n:"DB concentration curl",s:2,lo:12,hi:15,k:"hyp"},
-  {id:"d5g",implement:"bb",n:"Spider curl",s:2,lo:15,hi:20,k:"hyp",cut:1},
-  {id:"d5h",implement:"bb",n:"Close-grip bench",s:3,lo:8,hi:12,k:"hyp"},
-  {id:"d5i",implement:"bb",n:"Skull crusher",s:3,lo:12,hi:15,k:"hyp"},
-  {id:"d5j",implement:"cable",n:"Rope pressdown",s:2,lo:15,hi:20,k:"hyp",cut:1}]}
-];
-const KEY_LIFTS=[{id:"d1a",n:"Row",c:"var(--amber)"},{id:"d1d",n:"Bench",c:"var(--green)"},
-                 {id:"d2a",n:"Squat",c:"var(--bone)"},{id:"d2d",n:"Deadlift",c:"var(--red)"}];
+/* ============================================================ program
+   B-66. THE PROGRAMME IS NOT DECLARED HERE, AND MUST NEVER BE AGAIN.
+
+   This file used to carry its own 42-slot PROGRAM array. logic.js carries
+   PHAT.PHAT_PLAN. The screens read the copy, the engines were handed the
+   document, and they drifted. The worst case: slot d2e carried a two-in-one
+   slash-name and implement:"bodyweight" here, while the plan had already
+   resolved it to a single machine exercise under Rule A1 - so the screen
+   showed a name for two movements, Rule Z2 printed the wrong load word, and
+   Rule I2's increment line was switched off on a machine exercise. The copy
+   also had no `cue` on any of its 42 slots, so all 43 signed-off cue strings
+   were unreachable, and it had no `lift` (blocks Trend grouping) and no `wd`
+   (blocks B-31).
+
+   `PROGRAM` survives ONLY as the name ~20 call sites already use. It is a
+   DERIVED READ — the same frozen array object logic.js exports, not a copy.
+   Nothing may push, splice, sort or assign through it: PHAT_PLAN is
+   deep-frozen and this file is "use strict", so an attempt throws rather
+   than forking the programme. Everything a screen needs is on the slot:
+   n, s, lo, hi, k, implement, cut, lift, cue — and `wd` on the day.
+   Enforces the 2026-09-10 ruling "no slot id survives in code outside the
+   plan document". */
+const PROGRAM = PHAT.PHAT_PLAN.days;
+
+/* B-27 + B-66. The four lifts ST1 tests, DERIVED from the plan document.
+   `keyLifts` is ids-only on the plan and PHAT.KEY_LIFTS resolves the name
+   from the slot at read time, so a rename can never leave a stale label
+   behind — which is exactly what B-27 was ("the mapping is right, the labels
+   lie": d1d is a flat DB press, not a bench; d2d is a stiff-leg deadlift,
+   not a deadlift).
+
+   Two things here are VIEW concerns and are deliberately not programme data,
+   because a plan document has no business holding either:
+
+   `c` — the chart colour. Four lifts, four --root tokens, keyed by id.
+
+   `lbl` — the CHART-LEGEND ABBREVIATION, and only that. The legend sits
+   under a 500-unit-wide SVG at 400 px and cannot carry `Stiff-leg deadlift`
+   four times. It is NOT a name and no sentence may use it: coach addendum
+   §9.2 fixes ST1's prose to the plan's full name (`No progress on Bent-over
+   row, Squat` — never `Row, Squat`), so prose reads `.n` and the legend
+   reads `.lbl`. Falls back to `.n` if an id is not in the table, so a plan
+   with different key lifts labels itself honestly instead of blanking. */
+const KL_C  ={d1a:"var(--amber)", d1d:"var(--green)", d2a:"var(--bone)", d2d:"var(--red)"};
+const KL_LBL={d1a:"Row",          d1d:"DB press",     d2a:"Squat",       d2d:"SLDL"};
+const KEY_LIFTS=(PHAT.KEY_LIFTS||[]).map(l=>({
+  id:l.id, n:l.n, lbl:KL_LBL[l.id]||l.n, c:KL_C[l.id]||"var(--bone)"}));
 
 /* ============================================================ storage */
 /* One seam. window.storage and localStorage are two separate stores — the
@@ -706,23 +724,44 @@ function weeksIn(){return S.sessions.length?Math.floor(ago(S.sessions[0].date)/7
           back. NO FIGURE. A leg press has no fixed ground reference to draw:
           the platform itself is what moves, so the apparatus cannot be
           scenery. Drawn and rejected on the contact sheet - it did not read.
-     d3d  "DB row or shrug" NO FIGURE. Two different patterns in one slot;
-          nothing can be right for both until W1 rules the alternate.
+     d3d  DB row          NO FIGURE, still. The slot held two movements in
+          one name and no figure could be right for both; B-65 has since
+          defaulted it to the DB row, but that default is REVERSIBLE and
+          awaiting Chady - drawing for it now is artwork that a one-word
+          answer throws away. Revisit when the name is confirmed.
      d5d  incline cable fly NO FIGURE. Drawn plan-view and rejected: it read
           as a lateral raise, which is exactly the confusion 11.8(5) forbids.
      d5j  rope pressdown    NO FIGURE. 'tri' is drawn as a bench skull
           crusher, which is right for its other two slots (d1h, d5i) and a
           wrong ground reference for a standing cable pressdown.
+
+   RULE F1 (coach addendum §12, 2026-09-11) - TWO MORE DROPPED, and it
+   REVERSES §10.7, which had kept both. Same test as B-64, applied harder:
+     d5c  machine chest press  DROPS 'hpush'. 'hpush' is a SUPINE bench
+          figure; a machine chest press is upright, so the arrow is vertical
+          in the frame and horizontal in life. The tell is the cue: it names
+          a seat and handles that appear nowhere in the drawing.
+     d4g  seated leg curl      DROPS 'legcurl'. The arrow points the wrong
+          way - the prone figure travels the heel UP, seated it travels down
+          and back - and the cue names a lap pad the drawing lacks. d4f, the
+          LYING curl, keeps it: the hip angle is why the two slots exist.
+   36 of 42 slots now carry a figure. The six cue-only slots are d3d, d4c,
+   d4g, d5c, d5d and d5j, and every one renders its cue alone through the
+   same figBody() path - no box, no border, no placeholder.
+
    Same-class risks deliberately KEPT, because only the apparatus changes and
    not the body's relationship to the load: d2b/d4b hack squat on 'squat',
-   d5b incline press and d5c machine press on 'hpush', d4g seated leg curl on
-   'legcurl', d2g/d4h/d4i seated and donkey calf raises on 'calf' - the block
-   under the ball of the foot is the ground reference and it is the same one. */
+   d5b incline press on 'hpush', d2g/d4i seated and d4h donkey calf raises
+   on 'calf' - the block under the ball of the foot is the ground reference
+   and it is the same one. TWO OF THESE ARE LOAD-BEARING ON THEIR CUE and
+   survive only because of it: d4h ships only while its cue says "hips bent",
+   d5b only while its cue says the 30-35 degree bench angle. A copy edit that
+   drops either phrase makes the figure wrong - pinned in tests.html. */
 const PAT={d1a:"hpull",d1b:"vpull",d1c:"vpull",d1d:"hpush",d1e:"dip",d1f:"vpush",d1g:"curl",d1h:"tri",
  d2a:"squat",d2b:"squat",d2c:"legext",d2d:"hinge",d2e:"legcurl",d2f:"calf",d2g:"calf",
  d3a:"hpull",d3b:"vpull",d3c:"srow",d3e:"vpull",d3f:"vpush",d3g:"uprow",d3h:"lat",
- d4a:"squat",d4b:"squat",d4d:"legext",d4e:"hinge",d4f:"legcurl",d4g:"legcurl",d4h:"calf",d4i:"calf",
- d5a:"hpush",d5b:"hpush",d5c:"hpush",d5e:"curl",d5f:"curl",d5g:"curl",d5h:"hpush",d5i:"tri"};
+ d4a:"squat",d4b:"squat",d4d:"legext",d4e:"hinge",d4f:"legcurl",d4h:"calf",d4i:"calf",
+ d5a:"hpush",d5b:"hpush",d5e:"curl",d5f:"curl",d5g:"curl",d5h:"hpush",d5i:"tri"};
 
 /* RULE Q1: THE CUE IS NOT THE FIGURE'S, IT IS THE EXERCISE'S. The 15
    per-pattern cue strings the prototype shipped here have been DELETED, not
@@ -1120,7 +1159,7 @@ function vSession(){
      rendered at all. An empty frame in the gym is worse than no frame. */
   if(hasFig(e.id)||cueFor(e.id))
     h+=`<button class="showfig" data-fig="${esc(e.id)}" aria-expanded="false"
-      aria-controls="fig-${esc(e.id)}">&rsaquo; movement &amp; cue</button>
+      aria-controls="fig-${esc(e.id)}"><span class="chv" aria-hidden="true">&rsaquo;</span> movement &amp; cue</button>
       <div class="fig" id="fig-${esc(e.id)}" data-figbox="${esc(e.id)}"></div>`;
 
   /* ---- THE INPUTS. Built BEFORE and OUTSIDE every try block above, so no
@@ -1191,7 +1230,11 @@ function vSession(){
   /* ---- prev / next, then DISCARD SESSION as the last element in the scroll. */
   h+=`</div><div class="navrow">
     <button class="prev" id="navprev"${i===0?" disabled aria-disabled=\"true\"":""}
-      aria-label="Previous exercise">&larr;</button>`;
+      aria-label="Previous exercise">&larr;</button>`;   /* U+2190 is outside the
+      inlined Archivo subset and falls back per-glyph, checked on screen and
+      kept: it is one arrow at one size and it reads, where the chevron
+      alternative reads as "previous PAGE". If the subset is ever regenerated,
+      add U+2190. */
   h+=(i===n-1)
     ? `<button class="next" id="finish">Save session</button>`
     : `<button class="next" id="navnext">Next &mdash; ${esc(list[i+1].n)}</button>`;
@@ -1217,12 +1260,17 @@ const fixText=()=>{const n=badRows().length;
   return n?(n===1?"1 set left to fix.":n+" sets left to fix."):"Nothing left to fix.";};
 
 function vTrend(){
+  /* Series are keyed by SLOT ID, never by name. A name is display data now
+     that it is read from the plan at paint time; an id is the identity
+     (WO-004 C-6), and two lifts could legitimately share a label. */
   const rows=S.sessions.map(s=>{const r={date:fmt(s.date)};
-    KEY_LIFTS.forEach(l=>{const e=s.entries[l.id]; if(e) r[l.n]=PHAT.topSet(e.sets);}); return r;})
-    .filter(r=>KEY_LIFTS.some(l=>r[l.n]));
+    KEY_LIFTS.forEach(l=>{const e=s.entries[l.id]; if(e) r[l.id]=PHAT.topSet(e.sets);}); return r;})
+    .filter(r=>KEY_LIFTS.some(l=>r[l.id]));
   let stalled=[];
   if(weeksIn()>=6) KEY_LIFTS.forEach(l=>{
     const hits=S.sessions.filter(s=>s.entries[l.id]).map(s=>PHAT.topSet(s.entries[l.id].sets));
+    /* The PLAN NAME in full, not the legend abbreviation: coach addendum
+       §9.2 fixes this sentence to `Bent-over row`, never `Row`. */
     if(hits.length>=3&&Math.max(...hits)<=hits[0]) stalled.push(l.n);});
 
   let h=`<div class="pad" style="padding-top:26px;padding-bottom:16px">
@@ -1233,12 +1281,12 @@ function vTrend(){
     The split isn't the problem and neither is the diet. Either the sets aren't close enough to failure,
     or you aren't eating enough. Fix one, not both, and give it three weeks.</p></div></div>`;
 
-  const svg=linechart(rows,KEY_LIFTS,230);
+  const svg=linechart(rows,KEY_LIFTS.map(l=>({n:l.id,c:l.c})),230);
   if(!svg) h+=`<div class="pad"><div class="panel" style="text-align:center;padding:34px 16px">
       <p style="color:var(--dim);font-size:.875rem">Log two power sessions and the line appears here.</p></div></div>`;
   else{
     h+=`<div style="padding:0 8px">${svg}</div><div class="pad legend">`;
-    KEY_LIFTS.forEach(l=>h+=`<span><span class="swatch" style="background:${l.c}"></span>${l.n}</span>`);
+    KEY_LIFTS.forEach(l=>h+=`<span><span class="swatch" style="background:${l.c}"></span>${esc(l.lbl)}</span>`);
     h+=`</div>`;
   }
   h+=`<div class="pad mt24"><h2>Recent sessions</h2>`;
@@ -1644,7 +1692,8 @@ document.getElementById("view").addEventListener("click",async e=>{
     const box=document.querySelector(`[data-figbox="${fb.dataset.fig}"]`);
     const open=box.classList.toggle("on");
     if(open&&!box.innerHTML) box.innerHTML=figBody(fb.dataset.fig);
-    fb.innerHTML=(open?"⌄":"›")+" movement &amp; cue";
+    /* aria-expanded drives the chevron rotation in CSS, so the glyph itself
+       never changes and nothing here can reintroduce an out-of-subset one. */
     fb.setAttribute("aria-expanded",open?"true":"false");
     return;
   }
