@@ -354,6 +354,43 @@
   .sess{display:flex; align-items:center; justify-content:space-between; gap:var(--s3);
     background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
     padding:var(--s3) var(--s4); margin-bottom:var(--s2)}
+  .sess .sn{font-size:.90625rem}
+  .sess .sd{color:var(--faint); font-size:.78125rem; margin-top:2px}
+  .sess .sv{color:var(--dim); font-family:var(--mono); font-size:.8125rem; flex:none}
+
+  /* ==== W10: THE TREND SCREEN ============================================
+     The week-6 card and four per-lift rows. NO HUE CARRIES MEANING ON ITS
+     OWN here either: the card's red rule sits beside a sentence that opens
+     "no progress", and every delta carries + or − in front of the number,
+     so the screen reads in greyscale (B-13, spec 3.1 rule 3).
+     .tcard is NOT .warn: .warn is the app's refusal/alarm shape and three of
+     stallAdvice's five states are not alarms. Same geometry, and only the
+     stalled state takes the red rule. */
+  .tcard{background:var(--surface); border-left:3px solid var(--dim);
+    border-radius:var(--r); padding:14px var(--s4)}
+  .tcard.stall{border-left-color:var(--red)}
+  .tcard p{color:var(--dim); font-size:.8125rem; line-height:1.45; margin-top:6px}
+  .tcard p.lead{color:var(--bone); font-size:.90625rem; font-weight:800; line-height:1.35}
+
+  /* THE CHART YIELDS BEFORE THE LABEL DOES. The row is STACKED, so at any
+     text size the name owns a full-width line and there is no width for the
+     chart to take from it. The head wraps rather than squeezing: at 200%
+     text the delta drops onto its own line and the name is still whole.
+     min-width:0 lets the name shrink to wrapping instead of forcing the
+     flex row wider than the column (the B-37 squeeze, one screen over). */
+  .tl{border-top:1px solid var(--line); padding:var(--s3) 0}
+  .tlhead{display:flex; flex-wrap:wrap; align-items:baseline;
+    justify-content:space-between; gap:var(--s1) var(--s3)}
+  .tlname{color:var(--bone); font-size:.9375rem; font-weight:800; min-width:0}
+  .tldelta{font-family:var(--mono); font-size:.875rem; color:var(--dim); white-space:nowrap}
+  .tldelta.up{color:var(--green)}
+  .tldelta.dn{color:var(--red)}
+  /* 44px tall, in px, so it does not grow with the text and crowd the
+     label out. viewBox height matches, so y is 1:1 — see spark(). */
+  .tlspark{display:block; width:100%; height:44px; margin-top:var(--s2)}
+  .tlfoot{display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--s1) var(--s3);
+    color:var(--faint); font-size:.75rem; margin-top:var(--s1)}
+  .tlnone{color:var(--faint); font-size:.8125rem; line-height:1.45; margin-top:var(--s2)}
 
   /* ==== W11: THE WEIGHT SCREEN ============================================
      ORDER IS NORMATIVE (spec 7.1): average, change, calorie decision, entry,
@@ -726,8 +763,14 @@ const PROGRAM = PHAT.PHAT_PLAN.days;
    with different key lifts labels itself honestly instead of blanking. */
 const KL_C  ={d1a:"var(--amber)", d1d:"var(--green)", d2a:"var(--bone)", d2d:"var(--red)"};
 const KL_LBL={d1a:"Row",          d1d:"DB press",     d2a:"Squat",       d2d:"SLDL"};
+/* `lift` and `k` ride along for W10: `lift` is the TREND GROUPING (C-6), so
+   the sparkline is grouped by movement and a rename cannot split a line;
+   `k` is the protocol, which is how the speed-work slot that shares the
+   same `lift` is kept off the power lift's line (see liftPoints). Both are
+   read from the plan at paint time, like the name. */
 const KEY_LIFTS=(PHAT.KEY_LIFTS||[]).map(l=>({
-  id:l.id, n:l.n, lbl:KL_LBL[l.id]||l.n, c:KL_C[l.id]||"var(--bone)"}));
+  id:l.id, n:l.n, lbl:KL_LBL[l.id]||l.n, c:KL_C[l.id]||"var(--bone)",
+  lift:l.lift, k:l.k}));
 
 /* ============================================================ storage */
 /* One seam. window.storage and localStorage are two separate stores — the
@@ -889,7 +932,13 @@ function hideToast(){
   if(act){ act.hidden=true; act.textContent=""; }
 }
 function lastDay(id){for(let i=S.sessions.length-1;i>=0;i--)if(S.sessions[i].dayId===id)return S.sessions[i].date;return null;}
-function weeksIn(){return S.sessions.length?Math.floor(ago(S.sessions[0].date)/7)+1:0;}
+/* weeksIn() IS GONE. It counted CALENDAR weeks from the first session, and
+   its last caller was the inline stall block W10 deleted — the one that
+   printed "Week 5 and no progress" off a number no gated rule in this app
+   uses. Every week in this product is PHAT.trainingWeeks (weeks holding
+   three or more logged sessions), spoken by PHAT.cycleLine and by
+   PHAT.stallAdvice. Leaving a second, easier week counter in the file is
+   how B-52 happens again; there is now exactly one way to ask. */
 
 
 /* ============================================================ movement diagrams */
@@ -1149,6 +1198,15 @@ function figBody(id){
 /* ================== verdicts: the rules live in logic.js as PHAT.verdict */
 
 /* ============================================================ chart */
+/* THE COMBINED MULTI-LIFT CHART. NO CALLER TODAY, DELIBERATELY: W10 ships
+   four per-lift sparklines and the combined chart is scoped out of it,
+   pending Chady's answer on whether he wants both (WO-004 §Needs from
+   Chady). It is kept rather than deleted because that answer is expected,
+   and because its axis-label defect was found and fixed in the same pass —
+   deleting it would have deleted the fix. If the answer comes back "four
+   lines only", delete this function, KL_C, and the .legend / .swatch rules
+   that only its legend used.
+   B-11 (points spaced by index, not by date) is open here too, in X(). */
 function linechart(rows,series,h){
   const W=500,H=h||230,P={t:12,r:12,b:24,l:38};
   const vals=[]; rows.forEach(r=>series.forEach(s=>{if(r[s.n]>0)vals.push(r[s.n])}));
@@ -1169,7 +1227,13 @@ function linechart(rows,series,h){
   });
   const step=Math.max(1,Math.ceil(rows.length/5));
   rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)
-    g+=`<text x="${X(i)}" y="${H-6}" fill="var(--dim)" font-size="11" text-anchor="middle">${esc(r.date)}</text>`;});
+    /* THE LAST LABEL WAS HALF OFF THE VIEWBOX. It is centred on X = W - P.r
+       = 488 of 500, so roughly half of "8 Sep" fell outside the drawing and
+       was clipped — the most-read date on the axis, and visible at 400px.
+       The ends anchor inward; everything between stays centred on its
+       point. Same for the first: at X = P.l = 38 a long label ran past 0. */
+    g+=`<text x="${X(i)}" y="${H-6}" fill="var(--dim)" font-size="11" text-anchor="${
+      i===rows.length-1?"end":i===0?"start":"middle"}">${esc(r.date)}</text>`;});
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block">${g}</svg>`;
 }
 
@@ -1706,47 +1770,201 @@ function vOffer(C){
 const fixText=()=>{const n=badRows().length;
   return n?(n===1?"1 set left to fix.":n+" sets left to fix."):"Nothing left to fix.";};
 
-function vTrend(){
-  /* Series are keyed by SLOT ID, never by name. A name is display data now
-     that it is read from the plan at paint time; an id is the identity
-     (WO-004 C-6), and two lifts could legitimately share a label. */
-  const rows=S.sessions.map(s=>{const r={date:fmt(s.date)};
-    KEY_LIFTS.forEach(l=>{const e=s.entries[l.id]; if(e) r[l.id]=PHAT.topSet(e.sets);}); return r;})
-    .filter(r=>KEY_LIFTS.some(l=>r[l.id]));
-  let stalled=[];
-  if(weeksIn()>=6) KEY_LIFTS.forEach(l=>{
-    const hits=S.sessions.filter(s=>s.entries[l.id]).map(s=>PHAT.topSet(s.entries[l.id].sets));
-    /* The PLAN NAME in full, not the legend abbreviation: coach addendum
-       §9.2 fixes this sentence to `Bent-over row`, never `Row`. */
-    if(hits.length>=3&&Math.max(...hits)<=hits[0]) stalled.push(l.n);});
+/* ==== W10: THE TREND SCREEN =============================================
+   THE INLINE STALL BLOCK IS GONE, AND IT WAS B-07. What stood here scanned
+   every session for a key lift, took PHAT.topSet of each, and printed
+   `Week {n} and no progress on …` whenever the heaviest WEIGHT had not
+   moved. Week 1 100x3/3/3 -> week 6 100x5/5/5 is six weeks of real
+   progress and that block called it a stall, then blamed his effort or his
+   diet for it. It also counted CALENDAR weeks (weeksIn), which is not the
+   number any gated rule in this app uses.
 
-  let h=`<div class="pad" style="padding-top:26px;padding-bottom:16px">
-    <h1>Top sets</h1><p class="sub">The heaviest set on the four lifts that decide whether this is working.</p></div>`;
-  if(stalled.length) h+=`<div class="pad mb12"><div class="warn">
-    <p style="color:var(--red);font-size:.875rem;font-weight:600">Week ${weeksIn()} and no progress on ${esc(stalled.join(", "))}.</p>
-    <p style="color:var(--dim);font-size:.8125rem;margin-top:5px;line-height:1.5">This is the check we agreed on.
-    The split isn't the problem and neither is the diet. Either the sets aren't close enough to failure,
-    or you aren't eating enough. Fix one, not both, and give it three weeks.</p></div></div>`;
+   NOTHING ON THIS SCREEN IS RECOMPUTED HERE. PHAT.stallAdvice owns the
+   sentence — it calls PHAT.stallReport itself, so the measurement and the
+   diagnosis stay one answer — and this file prints its `lines` verbatim. If
+   a sentence on this screen is wrong, it is wrong in logic.js, where it is
+   testable from file:// with no DOM.
 
-  const svg=linechart(rows,KEY_LIFTS.map(l=>({n:l.id,c:l.c})),230);
-  if(!svg) h+=`<div class="pad"><div class="panel" style="text-align:center;padding:34px 16px">
-      <p style="color:var(--dim);font-size:.875rem">Log two power sessions and the line appears here.</p></div></div>`;
-  else{
-    h+=`<div style="padding:0 8px">${svg}</div><div class="pad legend">`;
-    KEY_LIFTS.forEach(l=>h+=`<span><span class="swatch" style="background:${l.c}"></span>${esc(l.lbl)}</span>`);
-    h+=`</div>`;
+   READ-ONLY. Nothing below writes a storage key at any data volume. */
+
+/* One lift's line, as a sparkline.
+
+   The viewBox height EQUALS the rendered height and preserveAspectRatio is
+   off, so y is 1:1 (a 10-unit tick is 10px tall, at any width) while x
+   stretches to the column. Every stroke is non-scaling, so nothing is drawn
+   at a distorted weight — which is also why there are no dots: a circle
+   under a non-uniform scale is an ellipse.
+
+   B-11 IS STILL OPEN AND IT LIVES IN X(), deliberately one line that takes
+   the row as well as the index, so spacing by date is a change to this
+   function and to nothing else. */
+const SPK_W=1000, SPK_H=44, SPK_PAD=10;
+function spark(pts){
+  if(pts.length<2) return "";
+  const vs=pts.map(p=>p.e);
+  let mn=Math.min(...vs), mx=Math.max(...vs);
+  /* A flat line sits in the MIDDLE of the box, never on the floor: a line
+     along the bottom edge reads as a collapse. */
+  if(mx-mn<1e-9){ mn-=1; mx+=1; }
+  const X=(row,i)=>SPK_PAD+i*(SPK_W-2*SPK_PAD)/(pts.length-1);
+  const Y=v=>6+(1-(v-mn)/(mx-mn))*(SPK_H-12);
+  const xy=pts.map((p,i)=>[r1(X(p,i)),r1(Y(p.e))]);
+  const l=xy[xy.length-1];
+  /* aria-hidden: the row's own text carries the whole reading — name,
+     latest value, dated endpoints and a signed delta — so the polyline is
+     decoration to a screen reader, not a second telling of it. */
+  return `<svg class="tlspark" viewBox="0 0 ${SPK_W} ${SPK_H}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline fill="none" stroke="var(--bone)" stroke-width="2" stroke-linejoin="round"
+      stroke-linecap="round" vector-effect="non-scaling-stroke"
+      points="${xy.map(p=>p.join(",")).join(" ")}"/>
+    <line x1="${l[0]}" y1="${r1(l[1]-5)}" x2="${l[0]}" y2="${r1(l[1]+5)}" stroke="var(--bone)"
+      stroke-width="3" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+/* The points for one key lift, GROUPED BY `lift` AND NEVER BY NAME (C-6):
+   PHAT.exIdsForLift is the plan's own grouping, so a rename moves the label
+   and the line stays where it is, and two slots that are the same movement
+   share one line.
+
+   ONE JUDGEMENT CALL, recorded because the work order does not settle it:
+   the group is narrowed to slots carrying the key lift's own `k`. d1a and
+   d3a share `l_row` — that shared field is what SPEED_SRC reads — but d3a
+   is prescribed at 65–70% of the 3–5RM, so plotting both on one line draws
+   a 30% cliff every speed day and calls it a trend. The grouping is kept;
+   the protocol is what is filtered. The lift's own slot is never filtered
+   out, whatever the plan says about it.
+
+   The metric is PHAT.e1rmByDate, the same estimate ST1 scores, so the chart
+   and the week-6 card cannot disagree — which is exactly what the old
+   weight-only chart did beside the old weight-only stall block. Merged by
+   DATE across the group's ids, best wins, because two sessions on one day
+   are one day of evidence (addendum 6c). */
+function liftPoints(l){
+  let ids=[];
+  try{ ids=PHAT.exIdsForLift(PHAT.PHAT_PLAN,l.lift)||[]; }catch(err){ ids=[]; }
+  if(ids.indexOf(l.id)<0) ids=ids.concat([l.id]);
+  const by=Object.create(null);
+  ids.forEach(id=>{
+    if(id!==l.id){
+      let ex=null;
+      try{ ex=PHAT.exById(PHAT.PHAT_PLAN,id); }catch(err){ ex=null; }
+      if(!ex||ex.k!==l.k) return;
+    }
+    let rows=[];
+    try{ rows=PHAT.e1rmByDate(S.sessions,id)||[]; }catch(err){ rows=[]; }
+    rows.forEach(p=>{ if(by[p.date]===undefined||p.e>by[p.date]) by[p.date]=p.e; });
+  });
+  return Object.keys(by).sort().map(d=>({date:d,e:by[d]}));
+}
+
+/* One row: label, signed delta, chart, dated endpoints.
+
+   STACKED, not side by side, and that is the 200%-text answer: the label
+   owns a full-width line, so there is no width for the chart to take from
+   it. The chart is a fixed 44px tall in a 100%-wide box, so it yields at
+   every text size and the name never truncates.
+
+   THE DELTA CARRIES A SIGN (B-13). Greyscale this screen and +7.5 / −2.5
+   still read; colour is a second channel, never the only one. */
+function liftRow(l){
+  const pts=liftPoints(l);
+  const last=pts.length?pts[pts.length-1]:null;
+  let head=`<span class="tlname">${esc(l.lbl)}</span>`;
+  if(pts.length>=2){
+    const d=r1(last.e-pts[0].e);
+    const word=d>0?"Up":(d<0?"Down":"No change");
+    const lab=word+(d?" "+Math.abs(d).toFixed(1)+" kg":"")+" since "+fmt(pts[0].date);
+    head+=`<span class="tldelta ${d>0?"up":(d<0?"dn":"")}" aria-label="${esc(lab)}">${
+      d>0?"+":d<0?"−":""}${Math.abs(d).toFixed(1)} kg</span>`;
   }
-  h+=`<div class="pad mt24"><h2>Recent sessions</h2>`;
-  const rec=S.sessions.slice().reverse().slice(0,12);
-  if(!rec.length) h+=`<p class="tiny">Nothing yet.</p>`;
-  rec.forEach(s=>{const d=PROGRAM.find(x=>x.id===s.dayId);
-    const n=Object.keys(s.entries).length;
-    const v=Object.values(s.entries).reduce((a,e)=>a+PHAT.vol(e.sets),0);
-    h+=`<div class="sess"><div><div style="font-size:.90625rem">${esc(d?d.name:"Session")}</div>
-      <div style="color:var(--faint);font-size:.78125rem;margin-top:2px">${fmt(s.date)} · ${plural(n,"exercise")}</div></div>
-      <div style="color:var(--dim);font-family:var(--mono);font-size:.8125rem">${sep(v)} kg</div></div>`;});
-  h+=`</div>`;
-  return h;
+  let body;
+  if(pts.length>=2){
+    body=spark(pts)+`<div class="tlfoot"><span>${esc(fmt(pts[0].date))}</span><span>${
+      r1(last.e).toFixed(1)} kg &middot; ${esc(fmt(last.date))}</span></div>`;
+  }else if(pts.length===1){
+    /* NEVER a flat line at zero and never an empty box (spec §6, states).
+       One date is a reading, not a trend, so it is printed as a reading. */
+    body=`<p class="tlnone">${r1(last.e).toFixed(1)} kg on ${esc(fmt(last.date))}.
+      One date cannot make a line. Log it again.</p>`;
+  }else{
+    body=`<p class="tlnone">No data yet. This line reads sets at 8 reps or fewer.</p>`;
+  }
+  return `<div class="tl"><div class="tlhead">${head}</div>${body}</div>`;
+}
+
+/* The week-6 card, and every character of it is PHAT.stallAdvice's.
+
+   PER-CARD CATCH (spec §0.7): a throw in here costs the card and the
+   sparklines still render. `early` and `quiet` render NOTHING — no
+   placeholder, no "on track" reassurance (audit 4), and no countdown line,
+   because the countdown copy is the coach's (W1) and does not exist yet.
+   The word "deload" cannot reach this screen: stallAdvice does not hold it
+   in any of its five states. */
+function stallCard(){
+  let a=null;
+  try{
+    a=PHAT.stallAdvice({plan:PHAT.PHAT_PLAN, sessions:S.sessions,
+      todayStr:PHAT.localDate(), state:S.logMeta, keyLifts:keyLiftRows()});
+  }catch(err){ return ""; }
+  if(!a) return "";
+  const lines=(a.absent?a.absentLines:a.lines)||[];
+  if(!lines.length&&!a.disclosureLine) return "";
+  /* The red rule is the SECOND channel. The first is the sentence itself:
+     the stalled state opens `Week 6 and no progress on …` in the lead. */
+  let h=`<div class="pad mt16"><div class="tcard${a.state==="stalled"?" stall":""}">
+    <span class="kick">Week 6 test</span>`;
+  lines.forEach((t,i)=>h+=`<p${i?"":' class="lead"'}>${esc(t)}</p>`);
+  /* Addendum §9.9. Its own line, never joined to the finding: it is a
+     disclosure about the CHECK, not a claim about a lift. */
+  if(a.disclosureLine) h+=`<p>${esc(a.disclosureLine)}</p>`;
+  return h+`</div></div>`;
+}
+
+function vTrend(){
+  const n=S.sessions.length;
+  /* A kicker pair, not an h1: at 200% text a 76px "Top sets" is wider than
+     the column's min-content and puts the screen into horizontal scroll —
+     the same measured defect W11 fixed on Bodyweight. */
+  let h=`<div class="hd"><span class="kick">Trend</span>
+    <span class="kick">${n?esc(plural(n,"session")):"No sessions"}</span></div>`;
+
+  /* THE EMPTY STATE NAMES WHAT UNLOCKS IT. The design's LOAD SAMPLE DATA
+     control is deliberately NOT here: the demo sandbox (W13b) is not built,
+     and a control that does nothing is worse than no control. */
+  if(!n) return h+`<div class="pad mt24"><h2>No sessions yet</h2>
+    <p class="sub">Top sets appear here after the first logged session, and the week 6 test
+    unlocks once there are two weeks to compare.</p></div>`;
+
+  h+=stallCard();
+  h+=`<section class="pad mt16" aria-labelledby="tl-h"><h2 id="tl-h">Key lifts</h2>
+    <p class="tiny">Estimated one-rep max, from the best set at 8 reps or fewer. The same
+    number the week 6 test reads.</p>
+    ${KEY_LIFTS.map(liftRow).join("")}</section>`;
+
+  h+=`<section class="pad mt24"><h2>Recent sessions</h2>`;
+  S.sessions.slice().reverse().slice(0,12).forEach(s=>{
+    const d=PROGRAM.find(x=>x.id===s.dayId);
+    /* B-33, ruled in WO-003 §Decision 7: an exercise COUNTS when it has at
+       least one completed set. A notes-only entry is data and is kept, so
+       it is named separately — never folded into the count, never hidden,
+       never deleted. */
+    const ents=Object.keys(s.entries||{}).map(k=>s.entries[k]);
+    let nEx=0, nNote=0;
+    ents.forEach(e=>{
+      if(!e) return;
+      if(PHAT.completedSets(e.sets).length) nEx++;
+      else if(String(e.note||"").trim()!=="") nNote++;
+    });
+    const v=ents.reduce((a,e)=>a+(e?PHAT.vol(e.sets):0),0);
+    /* fmt() returns its ARGUMENT UNCHANGED when PHAT.dayMon cannot parse it,
+       and that argument is a date string off the disk — so this is stored
+       data reaching innerHTML, and it is escaped like every other one. */
+    h+=`<div class="sess"><div><div class="sn">${esc(d?d.name:"Session")}</div>
+      <div class="sd">${esc(fmt(s.date))} &middot; ${esc(plural(nEx,"exercise"))}${
+        nNote?" &middot; "+esc(plural(nNote,"note")):""}</div></div>
+      <div class="sv">${esc(sep(v))} kg</div></div>`;
+  });
+  return h+`</section>`;
 }
 
 /* ============================================================ W11: weight
