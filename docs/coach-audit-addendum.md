@@ -3647,3 +3647,446 @@ Nothing here changes a load, a rep, a rest period, a week gate or a calorie numb
 touched. **The one standing item is unchanged and I will keep saying it:** this is the fourth night of
 work on the tool and the log is still empty. The measure of all of it is one logged Upper Power session
 with a correct verdict under it.
+
+---
+
+# 13. Two advice questions from QA — 2026-09-11 (WO-005)
+
+**Added 2026-09-11.** Answers the two items `qa-engineer` raised at commit `9564f88` and deliberately
+refused to pin. Both were right to refuse: one is a load recommendation nobody had ruled on, the other
+is a medical-adjacent word list that an engineer should not be extending on instinct.
+
+Rule ids introduced here: **P1.2a** (the repeat target, amending audit §3 case 2) and **S1b** (the
+pain word list, amending audit §10's `Inputs` line). Neither collides with anything above.
+
+## 13.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | `100 / 100 / 120` → `Repeat 120 kg` | **Reject.** Two defects in one branch: the mismatch branch fires on the wrong condition, and it names the wrong load. Rule **P1.2a**. |
+| 1 | What load does a mismatched session repeat | The **heaviest load held for at least half the prescribed sets, rounded up** — the upper median, not the max, not the min. `100/95/90` → **95 kg**. |
+| 1 | Does the branch fire at all on `100/100/120` | **No.** A set ABOVE the working load is not a failed prescription. It evaluates as an ordinary session at 100 kg → **`Go to 102.5 kg next session.`** |
+| 1 | `120/100/100` — a different training story? | **No. Same answer, deliberately.** The rule is direction-blind: ordering is not intent and the app must not infer it. |
+| 1 | Power vs hypertrophy | **Differs, and it already does.** H1 has no mismatch branch and must not get one — unequal loads across hypertrophy sets are normal execution, not a failed prescription. |
+| 1 | Barbell vs dumbbell | **No difference.** `implement` changes rendering and the I2 appendix, never which load is the working load. |
+| 2 | The pain word list | **Reject the current list as under-triggering.** 8 stems → **21**. Rule **S1b**, with the full transcribable set and a named exclusion list. |
+| 2 | Which words only show the notice | **None. There is no notice-only tier.** If a word is worth a line between sets it is worth holding the weight. |
+| 2 | `sore` | **Rejected from the list entirely.** Not a trigger, not a notice. Frequency, not physiology — reasoning in 13.6. |
+| 2 | `twinge`, `ache`, `niggle` | **Accepted, tier 1.** Suppress and notify. |
+| 2 | Negation handling | **No.** The deliberate over-trigger stands. Dropping `sore` removes more false positives than any negation logic would. |
+| 2 | B-45 | **Stays open.** Unchanged from §12.4. |
+
+---
+
+## 13.1 Rule P1.2a — the repeat target, and when the mismatch branch fires
+
+**The current behaviour is wrong and I am rejecting it.** `logic.js:2629` prints
+`Repeat " + loadWord(top, im)` where `top = maxW(C)`. It matches audit §3 case 2 — *"repeat at
+max(weights in C)"* — so this is my error, not the engineer's. I wrote case 2 while looking at one
+example, `100/100/95`, where the heaviest set and the load he was working at are the same number. They
+are only the same number when the log descends. QA found the ascending case and the rule falls over:
+`100/100/120` prescribes three sets at a weight he held once.
+
+`[Certain]` that is the sentence B-08 was filed about, reintroduced through a different branch. B-08
+was closed on `verdictFor`'s *increase* path and this is the *repeat* path, which is why the fix did
+not catch it.
+
+**Two things are wrong, not one.**
+
+1. The branch names `max`. It should name the load he actually worked at.
+2. The branch **fires on the wrong condition.** It triggers on any inequality. A set below the working
+   load is a failed prescription; a set above it is not. Firing on both means a better session
+   (`100/100/120` at 5/5/5) earns a worse instruction than the same session without the heavy set
+   (`100/100/100` at 5/5/5 → `Go to 102.5 kg`). `[Certain]` an inversion where doing more returns less
+   is the B-07 failure class — the app punishing the lifter for a good session — and it is the reason
+   this is a reject rather than a one-token patch.
+
+```
+Rule: P1.2a — the repeat target and the mismatch trigger
+Applies to:   k:"power" only. Session screen verdict. Amends audit §3 case 2.
+              k:"hyp" unchanged (13.3). k:"speed" does not reach P1 at all.
+Inputs:       C = the first ex.s completed sets (Rule Z1, sliced by Rule X1).
+              No history. No minimum beyond P1's existing gate.
+Minimum data: unchanged — C.length must equal ex.s, else no verdict at all.
+
+Logic:        load    = min(w in C)                    // B-08's working load, unchanged
+              k       = ceil(C.length / 2)             // "at least half, rounded up"
+              R       = the k-th LARGEST w in C         // the repeat target
+                        equivalently: the heaviest W such that at least k sets
+                        in C were performed at a load >= W
+              backoff = (R - load) > 0.01               // at least one set fell BELOW R
+              mixed   = (max(w in C) - load) > 0.01     // loads are not all equal
+
+              Case order, first match wins. Only case 2's TRIGGER and TARGET
+              change; every other case is untouched.
+
+              1. C[0].r < ex.lo        -> TOO HEAVY. Unchanged, still computed
+                                          from C[0].w. Still beats case 2. (13.4)
+              2. backoff               -> NOT MATCHED. Repeat at R.
+              3. min(r in C) >= hi + 2 -> TOO LIGHT. G1 step off `load`.
+              4. min(r in C) >= hi     -> ADD. load + inc.
+              5. else                  -> HOLD at load.
+
+              `equal` is retired as case 2's trigger. It is replaced by
+              `backoff`, and by `mixed` where the COPY needs to stay truthful.
+
+Output copy:  Case 2, no zero load in C:
+                `Sets not matched: 100 / 95 / 90 kg. Repeat 95 kg until all 3 sets reach 5 reps.`
+              Case 2, any zero load in C (Z2 delta 3 list form, unchanged):
+                `Sets not matched: 2.5 kg / bodyweight. Repeat 2.5 kg until all 2 sets reach 10 reps.`
+              The list is rendered in LOGGED ORDER, never sorted. It is a record
+              of what happened; R is the instruction. Both are on screen and
+              that is deliberate — he can see the 120 and see that the app saw it.
+
+              Cases 3 and 4 when `mixed` is true — the load token gains ` or above`,
+              and ONLY the token that makes a claim about every set:
+                3, loaded : `7 reps at 100 kg or above on every set. Too light. Go to 105 kg.`
+                3, zero   : `12 reps at bodyweight or above on every set. Too light. Add 2.5 kg.`
+                4, loaded : `Top of range on all 3 sets. Go to 102.5 kg next session.`   (UNCHANGED —
+                            the sentence claims reps, not load, and is already true)
+                4, zero   : `Top of range on all 3 sets at bodyweight or above. Add 2.5 kg next session.`
+                5         : `Stay at 100 kg until all 3 sets reach 5 reps.`              (UNCHANGED —
+                            an instruction, not a claim about what happened)
+              Rule ids do not move: P1.1, P1.2, P1.3, P1.4, P1.5 keep their
+              meanings. `mixed` is a copy variant of the same case, not a new one.
+Not enough data: unchanged. Below ex.s completed sets, nothing renders.
+```
+
+**Why the upper median and not something else.** `[Opinion]`, reasoned, and I will hold it.
+
+- **Not `max`** — `[Certain]` it prescribes a load he held once. That is the whole of B-08.
+- **Not `min`** — `[Certain]` it sends him backwards after a near miss. `100/100/95` → `Repeat 95`
+  costs two sessions to get back to a weight he just did twice, and it contradicts the pinned copy in
+  audit §3 example 2.
+- **Not the first set's load** — `[Certain]` it gives the right answer on `100/100/120` and the B-08
+  answer on `120/100/100`. Any rule that reads set order is inferring intent from a log that does not
+  record intent.
+- **The upper median** is the only one of the four that is a load he performed for the majority of the
+  prescription, in both directions, with no tie-break case. `[Opinion]` the sentence behind it is one a
+  lifter can reproduce in his head: *the weight you did most of your sets at.*
+
+**Frequency check, so the complexity is justified.** `[Likely]` ascending logs are not exotic here:
+eight slots are `db`, where the rack forces a jump and "the last set felt easy so I took the next
+dumbbell up" is ordinary behaviour, and `d1b`/`d1c`/`d1e` are loaded from a belt where he grabs
+whatever plate is to hand. This case will occur.
+
+**The Z2 invariant survives, for a new reason — say this to QA explicitly.** §Z2 asserts *"the repeat
+target in case 2 is max(weights in C) and can never be 0"*. The first half of that sentence is
+**withdrawn**; the conclusion stands and the assertion may stay pinned. Under P1.2a, case 2 fires only
+when `R > load`, and `load >= 0` by Z1, so `R > 0` always. `[Certain]` — arithmetic. The string `0 kg`
+remains unreachable from every branch.
+
+## 13.2 Worked examples — chosen to kill the wrong rules, not to pass
+
+QA's objection to B-08's existing regression case is correct and is the point of this table: on
+`100/100/95` the heaviest set and the working load are both 100, so the test passes under the broken
+rule and the correct one. **Every row below distinguishes at least one wrong rule from the ruled one,
+and rows 2 and 3 distinguish all of them.** Squat `d2a {s:3, lo:3, hi:5, k:"power", implement:"bb"}`
+unless stated.
+
+| # | Logged | today (`max`) | if `min` | if `C[0].w` | **RULED** |
+|---|---|---|---|---|---|
+| 1 | `100×5, 100×5, 95×5` | Repeat 100 | Repeat 95 | Repeat 100 | **Repeat 100** |
+| 2 | `100×5, 95×5, 90×5` | Repeat 100 | Repeat 90 | Repeat 100 | **Repeat 95** |
+| 3 | `100×5, 100×5, 120×5` | Repeat 120 | Repeat 100 | Repeat 100 | **Go to 102.5** |
+| 4 | `120×5, 100×5, 100×5` | Repeat 120 | Repeat 100 | Repeat 120 | **Go to 102.5** |
+
+1. **The B-08 regression, kept as-is.** `100×5, 100×5, 95×5` → desc `[100,100,95]`, k=2 → R=100,
+   load=95, backoff → case 2 →
+   `Sets not matched: 100 / 100 / 95 kg. Repeat 100 kg until all 3 sets reach 5 reps.`
+   **Character-identical to audit §3 example 2.** Nothing pinned moves. It kills `min` and nothing else,
+   which is exactly QA's complaint about it — keep it, but never cite it as evidence for the target.
+
+2. **The discriminator. This is the test B-08 should have had.** `100×5, 95×5, 90×5` → desc
+   `[100,95,90]`, k=2 → R=95, load=90, backoff → case 2 →
+   `Sets not matched: 100 / 95 / 90 kg. Repeat 95 kg until all 3 sets reach 5 reps.`
+   Max, median and min are three different numbers. Only the ruled rule produces 95.
+
+3. **QA's case.** `100×5, 100×5, 120×5` → desc `[120,100,100]`, k=2 → R=100, load=100 →
+   **backoff is false**, mixed is true, min rep 5 >= hi 5 → **case 4** →
+   `Top of range on all 3 sets. Go to 102.5 kg next session.` plus no I2 appendix (`bb`).
+   **Pin the negative too:** the strings `Repeat`, `120 kg` and `Sets not matched` must all be absent.
+   A test that only asserts the positive will pass on a rule that prints `Repeat 100 kg`, which is the
+   coincidence QA is trying to avoid.
+
+4. **The inverse.** `120×5, 100×5, 100×5` → same R, same load, same output as 3:
+   `Top of range on all 3 sets. Go to 102.5 kg next session.`
+   Deliberate. `[Opinion]` he held 100 for all three sets at the top of the range and 120 for one; the
+   prescription was met at 100 and the instruction is +2.5. The 120 is not thrown away — it is on the
+   screen in his own log, and the app does not need a sentence about it.
+
+5. **Boundary — upward outlier, reps short.** `100×5, 100×5, 120×4` → R=100, load=100, backoff false,
+   min rep 4 < hi 5 → case 5 → `Stay at 100 kg until all 3 sets reach 5 reps.` One rep short is still
+   one rep short, and the heavy set does not buy it (audit §3 example 3).
+
+6. **Boundary — the two-set slot, where k=1 and R IS the max.** `d1c Rack chin {s:2, lo:6, hi:10}`,
+   `5×8, 2.5×8` → desc `[5,2.5]`, k=ceil(2/2)=1 → R=5, load=2.5, backoff → case 2 →
+   `Sets not matched: 5 / 2.5 kg. Repeat 5 kg until all 2 sets reach 10 reps.`
+   `[Opinion]` on a two-set prescription one set is half of it, and repeating the heavier is the
+   standard call. The rule agreeing with `max` here is a consequence, not an exception.
+
+7. **Failing case — case 1 still beats case 2.** `120×2, 100×5, 100×5`, lo 3 → `C[0].r` 2 < 3 →
+   `2 reps at 120 kg. Below the range. Drop to 115 kg next session.` Unchanged and deliberate (13.4).
+
+8. **Zero load, and the invariant.** `d1b Weighted pull-up {s:3, lo:3, hi:5}`, `2.5×5, 0×5, 0×5` →
+   desc `[2.5,0,0]`, k=2 → R=0, load=0 → **backoff false** → mixed → case 4, zero form →
+   `Top of range on all 3 sets at bodyweight or above. Add 2.5 kg next session.` plus the I2 appendix.
+   Case 2 cannot fire here, which is why R can never be 0. Assert `0 kg` absent.
+
+9. **Zero load, backoff.** `2.5×8, 0×10` on a `{s:2, lo:6, hi:10}` bodyweight slot → k=1 → R=2.5,
+   load=0, backoff → case 2 → `Sets not matched: 2.5 kg / bodyweight. Repeat 2.5 kg until all 2 sets
+   reach 10 reps.` **Character-identical to Z2 example 5.** Nothing pinned moves.
+
+10. **Mixed too-light.** `100×7, 100×7, 120×7` on 3–5 → R=100, load=100, backoff false, mixed, min rep
+    7 >= hi+2 → case 3, G1 step `round2p5(100 × 0.025 × 2)` = 5 →
+    `7 reps at 100 kg or above on every set. Too light. Go to 105 kg.`
+    Without ` or above` the sentence claims he did every set at 100 kg and one of them was 120. Pin the
+    variant; it is the only new string in this rule.
+
+## 13.3 Does the answer change by role or by implement?
+
+**By role — yes, and the difference is already in the code.** `[Certain]`
+
+- **`k:"power"`** — straight sets at one load are the prescription. `3 × 3–5` means three sets at the
+  same weight; a set below that weight is a failed prescription and P1 case 2 exists to say so.
+- **`k:"hyp"`** — there is no mismatch branch and **there must not be one.** On `d3h Lateral raise
+  3 × 15–20` or `d5j Rope pressdown`, dropping the load on the last set is ordinary execution of a
+  high-rep set, not a failure, and H1's tonnage comparison (and Z3's rep comparison at zero load)
+  already accounts for it without naming a load. H1's one load-naming branch, case 2, computes off
+  `minW(C)` — the conservative end — and is correct as built. **No change to H1. Sign off.**
+- **`k:"speed"`** — SP1 owns the number; P1 is never consulted. No change. Rule S2a stands.
+
+**By implement — no.** `[Certain]` the identity of the working load is a property of what he lifted,
+not of what it was attached to. `implement` decides the per-DB suffix (I1), the load word (Z2) and the
+increment appendix (I2), and nothing else. Noted for completeness: a mismatched `db` session is
+*likelier* to mean "the 22.5s were taken" than "I failed", but the instruction — repeat the load you
+did most of your sets at — is the same one either way, so nothing turns on the distinction.
+
+## 13.4 One thing I looked at and am deliberately NOT changing
+
+`120×2, 100×5, 100×5` gives `Drop to 115 kg` — 5% off a set he **failed**, when the same session
+contains two completed sets at 100. That is the same shape of complaint as B-08 and I considered
+capping case 1's drop at R.
+
+**Rejected.** `[Opinion]`, and the deciding case is the audit's own: `100×2, 90×4, 90×5` → the cap
+would print `Drop to 90 kg` and the correct coaching answer is plainly **95** — he missed 100 by one
+rep and got 5 reps at 90, so the load is between them. A cap that is wrong on the pinned example is
+wrong. Case 1 is also already the conservative direction: it can only ever name a load **below** one he
+attempted today, and if it is still too heavy it fires again next session and comes down again.
+Unchanged, pinned example unchanged, and flagged here so nobody re-raises it as a bug.
+
+`[Opinion]` minor, take it or leave it: case 2 returns `t:"down"`. A mismatched session is neither
+progress nor regression, and `t:""` would be more honest. It is a tone token, it changes no number, and
+I am not asking for it tonight.
+
+---
+
+## 13.5 Rule S1b — the pain word list
+
+QA is right and the miss is mine. `right elbow twinge on set 2` is a person telling the app something
+about a joint, and the app answers `Go to 102.5 kg`. The list in audit §10 has eight stems and I wrote
+them in one pass without asking what a lifter actually types.
+
+```
+Rule: S1b — the pain trigger list
+Applies to:   every role, every screen with a note. Amends the `Inputs` line of
+              audit §10 (Rule S1). Everything else in §10 is unchanged: the
+              suppression scope, the two fixed lines, the clearing rule (S1a),
+              the per-exercise reach, the prohibitions.
+Inputs:       one note string. No history, no minimum data.
+Logic:        a match on ANY word below -> the full Rule S1 response:
+                - suppress every verdict that increases load (P1 cases 3 and 4,
+                  H1 case 2) on THAT exercise; show the hold copy instead
+                - render S1_LINES verbatim on that exercise's card
+                - the note enters painWindow, so Rule S2b suppresses V1's
+                  weekly accessory offer for 7 days, and S2c appends its one
+                  factual line to a stall report for 21 days
+              There is no second tier. A word is either all of the above or
+              nothing at all.
+Output copy:  unchanged. S1_LINES, verbatim, per §12.4. No new string.
+Not enough data: not applicable — the rule is the refusal.
+```
+
+### The complete set — 21 entries, transcribable
+
+| # | Word / stem | Status | Conf |
+|---|---|---|---|
+| 1 | `pain` `painful` `painfully` | existing | `[Certain]` |
+| 2 | `hurt` `hurts` `hurting` | existing | `[Certain]` |
+| 3 | `injur*` | existing | `[Certain]` |
+| 4 | `sharp` | existing | `[Certain]` |
+| 5 | `pinch*` | existing | `[Certain]` |
+| 6 | `tweak*` | existing | `[Certain]` |
+| 7 | `strain*` | existing | `[Certain]` |
+| 8 | `sprain*` | **new** | `[Certain]` |
+| 9 | `twinge` `twinges` `twinged` | **new** | `[Certain]` |
+| 10 | `ache` `aches` `ached` `aching` `achy` `achey` | **new** | `[Likely]` |
+| 11 | `niggl*` | **new** | `[Certain]` |
+| 12 | `numb` `numbness` | **new** | `[Certain]` |
+| 13 | `tingl*` | **new** | `[Certain]` |
+| 14 | `swollen` `swelling` | **new** | `[Certain]` |
+| 15 | `impinge*` | **new** | `[Certain]` |
+| 16 | `inflam*` | **new** | `[Certain]` |
+| 17 | `stabbing` `stabbed` | **new** | `[Certain]` |
+| 18 | `tear` `tears` `tore` `torn` | **new** | `[Certain]` |
+| 19 | `spasm` `spasms` | **new** | `[Likely]` |
+| 20 | `pulled` | **new** | `[Likely]` — program-specific, see below |
+| 21 | `gave way` `gives way` `giving way` | **new** | `[Opinion]` |
+
+One regex, one place, case-insensitive, word-bounded:
+
+```
+/\b(?:pain|painful|painfully|hurt|hurts|hurting|injur\w*|sharp|pinch\w*|tweak\w*|strain\w*|sprain\w*|twinge[sd]?|ach(?:e|es|ed|ing|y|ey)|niggl\w*|numb|numbness|tingl\w*|swollen|swelling|impinge\w*|inflam\w*|stabbing|stabbed|tears?|tore|torn|spasms?|pulled|g(?:ave|ives|iving) way)\b/i
+```
+
+**Five stem hazards. Every one of them is a word that will appear in a real note, and every one is the
+mistake an engineer makes while "tidying" this list.** `[Certain]` on all five.
+
+| Tempting | Breaks on | Use instead |
+|---|---|---|
+| `pain\w*` | `painting` | `pain\|painful\|painfully` (the existing `\b`-bounded form already handles this — §`logic.js:2126` says so, keep the comment) |
+| `numb\w*` | **`number`** — "rep number", "number of sets" | `numb\|numbness` |
+| `ach\w*` | `achieve` | `ach(?:e\|es\|ed\|ing\|y\|ey)` |
+| `stab\w*` | **`stability`, `stabilise`** | `stabbing\|stabbed` |
+| `tear\w*` | **`teardrop`** (the VMO) | `tears?\|tore\|torn` |
+
+**`pulled` is the one entry with a program-specific justification.** `[Likely]` In most training logs
+`pulled` is a false-positive machine — "pulled 200 today". **This program contains no conventional
+deadlift**: the pulling slots are `d1a` row, `d2d` SLDL and `d4e` RDL, and nobody writes "pulled 140 on
+rows". So the word is nearly free here and it catches `pulled my hamstring`, which is a thing a person
+types and a thing worth stopping for. **If a conventional deadlift ever enters the plan, revisit this
+one entry.** Bare `pull` and `pulling` stay out — those are the movement pattern and half the program.
+
+### Which words suppress, and which only show the notice: **none only show the notice**
+
+QA asked me to draw this line rather than let an engineer draw it. I am drawing it in a place QA did not
+offer: **there is no notice-only tier, and there should not be one.** `[Opinion]`, held.
+
+A notice with no change to the prescription is the app naming a symptom and then telling him to add
+2.5 kg anyway — it comments on his body and acts as if it had not. And `S1_LINES[1]` is a *referral*:
+`stop the exercise and see a physio or a doctor` is the wrong sentence to attach to normal training
+soreness, and attaching it there is how the line stops being read on the day it matters. If a word is
+worth a line between sets it is worth holding the weight for one session. If it is not worth holding
+the weight it is not worth a line.
+
+### `sore`, `ache`, and why they are split
+
+**`ache` is in. `sore` is out.** They are the same kind of word and I am treating them differently on
+**frequency, not physiology** — say that plainly rather than dressing it as a clinical distinction.
+`[Opinion]` on the line; `[Certain]` on the two facts under it.
+
+`[Certain]` delayed-onset soreness is the expected result of a five-day hypertrophy split in a surplus.
+It is not a symptom. A trigger that fires most weeks is not a signal, it is a tax — and it does three
+things, all bad: it holds loads on exercises that are progressing fine, it suppresses V1's accessory
+offer more or less permanently through `painWindow` (Rule S2b, 7-day window, **any** exercise), and it
+teaches him to stop writing notes, which blinds the other 20 words. `[Certain]` that last cost is the
+one that matters: the note field is the only recovery input the app has.
+
+`ache` does not carry that frequency. `[Likely]` a lifter writes "legs sore" every week and "elbow
+aches" when something is wrong. The app cannot parse anatomy and must not try — deciding that
+"quad ache" is benign and "elbow ache" is not is assessment, and §10 forbids it. So `ache` takes the
+over-trigger, accepts the occasional held session, and `sore` is not in the list at all.
+
+### Considered and excluded, with the reason. Do not add these back without a ruling
+
+| Word | Why not | Conf |
+|---|---|---|
+| `sore` `soreness` `DOMS` | above — frequency, and the referral line is wrong copy for DOMS | `[Opinion]` |
+| `stiff` `tight` `tightness` | normal, and **`tight` is a coaching cue** — "stay tight", "tight brace" | `[Certain]` |
+| `cramp*` | benign and common in calf and hamstring work at 15–20 reps | `[Likely]` |
+| `burn` `burning` | the burn is a deliberate product of the 15–20 rep slots | `[Certain]` |
+| `pump` `fatigue` `tired` `drained` `beat up` | recovery words, not symptoms. They are also **not** deload inputs — D1 triggers off performance (§8), never off a mood word | `[Certain]` |
+| `pop` `popped` `popping` | **"pop the hips" is a standard cue**, and painless joint noise is not a symptom | `[Certain]` |
+| `click*` `crunch*` `crepitus` | painless joint noise is not clinically meaningful, and `crunch` is an exercise. **This is the one place the over-trigger bias is deliberately overridden by a fact** | `[Certain]` |
+| `shooting` | **"shooting for 5 reps"** | `[Certain]` |
+| `unstable` `instability` | describes equipment as often as a joint, and lives one letter from `stability` | `[Opinion]` |
+| `locked` `locking` | **`lockout`** | `[Certain]` |
+| `catch` `catching` | a lift term and a breath term | `[Likely]` |
+| `grind*` | a lift term — the speed-work copy itself says `never grinding` | `[Certain]` |
+| `flare` `flared` | **elbow flare is a bench form cue** | `[Certain]` |
+| `bruise*` | bar bruising on RDLs and hack squats is cosmetic | `[Likely]` |
+| `weird` `odd` `off` | too vague to defend in either direction | `[Opinion]` |
+| `physio` `doctor` `MRI` `cortisone` | real signals, but indirect, and the symptom word is almost always in the same note. Keep this list to words about the body | `[Opinion]` |
+
+### Negation: **no handling. The over-trigger stands.** `[Certain]` on the reasoning
+
+Audit §10 accepts `no pain today` as a false positive by name and §12.4 did not disturb it. That still
+holds, and three things make it the right call:
+
+1. `[Certain]` negation detection on free text fails **silently in the dangerous direction**. The note
+   `no pain in the knee but the shoulder is sharp` is one clause of negation and one real report, and
+   any scan cheap enough to ship would suppress the whole note.
+2. `[Certain]` the cost matrix is unchanged: a false positive costs one held session plus two lines of
+   text; a false negative costs a load increase onto something that hurts.
+3. `[Likely]` **dropping `sore` does more for false positives than negation logic would.** `not sore`
+   and `less sore than last week` were the most likely benign notes in the whole list, and they no
+   longer match anything. `less achy than last week` still fires. I accept that one.
+
+**Instruction to whoever implements it: do not extend this into a parser.** No negation, no proximity,
+no body-part table, no severity grading. One regex, one boolean.
+
+### Consequences of widening the list, all intended
+
+- `painWindow` widens, so V1's accessory offer is suppressed by more notes. **Correct** — that is
+  S2b's whole purpose and it is refusal, not treatment.
+- S2c's appended line on a stall report fires more often. **Correct.**
+- SP1 is still untouched (S2a). **Correct.**
+- **`S1_LINES` does not change.** `[Opinion]`, and I hold it: `You logged pain on this.` under a note
+  that said "twinge" is the app using one word as the category name for the class, and the second line
+  already carries the conditional (`If it is sharp, or it repeats`) that covers the mild end. Churning
+  the one piece of near-medical copy in the app to accommodate a word-list change is the wrong trade.
+  §12.4's two strings stand, character for character. The same applies to S2b's
+  `You logged pain in the last 7 days.`
+
+### Worked examples
+
+1. **QA's case.** `d1g Cambered bar curl`, note `right elbow twinge on set 2`, sets `30×5, 30×5, 30×5`
+   → P1 case 4 would print `Go to 32.5 kg next session.` → suppressed →
+   `Stay at 30 kg until all 3 sets reach 5 reps.` plus `S1_LINES` verbatim. Today: no notice, `Go to
+   32.5 kg`. This is the regression test.
+2. `d3c Seated cable row`, note `shoulder aches after set 3` → matches (`aches`) → H1 case 2 downgrades,
+   notice shows, `painWindow` active for 7 days so V1's offer does not render this week.
+3. **Boundary — the stem hazards, as a single test with five assertions, all expecting NO match.**
+   `rep number 3 felt fast` · `achieve 5 reps` · `stability work after` · `teardrop finally showing` ·
+   `painting the garage tomorrow`. Every one must return `false`. **This is the half of the suite that
+   never gets written and it is the half that catches the next well-meaning `\w*`.**
+4. **Failing case — the deliberate false positive, unchanged.** `no pain today, felt strong` → matches
+   → notice shows, load held. Accepted cost, pinned since audit §10. Do not "fix" it.
+5. **The deliberate silence.** `legs sore from Tuesday` → **no match.** Normal verdict, no notice, V1's
+   offer renders. Assert the absence, not just the presence — this is the ruling that is most likely to
+   be undone by someone reading QA's original report and adding `sore`.
+6. `pulled my hamstring on the last rep` → matches (`pulled`) → full S1 response.
+   `pulled 140 for a triple` → also matches. Accepted, and 13.5's program-specific note says why.
+
+---
+
+## 13.6 What this changes, by work item
+
+| Item | Change |
+|---|---|
+| `logic.js` `verdictPower` | Case 2's trigger `!equal` → `backoff`; its target `maxW(C)` → `R`. New helper (suggested name `repeatLoad(C)`, not `top`, not `mode` — see CLAUDE.md §7 on `top`). Cases 3 and 4 gain the ` or above` variant on `mixed`. No other branch moves. |
+| `logic.js` `PAIN_RE` | Replaced per 13.5. **Recommend** exporting the source list as a frozen `PHAT.PAIN_WORDS` compiled into the regex, so the suite pins the list rather than a regex literal — same argument as `S1_LINES` in §12.4. `[Opinion]` |
+| `tests.html` | P1.2a examples 1–10; the four-column mutant table in 13.2 as explicit negative assertions (`Repeat 120 kg` absent on rows 3 and 4). S1b: one test per new word, the five-assertion stem-hazard test in 13.5 example 3, and the `sore` **non**-trigger test. |
+| `docs/coach-audit.md` §3 case 2 | Superseded by 13.1. The file is not edited (§0 convention); this section is the amendment. |
+| `docs/coach-audit.md` §10 `Inputs` | Superseded by 13.5. Everything else in §10 unchanged. |
+| Addendum §Z2 | The invariant sentence "the repeat target in case 2 is max(weights in C)" is **withdrawn**; its conclusion (never 0) stands, for the reason in 13.1. |
+| Addendum §Z2 example 5, §3 example 2 | **Unchanged, character for character.** Neither pinned string moves under P1.2a. |
+| B-08 | Reopen or file a sibling — the repeat path was never covered. PM's call which. |
+| B-45 | **Stays open.** Unchanged from §12.4: no sentence for `fail → deload → fail` until there is real logged history. |
+
+## 13.7 Verdict
+
+**Reject both, with the replacement rules above.**
+
+Question 1 was two defects, not one, and the second is the worse of them: the branch fires on a
+condition that turns a good session into a worse instruction. Question 2 was a list I wrote too fast —
+eight words where twenty-one are needed, and the one QA typed by hand is the one that proves it.
+
+Two things I will not do. I will not build negation handling, and I will not add `sore`: one is a
+parser in the advice layer and the other is a trigger that fires most weeks and would end up training
+him out of writing notes at all. Both are refusals, and refusing is the app's correct move near this
+subject.
+
+**And the standing item, for the fifth night: the log is still empty.** Every rule in this section is
+about which number to print under a set he has not yet performed. One logged Upper Power session would
+tell us more about P1 than this document does.
