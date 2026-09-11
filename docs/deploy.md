@@ -31,11 +31,24 @@ That is the black screen this project keeps rediscovering. **Every deploy upload
 
 ---
 
-## 2. The file list
+## 2. The file list — it is TEN
 
-WO-005 says six files. With B-68 closed (the placeholder icons now exist on disk) it is **ten** —
-the four PNGs are new as of 2026-09-11. Upload them in this order; the order does not matter to
-Vercel, but keeping one order means a half-finished upload is obvious in the terminal.
+**Ten files. Not six.** `docs/work-orders/WO-005-overnight.md` still says six; it is stale and the
+PM owns correcting it. This table and `scripts/verify-deploy.sh` are the authority.
+
+Six core files plus four icons. Upload them in this order; the order does not matter to Vercel, but
+keeping one order means a half-finished upload is obvious in the terminal.
+
+**The four icons are not optional, and "it's only an icon" is the wrong instinct.**
+`manifest.webmanifest` names every one of them by path. A 404 on an icon is not a cosmetic miss:
+
+- the browser has no icon to install with, so the home-screen entry is degraded or refused
+  outright — which is the entire point of E-4, turning a bookmark into an app;
+- `sw.js` refuses to commit a cache entry for a non-200, so a missing icon **fails the service
+  worker install**, and a failed install means no offline shell — the gym has no signal, so that is
+  a release-blocking failure, not a blemish;
+- `verify-deploy.sh` therefore checks them as hard failures, not warnings, and cross-checks that
+  every `src` in the manifest is one it verifies.
 
 | # | Path | Content-type Vercel serves | Why it is load-bearing |
 |---|---|---|---|
@@ -90,18 +103,66 @@ yet.
 
 ## 4. The deploy
 
-Run from the repo root, on a clean tree, on the commit you intend to ship.
+### 4.0 Preview first. Always.
 
-### 4.1 Pre-flight
+**Deploy a preview, verify it, then deploy production.** A preview is the same API call with the
+`target` key **omitted**; it gets its own URL and touches nothing that is live. The cost is one
+extra minute. The thing it buys is that production is never the place you discover a bad recipe.
+
+Setting `"target":"production"` is the *only* thing that makes a deploy production. Omit the key
+and you cannot hurt the live site, whatever else goes wrong.
+
+Exercised on 2026-09-11 against `verify-deploy.sh`: §4.1–4.2 and the body-construction half of
+§4.3–4.4 were run end to end and three defects were found and are corrected below. **The
+authenticated calls — `POST /v2/files` and `POST /v13/deployments` — remain UNEXECUTED**, because
+no Vercel token was available in that session. See §9 for exactly what is still unproven.
+
+### 4.1 Pre-flight — and how to deploy safely while other agents are editing
+
+The old instruction here was "`git status --short` must be empty. Never deploy an uncommitted
+tree." **That is not achievable in this repo** and pretending otherwise is how a release gets
+blocked or, worse, ships someone's half-written file. Several agents share one working tree and
+there is almost always something in flight (CLAUDE.md §4b).
+
+So do not deploy the working tree, and **do not `git stash`, `git checkout` or `git clean`** — each
+of those mutates the tree other agents are working in and can destroy unfinished work.
+
+Deploy from an **extract of one pinned commit**, in a temp directory outside the repo:
 
 ```sh
-cd "/c/Users/Chady/Desktop/Phat Gym Track"
-git status --short              # must be empty. Never deploy an uncommitted tree.
-git rev-parse --short HEAD      # write this SHA down; it goes in the deploy meta and the report
-ls -l index.html logic.js tests.html sw.js manifest.webmanifest assets/
+REPO="/c/Users/Chady/Desktop/Phat Gym Track"
+
+# Pin the SHA ONCE. Do not write "HEAD" again after this line.
+SHA=$(git -C "$REPO" rev-parse HEAD)
+BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD)
+echo "$SHA on $BRANCH"          # record this; it goes in the deploy meta and the report
+
+TREE=$(mktemp -d)
+FILES="index.html logic.js tests.html assets/archivo-inline.css manifest.webmanifest sw.js \
+assets/icon-192.png assets/icon-512.png assets/icon-maskable-512.png assets/apple-touch-icon-180.png"
+
+for f in $FILES; do
+  mkdir -p "$TREE/$(dirname "$f")"
+  git -C "$REPO" cat-file blob "$SHA:$f" > "$TREE/$f" || { echo "MISSING IN COMMIT: $f"; break; }
+done
+ls -lR "$TREE"
 ```
 
-Then the credential grep from §3.
+Then the credential grep from §3, run against `$TREE`, not the repo.
+
+> **Why the SHA is pinned, and it is not theoretical.** During the 2026-09-11 dry run `HEAD` moved
+> **twice in ten minutes** (`5ecf1dc` → `8bb7668` → `47cf307`) as other agents committed. Two
+> `git rev-parse HEAD` calls minutes apart returned different commits, so a recipe that re-evaluates
+> `HEAD` can upload `logic.js` from one commit and `index.html` from the next. That is a black
+> screen assembled out of two individually-correct files. Resolve once, reuse `$SHA` everywhere.
+
+> **Why `git cat-file blob` and NOT `git archive`.** `core.autocrlf` is `true` on this machine, and
+> `git archive` applies it: it rewrote LF to CRLF and inflated `tests.html` from 527,241 to
+> **535,996 bytes** (+8,755, one per line), `sw.js` by 267, `manifest.webmanifest` by 34.
+> `git cat-file blob` emits the committed bytes verbatim. Measured, not assumed. The PNGs are safe
+> either way — `.gitattributes` marks `*.png binary` and all four came out byte-identical.
+> If you prefer a single command, `git -c core.autocrlf=false archive "$SHA" | tar -x -C "$TREE"`
+> also produces the correct bytes; the bare `git archive` does not.
 
 ### 4.2 Record the deployment you are about to replace — **do this before uploading**
 
@@ -115,9 +176,25 @@ curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" \
 Copy the `uid` (looks like `dpl_...`) and `url` of the current **READY** production deployment into
 your notes. That is the rollback target in §6.
 
-> If this returns `{"error":{"code":"forbidden"}}` the project is under a team, not your personal
-> scope. Get the team id with `curl -sS -H "Authorization: Bearer $VERCEL_TOKEN"
-> https://api.vercel.com/v2/teams` and append `&teamId=team_...` to this and every call below.
+> **Team scope — settle this FIRST, before any upload.** If any call returns
+> `{"error":{"code":"forbidden"}}` the project is under a team, not your personal scope, and every
+> call needs a team id. The old wording here said "append `&teamId=team_...` to every call below",
+> which is **wrong for two of the three calls**: `POST /v2/files` and the deployment-status GET
+> have no query string, so `&teamId=` produces a malformed URL like
+> `https://api.vercel.com/v2/files&teamId=team_x`. Use one variable instead, set once, appended
+> with a leading `?` so it is correct everywhere:
+>
+> ```sh
+> curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" https://api.vercel.com/v2/teams
+> TEAM=""                      # personal scope: leave empty
+> # TEAM="?teamId=team_XXXX"   # team scope: uncomment and fill in
+> ```
+>
+> Then every URL below is written `".../endpoint${TEAM}"`, and a call that already has a query
+> string uses `"...?a=b${TEAM#?}"`. **Prove scope with a cheap read before uploading 900 KB**:
+> `curl -sS -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $VERCEL_TOKEN"
+> "https://api.vercel.com/v9/projects/gym-app${TEAM}"` — a `200` means this scope is right, a
+> `403` means try the other one. **Unresolved as of 2026-09-11: which of the two applies.**
 
 ### 4.3 Upload the file bodies
 
@@ -125,18 +202,18 @@ Each file is uploaded once, addressed by its SHA-1. Vercel stores it and the dep
 references it by digest — which is also why a typo in a digest is a missing file rather than a
 corrupt one.
 
-```sh
-FILES="index.html logic.js tests.html assets/archivo-inline.css manifest.webmanifest sw.js \
-assets/icon-192.png assets/icon-512.png assets/icon-maskable-512.png assets/apple-touch-icon-180.png"
+Run this **from `$TREE`** (the pinned extract from §4.1), never from the repo.
 
-WORK=$(mktemp -d); : > "$WORK/entries"
+```sh
+cd "$TREE"
+WORK=$(mktemp -d); : > "$WORK/entries"; OK=0
 
 for f in $FILES; do
   [ -f "$f" ] || { echo "MISSING LOCALLY: $f - stop, do not deploy"; break; }
   sha=$(sha1sum "$f" | cut -d' ' -f1)
   size=$(wc -c < "$f" | tr -d ' ')
   code=$(curl -sS -o "$WORK/resp" -w '%{http_code}' -X POST \
-    "https://api.vercel.com/v2/files" \
+    "https://api.vercel.com/v2/files${TEAM}" \
     -H "Authorization: Bearer $VERCEL_TOKEN" \
     -H "Content-Type: application/octet-stream" \
     -H "x-vercel-digest: $sha" \
@@ -145,70 +222,130 @@ for f in $FILES; do
   echo "$f  $size bytes  sha=$sha  HTTP $code"
   case "$code" in 200|201) ;; *) echo "UPLOAD FAILED: $f"; cat "$WORK/resp"; break ;; esac
   printf '{"file":"%s","sha":"%s","size":%s},' "$f" "$sha" "$size" >> "$WORK/entries"
+  OK=$((OK+1))
 done
+
+# The loop uses `break`, which leaves a SHORT entries file and keeps going. Do
+# not rely on reading the lines above. Make it refuse:
+[ "$OK" -eq 10 ] || echo "STOP: only $OK of 10 uploaded. Do NOT run 4.4. Fix and re-run the whole loop."
 ```
 
-**Check the printed count is 10 and every line says HTTP 200 or 201 before continuing.** If any
-line failed, fix it and re-run the whole loop. A partial upload here is harmless — nothing is live
-until §4.4 — but a partial `entries` file is the black screen.
+**`$OK` must be 10 and every line must say HTTP 200 or 201 before continuing.** If any line
+failed, fix it and re-run the whole loop. A partial upload here is harmless — nothing is live until
+§4.4 — but a partial `entries` file is the black screen.
+
+Dry-run 2026-09-11: the loop, with the curl stubbed out, produced all ten entries with correct
+sizes and digests, and the resulting JSON parsed clean. The `sha1sum | cut -d' ' -f1` idiom is safe
+despite git-bash printing `sha *file` in binary mode. **The upload call itself is still unproven.**
 
 ### 4.4 Create the deployment
 
+**Preview (do this one first, and by default):** omit `target` entirely.
+
 ```sh
-{ printf '{"name":"gym-app","project":"gym-app","target":"production",'
+{ printf '{"name":"gym-app","project":"gym-app",'
   printf '"projectSettings":{"framework":null,"buildCommand":null,"installCommand":null,'
   printf '"outputDirectory":null,"devCommand":null},'
-  printf '"meta":{"commit":"%s","branch":"%s"},' \
-    "$(git rev-parse HEAD)" "$(git rev-parse --abbrev-ref HEAD)"
+  printf '"meta":{"commit":"%s","branch":"%s"},' "$SHA" "$BRANCH"
   printf '"files":[%s]}' "$(sed 's/,$//' "$WORK/entries")"
 } > "$WORK/body.json"
 
-grep -c '"file"' "$WORK/body.json"        # must print 10
+# COUNT THE FILES. `grep -c` is WRONG here - see the note below.
+grep -o '"file"' "$WORK/body.json" | wc -l      # must print 10
 
-curl -sS -X POST "https://api.vercel.com/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1" \
+curl -sS -X POST "https://api.vercel.com/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1${TEAM#?}" \
   -H "Authorization: Bearer $VERCEL_TOKEN" \
   -H "Content-Type: application/json" \
   --data-binary "@$WORK/body.json"
 ```
 
+**Production:** identical, but with `"target":"production",` inserted after `"project":"gym-app",`.
+Only do this after the preview has passed §5.
+
+> **Two corrections, both found by running this on 2026-09-11.**
+>
+> **1. The file-count guard never worked.** This document said `grep -c '"file"' body.json` "must
+> print 10". `grep -c` counts matching **lines**, and the body is built with `printf` with no
+> newlines — it is a single line. So it prints **1**, always, on a perfectly good ten-file body.
+> Measured: `wc -l` = 0, `grep -c` = 1, `grep -o '"file"' | wc -l` = 10. The one gate protecting
+> against the partial `entries` file that §1 calls "the black screen" would have fired on every
+> single deploy — which trains you to ignore it, or sends you debugging a healthy release at 5 a.m.
+> Use `grep -o ... | wc -l`.
+>
+> **2. `meta` came out empty.** This document called `$(git rev-parse HEAD)` inline, but §4.3 runs
+> from `$TREE`, which is an extract and **not a git repository**: the command prints
+> `fatal: not a git repository` and substitutes an empty string, giving `"commit":"","branch":""`.
+> Not fatal to the deploy, but it silently destroys the only record of which commit is live — the
+> field you need most when something is wrong. Use the `$SHA` and `$BRANCH` pinned in §4.1.
+
 `projectSettings` with every command `null` is what keeps this a static deploy. **Do not add a
 framework preset or a build command** — CLAUDE.md §3.1, and a build step here is a defect, not a
-convenience.
+convenience. *Unverified:* that all-null `projectSettings` in fact yields a build-free static
+deployment has not been observed on this project; it is inference from the API docs (§9).
 
-The response carries `id` (`dpl_...`) and `readyState`. `$WORK` is a temp directory outside the
-repo; it holds no token, but delete it anyway: `rm -rf "$WORK"`.
+The response carries `id` (`dpl_...`), `url` (the preview hostname) and `readyState`. `$WORK` is a
+temp directory outside the repo; it holds no token, but delete it anyway, along with the extract:
+`rm -rf "$WORK" "$TREE"`.
 
 ### 4.5 Wait for READY
 
 ```sh
-curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" \
-  "https://api.vercel.com/v13/deployments/dpl_XXXX" | tr ',' '\n' | grep -i 'readyState\|"url"'
+DPL=dpl_XXXX            # the id from 4.4's response
+for i in $(seq 1 40); do
+  s=$(curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" \
+        "https://api.vercel.com/v13/deployments/${DPL}${TEAM}" \
+      | tr ',' '\n' | grep -i 'readystate' | head -1)
+  echo "$i $s"
+  case "$s" in *READY*|*ERROR*|*CANCELED*) break ;; esac
+  sleep 3
+done
 ```
 
-`QUEUED` → `BUILDING` → `READY`. With no build step this takes seconds. `ERROR` means stop and read
-the response; do not retry blindly.
+`QUEUED` → `BUILDING` → `READY`. With no build step this should take seconds. `ERROR` means stop
+and read the full response; do not retry blindly.
+
+The preview hostname is the `url` field of the same response (no scheme — prefix `https://`). That
+string is the argument to §5. *Unverified:* the polling loop above has not been run against the
+live API (§9); the shape of the response is taken from the API docs.
 
 ---
 
 ## 5. Verify — by fetching the bytes, never by reading a dashboard
 
+**Verify against the same bytes you deployed.** The script compares the origin to a local
+directory, and by default that directory is the working tree — which other agents are editing. If
+you deployed the §4.1 extract, point `TREE` at it:
+
+```sh
+TREE="$TREE" COMMIT="$SHA" sh scripts/verify-deploy.sh https://<preview-host>.vercel.app
+```
+
+Only use the bare form when the working tree genuinely is what went out:
+
 ```sh
 sh scripts/verify-deploy.sh
 ```
 
-It fetches all ten files from `https://gym-app-psi-eight.vercel.app` and fails unless each returns
-**200**, a content-type containing the expected token, a byte length equal to the local file, and
-bytes identical to the local file. It exits non-zero and names every failure. It uses no token and
-no API — it is a stranger with `curl`, which is exactly what his phone is.
+It fetches all ten files and fails unless each returns **200**, a content-type containing the
+expected token, a byte length equal to the local file, and bytes identical to the local file. It
+then cross-checks that every icon named in `manifest.webmanifest` is one it verified. It exits
+non-zero and names every failure. It uses no token and no API — it is a stranger with `curl`,
+which is exactly what his phone is.
 
 A green dashboard with a 404 on `/logic.js` is a state this project has actually been in. **The
 dashboard is not evidence. The bytes are.**
 
-To check a preview or a specific deployment URL instead of production:
+If a length mismatch reports **"IDENTICAL once CR is stripped"**, that is not a stale upload — it
+is the CRLF trap from §4.1. Re-extract with `git cat-file blob`, or point `TREE` at what you
+actually deployed. The script names this case specifically so it is never mistaken for a partial
+upload.
 
-```sh
-sh scripts/verify-deploy.sh https://gym-app-xxxxxx.vercel.app
-```
+**Verified on 2026-09-11:** against a stand-in origin serving the ten files from a pinned-commit
+extract, `verify-deploy.sh` printed `PASS 10/10` and **exited 0**; against an origin serving
+CRLF-converted bytes it exited 1 and named the line-ending cause on exactly the four affected files
+while still reporting a genuinely different `logic.js` as a real mismatch. Against live production
+it exited 1 and correctly reported three stale files and seven 404s. The verifier is proven; what
+is not yet proven is the deployer that feeds it (§9).
 
 If `verify-deploy.sh` fails on *any* file: **roll back now** (§6), then diagnose. Do not "just
 re-upload the one that failed" — see §1.
@@ -250,9 +387,17 @@ The recovery path, in order of preference. **Rollback is always cheaper than a f
 5. Click the **⋯** menu at the right of that row.
 6. Click **Instant Rollback** (older UIs: **Promote to Production**).
 7. Confirm in the dialog.
-8. Back in this terminal, run `sh scripts/verify-deploy.sh` **against the tree that matches that
-   deployment** — i.e. `git stash` or check out the commit it was built from first, otherwise the
-   byte-length check will correctly report a mismatch against the newer local files.
+8. Back in this terminal, verify **against the tree that matches that deployment**, otherwise the
+   byte-length check will correctly report a mismatch against newer local files. Extract that
+   commit and point `TREE` at it — **do not `git stash` and do not check out another ref**, both
+   mutate the shared working tree (CLAUDE.md §4b):
+
+   ```sh
+   OLD=$(mktemp -d)
+   for f in $FILES; do mkdir -p "$OLD/$(dirname "$f")"
+     git -C "$REPO" cat-file blob "<good-sha>:$f" > "$OLD/$f"; done
+   TREE="$OLD" COMMIT="<good-sha>" sh "$REPO/scripts/verify-deploy.sh"
+   ```
 
 ### 6.2 API
 
@@ -264,13 +409,22 @@ curl -sS -X POST \
 
 ### 6.3 Last resort — redeploy from git
 
-Every deployment is a snapshot of a commit, so a known-good commit can always be rebuilt:
+Every deployment is a snapshot of a commit, so a known-good commit can always be rebuilt.
+
+**The instruction that used to be here was dangerous and is withdrawn.** It said `git stash -u`,
+`git checkout <sha>`, redeploy, `git checkout <branch> && git stash pop`. In a worktree shared by
+several agents that is a way to destroy unfinished work: `stash -u` sweeps up every other agent's
+in-progress file, the checkout moves the tree under them mid-edit, and a `stash pop` conflict at
+2 a.m. is how you lose the thing you were trying to protect.
+
+Redeploy from an extract instead. **Nothing touches the working tree:**
 
 ```sh
-git stash -u                 # protect any in-flight work first
-git checkout <last-good-sha>
-# run §4.3 and §4.4 unchanged
-git checkout wo-004-redesign && git stash pop
+SHA=<last-good-sha>
+TREE=$(mktemp -d)
+for f in $FILES; do mkdir -p "$TREE/$(dirname "$f")"
+  git -C "$REPO" cat-file blob "$SHA:$f" > "$TREE/$f"; done
+# then §4.3 and §4.4 unchanged, with $TREE as the source
 ```
 
 ---
@@ -306,14 +460,68 @@ URL. `scripts/verify-deploy.sh` still applies — point it at the preview URL be
 
 ## 8. Checklist — copy this into the release note
 
-- [ ] `git status --short` empty; HEAD SHA recorded
-- [ ] Credential grep (§3) returned nothing
+- [ ] `$SHA` pinned once (§4.1) and recorded; extract built with `git cat-file blob`
+- [ ] Working tree NOT stashed, checked out or cleaned
+- [ ] Credential grep (§3) against `$TREE` returned nothing
+- [ ] Scope settled: `$TEAM` empty or `?teamId=...`, proven by a 200 on the project read (§4.2)
 - [ ] Previous production `dpl_` id recorded (§4.2)
-- [ ] 10 uploads, all HTTP 200/201
-- [ ] `grep -c '"file"' body.json` printed **10**
+- [ ] **Preview deployed and verified first** (§4.0)
+- [ ] 10 uploads, all HTTP 200/201, `$OK` = 10
+- [ ] `grep -o '"file"' body.json | wc -l` printed **10** (NOT `grep -c`, which always prints 1)
+- [ ] `meta.commit` in the body is a real SHA, not an empty string
 - [ ] Deployment `readyState: READY`
-- [ ] `sh scripts/verify-deploy.sh` exits **0**
+- [ ] `TREE=... COMMIT=... sh scripts/verify-deploy.sh <preview-url>` exits **0**
+- [ ] Only then production, and `verify-deploy.sh` against it exits **0**
 - [ ] Installed PWA opens, closes, reopens on the new build
 - [ ] Airplane mode: app opens and a full session logs
 - [ ] `/tests.html` loads on the phone
 - [ ] Vercel token rotated if it has ever been pasted anywhere
+
+---
+
+## 9. What is proven, and what is still not — as of 2026-09-11
+
+This section exists because the honest answer to "has this procedure ever been run?" is *partly*,
+and a release engineer who blurs that line is the reason deploys fail at 5 a.m. Read it before
+trusting any step above.
+
+### Proven by execution
+
+| Step | Evidence |
+|---|---|
+| §4.1 pinned-SHA extract | Built for all ten files; PNGs byte-identical to the worktree |
+| §4.1 CRLF hazard | Measured: `git archive` inflates `tests.html` 527,241 → 535,996 bytes |
+| §4.1 SHA pinning | `HEAD` observed moving twice in ten minutes under concurrent agents |
+| §4.3 digest loop | Ran with the upload stubbed; 10/10 entries, correct sizes and SHA-1s |
+| §4.4 body construction | Output parses as valid JSON, `files.length === 10`, no `target` key |
+| §4.4 file-count guard | `grep -c` returns 1, not 10 — defect found and corrected |
+| §4.4 `meta` | Returned empty strings from the extract — defect found and corrected |
+| §5 `verify-deploy.sh` | Exit **0**, `PASS 10/10`, against a stand-in origin serving the extract |
+| §5 CRLF diagnosis | Exits 1 and names line endings on the 4 affected files, not the other 6 |
+| §5 against production | Exit 1: 3 stale files, 7 × 404 — correct for the old three-file build |
+
+### NOT proven — no Vercel token was available, so no API call was made
+
+1. **`POST /v2/files` with `x-vercel-digest`.** Whether it returns 200/201 on this project, or
+   `forbidden` for want of a `teamId`, **is still open.** §4.2 now makes the scope question a
+   cheap pre-flight read instead of a surprise 900 KB into the upload, which is the best that can
+   be done without the token — but it is mitigation, not an answer.
+2. **A 527 KB `tests.html` uploading cleanly.** Untested. It is the largest file by far and the
+   most likely to hit a body-size limit. Watch it specifically.
+3. **All-null `projectSettings` producing a static, build-free deployment.** Inference from the
+   API docs, not observation.
+4. **The READY polling loop.** Response shape taken from the docs; never run.
+5. **`verify-deploy.sh` exiting 0 against a real Vercel deployment.** It exits 0 against a
+   stand-in origin, which proves the script. It does not prove the deployer and the verifier
+   agree about what Vercel actually serves — in particular **the content-type Vercel returns for
+   `manifest.webmanifest`**. The script requires the type to contain `json`; the stand-in served
+   `application/manifest+json`, which passes. If Vercel serves `text/plain` or
+   `application/octet-stream` for an unknown extension, this check fails on an otherwise good
+   deploy. **First real deploy: look at that line before anything else.**
+
+### The consequence
+
+Items 1–5 must be exercised on a **preview** deployment before the production one, exactly as §4.0
+says. The remaining unknowns are now small, named and front-loaded, rather than discovered in the
+middle of a release — but they are unknowns, and the first run of §4.3–4.5 against the live API is
+still a first run.

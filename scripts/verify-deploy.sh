@@ -15,7 +15,16 @@
 #   sh scripts/verify-deploy.sh                        # production origin
 #   sh scripts/verify-deploy.sh https://<preview>.vercel.app
 #   ORIGIN=https://... sh scripts/verify-deploy.sh
-# Run it from anywhere; it locates the repo from its own path.
+#   TREE=/path/to/extracted/tree sh scripts/verify-deploy.sh https://<preview>
+#   COMMIT=<sha> TREE=... sh scripts/verify-deploy.sh https://<preview>
+# Run it from anywhere; with no TREE it locates the repo from its own path.
+#
+# TREE EXISTS BECAUSE OF A REAL FALSE ALARM. This script compares the origin
+# against a LOCAL directory. By default that is the working tree - which, in
+# this repo, several agents are editing at once. If you deployed from a
+# pinned-SHA extract (docs/deploy.md 4.1) you must point TREE at that same
+# extract, or every uncommitted edit in the worktree is reported as a failed
+# deploy. Deploy source and verify source must be the same bytes.
 #
 # EXIT CODES
 #   0  every file matched
@@ -31,16 +40,30 @@ set -u
 ORIGIN="${1:-${ORIGIN:-https://gym-app-psi-eight.vercel.app}}"
 ORIGIN="${ORIGIN%/}"
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+# TREE overrides the comparison source. Stated beats inferred: if you deployed
+# from an extract, say so here rather than hoping the worktree still matches.
+if [ -n "${TREE:-}" ]; then
+  [ -d "$TREE" ] || { echo "FATAL: TREE is not a directory: $TREE"; exit 2; }
+  ROOT=$(CDPATH= cd -- "$TREE" && pwd)
+  ROOT_SRC="TREE override"
+else
+  ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+  ROOT_SRC="working tree (script location)"
+fi
 
 command -v curl >/dev/null 2>&1 || { echo "FATAL: curl not found"; exit 2; }
 
 # --------------------------------------------------------------------------
-# THE SIX. Every file a released build must serve, in the order deploy.md
+# THE TEN. Every file a released build must serve, in the order deploy.md
 # uploads them. Format: <path>|<substring the content-type MUST contain>
 #
-# Keep this list identical to the file list in docs/deploy.md. If you add a
-# seventh file to the deploy, add it here in the same commit - a file that is
+# Six core files plus four icons. The icons are NOT optional: manifest.web-
+# manifest names them by path, so a 404 on one is a degraded install (no
+# home-screen icon, and on iOS no icon at all), and sw.js refuses to commit a
+# cache entry for a non-200, which fails the install outright.
+#
+# Keep this list identical to the file list in docs/deploy.md. If you add an
+# eleventh file to the deploy, add it here in the same commit - a file that is
 # deployed but unverified is the same risk this script was written for.
 # --------------------------------------------------------------------------
 CORE_FILES='
@@ -117,6 +140,17 @@ check_one() {
   esac
 
   if [ "$got_len" != "$want_len" ]; then
+    # Before crying "stale upload", rule out the one benign cause of a length
+    # mismatch: line endings. `git archive` on this machine (core.autocrlf=true)
+    # rewrites LF to CRLF, so a perfectly good deploy made from an archive
+    # extract reports +1 byte per line against an LF worktree - 8755 bytes on
+    # tests.html alone. That false alarm, read at 5am, says "roll back".
+    # Naming it costs one comparison and saves the rollback.
+    if [ "$(tr -d '\r' < "$body" | wc -c | tr -d ' ')" \
+       = "$(tr -d '\r' < "$local_file" | wc -c | tr -d ' ')" ]; then
+      fail "$path" "length $got_len live vs $want_len local, but IDENTICAL once CR is stripped - this is a CRLF/LF difference, not a stale upload. You deployed from a 'git archive' extract; use 'git cat-file blob' (docs/deploy.md 4.1) or point TREE at the extract you actually deployed"
+      return
+    fi
     fail "$path" "length $got_len live vs $want_len local (differs by $((got_len - want_len)) bytes) - STALE OR PARTIAL UPLOAD"
     return
   fi
@@ -133,13 +167,20 @@ check_one() {
 echo "verify-deploy - fetching the bytes, not a build status"
 echo "origin : $ORIGIN"
 echo "tree   : $ROOT"
-echo "commit : $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo 'not a git checkout') on $(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+echo "source : $ROOT_SRC"
+if [ -n "${COMMIT:-}" ]; then
+  # An extract is not a git checkout, so it cannot report its own provenance.
+  # Pass the SHA you pinned in deploy.md 4.1 and the output documents itself.
+  echo "commit : $COMMIT (stated)"
+else
+  echo "commit : $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo 'not a git checkout - pass COMMIT=<sha> to record which one') on $(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+fi
 echo
 
 # A subshell in a pipeline cannot update FAILED, so feed the loop from a file.
 printf '%s\n%s\n' "$CORE_FILES" "$ICON_FILES" | grep '|' > "$TMP/list"
 
-echo "--- the six files a release must serve, plus the icons the manifest names"
+echo "--- the ten files a release must serve: six core, plus the four icons the manifest names"
 while IFS='|' read -r p c; do
   [ -n "$p" ] || continue
   check_one "$p" "$c"
