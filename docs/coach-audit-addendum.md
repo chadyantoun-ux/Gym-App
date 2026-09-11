@@ -4090,3 +4090,329 @@ subject.
 **And the standing item, for the fifth night: the log is still empty.** Every rule in this section is
 about which number to print under a set he has not yet performed. One logged Upper Power session would
 tell us more about P1 than this document does.
+
+---
+
+# 14. The calorie hold's copy — 2026-09-11 (WO-005)
+
+**Added 2026-09-11.** Answers the sign-off `ux-designer` requested in `docs/specs/wo-004-screens.md`
+§7.5.2 and §15 #12, and closes out the whole of `wo-003-train-weight.md` §3.5, which has been marked
+*pending coach sign-off* since it was written and shipped that way in W11 tonight.
+
+`ux-designer` was right to refuse. The hold note is the app's account of **why a calorie instruction
+is being withheld**, printed under a calorie band. That is advice about the diet protocol wearing a
+state-disclosure's clothes, and it is mine.
+
+Rule id introduced here: **W1h** — the hold disclosure. It amends nothing in audit §2; it specifies a
+field that did not exist when §2 was written.
+
+## 14.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | `You changed calories {ago}. Hold ends {date}.` | **Sign off, unchanged.** Not one character moves. |
+| 1a | Drop state 7's instruction clause? | **Correct, and for a stronger reason than UX gave.** In all three states where the note can render, `adv.text` one rank above already contains the literal clause `Change nothing.` The instruction is not missing; restating it in different words would be the second voice. Pinned as an invariant (14.2). |
+| 1b | Does it read as permission to change? | **`[Likely]` no, and the residual risk is correctly placed.** The hold is his own receipt, not a prescription. What he may do on the date is decided by the band sentence he reads at rank 2, and on that date the card still says `Change nothing.` if the rate has not moved. |
+| 1c | `Hold ends {date}` or a countdown in days? | **The date. `[Certain]`** — it matches `holdUntil` exactly, it matches state 7's own `Hold until 15 Sep`, it is checkable against a calendar, and it does not change while he looks at it. A day count is a number that ticks (§4.7) and is wrong for ten minutes either side of midnight. |
+| 2 | `This starts a 7-day hold. No new calorie advice until {date}.` | **Reject.** The promise is false in bands 2, 3 and 4. Replacement in 14.3: **`This starts a 7-day hold. Change nothing until {date}.`** |
+| 3 | The remaining seven §3.5 strings | **Sign off all seven, unchanged** (14.4). One of the eight is replaced; the other seven ship as written. |
+| 4 | Where `holdNote` is built | **In `logic.js`. Confirmed.** A view assembling it is wrong, and is wrong in the specific way B-06 and B-51 are wrong (14.5). |
+| — | A gap found while in here | The set control renders only in tone `act`, so a calorie change he makes **on his own initiative** can never be declared. Named in 14.6. **Not changed tonight** — it needs UX and a work order. |
+
+---
+
+## 14.1 The sentence — sign off, unchanged
+
+```
+You changed calories {ago}. Hold ends {date}.
+→ You changed calories 3 days ago. Hold ends 15 Sep.
+```
+
+**Signed off as written. `[Certain]` on the reasoning below; the copy itself is a `[Opinion]` call I
+am making and will hold.**
+
+**(a) Disclosing without restating the instruction is the right call — and the reason is mechanical,
+not stylistic.** UX argued from voice: an instruction under `Change nothing. Recheck in 7 days.` puts
+two voices on one card. True, but that argument alone would not survive a coach's objection that he is
+being left uninstructed. He is not, and here is the proof. The note is reachable **only** in states
+`above`, `on-target` and `below` — `logic.js` resolves a live hold in any of the other three bands to
+`cooldown`, which renders state 7's own sentence instead. All three of those band sentences contain
+the literal clause `Change nothing.`:
+
+```
+above      +0.41 kg per week. Above target, inside the margin. Change nothing. Recheck in 7 days.
+on-target  +0.25 kg per week. On target. Change nothing.
+below      +0.14 kg per week. Below target but inside weekly noise. Change nothing. Recheck in 7 days.
+```
+
+So the instruction *not to change calories* is already on the card, one rank louder than the note,
+every single time the note appears. Adding `Hold until 15 Sep before changing again.` beneath it would
+not add an instruction; it would add a **second, differently-worded copy of the instruction already
+there**, and two imperatives that differ in wording invite the reading that they differ in meaning.
+That is the failure to avoid.
+
+**This is a dependency, so it is pinned as a test, not left as a coincidence** — see the invariant in
+14.2. If a future edit ever removes `Change nothing.` from one of those three sentences, W1h must come
+back to me before it ships, because at that moment the card really would be withholding an instruction.
+
+**(b) The permission-reading risk, stated honestly and accepted.** `Hold ends 15 Sep` can be read as
+*on 15 Sep I may change something*. `[Likely]` that reading is harmless here, for two reasons:
+
+- The hold is a receipt for something **he** did, not a prescription the app issued. It expires; it
+  does not mature into an entitlement.
+- On 15 Sep the decision is made by the band sentence at rank 2, not by the note at rank 4. If the
+  rate is still in band 2/3/4 the card still reads `Change nothing.` The note cannot outrank it, which
+  is precisely why §7.5.1 forbids it its own kicker, its own rule and `--bone`.
+
+I considered and rejected three "safer" wordings. `Calorie advice resumes 15 Sep` is false for the
+same reason the confirmation body is false (advice never stopped). `New calorie advice is on hold
+until 15 Sep` is accurate but re-asserts a rule at footnote rank and is longer than the line it
+replaces. Saying nothing at all is worse than either: see (d).
+
+**(c) Date, not countdown. `[Certain]`.** `Hold ends 15 Sep` is the same token, from the same field
+(`holdUntil`), as the `15 Sep` in state 7's sentence and the `{date}` in the confirmation he tapped
+through. Three places, one date, no arithmetic for him to do. `4 days left` is a different number in
+each of those places, changes every midnight, and is the kind of figure a lifter checks daily instead
+of weighing himself daily — which is the one behaviour this whole tab exists to produce.
+
+**One boundary that matters and reads correctly under this wording:** the hold is **not** active on the
+date printed. `active = gap < 7`, so a stamp on 8 Sep gives `holdUntil` 15 Sep and the hold is already
+gone when 15 Sep arrives. `Hold ends 15 Sep` is therefore exact — 15 Sep is the first free day, and the
+note does not render on it. Worked example 4 in 14.7 pins the absence.
+
+**(d) The justification I want on the record, because it decides the rank.** In bands 2, 3 and 4
+nothing is being withheld *at this moment* — the card is character-for-character identical with the
+hold on or off. So the note is not an advisory. **It is the clear control's context.** A bare
+`I did not change anything` button sitting under `+0.25 kg per week. On target. Change nothing.` is
+incoherent — it reads as an answer to the band. The note is what makes that button legible, which is
+exactly why it is footnote rank, why `aria-describedby` points the control at it (§7.5.1 A11y), and
+why it must never grow a kcal figure or a rate.
+
+---
+
+## 14.2 Rule W1h — the hold disclosure
+
+```
+Rule: W1h — the hold note
+Applies to:   the Weight tab only. No exercise role, no session screen.
+              Rule W1 states `above` / `on-target` / `below` only.
+Inputs:       PHAT.calorieAdvice(entries, todayStr, calChangedAt) and nothing
+              else: state, holdUntil, daysAgo. No new stored field, no new
+              minimum, no new window.
+Minimum data: none beyond W1's own. holdUntil is null in `empty`,
+              `need-history`, `thin-window-b` and `thin-window-a` because the
+              engine returns before the cooldown test. The note is therefore
+              UNREACHABLE in every not-enough-data state and must stay
+              unreachable: a screen that cannot compute a rate does not get to
+              start explaining why it is suppressing one.
+Logic:        holdNote is non-empty  IFF  holdUntil !== null AND state !== "cooldown"
+              "" in every other case, including cooldown.
+              Exactly one hold disclosure on screen whenever holdUntil is set:
+                state === "cooldown"  -> adv.text IS the disclosure, holdNote ""
+                any band              -> holdNote, below the sub-line
+              The note never renders without the clear control beside it, and
+              the clear control never renders without either the note or state
+              7's sentence. A disclosure with no exit is the defect this rule
+              exists to close.
+Output copy:  `You changed calories {ago}. Hold ends {date}.`
+              {ago}  = the existing agoWord(daysAgo): `today` | `1 day ago` | `{n} days ago`
+              {date} = dayMon(holdUntil): `15 Sep`. Never Intl (B-44).
+              Carries NO imperative, NO kcal figure, NO rate, NO day count.
+              Rank 4, the sub-line's token and size, never bolder, never --bone.
+Not enough data: "" and the slot renders nothing. There is no thin-data variant
+              of this string, because holdUntil cannot be set in a thin-data state.
+Rationale:    the hold suppresses the next add-or-cut instruction. Suppression
+              the user cannot see, cannot date and cannot undo is the app lying
+              by omission. One sentence that says who did what and when, at the
+              rank of a footnote, with its own undo directly beneath it.
+```
+
+**Two invariants for `qa-engineer`, both cheap and both load-bearing.**
+
+1. `holdNote !== ""` implies `holdUntil !== null`; `state === "cooldown"` implies `holdNote === ""`.
+   (UX already specified these; I am confirming them as coaching requirements, not just contracts.)
+2. **The instruction guard.** For every input that yields `holdNote !== ""`, assert
+   `adv.text.indexOf("Change nothing.") !== -1`. This is the test that makes 14.1(a) safe. If it ever
+   goes red, the fix is **not** to relax the assertion — it is to send W1h back to `strength-coach`,
+   because the card has stopped instructing him and the note was written on the assumption it does not
+   have to.
+
+**The opening clause is one string in one place.** `You changed calories {ago}` appears in state 7's
+sentence and in the note, and they must be byte-identical for the same `daysAgo` — that identity is
+the whole reason UX opened with state 7's clause. Build both from one internal helper (suggested
+`changedClause(daysAgo)`; naming is `backend-engineer`'s). Two literals that happen to match today is
+a divergence waiting for the next edit.
+
+---
+
+## 14.3 The confirmation body — reject, and the replacement
+
+**Current, already shipped:**
+
+```
+This starts a 7-day hold. No new calorie advice until {date}.
+```
+
+**Reject. `[Certain]` it is false**, and UX was right to refuse to reuse it and right not to invent
+the replacement. During a hold, calorie advice renders in full in bands 2, 3 and 4 — the rate, the
+band sentence, the sub-line, all of it. What the hold suppresses is a **new add-or-cut instruction**,
+and only that. A false promise in a modal is cheap to fix today and expensive later: it is the
+sentence he will remember when the app shows him a calorie decision during a week he was told there
+would be none, and the thing he loses at that moment is trust in the number.
+
+**Replacement, signed off:**
+
+```
+This starts a 7-day hold. Change nothing until {date}.
+```
+
+**Why this one.**
+
+- It makes **no claim about what the app will render**, so the imprecision is not tightened, it is
+  removed. There is nothing left to be wrong about.
+- `Change nothing.` is the app's existing vocabulary for exactly this instruction — it is the clause
+  in bands 2, 3 and 4 and in the on-target sentence. One idea, one wording, everywhere.
+- It states the **coaching** content, which the old line never did. The hold is not an app feature; it
+  is the seven days you must leave a 200 kcal change alone before you are allowed to read the scale
+  and judge it. The modal is the right place for that instruction, unlike the card footnote, because
+  this is the moment of commitment.
+- `7-day` and the date both stay: the length is what he is consenting to, the date is what he will
+  check against, and `hold` is the word the note and state 7 both reuse.
+
+**Why seven days is the right number, since I am now putting an imperative behind it. `[Certain]`
+given W1's windows.** The rate is `mean(window B) − mean(window A)` over `[today−6..today]` versus
+`[today−13..today−7]`. Exactly seven days after a change, window B is entirely post-change and window
+A is entirely pre-change — that is the cleanest comparison the data can produce, and the first day on
+which the change is readable at all. Shorter would be reading noise. **Do not shorten it, and do not
+let a UI convenience shorten it.** I am not lengthening it either: the brief's protocol is the
+protocol, and 7 days is the first honest read.
+
+**This changes a string he has already seen.** It shipped in W11 tonight. The cost is one string and
+nothing else: the modal is transient, no stored field depends on it, no migration, no test fixture
+outside `tests.html`. `[Likely]` he has never actually seen it — the modal renders only in tone `act`,
+which needs ≥ 5 dated bodyweight entries in each of two windows, and the log is empty. Replace it.
+
+---
+
+## 14.4 The rest of §3.5 — seven strings, all signed off
+
+| Element | String | Ruling |
+|---|---|---|
+| Control | `I changed my calories today` | **Sign off.** First person is correct here and nowhere else in the app: this is him making a claim to the app, not the app instructing him. `today` is load-bearing — it is what `setCalChanged` stamps. |
+| Confirmation headline | `Changed your calories today?` | **Sign off.** Asks the one question the stamp answers. See the note below on a change made yesterday. |
+| Confirmation body | `This starts a 7-day hold. No new calorie advice until {date}.` | **REJECT — replaced in 14.3.** |
+| Confirm | `Yes, changed today` | **Sign off.** Repeats the claim being recorded on the button that records it. Correct for the destructive direction. |
+| Cancel | `Not yet` | **Sign off**, and it is better than `Cancel`. The instruction above is still outstanding when he taps it, and `Not yet` says so without nagging. `Cancel` would imply the decision goes away. |
+| Toast | `Recorded.` | **Sign off.** Flat, factual, no praise. The app must not congratulate a man for eating more; that is the failure mode this voice exists to prevent. |
+| Clear control | `I did not change anything` | **Sign off**, in both contexts. Under state 7 it answers the sentence above it; under a band it reads as the retraction of the claim the hold note just restated — which is exactly what it is. |
+| Clear toast | `Hold cleared.` | **Sign off.** Names the thing removed, in the word the note and the modal both use. |
+
+**Two calls inside that table that are mine, not UX's, and I want them on the record.**
+
+**The "changed yesterday" case.** He changed calories yesterday, opens the app today and taps
+`I changed my calories today`. The stamp lands on today, so the hold runs one day long. `[Certain]`
+that error is in the safe direction — a hold one day too long costs one day of a suppressed
+instruction and nothing else, while a hold one day too short lets a second 200 kcal change stack
+inside the measurement window. **Do not add a date picker to this control.** It would turn a
+two-tap acknowledgement into a form, to buy an accuracy the protocol does not need.
+
+**One tap to clear, no confirmation.** `[Likely]` correct, and it is a coaching call as much as a UX
+one, so I am confirming it rather than deferring. The mis-tap costs a restored instruction he may then
+act on — worst case a second +200 kcal stacked on a real change, ≈ +400 kcal/day for a few days, which
+next week's rate catches and band 1 corrects. The opposite mis-tap — a hold stuck on with no cheap way
+out — costs a week of silence on the one screen whose job is to answer *am I eating right*. Cheap
+direction is the safe direction. Confirmed.
+
+---
+
+## 14.5 `holdNote` is built in `logic.js`. Confirmed, and a view doing it would be wrong
+
+**Confirmed. `[Certain]`.** `PHAT.calorieAdvice` returns `holdNote`, non-empty exactly per 14.2, and
+the view prints it or prints nothing. Three reasons, in order of weight:
+
+1. **The sentence interpolates two coach-owned helpers**, `agoWord` and `dayMon`. A view that
+   re-derives `3 days ago` from a stored date is a **second implementation of a clause that already
+   exists in state 7's sentence**, and the two can disagree — most obviously at `daysAgo === 0` and at
+   a future stamp, where `agoWord` has deliberate behaviour that nobody re-implementing it by
+   instinct would reproduce.
+2. **The one-disclosure invariant is only testable in the engine.** `holdNote !== "" XOR state ===
+   "cooldown"` is an assertion `qa-engineer` can write against a pure function from `file://`. The same
+   rule expressed as a condition inside a template string is a thing you verify by reading it.
+3. **It is the B-06 failure class, one layer up.** B-06 and B-51 are both a *view* computing its own
+   version of a coach-owned number. This app's whole advice architecture is the correction to that:
+   no sentence that makes a claim about the diet or the training is assembled in a view. The hold note
+   makes a claim about the diet protocol — that is precisely why §7.5.2 escalated it to me rather than
+   shipping it.
+
+**One engine edge, already correct, that must be pinned rather than fixed.** A stamp dated in the
+future keeps the hold active (`logic.js` says why: clock skew must not open a window for a second
+change). `agoWord` then returns `today` for a negative gap, so the note reads
+`You changed calories today. Hold ends 25 Sep.` for a stamp of 18 Sep. **That is the behaviour I
+want** — it is identical to what state 7 already prints in the same situation, and the alternative
+("in 7 days") is a sentence about the future in a field that describes the past. Worked example 7.
+
+---
+
+## 14.6 One gap found while in here — named, not fixed
+
+**The set control renders only in tone `act`, so a calorie change he makes on his own initiative can
+never be declared.** He eats 400 more for a week over a holiday, or decides himself to add food while
+the card says `+0.25 kg per week. On target. Change nothing.` — there is no control to stamp it, so
+the app carries no record, and when the rate swings it may instruct a second change on top of the
+first, inside the same noise window. That is the exact outcome the hold exists to prevent, reachable
+through the one door the hold does not cover.
+
+**I am not changing it tonight.** The fix is a control in every band, which contradicts §3.5's own
+reasoning (*a control that is always present is a control that gets tapped absently*), needs UX, and
+is new capability rather than a defect fix. `[Guessing]` on frequency — I have no data, because there
+is no data. **For `project-manager`: this is a backlog candidate, P2, and it should not be opened
+until there is real bodyweight history to say whether it ever happens.**
+
+---
+
+## 14.7 Worked examples
+
+Bodyweight sufficient for a rate in every row unless stated. `today` = 11 Sep 2026.
+
+| # | Stamp | Rate / state | `holdNote` | What renders |
+|---|---|---|---|---|
+| 1 | 11 Sep (today) | `+0.41` → `above` | `You changed calories today. Hold ends 18 Sep.` | band · sub-line · note · clear control. **No set control** |
+| 2 | 8 Sep | `+0.25` → `on-target` | `You changed calories 3 days ago. Hold ends 15 Sep.` | as above. Card is identical to the no-hold card except for rows 4 and 5 |
+| 3 | **Boundary, last day of the hold.** 5 Sep | `+0.14` → `below` | `You changed calories 6 days ago. Hold ends 12 Sep.` | as above. `gap 6 < 7`, still active |
+| 4 | **Boundary, first free day.** 4 Sep | `+0.14` → `below` | `""` | band · sub-line and **nothing else**. `gap 7`, hold inactive, `holdUntil` null, clear control gone. **Assert the absence** — the note must not render on the date it printed yesterday |
+| 5 | **Failing case.** 8 Sep | `+0.04` → would be `flat` (tone `act`) | `""` | state 7: `You changed calories 3 days ago. Hold until 15 Sep before changing again.` · sub-line · clear control. **Two disclosures on this card is the bug W1h exists to prevent** — assert `holdNote === ""` |
+| 6 | **Failing case.** 8 Sep, 8 entries over 24 days | `thin-window-a` | `""` | `Not enough daily weights. 2 of those 7 days logged; this needs 5.` No rate, **no note, no clear control**, and the hold is unreachable until the windows fill. Deliberate |
+| 7 | **Edge, pin it.** 18 Sep (future) | `+0.25` → `on-target` | `You changed calories today. Hold ends 25 Sep.` | as row 2. Matches state 7's existing behaviour on the same input. Do not "fix" |
+| 8 | none | `+0.41` → `above` | `""` | band · sub-line. No note, no control, no set control |
+
+---
+
+## 14.8 What this changes, by work item
+
+| Item | Change |
+|---|---|
+| `logic.js` `calorieAdvice` | Returns `holdNote`, per Rule W1h (14.2). Built from the existing `agoWord` and `dayMon`; no new helper beyond the shared `changedClause(daysAgo)` that state 7's sentence should also be built from. No band, window, threshold or existing string moves. |
+| `index.html` — Weight tab | Renders `adv.holdNote` when non-empty, at rank 4, sub-line token and size. The clear control keys off `adv.holdUntil !== null` — that half is a defect fix and ships regardless of this sign-off. **The view assembles no part of the sentence.** |
+| `index.html` — confirmation modal | Body string replaced: `This starts a 7-day hold. No new calorie advice until {date}.` → **`This starts a 7-day hold. Change nothing until {date}.`** One string. Nothing else in the modal moves. |
+| `tests.html` | The eight rows of 14.7, with rows 4, 5, 6 and 8 as explicit **absence** assertions. Both invariants from 14.2, including the `Change nothing.` instruction guard across every input that yields a non-empty note. One test pinning the opening clause byte-identical between `holdNote` and state 7's `text` at the same `daysAgo`. |
+| `wo-004-screens.md` §7.5.2 | Satisfied. The sentence is signed off unchanged; the slot may render. |
+| `wo-004-screens.md` §15 #12 | Closed by 14.3. The imprecision was real; the replacement removes the claim rather than qualifying it. |
+| `wo-003-train-weight.md` §3.5 | The eight-string table is signed off, one string replaced. The *pending coach sign-off* marker comes off. That file is not edited (§0 convention); this section is the amendment. |
+| Backlog | New P2 candidate from 14.6 — no way to declare a self-initiated calorie change. **Do not open it until there is bodyweight history.** |
+
+## 14.9 Verdict
+
+**Sign off the hold note unchanged. Reject the confirmation body and replace it. Sign off the other
+seven §3.5 strings as written.**
+
+The sentence UX wrote is right, and it is right for a better reason than the one given: the
+instruction he needs is already on the card, one rank louder, in every state where the note can
+appear — and that is now a test rather than a coincidence. The confirmation body was the only genuine
+error in the set, it was found by the person who declined to paper over it, and the correct repair is
+to delete the claim about what the app will render rather than to qualify it. `Change nothing until
+{date}.` says the true thing and says the coaching thing in the same six words.
+
+**And the standing item, for the sixth night: the log is still empty, and so, as far as I can tell, is
+the bodyweight table.** Every string ruled on above renders only after ten dated weigh-ins across two
+specific weeks. The cheapest way to make this section matter is to stand on the scale tomorrow
+morning.
