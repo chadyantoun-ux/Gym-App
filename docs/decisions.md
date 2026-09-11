@@ -1265,3 +1265,64 @@ slots.
 - `d3d`'s name is still the slash-name `DB row or shrug`, which §8.2 says the app must never display.
   Renaming is Rule A1's call and a programme change, so it was deliberately **not** done under a
   cue-only scope. It settles when Chady answers.
+
+### 2026-09-11 — The overnight run: one writer on index.html, and the PWA goes last
+`docs/work-orders/WO-005-overnight.md`. Chady asked for the app "fully developed and operational"
+by morning. Three sequencing rulings, all of them consequences of the shape of this repo rather
+than preferences.
+
+**One writer on `index.html`.** Every remaining screen lives in one 2,743-line file and agents share
+one working tree, so the whole redesign tail is a serial chain with a `git status --short` gate
+between items. `logic.js`, `tests.html`, `sw.js` and `docs/*` run in parallel lanes with one named
+owner each. Commit after every serial item with named paths — an uncommitted half-edit is the one
+way a failed unattended run becomes lost work.
+
+**The service worker is wired LAST, after the final `index.html` edit.** A worker that caches a
+half-finished shell persists on his phone, survives a reload, and cannot be cleared from here. That
+is the worst outcome available on an unattended night, and it is entirely avoidable by ordering.
+
+**One deploy, at the end, not per wave.** The Vercel token was pasted in chat and is un-rotated. Its
+exposure is already total, so using it once more does not increase the compromise and declining to
+use it costs a working app for no security gain. One deploy of a QA-green tree, verified by fetching
+the bytes of all six files, rolled back on any failure. Rotation is the first line of the wake-up
+note.
+
+### 2026-09-11 — `index.html` kept a second copy of the programme, and it had already drifted
+Found while planning the overnight run. `index.html:508` declares a full 42-slot `PROGRAM` array
+alongside `logic.js`'s `PHAT.PHAT_PLAN`. The screens read the copy; the engines are handed the
+document. They have diverged, and not harmlessly: `d2e` is `Glute-ham raise or lying leg curl` with
+`implement:"bodyweight"` on screen versus `Lying leg curl` with `implement:"machine"` in the plan, so
+**Rule Z2 is printing the wrong load word and Rule I2's increment line is switched off on a machine
+exercise, in the shipped build**. The copy carries no `cue` on any slot, so all 43 signed-off cues
+are unreachable; no `lift`, which blocks W10's grouping; no `wd`, which blocks B-31.
+
+This is the failure the 2026-09-10 ruling "No slot id survives in code outside the plan document"
+was written to prevent, and it survived that ruling because the ruling was applied to `logic.js` and
+never to the view layer. Filed as **B-66**, first on the overnight serial chain.
+
+**The general rule, restated with teeth:** the plan document is the only place programme data may
+live. A view may derive from it and may cache a read of it; it may not restate it. Anything that
+looks like a literal exercise name, `s`, `lo`, `hi`, `k` or `implement` outside `PHAT_PLAN` is a
+defect on sight, whichever file it is in.
+
+Two smaller findings in the same pass: **B-67**, `assets/archivo-inline.css` is in the repo and
+precached by `sw.js` but never linked from `index.html` — so B-63 shipped the asset and not the
+typeface, and every 44 px and 200 %-zoom measurement in W6 and W7 was taken on the fallback stack
+rather than the face that ships. It lands early in the night for exactly that reason: measure once,
+against the real metrics. And **B-68**, the manifest names icons that do not exist, which is not
+merely a degraded install — `sw.js` correctly refuses to cache a non-200, so a 404 in the precache
+list is a failed worker install.
+
+### 2026-09-11 — `d3d` defaults to DB row, and the two slash-slots do not cost the same to revert
+Chady is asleep and the app cannot ship a forbidden slash-name: Rule A1 already ruled that two
+exercises in one slot is two histories, and resolved `d2e` on that ground. `d3d` was left for him
+and never answered. **Defaulted to `DB row`** — the design's choice, the cue already written for it,
+and the one slot where nothing else moves: `implement:"db"`, `lift:"l_dbrow"`, `k:"hyp"`, `cut:1`,
+`s:2` and `12–15` are correct for a shrug too.
+
+**The two reverts are not the same size, and that asymmetry is the thing to remember.** Reverting
+`d3d` to a shrug costs two strings, `n` and the cue, and touches no rule. Reverting `d2e` to a
+glute-ham raise costs three things — `n`, the cue, **and `implement` back to `bodyweight`**, which
+flips Rule Z2's load word and switches Rule I2's increment line off. Both are free today only
+because the log is empty. `d2e` stops being free the first time it is logged, which makes it the one
+question worth answering before the next Lower Power session rather than whenever.
