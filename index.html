@@ -2253,6 +2253,30 @@ function vWeight(){
       <span class="kick">Calorie decision</span>
       <p class="lead">${esc(adv.text)}</p>`;
     if(adv.subline) h+=`<p>${esc(adv.subline)}</p>`;
+    /* RANK 4, the hold note (Rule W1h, addendum §14.2; spec §7.5.1). A hold
+       is stamped in EVERY band, but the engine only turns it into state 7
+       when the band itself instructs a change; in bands 2, 3 and 4 it stayed
+       invisible while still suppressing the next add-or-cut instruction.
+       That is the app lying by omission, and this line is the confession.
+
+       IT IS A PLAIN <p> INSIDE THE EXISTING .advice ENCLOSURE, ON PURPOSE.
+       `.advice p` is --dim at .8125rem, which is the sub-line's exact token,
+       size and weight - never bolder, never --bone, no kicker of its own, no
+       second card. A hold note that outranks the band sentence above it reads
+       as a competing instruction, which is the failure the ruling exists to
+       prevent. It is a footnote: true, needed, not the point.
+
+       THE VIEW ASSEMBLES NO PART OF THIS SENTENCE. `{ago}` needs agoWord and
+       `{date}` needs dayMon, and a second implementation of the clause state
+       7 already prints is the B-06 failure class one layer up - two literals
+       that agree today and disagree after the next edit. Print adv.holdNote
+       or print nothing.
+
+       EXACTLY ONE HOLD DISCLOSURE whenever holdUntil is set: in cooldown
+       adv.text IS the disclosure and holdNote is ""; in a band this is it.
+       Never both, never neither - the engine owns that XOR so it is testable
+       from file:// instead of being read out of a template string. */
+    if(adv.holdNote) h+=`<p id="calhold">${esc(adv.holdNote)}</p>`;
     /* tone === "act" is EXACTLY the three states that instruct a change, so
        the view never re-derives that list (logic.js says so in as many
        words). Acknowledging "I changed my intake" under "Change nothing."
@@ -2261,9 +2285,24 @@ function vWeight(){
     if(adv.tone==="act")
       h+=`<button class="ghostbtn" id="calset">I changed my calories today</button>`;
     /* The way back out. One tap, no confirmation: clearing RESTORES advice,
-       so the cheap direction is the safe direction (spec §0.1 rule 8). */
-    if(adv.state==="cooldown")
-      h+=`<button class="ghostbtn" id="calclear">I did not change anything</button>`;
+       so the cheap direction is the safe direction (spec §0.1 rule 8).
+
+       GATED ON THE FACT, NOT ON A RENDERED STATE (spec §7.5.1 ruling 1). The
+       old test was `adv.state==="cooldown"` - a rendered state standing in
+       for the thing the control acts upon - so a live hold in bands 2, 3 and
+       4 was unclearable. holdUntil is the engine's own statement that a hold
+       is on disk, and it is set in every band. `!=null` is loose on purpose:
+       it also catches an engine that predates holdUntil, where `!==null`
+       would offer a clear button with nothing behind it.
+
+       aria-describedby points the control at the note rather than inventing a
+       longer accessible name (spec §7.5.1 A11y): a reader hears "I did not
+       change anything" then "You changed calories 3 days ago. Hold ends 15
+       Sep." In cooldown there is no note and so no dangling reference -
+       adv.text one rank above is already the context. */
+    if(adv.holdUntil!=null)
+      h+=`<button class="ghostbtn" id="calclear"${
+        adv.holdNote?` aria-describedby="calhold"`:""}>I did not change anything</button>`;
     h+=`</div></div>`;
   }
   /* State D, the true empty state (spec §3.3): the entry control and this
@@ -2843,7 +2882,14 @@ function announceWeight(receipt){
 function askCalChanged(){
   const until=PHAT.dateAdd(PHAT.localDate(),PHAT.CAL_COOLDOWN_DAYS);
   askSheet({headline:"Changed your calories today?",
-    body:"This starts a 7-day hold. No new calorie advice until "+fmt(until)+".",
+    /* NOT "No new calorie advice until {date}." - coach rejected that as
+       false (addendum §14.3, [Certain]). Advice renders in full in bands 2,
+       3 and 4 during a hold; what a hold suppresses is a new add-or-cut
+       instruction and only that. The replacement makes no claim about what
+       the app will render, so there is nothing left to be wrong about, and
+       "Change nothing" is already the app's word for this instruction in
+       every band sentence. The date formatting does not move. */
+    body:"This starts a 7-day hold. Change nothing until "+fmt(until)+".",
     danger:"Yes, changed today", safe:"Not yet", back:"calset",
     onDanger:()=>{ closeSheet(); setCalStamp(true); }});
 }
