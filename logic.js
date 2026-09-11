@@ -4091,13 +4091,25 @@
 
      Pure: reads sessions, mutates nothing, touches no storage, reads no clock.
      `todayStr` is not a parameter because no date bounds this rule. */
-  var S1_LINES = [
+  /* THE MEDICAL COPY. Exactly two strings, both signed off by strength-coach,
+     and the coach declined to write a third — B-45 stays open deliberately.
+     FROZEN, and exported frozen: a plain array on window.PHAT is an array any
+     caller can push onto, and the thing it would be pushing onto is the app's
+     medical copy. painState already hands out a .slice(0); the freeze is the
+     same protection at the export boundary. */
+  var S1_LINES = Object.freeze([
     "You logged pain on this. Not something this app can assess.",
     "Holding the weight. If it is sharp, or it repeats, stop the exercise and see a physio or a doctor."
-  ];
-  /* UX spec 4.8, marked NEW and PENDING COACH REVIEW there. Returned as its own
-     field, never joined into `text`, so the view can render the two approved
-     lines today and add this one only once the coach has signed it off. */
+  ]);
+  /* APPROVED 2026-09-10 by strength-coach (coach-audit-addendum §9.6). It was
+     marked NEW and PENDING COACH REVIEW in UX spec 4.8 and this comment still
+     said so, which is how approved copy gets dropped by the next person
+     through — the marker outlives the review.
+
+     It is approved AS A PROVENANCE LABEL IN ITS OWN FIELD. It is not a third
+     member of S1_LINES and must never be joined into `text`: the S1 notice is
+     two lines about pain, and a sentence about where a number came from is not
+     one of them. */
   var S1_PROVENANCE = "From your last session on this.";
 
   /* Rule S1a (addendum §9.7) — a pain notice with no subsequent entry.
@@ -5773,6 +5785,385 @@
     return out;
   }
 
+  /* ==================================================== the demo store
+
+     WO-005 W2b. A PURE, DETERMINISTIC sample-data generator. It writes
+     nothing, reads no clock it was not handed, and returns a plain object.
+     Same arguments in, byte-identical object out — assert it on the JSON
+     string, because that determinism is the only thing that makes this
+     usable as a QA fixture.
+
+     WHAT IT IS FOR. Four agents have hand-seeded sessions this week just to
+     get a populated screen, and QA has no fixed fixture for Trend, the stall
+     report or the deload path. This is that fixture.
+
+     WHAT IT IS NOT. It is not wired to any UI and there is no control for it
+     (W13b, the demo sandbox, is out of scope). It does not bump
+     SCHEMA_VERSION and there is no migration: the object it returns validates
+     against the CURRENT schema, exactly as it stands.
+
+     THE SAFETY RULE IT CARRIES. Every generated session carries `demo: true`
+     (WO-004 C-14), and so does each returned store. No engine may ever be
+     handed a mixed real+demo array, and the flag is what lets a test prove it
+     was not. The flag is set on the object buildSession returns, so it is on
+     the same object the sets are on and cannot be separated from them.
+
+     THE PLAN IS READ, NEVER COPIED. Day ids, exercise ids, rep ranges, kinds,
+     implements, the cut tier, the reintroduction order and the block length
+     all come off the plan document. There is no second copy of the programme
+     in here (B-66), so a plan edit moves the sample data with it and a plan
+     that is not PHAT still generates.
+
+     THE LOADS ARE DERIVED, NOT CURATED, and that is a deliberate trade. A
+     hand-written table of "the right weight for a bent-over row" would read
+     better and would be keyed to the shipped plan's ids — a second thing to
+     maintain, drifting the moment the plan is edited, which is the same
+     defect B-66 names. So a load is computed from what the plan actually
+     says: implement, position in the day, and rep range. The numbers land in
+     the right order of magnitude everywhere and are exactly right nowhere.
+     They are sample data; they are not his numbers and must never be shown as
+     though they were. */
+
+  var DEMO_SEED = 7;             /* default RNG seed                        */
+  var DEMO_WEEKS = 6;            /* six weeks — enough for ST1's gate       */
+  /* The default "today". A FIXED DATE, not localDate(): a generator whose
+     output changes because the wall clock moved is not a fixture. A caller
+     that wants sample data anchored to now passes {today: PHAT.localDate()}
+     and accepts that its output moves with the day. */
+  var DEMO_ANCHOR = "2026-09-12";
+  var DEMO_STEP = 2.5;           /* CLAUDE.md §3.5 — kg, in steps of 2.5    */
+  var DEMO_REF = 80;             /* a barbell first slot at 10 reps, in kg  */
+  var DEMO_DECAY = 0.18;         /* load falls off down the day's order     */
+  var DEMO_JITTER = 0.30;        /* P(the last set comes up one rep short)  */
+  var DEMO_NOTE_P = 0.12;        /* P(a session carries a note)             */
+  /* Deliberately benign: not one of these matches PAIN_RE, so sample data
+     can never fabricate a pain notice (Rule S1) out of nothing. */
+  var DEMO_NOTES = [
+    "Belt from set two.",
+    "Bar felt fast today.",
+    "Straps on the last set.",
+    "Bumped the seat up one notch.",
+    "Short on sleep."
+  ];
+  /* Load scale by implement. A dumbbell number is PER HAND, which is what the
+     app logs, so it is far below the barbell reference on purpose. */
+  var DEMO_IMPLEMENT = { bb: 1, machine: 0.9, cable: 0.8, db: 0.45, bodyweight: 0.15 };
+  var DEMO_IMPLEMENT_ANY = 0.7;  /* a slot with no implement tag            */
+  var DEMO_WD = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  var DEMO_WD_ANY = 0;
+
+  /* Bodyweight: 85.0 kg climbing at +0.25 kg/week, which is the middle of the
+     brief's correct band, so calorieAdvice reads "hold" off this store.
+
+     The wobble is a FIXED period-7 pattern summing to zero, not RNG. A random
+     daily noise term would move the seven-day means enough to push the
+     measured rate out of the +0.20–0.30 band on some seeds, and a fixture
+     whose diet verdict depends on the seed is not a fixture. Day-to-day it
+     still looks like a real scale.
+
+     The gaps are real missing days, spread so that BOTH of bwWindows' seven-
+     day windows keep at least BW_MIN entries — the point is to make the
+     window arithmetic handle a hole, not to starve it.
+
+     The two gaps that fall inside the windows are 3 and 10 days ago, SEVEN
+     APART on purpose. A hole at 3 and a hole at 9 would leave the two windows
+     sampling different days of the wobble, and the measured rate came out at
+     +0.33 kg/week — a fixture that reads "above target" off data built to sit
+     in the middle of it. Seven apart, the wobble cancels between the windows
+     and the rate is the trend. The other gaps (17, 25, 26, 33) are outside
+     both windows and are there so the chart has a real hole in it, including
+     one two-day gap. */
+  var DEMO_BW_START = 85.0;
+  var DEMO_BW_RATE = 0.25;       /* kg per week                             */
+  var DEMO_BW_DAYS = 42;
+  var DEMO_BW_WOBBLE = [0.3, -0.2, 0.1, -0.3, 0.2, -0.1, 0.0];
+  var DEMO_BW_SKIP = [3, 10, 17, 25, 26, 33];   /* days ago with no reading */
+
+  /* mulberry32. Small, fast, and identical in every engine — which is the
+     only property that matters here. Never Math.random(). */
+  function demoRng(seed) {
+    var a = (seed >>> 0) || 1;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* A string seed hashes to a number (FNV-1a). A number is used as-is. */
+  function demoSeedOf(v) {
+    if (typeof v === "number" && isFinite(v)) return Math.abs(Math.round(v)) >>> 0;
+    var s = str(v);
+    if (s === "") return DEMO_SEED;
+    var h = 2166136261 >>> 0;
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  function demoInt(v, dflt) {
+    var n = (typeof v === "number") ? v : Number(str(v));
+    return (isFinite(n) && n > 0) ? Math.round(n) : dflt;
+  }
+
+  /* The load a slot starts the block at, in kg, rounded to the 2.5 step.
+     Three factors, all read off the plan:
+       implement  a barbell is not a cable is not an added-load chin
+       position   slot 0 in a day is the big lift; slot 8 is an isolation
+       reps       a 3–5 slot carries more than a 15–20 slot
+     Never below one step: "0 kg" is a broken-app number (Rule Z2). */
+  function demoBase(ex, idx) {
+    var imp = str(isObj(ex) ? ex.implement : "").trim();
+    var scale = own(DEMO_IMPLEMENT, imp) ? DEMO_IMPLEMENT[imp] : DEMO_IMPLEMENT_ANY;
+    var role = 1 / (1 + DEMO_DECAY * (idx > 0 ? idx : 0));
+    var lo = demoInt(isObj(ex) ? ex.lo : null, 8);
+    var hi = demoInt(isObj(ex) ? ex.hi : null, lo);
+    if (hi < lo) hi = lo;
+    var rep = 40 / (30 + (lo + hi) / 2);
+    var w = round2p5(DEMO_REF * scale * role * rep);
+    return (isFinite(w) && w >= DEMO_STEP) ? w : DEMO_STEP;
+  }
+
+  /* Double progression, which is the progression the app's own verdict reads:
+     climb the rep range at a fixed load, then add one step and drop back to
+     the bottom of the range. Over six weeks a 3–5 slot runs 3,4,5,3,4,5 and
+     gains one step; a 15–20 slot never completes a run and gains nothing,
+     which is also what really happens.
+
+     `runWeeks` is how many weeks THIS slot is trained for, and it exists to
+     PHASE the run so the block ENDS at the top of a range. Started naively at
+     the bottom, a six-week block puts every 8–12 slot on the first session of
+     a new load in week 6 — so eight hypertrophy slots simultaneously read
+     `Volume down 30%` on the most recent session. Each one is individually
+     correct (you do lose tonnage the week you add load and reset reps) and
+     all eight at once is an artefact of the generator, not a lifter. Phased,
+     the slot starts mid-run, which is what picking a programme up in week one
+     of a log actually looks like. */
+  function demoRun(ex, week, runWeeks) {
+    var lo = demoInt(isObj(ex) ? ex.lo : null, 8);
+    var hi = demoInt(isObj(ex) ? ex.hi : null, lo);
+    if (hi < lo) hi = lo;
+    var span = hi - lo + 1;
+    var rw = demoInt(runWeeks, 0);
+    var p0 = rw > 0 ? (((span - rw) % span) + span) % span : 0;
+    var i = (week > 0 ? week : 1) - 1 + p0;
+    return { lo: lo, hi: hi, reps: lo + (i % span), steps: Math.floor(i / span) };
+  }
+
+  /* demoStore(seed)
+       -> { seed, today, weeks, planId,
+            log: { schemaVersion, sessions, includeCut, reintro,
+                   lastReintroDate, calChangedAt, deload, demo },
+            bw:  { schemaVersion, entries, demo },
+            counts: { sessions, entries, sets, bw },
+            skipped: [] }
+
+     `log` and `bw` are the two real stores, in their real shape: hand either
+     one to any engine in this file. `seed` may be
+
+       omitted          the defaults
+       a number         the RNG seed
+       a string         hashed to an RNG seed
+       an object        { seed, today, weeks, plan } — `today` is the anchor
+                        date, `weeks` the block length, `plan` any plan
+                        document; all optional.
+
+     NOTHING IS WRITTEN AND NOTHING IS READ. No storage, no DOM, no clock
+     (`today` defaults to a fixed constant, not to localDate). Calling it
+     twice with the same argument returns two objects with identical JSON.
+
+     `skipped` must be empty. It holds {week, dayId, reason} for any session
+     buildSession refused to build — a generator that silently produced 29
+     sessions where it promised 30 is the same class of bug as B-02, so the
+     refusal is reported rather than swallowed.
+
+     Every session is built by buildSession, the same function finish() calls,
+     so the sets come out coerced to numbers, the entries carry Rule PE1's
+     `rx`, and anything this generator could get wrong would have been refused
+     on the real save path too. */
+  function demoStore(seed) {
+    var opt = isObj(seed) ? seed : {};
+    var rawSeed = isObj(seed) ? opt.seed : seed;
+    var sd = (rawSeed === undefined || rawSeed === null) ? DEMO_SEED : demoSeedOf(rawSeed);
+    var rng = demoRng(sd);
+    var plan = isPlanDoc(opt.plan) ? opt.plan : PHAT_PLAN;
+    var planId = str(plan.planId).trim() || PHAT_PLAN_ID;
+    var weeks = demoInt(opt.weeks, DEMO_WEEKS);
+    var today = (typeof opt.today === "string" && DATE_RE.test(opt.today.trim()))
+      ? opt.today.trim() : DEMO_ANCHOR;
+
+    /* The Monday the block's LAST week starts on. Every generated session is
+       in the past: if this week's Saturday has not happened yet, the block
+       ends on the previous week instead of stamping sessions in the future.
+       A future-dated session would be read by trainingDays, ST1 and the
+       deload check as training he has not done. */
+    var lastMon = weekStart(today);
+    if (lastMon === null) { today = DEMO_ANCHOR; lastMon = weekStart(today); }
+    var gap = dayGap(lastMon, today);
+    if (gap === null || gap < 5) lastMon = dateAdd(lastMon, -7);
+
+    var days = planDays(plan);
+    var rw = planReducedWeeks(plan);
+    var hasTier = planHasCutTier(plan);
+
+    var sessions = [], skipped = [], reintro = {}, lastReintroDate = {};
+    var nEntries = 0, nSets = 0;
+    var w, di, ei, si;
+
+    for (w = 1; w <= weeks; w++) {
+      var mon = dateAdd(lastMon, -7 * (weeks - w));
+      for (di = 0; di < days.length; di++) {
+        var day = days[di];
+        if (!isObj(day)) continue;
+        var dayId = str(day.id).trim();
+        if (dayId === "") continue;
+        var wd = str(day.wd).trim();
+        var off = own(DEMO_WD, wd) ? DEMO_WD[wd] : DEMO_WD_ANY;
+        var date = dateAdd(mon, off);
+        if (date === null || date > today) continue;
+
+        var exList = Array.isArray(day.ex) ? day.ex : [];
+        /* Rule V1's ramp, read off the plan: the cut tier is out for weeks
+           1..rw, then one accessory comes back per week from rw+1, in the
+           plan's declared order. Not all of them at once. */
+        var order = hasTier ? planReintroOrder(plan, dayId) : [];
+        var back = (hasTier && w > rw) ? Math.min(w - rw, order.length) : 0;
+        var allowed = order.slice(0, back);
+        if (back > 0) {
+          reintro[dayId] = back;
+          lastReintroDate[dayId] = date;
+        }
+
+        var entries = {};
+        for (ei = 0; ei < exList.length; ei++) {
+          var ex = exList[ei];
+          if (!isObj(ex)) continue;
+          var exId = str(ex.id).trim();
+          if (exId === "") continue;
+          if (ex.cut && hasTier && allowed.indexOf(exId) < 0) continue;
+
+          var want = demoInt(ex.s, 3);
+          /* A cut accessory did not exist for weeks 1..rw, so it starts its
+             rep run at the bottom in the week it comes back — it does not
+             arrive already carrying four weeks of progression it was never
+             trained for. Everything else counts from week 1. */
+          var isCut = !!(ex.cut && hasTier);
+          var wEff = (isCut && w > rw) ? (w - rw) : w;
+          var run = demoRun(ex, wEff, isCut ? Math.max(1, weeks - rw) : weeks);
+          var kind = str(ex.k).trim();
+          var load, reps;
+
+          if (kind === "speed") {
+            /* Rule SP1's own number, computed by Rule SP1's own function off
+               the sessions already generated — so the sample data agrees with
+               what the app will say about it instead of offering a second
+               opinion. The fallback is only reached when no qualifying source
+               triple exists yet, which this block never produces. */
+            var sp = speedLoad(sessions, exId, date, null, plan);
+            load = (sp && typeof sp.target === "number" && isFinite(sp.target))
+              ? sp.target : round2p5(demoBase(ex, ei) * SP1_MID);
+            if (!(load >= DEMO_STEP)) load = DEMO_STEP;
+            reps = run.lo;
+          } else {
+            load = demoBase(ex, ei) + run.steps * DEMO_STEP;
+            reps = run.reps;
+          }
+
+          var sets = [];
+          for (si = 0; si < want; si++) {
+            var r = reps;
+            /* The last set of a longer exercise sometimes comes up one short.
+               Never on speed work (the reps are the prescription), never
+               below the bottom of the range, and never on a two-set slot. */
+            if (kind !== "speed" && want >= 3 && si === want - 1 &&
+                r > run.lo && rng() < DEMO_JITTER) r = r - 1;
+            sets.push({ w: String(load), r: String(r) });
+          }
+          var entry = { sets: sets };
+          if (ei === 0 && rng() < DEMO_NOTE_P) {
+            entry.note = DEMO_NOTES[Math.floor(rng() * DEMO_NOTES.length) % DEMO_NOTES.length];
+          }
+          entries[exId] = entry;
+        }
+
+        var draft = { date: date, dayId: dayId, entries: entries };
+        var s = buildSession(draft, dayId, date, "demo-w" + w + "-" + dayId, planId, plan);
+        if (s === null) {
+          skipped.push({ week: w, dayId: dayId, reason: "refused" });
+          continue;
+        }
+        /* WO-004 C-14. On the session object itself, next to the sets. */
+        s.demo = true;
+        sessions.push(s);
+        var c = demoCount(s);
+        nEntries += c.entries;
+        nSets += c.sets;
+      }
+    }
+
+    var bwEntries = [];
+    for (var i = DEMO_BW_DAYS - 1; i >= 0; i--) {
+      if (DEMO_BW_SKIP.indexOf(i) >= 0) continue;
+      var bd = dateAdd(today, -i);
+      if (bd === null) continue;
+      var kg = DEMO_BW_START +
+               (DEMO_BW_DAYS - 1 - i) * (DEMO_BW_RATE / 7) +
+               DEMO_BW_WOBBLE[i % DEMO_BW_WOBBLE.length];
+      bwEntries.push({ date: bd, kg: Math.round(kg * 10) / 10 });
+    }
+
+    return {
+      seed: sd,
+      today: today,
+      weeks: weeks,
+      planId: planId,
+      log: {
+        schemaVersion: SCHEMA_VERSION,
+        sessions: sortSessions(sessions),
+        /* Still written because the real store still holds it: a key his data
+           contains is not deleted because a later rule stopped reading it
+           (WO-003 Decision 6). Nothing reads it. */
+        includeCut: false,
+        reintro: reintro,
+        lastReintroDate: lastReintroDate,
+        calChangedAt: null,
+        deload: null,
+        demo: true
+      },
+      bw: {
+        schemaVersion: SCHEMA_VERSION,
+        entries: bwEntries,
+        demo: true
+      },
+      counts: {
+        sessions: sessions.length,
+        entries: nEntries,
+        sets: nSets,
+        bw: bwEntries.length
+      },
+      skipped: skipped
+    };
+  }
+
+  /* {entries, sets} for one built session. Counting is the generator's own
+     account of what it produced; a caller comparing counts.sets against what
+     it can see on screen is how a quietly-dropped set would be noticed. */
+  function demoCount(s) {
+    var out = { entries: 0, sets: 0 };
+    if (!isObj(s) || !isObj(s.entries)) return out;
+    Object.keys(s.entries).forEach(function (k) {
+      var e = s.entries[k];
+      if (!isObj(e)) return;
+      out.entries++;
+      if (Array.isArray(e.sets)) out.sets += e.sets.length;
+    });
+    return out;
+  }
+
   /* ------------------------------------------------------------- exports */
 
   window.PHAT = {
@@ -5934,6 +6325,25 @@
        declining to assess, pointing at a person. Never an all-clear, and it
        never clears itself. Without it, nothing changes and no clock is read. */
     S1A_DAYS: S1A_DAYS,
+    /* Rule S1's medical copy, FROZEN. Exactly two strings, both coach-signed,
+       and there is no third — the coach declined to write one and B-45 stays
+       open deliberately. Two things are deliberately NOT members of it:
+
+         S1_PROVENANCE   "From your last session on this." is a provenance
+                         label in its OWN field (painState().provenanceLine),
+                         approved 2026-09-10 as such. Joining it into the
+                         notice makes the app say something about a weight in
+                         the middle of something about pain.
+         the S1a line    the 21-day restatement REPLACES out.lines, it is not
+                         appended to it. Folded in, the app would say "Holding
+                         the weight" about an exercise he has not touched in
+                         three weeks — advice about a session that did not
+                         happen.
+
+       Frozen because it is exported: painState hands callers a .slice(0), but
+       the export itself is the array, and nothing may push onto it. */
+    S1_LINES: S1_LINES,
+    S1_PROVENANCE: S1_PROVENANCE,
     painWindow: painWindow,
     painState: painState,
     /* Rule R1 - W4. Rest is computed from the EXERCISE (k, hi) and from
@@ -5970,6 +6380,16 @@
     declineDeload: declineDeload,
     endDeload: endDeload,
     cycleLine: cycleLine,
-    migrateStore: migrateStore
+    migrateStore: migrateStore,
+    /* WO-005 W2b — the pure sample-data generator. Writes nothing, reads no
+       clock it was not handed, and every session it builds carries demo:true
+       (WO-004 C-14). Not wired to any UI: W13b, the sandbox, is out of scope.
+       DEMO exposes the knobs a test needs to reproduce the numbers by hand. */
+    DEMO: { seed: DEMO_SEED, weeks: DEMO_WEEKS, anchor: DEMO_ANCHOR,
+            step: DEMO_STEP, ref: DEMO_REF, decay: DEMO_DECAY,
+            implement: DEMO_IMPLEMENT, jitter: DEMO_JITTER,
+            bwStart: DEMO_BW_START, bwRate: DEMO_BW_RATE,
+            bwDays: DEMO_BW_DAYS, bwSkip: DEMO_BW_SKIP },
+    demoStore: demoStore
   };
 })();
