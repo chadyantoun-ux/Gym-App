@@ -60,9 +60,13 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 - `logic.js` — pure logic behind `window.PHAT`: local dates, set validation, migration, and the draft
   and session builders. A **classic script**, not a module, so `tests.html` can load it from `file://`.
   No DOM, no `S`. `index.html` will not run without it and says so rather than showing a black screen.
-- `tests.html` — 148 assertions, opens from `file://`, no Node. One is **deliberately failing** (B-38);
-  the expected shape is **148 / 147 / 1**, and a different count means something broke. Ends with a
-  17-item manual checklist that covers what no browser page can.
+- `tests.html` — assertions that open from `file://`, no Node. **The expected count moves with the
+  code; read the file rather than quoting a number from here.** On `main` it was 148 / 147 / 1 with one
+  deliberate failure; the `wo-003-advice` branch closed that one (B-38) and made four others stale by
+  bumping the schema to 3 and exporting `lastFor`, so the branch currently reads 148 / 143 / 5 until
+  `qa-engineer` folds them in. Ends with a manual checklist split into **"What only a phone can
+  answer"** (4 items) and **"Already proven — no action needed"** (16, each carrying its evidence).
+  A checklist item is retired by automating it and citing what was observed, never by deleting it.
 - **Repo:** `https://github.com/chadyantoun-ux/Gym-App` (`main`).
 - **Live:** `https://gym-app-psi-eight.vercel.app` — Vercel project `gym-app`, static, no build.
   `/tests.html` is deployed too, so the checklist can be run from the phone.
@@ -93,8 +97,15 @@ Rationale and alternatives in `docs/architecture.md`. Decisions log in `docs/dec
 
 These are not preferences. Violating one is a defect.
 
-1. **No build step.** No bundler, no transpiler, no framework. Node is not installed on this machine.
-   Anything that requires `npm run build` to view the app is rejected. Load libraries from CDN as ESM.
+1. **No build step.** No bundler, no transpiler, no framework. Anything that requires `npm run build`
+   to view the app is rejected. Load libraries from CDN as ESM.
+   **This is a choice, not a limitation — correcting an error in this file.** Node **is** installed
+   (`C:\Program Files\nodejs`, v24.14.1, npm 11.11.0); it is simply not on the git-bash `PATH`, so an
+   early `command -v node` returned a false negative that was written down here as fact. The constraint
+   stands on its own merits: the app is one file a phone opens directly, it must run from `file://` and
+   from static hosting with nothing between the source and the screen, and a build step is a thing that
+   can be broken or forgotten between him and a logged set. Do not cite "Node isn't available" as the
+   reason — cite that.
 2. **Offline-first.** The gym has no signal. A workout must be fully loggable with the network off.
    Network writes are best-effort sync on top of local storage, never a precondition for logging.
 3. **Never lose a number.** Data loss is the only P0 class of bug. An in-progress session must survive
@@ -129,6 +140,17 @@ Match the existing code; it has a deliberate style.
   arguments with no DOM and no globals, so `qa-engineer` can test them.
 
 ---
+
+## 4b. Committing while agents are running
+
+**Never `git add -A` while another agent is working in this directory.** Agents share one working
+tree, so a blanket add sweeps another agent's half-written file into your commit. It happened on
+2026-09-10: a `git add -A` for a docs-only change pulled ~830 lines of an in-progress `logic.js` into
+an unrelated commit. Nothing was lost, but code was committed before its author had finished or
+reported it, and the history now attributes it to the wrong change.
+
+**Commit named paths.** `git add logic.js docs/decisions.md`, never `-A`, whenever anything else is in
+flight. If you don't know what else is running, name paths anyway — it costs one extra word.
 
 ## 5. Definition of done
 
