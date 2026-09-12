@@ -737,6 +737,16 @@
   /* Export's two outcomes, and they do not look alike (B-16, spec 10.4).
      Success is the advice enclosure; failure is the four-sided refusal. */
   .setsec .advice,.setsec .refuse{margin-top:11px}
+  /* E-3. The backup form and the typed-confirmation field. Same box as .note:
+     48px tall, 2px --line, --bg fill, so a text field looks like one thing
+     everywhere in the app. The label is the --lbl kicker, block, above. */
+  .bklbl{display:block; color:var(--dim); font-size:.6875rem; font-weight:800; letter-spacing:.12em;
+    text-transform:uppercase; margin-top:var(--s3)}
+  .bkin{width:100%; background:var(--bg); color:var(--bone); border:2px solid var(--line);
+    border-radius:var(--r); padding:var(--s3); font-size:1rem; font-weight:800; margin-top:var(--s1);
+    min-height:var(--key); font-family:var(--sans)}
+  .setsec button[disabled]{opacity:.5; cursor:default}
+  .sheet .bklbl{margin-top:var(--s3)}
 
   /* ---- W12: DIET (spec 8, coach addendum 8.6) ---------------------------
      EVERY NUMBER AND EVERY SENTENCE ON THIS SCREEN COMES OUT OF
@@ -918,6 +928,14 @@ const KEY_LIFTS=(PHAT.KEY_LIFTS||[]).map(l=>({
    provable if a preference never touches them. Absence-tolerant: a missing
    store is the default prefs, which is how every existing install boots. */
 const LOG="phat:v1:log", BWK="phat:v1:bw", DRAFT="phat:v1:draft", PREFS="phat:v1:prefs";
+/* E-3. The plan store's key (logic.js names it; nothing here reads it yet
+   except the backup, which carries it so a plan edited later is not the first
+   thing a restore forgets). */
+const PLANS="phat:v1:plans";
+/* E-3. Keys a save() to which schedules a backup push - AFTER the write has
+   returned. The draft, prefs and recover copies never do: the draft is the
+   live workout and does not back up (README §5), prefs are device state. */
+const BACKED_UP={[LOG]:1,[BWK]:1,[PLANS]:1};
 const hasNative = typeof window.storage!=="undefined" && window.storage && window.storage.get;
 /* readRaw distinguishes the three outcomes load() used to collapse into null:
    absent (nothing stored), ok (parsed), error (the read threw, or the stored
@@ -945,7 +963,12 @@ async function save(k,obj){
   try{
     if(hasNative) await window.storage.set(k,JSON.stringify(obj));
     else localStorage.setItem(k,JSON.stringify(obj));
-    S.err=null; return true;
+    S.err=null;
+    /* E-3. The local write is DONE. Only now, and only for the three stores
+       that back up, is a push scheduled - a timer, never an await, so nothing
+       network-shaped sits between this return and the caller's toast. */
+    if(BACKED_UP[k]) backupSoon(k);
+    return true;
   }catch(e){ S.err="Could not save. Your entries are still on screen — try again."; return false; }
 }
 async function del(k){
@@ -1001,8 +1024,17 @@ async function del(k){
 const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
          problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
          exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,dietView:null,
-         stores:{log:"absent",bw:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:""},
-         prefsMeta:{},exp:null};
+         stores:{log:"absent",bw:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null},
+         prefsMeta:{},exp:null,
+         /* E-3. The backup client's state, IN MEMORY. `mod` is whether sync.js
+            loaded: "off" (never attempted - file://, or offline at boot),
+            "loading", "ready", "failed". `user` is the signed-in account or
+            null. `busy` mirrors the module. `last` is this session's most
+            recent outcome so failure is a VISIBLE state that cannot look like
+            success (B-16); the last SUCCESSFUL backup persists in
+            prefs.backup so "Backed up 3 days ago" survives a relaunch.
+            `pulled` holds a restore between the read and the confirmation. */
+         sync:{mod:"off",user:null,busy:null,last:null,pulled:null}};
 const logPayload=()=>Object.assign({},S.logMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,sessions:S.sessions,includeCut:S.includeCut});
 const bwPayload=()=>Object.assign({},S.bwMeta,
@@ -1012,7 +1044,10 @@ const bwPayload=()=>Object.assign({},S.bwMeta,
    understand. */
 const prefsPayload=()=>Object.assign({},S.prefsMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,restAuto:!!S.prefs.restAuto,onboarded:!!S.prefs.onboarded,
-   proteinDate:String(S.prefs.proteinDate||"")});
+   proteinDate:String(S.prefs.proteinDate||"")},
+  /* E-3. The last successful backup: {at, sig, user, n, m, x}. Device state,
+     so it lives here and not in the log; absent until the first push lands. */
+  S.prefs.backup?{backup:S.prefs.backup}:{});
 
 /* ============================================================ utils */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1734,6 +1769,11 @@ function vSettings(){
      lands. Not before. */
   h+=`<p class="tiny">Your log lives on this device. Export writes a copy you can keep.
       This version cannot read one back in yet.</p></div>`;
+  /* E-3. BACKUP. Four states and the buttons exist in exactly one of them:
+     the module could not load (a sentence, no control - a sync affordance
+     that does not sync is a false durability promise), loading, signed out
+     (the form), signed in (status + BACK UP NOW / RESTORE / SIGN OUT). */
+  h+=vBackup();
   return h;
 }
 
@@ -3027,7 +3067,20 @@ document.getElementById("view").addEventListener("click",async e=>{
   /* ---- W9 / W13a. Navigation, the deload answer, onboarding and the rest
      mode. All delegated from #view like everything else — no per-node
      listeners to leak across a re-render. */
-  if(e.target.closest("#settings-open")){ S.sub="settings"; S.exp=null; render(); return; }
+  if(e.target.closest("#settings-open")){
+    S.sub="settings"; S.exp=null; render();
+    /* E-3. A load never attempted (offline at boot) is attempted when he
+       comes looking for it. A FAILED one is not - see loadSync. */
+    if(S.sync.mod==="off") loadSync();
+    return;
+  }
+  /* E-3. The backup controls. Each exists only in the state that can honour
+     it (vBackupBody), and each handler re-checks that state. */
+  if(e.target.closest("#bk-signin")){ await authTap("in"); return; }
+  if(e.target.closest("#bk-signup")){ await authTap("up"); return; }
+  if(e.target.closest("#bk-signout")){ await signOutTap(); return; }
+  if(e.target.closest("#bk-push")){ clearTimeout(bkTimer); await runBackup(true,"manual"); return; }
+  if(e.target.closest("#bk-restore")){ await restoreStart(); return; }
   if(e.target.closest("#settings-back")){ S.sub=""; S.exp=null; render(); return; }
   if(e.target.closest("#rest-auto")){ await setRestAuto(true); return; }
   if(e.target.closest("#rest-manual")){ await setRestAuto(false); return; }
@@ -3213,6 +3266,13 @@ document.getElementById("view").addEventListener("focusout",e=>{
   }
 });
 
+/* E-3. Enter in the password field is SIGN IN - the one keyboard commit on
+   the Settings screen. Delegated like everything else; no per-node listener. */
+document.getElementById("view").addEventListener("keydown",e=>{
+  if(e.key!=="Enter") return;
+  if(e.target.id==="bk-pass"||e.target.id==="bk-email"){ e.preventDefault(); authTap("in"); }
+});
+
 /* THE `change` LISTENER ON #view IS GONE with the full-volume checkbox — it
    was its only subscriber. It wrote the whole log store on a tick of a control
    no engine read (C-1, B-23). Nothing in the app now writes phat:v1:log from
@@ -3245,6 +3305,13 @@ document.getElementById("modal").addEventListener("click",e=>{
      route. It does not disable the button and does not change its appearance. */
   if(a==="danger"){
     if(Date.now()<sheetState.armAt) return;
+    /* E-3 / WO-004 C-14: a sheet that carries `typed` does not fire until the
+       word is typed exactly. Not a disabled button - a refusal that says what
+       it wants, in the sheet, in the rule shape. */
+    if(sheetState.typed){
+      const inp=document.getElementById("dr-typed");
+      if(!inp||inp.value.trim()!==sheetState.typed){ sheetErr("Type "+sheetState.typed+" to continue."); if(inp) inp.focus(); return; }
+    }
     if(sheetState.onDanger) sheetState.onDanger();
   }
 });
@@ -3254,7 +3321,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){ e.preventDefault(); closeSheet(); return; }
   if(e.key!=="Tab") return;
   const m=document.getElementById("modal");
-  const f=Array.prototype.slice.call(m.querySelectorAll("button"));
+  const f=Array.prototype.slice.call(m.querySelectorAll("button,input"));
   if(!f.length) return;
   const first=f[0], last=f[f.length-1], cur=document.activeElement;
   if(e.shiftKey&&(cur===first||!m.contains(cur))){ e.preventDefault(); last.focus(); }
@@ -3935,6 +4002,8 @@ function askSheet(cfg){
     <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title">
       <h2 id="dr-confirm-title" tabindex="-1">${esc(cfg.headline)}</h2>
       <p class="det">${esc(cfg.body)}</p>
+      ${cfg.typed?`<label class="bklbl" for="dr-typed">Type ${esc(cfg.typed)} to continue</label>
+      <input class="bkin" id="dr-typed" autocomplete="off" autocapitalize="characters" spellcheck="false">`:""}
       <div id="dr-sheet-err"></div>
       <div class="btns">
         <button class="ghostbtn danger" data-sheet="danger" style="pointer-events:none">${esc(cfg.danger)}</button>
@@ -4304,6 +4373,344 @@ function deloadTrigger(){
   }catch(err){ return null; }
 }
 
+/* ============================================================ E-3: backup
+   The app side of sync.js. Everything network-shaped lives in the module;
+   everything that touches S or a store lives here, and the two meet at
+   exactly three calls: push(payload), pull(), and the auth trio.
+
+   THE ORDER OF EVENTS ON A SAVE, because it is the whole point:
+     1. save() writes the store and returns true.
+     2. The caller renders and toasts "Session saved." from that return.
+     3. A timer set inside save() fires ~2 s later and, if signed in and the
+        module is ready, builds the payload and pushes it.
+   Nothing in step 3 is awaited by steps 1 or 2. A push that fails changes
+   nothing on disk and is reported in Settings as a failed BACKUP, in the
+   refusal shape, never as a failed save and never with a green tick (B-16).
+
+   THE MODULE IS INJECTED, NOT DECLARED. A static <script type="module"> in
+   the markup would start its CDN fetch at parse time and, with the radio off,
+   print a failed-resource error on every gym launch - an error he would learn
+   to ignore on the path where an error matters. loadSync() creates the tag
+   after the first render, only on http(s) (module scripts do not run from
+   file://, and file:// stays the honest test path), and only when
+   navigator.onLine is not false. The element's `error` event covers the
+   module and every import inside it, so a CDN that does not answer is a
+   clean "failed" state and not a hang. Nothing here reloads the page. */
+
+/* Adopt a migrated log / bodyweight store into S. Shared by boot and by
+   restore, so the two cannot disagree about what "loaded" means. Sorting
+   reorders references - it copies nothing, drops nothing, edits nothing;
+   lastFor and every week gate scan the array in order (audit D-9). */
+function adoptLog(log){
+  if(!log||typeof log!=="object") return;
+  S.logMeta={}; Object.keys(log).forEach(k=>{ if(k!=="sessions"&&k!=="includeCut") S.logMeta[k]=log[k]; });
+  S.sessions=PHAT.sortSessions(Array.isArray(log.sessions)?log.sessions:[]);
+  S.includeCut=!!log.includeCut;
+}
+function adoptBw(bw){
+  if(!bw||typeof bw!=="object") return;
+  S.bwMeta={}; Object.keys(bw).forEach(k=>{ if(k!=="entries") S.bwMeta[k]=bw[k]; });
+  S.bw=Array.isArray(bw.entries)?bw.entries:[];
+}
+
+const syncOn=()=>S.sync.mod==="ready"&&!!window.PHAT_SYNC;
+const signedIn=()=>syncOn()&&!!S.sync.user;
+
+/* Load the module. Idempotent: a second call while loading or ready is a
+   no-op. A load that was never ATTEMPTED ("off": the radio was off at boot)
+   is attempted when the `online` event fires or Settings opens. A load that
+   FAILED is not retried in this page: the browser's module map remembers a
+   failed fetch for the life of the document, so a second tag with the same
+   URL fails instantly without touching the network, and the CDN import
+   inside sync.js is the same URL every time. Honest copy instead: reopen
+   the app. A 20 s timer turns a hung fetch into that same state, so
+   "loading" cannot be the last word on a connection that never answers. */
+function loadSync(){
+  if(S.sync.mod!=="off") return;
+  if(location.protocol!=="https:"&&location.protocol!=="http:") return;   // file:// - never
+  if(navigator.onLine===false) return;                                   // no fetch, no noise
+  S.sync.mod="loading"; paintBackup();
+  setTimeout(()=>{ if(S.sync.mod==="loading"){ S.sync.mod="failed"; paintBackup(); } },20000);
+  const s=document.createElement("script");
+  s.type="module"; s.src="./sync.js"; s.async=true;
+  s.addEventListener("load",async()=>{
+    const Y=window.PHAT_SYNC;
+    if(!Y){ S.sync.mod="failed"; paintBackup(); return; }
+    Y.subscribe(onSync);
+    let snap=null;
+    try{ snap=await Y.ready(); }catch(err){ snap=null; }
+    S.sync.mod="ready";
+    S.sync.user=snap&&snap.user?snap.user:null;
+    paintBackup();
+    /* Once, on open, if signed in and online: the push that catches a save
+       whose push failed last time. backupSoon() compares signatures, so a log
+       that already matches the last successful backup sends nothing. */
+    if(S.sync.user) backupSoon("open");
+  });
+  s.addEventListener("error",()=>{
+    S.sync.mod="failed"; s.remove();
+    console.info("[phat] backup module not loaded (offline, or the CDN did not answer). Logging is unaffected.");
+    paintBackup();
+  });
+  document.head.appendChild(s);
+}
+/* The module's subscriber. Auth changes repaint; a busy flag flip repaints
+   only the backup section. NEVER render(): a re-render mid-edit is B-19, and
+   this can fire while he is typing a set. */
+function onSync(snap){
+  const was=S.sync.user?S.sync.user.id:null;
+  S.sync.user=snap&&snap.user?snap.user:null;
+  S.sync.busy=snap?snap.busy:null;
+  if((S.sync.user?S.sync.user.id:null)!==was) S.sync.last=null;
+  paintBackup();
+}
+window.addEventListener("online",()=>{
+  if(S.sync.mod==="off") loadSync();
+  else if(signedIn()) backupSoon("online");
+});
+
+/* ---- the debounce. One timer; every trigger resets it; the payload is built
+   when it FIRES, from S as it is then, so five saves in two seconds are one
+   push of the final state. A push already running sets `again` and runs once
+   more after, so a save during a push is never lost. */
+let bkTimer=0, bkAgain=false, bkRunning=false;
+function backupSoon(reason){
+  if(!signedIn()) return;
+  clearTimeout(bkTimer);
+  bkTimer=setTimeout(()=>{ runBackup(false,reason); },2000);
+}
+async function runBackup(manual,reason){
+  const Y=window.PHAT_SYNC;
+  if(!signedIn()) return;
+  if(bkRunning){ bkAgain=true; return; }
+  bkRunning=true;
+  try{
+    const plans=await load(PLANS);
+    const p=PHAT.backupPayload(logPayload(),bwPayload(),plans);
+    const sig=PHAT.backupSig(p);
+    const b=S.prefs.backup;
+    /* Nothing changed since the last backup that landed: send nothing. A
+       manual tap always sends - "BACK UP NOW" means now. */
+    if(!manual&&b&&b.sig===sig&&b.user===S.sync.user.id){ return; }
+    S.sync.last={busy:"push"}; paintBackup();
+    const r=await Y.push(p);
+    if(r.ok){
+      S.prefs.backup={at:r.at,sig:sig,user:S.sync.user.id,n:p.counts.sessions,m:p.counts.bodyweight,x:p.counts.refused};
+      /* The stamp's own write. Not a backed-up key, so it cannot re-trigger. */
+      await save(PREFS,prefsPayload());
+    }
+    S.sync.last={ok:!!r.ok,phase:"push",at:r.at||0,reason:r.reason||"",message:r.message||"",
+      counts:p.counts,problems:p.problems,notes:p.notes,manual:!!manual};
+    if(r.ok&&!p.problems.length) announce("Backed up "+plural(p.counts.sessions,"session")+" and "+plural(p.counts.bodyweight,"weight")+".");
+    else if(r.ok) announce("Backed up with "+plural(p.problems.length,"problem")+". See Settings.");
+    else announce("Backup failed: "+(r.message||"unknown")+" Your log is unchanged on this device.");
+    paintBackup();
+  }catch(err){
+    console.warn("[phat] backup threw",err);
+    S.sync.last={ok:false,phase:"push",reason:"error",message:String(err&&err.message||err)};
+    paintBackup();
+  }finally{
+    bkRunning=false;
+    if(bkAgain){ bkAgain=false; backupSoon("again"); }
+  }
+}
+
+/* ---- auth, from the Settings form. The two fields are read at the tap and
+   never stored anywhere by this file. */
+async function authTap(kind){
+  const Y=window.PHAT_SYNC; if(!syncOn()) return;
+  const em=document.getElementById("bk-email"), pw=document.getElementById("bk-pass");
+  const email=em?String(em.value||"").trim():"", pass=pw?String(pw.value||""):"";
+  if(!email||!pass){ S.sync.last={ok:false,phase:"auth",message:"Email and password, both."}; paintBackup(); return; }
+  S.sync.last={busy:"auth"}; paintBackup();
+  const r=kind==="up"?await Y.signUp(email,pass):await Y.signIn(email,pass);
+  if(r.ok){
+    S.sync.user=r.user; S.sync.last=null; paintBackup();
+    announce("Signed in.");
+    backupSoon("signin");
+  }else{
+    S.sync.last={ok:false,phase:"auth",message:r.message||"Could not sign in."}; paintBackup();
+    announce(r.message||"Could not sign in.",true);
+  }
+}
+async function signOutTap(){
+  const Y=window.PHAT_SYNC; if(!signedIn()) return;
+  const r=await Y.signOut();
+  if(r.ok){ S.sync.user=null; S.sync.last=null; announce("Signed out. Your log is still on this device."); }
+  else S.sync.last={ok:false,phase:"auth",message:"Could not sign out. "+(r.message||"")};
+  paintBackup();
+}
+
+/* ---- RESTORE. The dangerous path, and the rules (work order E-3):
+     - read first, validate WHOLE (PHAT.restorePayload refuses on one bad
+       document and names it), and only then ask - with the real counts.
+     - onto an EMPTY local log: one confirmation, then replace.
+     - onto a NON-EMPTY local log: a TYPED confirmation (WO-004 C-14), the
+       local log is exported first, and a verbatim copy is kept on this device
+       under phat:v1:recover:* - the same keep-aside the boot path uses for an
+       unreadable store. If that copy cannot be written, nothing is replaced.
+     - every write goes through save(), so the window.storage / localStorage
+       split is respected and blocked writes are refused (CLAUDE.md §7).
+   "Empty" is judged on what was READ, not on the arrays: a store that failed
+   to read is not empty, it is unknown, and unknown gets the typed path. */
+const localEmpty=()=>S.stores.log!=="error"&&S.stores.bw!=="error"&&!S.sessions.length&&!S.bw.length;
+async function restoreStart(){
+  const Y=window.PHAT_SYNC; if(!signedIn()) return;
+  if(S.draft||S.offer){ S.sync.last={ok:false,phase:"restore",message:"Finish or discard the unfinished session first."}; paintBackup(); return; }
+  S.sync.last={busy:"pull"}; paintBackup();
+  const r=await Y.pull();
+  if(!r.ok){ S.sync.last={ok:false,phase:"restore",reason:r.reason,message:"Could not read the backup. "+(r.message||"")}; paintBackup(); return; }
+  const rp=PHAT.restorePayload(r.rows);
+  if(!rp.ok){
+    const n=rp.problems.length;
+    S.sync.last={ok:false,phase:"restore",reason:"rejected",
+      message:"Backup refused, nothing changed: "+rp.problems[0]+(n>1?" (and "+(n-1)+" more)":"")+"."};
+    paintBackup(); return;
+  }
+  if(!rp.counts.sessions&&!rp.counts.bodyweight){
+    S.sync.last={ok:false,phase:"restore",reason:"empty",message:"The backup is empty. Nothing to restore."};
+    paintBackup(); return;
+  }
+  S.sync.pulled=rp; S.sync.last=null; paintBackup();
+  const n=rp.counts.sessions, m=rp.counts.bodyweight, ln=S.sessions.length, lm=S.bw.length;
+  if(localEmpty()){
+    askSheet({headline:"Restore from backup?",
+      body:plural(n,"session")+" and "+plural(m,"weight")+" land on this device. It holds nothing now.",
+      danger:"Restore "+plural(n,"session"), safe:"Not now", back:"bk-restore",
+      onDanger:()=>{ closeSheet(); restoreApply(false); },
+      onSafe:()=>{ S.sync.pulled=null; }});
+  }else{
+    askSheet({headline:"Replace this device's log?",
+      body:"This replaces "+plural(ln,"session")+" and "+plural(lm,"weight")+" on this device with "+n+" and "+m+" from the backup. "+
+           "What is on this device is exported first, and a copy is kept here.",
+      typed:"REPLACE", danger:"Replace "+plural(ln,"session"), safe:"Keep this device's log", back:"bk-restore",
+      onDanger:()=>{ closeSheet(); restoreApply(true); },
+      onSafe:()=>{ S.sync.pulled=null; }});
+  }
+}
+async function restoreApply(nonEmpty){
+  const rp=S.sync.pulled; S.sync.pulled=null;
+  if(!rp||!rp.ok) return;
+  const fail=(msg)=>{ S.sync.last={ok:false,phase:"restore",reason:"local",message:msg}; paintBackup(); announce(msg,true); };
+  if(nonEmpty){
+    exportAll();
+    const ts=Date.now();
+    const k1=await save(LOG.replace("phat:v1:","phat:v1:recover:")+":"+ts,{key:LOG,savedAt:ts,reason:"restore",value:logPayload()});
+    const k2=await save(BWK.replace("phat:v1:","phat:v1:recover:")+":"+ts,{key:BWK,savedAt:ts,reason:"restore",value:bwPayload()});
+    if(!k1||!k2){ fail("Could not keep a copy of this device's log. Nothing changed."); return; }
+  }
+  /* Non-destructive and idempotent on a store this build wrote; on an older
+     backup it adds what the schema adds and rewrites no value. */
+  const m=PHAT.migrateStore(rp.log,rp.bw,rp.plans===null?undefined:rp.plans);
+  const log=m.log&&typeof m.log==="object"?m.log:rp.log;
+  const bw=m.bw&&typeof m.bw==="object"?m.bw:rp.bw;
+  const plansStore=rp.plans?(m.plans&&typeof m.plans==="object"?m.plans:rp.plans):null;
+  const ok1=await save(LOG,log);
+  if(!ok1){ fail("Could not write the restored log. Nothing changed. "+(S.err||"")); return; }
+  const ok2=await save(BWK,bw);
+  let ok3=true;
+  if(plansStore) ok3=await save(PLANS,plansStore);
+  adoptLog(log); if(ok2) adoptBw(bw);
+  S.stores={log:"ok",bw:ok2?"ok":S.stores.bw};
+  /* The restored log IS the backup, so it is stamped as backed up, with the
+     signature computed the way runBackup computes it: save() has already
+     scheduled a push, and the signature match makes it a no-op rather than a
+     round trip that re-sends what just came down. */
+  if(ok2&&ok3){
+    const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),plansStore));
+    S.prefs.backup={at:Date.now(),sig:sig,user:S.sync.user.id,n:rp.counts.sessions,m:rp.counts.bodyweight,x:0};
+    await save(PREFS,prefsPayload());
+  }
+  const msg=ok2&&ok3
+    ? "Restored "+plural(rp.counts.sessions,"session")+" and "+plural(rp.counts.bodyweight,"weight")+"."
+    : "Restored "+plural(rp.counts.sessions,"session")+". Could not write "+(ok2?"the plans":"the weights")+" - try again.";
+  S.sync.last={ok:ok2&&ok3,phase:"restore",message:msg,counts:rp.counts};
+  S.sub="settings"; render(true);
+  announce(msg,!(ok2&&ok3));
+}
+
+/* ---- the Settings section. Painted in place through #bk-body so a status
+   change never re-renders the screen around it. `keep` preserves the two
+   auth fields across a repaint of the signed-out state, so a failed sign-in
+   does not also eat the email he typed. */
+function vBackup(){
+  return `<div class="setsec" id="bk"><span class="lbl secrule">Backup</span><div id="bk-body">${vBackupBody()}</div></div>`;
+}
+function bkStatusLine(){
+  const L=S.sync.last, b=S.prefs.backup, me=S.sync.user?S.sync.user.id:null;
+  if(L&&L.busy) return `<p class="tiny" id="bk-status">${L.busy==="pull"?"Reading the backup.":L.busy==="auth"?"Signing in.":"Backing up."}</p>`;
+  const stamp=(b&&b.user===me&&typeof b.at==="number")
+    ? "Last backup "+PHAT.agoText(b.at)+(b.x?", "+plural(b.x,"item")+" left out":"")+"."
+    : "Never backed up.";
+  if(L&&L.ok===false){
+    return `<div class="refuse" role="alert" id="bk-status"><p><span aria-hidden="true">! </span>${esc(
+      L.phase==="push"?"Backup failed: "+(L.message||"unknown")+" Your log is unchanged on this device."
+      :L.message)}</p><p>${esc(stamp)}</p></div>`;
+  }
+  if(L&&L.ok===true&&L.phase==="push"){
+    const P=L.problems||[];
+    if(P.length){
+      return `<div class="refuse" role="alert" id="bk-status"><p><span aria-hidden="true">! </span>Backed up ${
+        L.counts.sessions} of ${L.counts.sessions+P.filter(p=>p.kind==="session").length} sessions. ${
+        plural(P.length,"item")} could not be backed up:</p>${
+        P.slice(0,5).map(p=>`<p>${esc(p.key?p.key+" - ":"")}${esc(p.msg)}</p>`).join("")}${
+        P.length>5?`<p>and ${P.length-5} more.</p>`:""}</div>`;
+    }
+    return `<div class="advice" id="bk-status"><span class="kick">Backed up</span>
+      <p>${plural(L.counts.sessions,"session")} and ${plural(L.counts.bodyweight,"weight")}, ${esc(PHAT.agoText(L.at))}.</p></div>`;
+  }
+  if(L&&L.ok===true&&L.phase==="restore"){
+    return `<div class="advice" id="bk-status"><span class="kick">Restored</span><p>${esc(L.message)}</p></div>`;
+  }
+  return `<p class="tiny" id="bk-status">${esc(stamp)}</p>`;
+}
+function vBackupBody(){
+  const M=S.sync.mod;
+  if(M==="loading") return `<p class="tiny">Backup is loading.</p>`;
+  if(M!=="ready"||!window.PHAT_SYNC){
+    const why=(location.protocol!=="https:"&&location.protocol!=="http:")?"Backup does not run from a file. Open the installed app."
+      :(navigator.onLine===false||M==="off")?"Backup needs a connection. None right now."
+      :"Backup could not load. Close the app and open it again to retry.";
+    return `<p class="tiny">${esc(why)} Your log is on this device and saves as normal.</p>`;
+  }
+  if(!S.sync.user){
+    const L=S.sync.last, busy=!!(L&&L.busy);
+    return `<p class="tiny">Keeps a copy of your log off this phone. Logging works the same signed in or out.</p>
+      <label class="bklbl" for="bk-email">Email</label>
+      <input class="bkin" id="bk-email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label class="bklbl" for="bk-pass">Password</label>
+      <input class="bkin" id="bk-pass" type="password" autocomplete="current-password">
+      ${busy?`<p class="tiny" id="bk-status">Signing in.</p>`
+        :(L&&L.ok===false)?`<div class="refuse" role="alert" id="bk-status"><p><span aria-hidden="true">! </span>${esc(L.message)}</p></div>`:""}
+      <button class="ghostbtn" id="bk-signin"${busy?" disabled":""}>Sign in</button>
+      <button class="ghostbtn" id="bk-signup"${busy?" disabled":""}>Create account</button>`;
+  }
+  const busy=!!(S.sync.last&&S.sync.last.busy)||!!S.sync.busy;
+  return `<p class="tiny">Signed in as ${esc(S.sync.user.email||"")}. Backs up after every saved session and weight.</p>
+    ${bkStatusLine()}
+    <button class="ghostbtn" id="bk-push"${busy?" disabled":""}>Back up now</button>
+    <button class="ghostbtn" id="bk-restore"${busy?" disabled":""}>Restore from backup</button>
+    <button class="ghostbtn" id="bk-signout"${busy?" disabled":""}>Sign out</button>
+    <p class="tiny">Restore replaces what is on this device with the backup. It asks first, and never touches an unfinished session.</p>`;
+}
+function paintBackup(){
+  if(S.sub!=="settings") return;
+  const box=document.getElementById("bk-body"); if(!box) return;
+  /* ALWAYS carried across: the module emits a busy-flag change in the middle
+     of a sign-in attempt, and a repaint that dropped the email he typed
+     would make a wrong password cost him the address as well (B-19, one
+     screen over). Focus is put back where it was. */
+  const em=document.getElementById("bk-email"), pw=document.getElementById("bk-pass");
+  const vals={e:em?em.value:"",p:pw?pw.value:"",f:document.activeElement===pw?"p":document.activeElement===em?"e":""};
+  box.innerHTML=vBackupBody();
+  {
+    const em2=document.getElementById("bk-email"), pw2=document.getElementById("bk-pass");
+    if(em2) em2.value=vals.e; if(pw2) pw2.value=vals.p;
+    if(vals.f==="p"&&pw2) pw2.focus(); else if(vals.f==="e"&&em2) em2.focus();
+  }
+  reserveDock();
+}
+
 /* ============================================================ boot */
 /* An unreadable store is not an empty store. If we treated it as empty the
    first save would overwrite whatever is really there, so keep a verbatim
@@ -4355,7 +4762,12 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   if(rp.status==="ok"&&rp.value&&typeof rp.value==="object"){
     S.prefsMeta={};
     Object.keys(rp.value).forEach(k=>{
-      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate") S.prefsMeta[k]=rp.value[k]; });
+      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate"&&k!=="backup") S.prefsMeta[k]=rp.value[k]; });
+    /* E-3. The last successful backup, or null. Shape-checked: a stamp that
+       is not an object with a numeric `at` is treated as "never backed up",
+       which is the honest reading of a stamp this build cannot vouch for. */
+    S.prefs.backup = (rp.value.backup&&typeof rp.value.backup==="object"&&typeof rp.value.backup.at==="number")
+      ? rp.value.backup : null;
     S.prefs.restAuto = rp.value.restAuto===undefined ? true : !!rp.value.restAuto;
     S.prefs.onboarded = !!rp.value.onboarded;
     /* A stored tick from any day but today reads as off. It is kept, not
@@ -4367,21 +4779,7 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   }
   /* Non-destructive, idempotent, never throws. No date value is rewritten. */
   const m=PHAT.migrateStore(rawLog,rawBw);
-  if(m.log&&typeof m.log==="object"){
-    S.logMeta={}; Object.keys(m.log).forEach(k=>{ if(k!=="sessions"&&k!=="includeCut") S.logMeta[k]=m.log[k]; });
-    S.sessions=Array.isArray(m.log.sessions)?m.log.sessions:[];
-    S.includeCut=!!m.log.includeCut;
-  }
-  if(m.bw&&typeof m.bw==="object"){
-    S.bwMeta={}; Object.keys(m.bw).forEach(k=>{ if(k!=="entries") S.bwMeta[k]=m.bw[k]; });
-    S.bw=Array.isArray(m.bw.entries)?m.bw.entries:[];
-  }
-  /* Sorted once, here, after the migration and before the first render, and
-     kept sorted by every save. lastFor and every week gate scan this array in
-     order; an array in insertion order gives the wrong "last session" the
-     first time a draft started yesterday is saved today (audit D-9). Sorting
-     reorders references — it copies nothing, drops nothing, edits nothing. */
-  S.sessions=PHAT.sortSessions(S.sessions);
+  adoptLog(m.log); adoptBw(m.bw);
   /* Only writes when the migration actually marked or added something. An
      empty store boots with zero writes; the version lands on the first real
      save. Sorting alone does not trigger a write — order is not data. */
@@ -4416,6 +4814,11 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      !notice && !S.prefs.onboarded && !S.offer) S.sub="onboard";
   clearTimeout(slow);
   render();
+  /* E-3. After the first paint, never before: the module is an upgrade to
+     Settings, not a dependency of the app, and it must not compete with the
+     shell for the one bar of signal. loadSync() is a no-op on file:// and
+     when navigator.onLine is false. */
+  loadSync();
 })();
 })();
 </script>

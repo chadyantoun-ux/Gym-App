@@ -1,16 +1,50 @@
 # Supabase — E-3
 
-Backend store for Phat Gym Track. **Sync and backup only.** `localStorage` is the source of truth
+Backend store for Phat Gym Track. **Backup and restore only.** `localStorage` is the source of truth
 during a workout and nothing in here may ever sit between tapping `+` and the number changing on
 screen (CLAUDE.md §3.2).
 
-Nothing in this directory is wired into the app. `index.html`, `logic.js`, `tests.html` and `sw.js`
-are untouched, there is no Supabase import anywhere, and there is no "Sync" button — a sync
-affordance that does not sync is a false durability promise, and this project's one P0 class is
-believing your data is safe when it is not.
+**Current state (2026-09-11): applied, verified, and wired.** Project
+`https://nkebsoqjtkcdiswrmely.supabase.co`; the publishable key is in `sync.js` and that is where it
+belongs (§3). Schema and RLS are applied — five tables, 18 policies, RLS on everywhere, the
+publishable key returns zero rows on every table, an anonymous insert fails with `42501`, and
+`v_session_counts` is `security_invoker`. The client is `sync.js` (an ES module, loaded after boot)
+plus `PHAT.backupPayload` / `PHAT.restorePayload` in `logic.js`, and the Settings screen carries the
+one Backup section. What was decided and why is in §6 and `docs/decisions.md`.
 
-**Current state: SQL written, nothing applied, nothing connected.** Applying it needs a project;
-connecting it needs the URL and the anon key.
+---
+
+## 0. How the client works
+
+| Piece | Where | What it does |
+|---|---|---|
+| `backupPayload(log, bw, plans)` | `logic.js`, pure | Turns the three stores into the rows to upsert. Validates every document against the same rules as the server; a document that would be refused is **left out and named** in `problems`, never coerced, never dropped quietly |
+| `restorePayload(rows)` | `logic.js`, pure | Rebuilds the three stores from pulled rows. **Refuses whole** on one bad document and names it. Restores the builder's key order (JSONB sorts keys) so a restored session is byte-identical to the one the device wrote |
+| `validateSessionDoc` / `validateBwDoc` | `logic.js`, pure | Mirror `phat_validate_session_doc` / `phat_validate_bw_doc` line for line |
+| `backupSig(payload)` | `logic.js`, pure | Key-order-independent signature; equal to the one stored at the last successful push means nothing has changed |
+| `sync.js` | ES module, `window.PHAT_SYNC` | `createClient` on the pinned CDN build, `signIn` / `signUp` / `signOut`, `push(payload)` (upserts, chunked), `pull()` (every live row). No store key is named in this file |
+| `loadSync` / `backupSoon` / `runBackup` / `restoreStart` / `restoreApply` | `index.html` | The app side. `save()` schedules a push **after** its write has returned; a 2 s debounce coalesces bursts; a manual `BACK UP NOW` ignores the signature |
+
+**Triggers for a push:** a successful write to `phat:v1:log`, `phat:v1:bw` or `phat:v1:plans`
+(inside `save()`, after the write); `BACK UP NOW`; once on open when signed in and online (skipped
+when the signature matches the last successful push); the `online` event. Never a keystroke, never
+the draft.
+
+**Module loading is deliberately not a `<script type="module">` in the markup.** `loadSync()`
+injects the tag after the first render, only on `http(s)` and only when `navigator.onLine` is not
+`false`. The tag's `error` event covers the module and the CDN import inside it, so no signal means
+a clean "Backup needs a connection" state and zero console errors; `file://` never attempts it. The
+CDN URL is pinned to `@supabase/supabase-js@2.116.0` and is **not** precached by `sw.js`
+(cross-origin, opaque) — `sync.js` itself is.
+
+**Auth** is email + password from Settings; the session persists in `localStorage` under
+`phat:auth` (not a `phat:v1:*` key). Sign-out clears that key only. Magic links are rejected: a link
+from an email opens in the browser, not the installed PWA.
+
+**Restore** is the dangerous path. Onto an empty log: one confirmation. Onto a non-empty log: the
+word `REPLACE` typed (WO-004 C-14), the local log **exported first**, and a verbatim copy kept under
+`phat:v1:recover:log:<ts>` / `phat:v1:recover:bw:<ts>` — if that copy cannot be written, nothing is
+replaced. Refused while an unfinished session is on disk. Every write goes through `save()`.
 
 ---
 
@@ -18,20 +52,26 @@ connecting it needs the URL and the anon key.
 
 1. Open the Supabase dashboard → **SQL Editor** → **New query**.
 2. Paste the whole of **`schema.sql`**. Run. Expect `Success. No rows returned.`
-3. New query. Paste the whole of **`rls.sql`** *down to the line marked `4. THE PROOF`*. Run.
-4. Run the proof blocks in §4 of `rls.sql` one at a time and check each result against §2 below.
+3. New query. Paste the whole of **`rls.sql`**. Run.
+4. New query. Paste **`rls-selftest.sql`** and check each result against §2 below.
 
-Both files are idempotent — re-running them is safe and is the intended way to make a change:
+**Why the self-test is its own file, and why this matters more than it looks:** the Management API
+(and any client that submits a file as one batch) **runs a submission as one transaction**. When the
+self-test lived at the foot of `rls.sql`, its trailing `rollback` rolled back the policies above it —
+the submission reported success and the database had **no RLS policies**. Caught on 2026-09-11 by
+re-reading `pg_policies`, not by anything the API said. Nothing that can roll back may share a
+submission with anything that must land.
+
+All three files are idempotent — re-running them is safe and is the intended way to make a change:
 edit the file, re-run the file, commit the file. There is no migration tool and there does not need
 to be one for a single-user database with one table set.
 
 **Order matters, and re-running `schema.sql` means re-running `rls.sql` too.** `rls.sql` alters
 tables `schema.sql` creates, and `schema.sql` drops and recreates `v_session_counts`, which discards
-that view's grants. Always run the pair.
+that view's grants. Always run the pair, then the self-test.
 
 Re-running is **non-destructive to data**: every table is `create table if not exists`, no column is
-dropped, and no row is touched. Nothing in either file deletes anything.
-
+dropped, and no row is touched. Nothing in any file deletes anything.
 ---
 
 ## 2. Verify RLS is actually on
@@ -58,16 +98,16 @@ switched off wearing a costume; it will pass Check A and protect nothing.
 
 **Check B2 — views.** Check A only looks at tables. A view runs as its *owner* unless it is created
 `with (security_invoker = true)`, so a view over an RLS'd table is the classic way the table gets
-handed out anyway. The query in `rls.sql` §4 B2 must report `security_invoker = true` for every view
+handed out anyway. The query in `rls-selftest.sql` B2 must report `security_invoker = true` for every view
 — there is one, `v_session_counts`.
 
-**Check C — behaviour, which is the only check that actually proves anything.** The block at the
-bottom of `rls.sql` impersonates `anon`, counts every table, and rolls back. Every count must be
+**Check C — behaviour, which is the only check that actually proves anything.** The C/D/E block in
+`rls-selftest.sql` impersonates `anon`, counts every table, and rolls back. Every count must be
 **`0`**, and it must be zero *rows*, not an error. An error would tell an unauthenticated caller
 which tables exist; a grant of `select` to `anon` is kept deliberately so that RLS — not a
 permission failure — is what returns nothing.
 
-**Check D — writes.** The commented insert in `rls.sql` §4 D must fail with **SQLSTATE `42501`**.
+**Check D — writes.** The commented insert in `rls-selftest.sql` D must fail with **SQLSTATE `42501`**.
 If it succeeds, stop and do not deploy.
 
 Re-run Check A after any future change to this schema. Adding a table and forgetting
@@ -106,9 +146,18 @@ this project and writing their own rows. For a single-user app that is free stor
 else and a support surface for you.
 
 **Authentication → Providers → Email → disable "Enable sign ups"** *after* creating Chady's one
-account. Create the account first or you will lock yourself out.
+account. Create the account first or you will lock yourself out. The `CREATE ACCOUNT` button in
+Settings will then say `New accounts are switched off.` — that is the intended end state.
 
-Also: leave **email confirmation on**, and do not enable anonymous sign-ins.
+Also: do not enable anonymous sign-ins. Email confirmation is currently **off**
+(`mailer_autoconfirm`) so that sign-up from the Settings screen returns a session directly; the
+client reports an account created without a session rather than treating it as signed in, so
+turning confirmation back on later degrades honestly.
+
+**A throwaway account exists:** `test+e3@example.com`, created by the E-3 verification run, with
+three test sessions and one bodyweight row under it (and one `conflicts` row from a deliberate
+hard delete during the derived-column test). Delete the user in Authentication → Users once Chady's
+account exists; `on delete cascade` removes every row it owns.
 
 ---
 
@@ -170,9 +219,11 @@ between a visible problem and a silent one.
 
 ---
 
-## 6. Sync — a proposal for review, not a design, and nothing is built
+## 6. Sync — the proposal, and the decision taken
 
-Read this as a list of decisions that are **owed**, not made.
+**Decided 2026-09-11 (work order E-3): §6.1 is adopted.** Backup and restore shipped; two-way sync
+did not. The draft and the preferences do not back up. Everything below §6.1 is kept as the record
+of what two-way sync would have to answer before it is built, and none of it is answered.
 
 ### 6.1 The recommendation, first
 
@@ -260,10 +311,13 @@ conventional one.
 
 ---
 
-## 7. What QA should test — once there is client code
+## 7. What QA should test
 
-Nothing here is testable from `tests.html`; it is SQL, it needs a database, and `tests.html` runs
-from `file://`. The list is recorded now so it is not invented later under pressure:
+The pure half — `backupPayload`, `restorePayload`, `validateSessionDoc`, `validateBwDoc`,
+`backupSig`, `agoText` — is testable from `tests.html` over `file://` with no network, and QA owes
+it a section. The rest needs a browser and the live project; the E-3 verification run did each of
+these once with Playwright against `http://localhost` and the results are in the E-3 report and
+`docs/decisions.md`:
 
 - **Idempotence.** Push the same session twice → one row. Push it fifty times → one row, and
   `conflicts` stays empty because the document never changed.
@@ -306,23 +360,18 @@ from `file://`. The list is recorded now so it is not invented later under press
 
 ---
 
-## 8. What I need from Chady
+## 8. What is still owed by Chady
 
-1. **Project URL** and the **anon / publishable key.** Nothing else. Not the `service_role` key —
-   if it is ever pasted into a chat, rotate it immediately.
-2. **Keep or replace existing data?** The local log is currently empty, so as things stand there is
-   nothing to import and this is a clean start. Confirm that — if there is a `phat-log-*.json`
-   export anywhere worth loading, it changes the first step from "sync from now on" to "import
-   first", and that is WO-002's importer, not this.
-3. **Does the draft sync?** My recommendation: no. It is the live workout; two devices editing one
-   unfinished session is the worst conflict there is, and local durability is already solved (B-01).
-4. **Do preferences sync?** My recommendation: no. `restAuto` and `onboarded` are device state.
-   `proteinDate` is a habit tick that no engine reads. Cheap to add later if you disagree.
-5. **Backup-only, or two-way sync?** §6.1 is my recommendation and I will hold it until there is a
-   second device.
-6. **Disable sign-ups** in the dashboard once your account exists (§4). Say when it is done.
+Items 1–5 of the original list are answered: the project exists, the key is in `sync.js`, the local
+log was empty so there was nothing to import, the draft and preferences do not back up, and it is
+backup-only. What remains:
 
-One thing worth saying plainly, since it is the standing diagnosis: this is infrastructure for a log
-with zero sessions in it. The backup is worth having before there is something to lose, which is why
-it is worth doing now — but it protects nothing until there is training in it. The bottleneck is
-still the training, not the tooling.
+1. **Create your account** from Settings → Backup → `CREATE ACCOUNT` on the phone, once the build
+   is deployed. Then **disable sign-ups** in the dashboard (§4) and say when it is done.
+2. **Delete the throwaway account** `test+e3@example.com` (§4) after yours exists.
+3. **Restore is the only path that shrinks the local log**, and only behind a typed `REPLACE` with
+   an export and a kept copy in front of it. If you would rather it did not exist at all until a
+   phone is actually lost, say so — it is one button and one function.
+
+The standing diagnosis still stands: this is a backup for a log with zero real sessions in it. It is
+worth having before there is something to lose. It protects nothing until there is training in it.

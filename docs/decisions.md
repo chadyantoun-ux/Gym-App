@@ -1494,3 +1494,67 @@ dependency here, never the app's: this is a checked-in tool, not a build step,
 and the app still opens by double-clicking the file.
 
 Run it before any deploy, after the suite, not instead of it.
+
+## 2026-09-11 — E-3: backup and restore shipped; two-way sync did not
+
+**Decided:** the client is push-only backup with an explicit Restore, exactly as `supabase/README.md`
+§6.1 recommended. The server never writes to the device except on a Restore tap. The draft
+(`phat:v1:draft`) and the preferences (`phat:v1:prefs`) do not back up. Auth is email + password
+from the Settings screen; magic links are rejected because a link opened from an email lands in the
+browser, not the installed PWA. `@supabase/supabase-js` is loaded from the CDN as an ES module,
+pinned to `2.116.0`, never `@2`.
+
+**The one place the design moved during the build.** The work order said "a separate
+`<script type="module">`". It is a module, but `index.html` **injects the tag after the first
+render** rather than declaring it in the markup, and only on `http(s)` with `navigator.onLine` not
+`false`. Reason: a static module tag starts its CDN fetch at parse time, and with the radio off that
+is a failed-resource error in the console on every gym launch — on the exact path where an error
+has to mean something. Injected after boot and gated on the radio, the offline case fetches nothing
+and logs nothing (measured: zero console output on `file://` and on an offline `http://` cold
+reload). The tag's `error` event covers the module and every import inside it, so a CDN that does
+not answer is a clean `Backup could not load` state. A failed load is **not retried within the
+page**: the browser's module map remembers a failed fetch for the life of the document, so a retry
+with the same URL fails instantly without touching the network. The copy says to reopen the app,
+which is the truth.
+
+**Key order is not identity, and it had to be said in code twice.** JSONB sorts object keys, so a
+session that went up `{id, date, dayId, planId, entries}` with sets `{w, r}` comes back with sets
+`{r, w}` — same values, different bytes, and `buildSession` promises a stable key order that tests
+assert on. Two consequences: `restorePayload` re-orders every restored document to the builder's key
+order for the keys this build writes (unknown keys keep the server's order, after them), which is
+what makes the round trip byte-identical (measured); and `backupSig` serialises with sorted keys at
+every depth, because the first run signed a restored log differently from the same log rebuilt by
+`logPayload()` and pushed it again for nothing. Harmless — an identical document never reaches the
+`conflicts` archive — but a no-op that costs four requests is a bug.
+
+**What a push refuses, and how.** `backupPayload` validates every document against a line-for-line
+mirror of `phat_validate_session_doc`. A document the server would refuse is **left out and named**
+(`9 Sep (d3) - entry d3a has an unreadable weight: "7.5.0"`) and the status renders in the refusal
+shape: `Backed up 1 of 2 sessions. 1 item could not be backed up:` followed by the reason. Not
+refused whole — one legacy row must not block six weeks of good ones — and not dropped quietly. The
+server was also exercised directly: `7.5.0` → `23514` naming the entry; a batch holding one 0 kg set
+(legal, B-21) and one 0-rep set (illegal) → `23514` and the 0 kg row did **not** land alone; a row
+supplied with a lying `local_date` / `day_id` / `client_id` came back with all three derived from the
+document.
+
+**Restore onto a non-empty log is the only control in the app that shrinks `phat:v1:log`**, and it
+sits behind the word `REPLACE` typed (WO-004 C-14), an export fired first, and a verbatim copy
+written to `phat:v1:recover:log:<ts>` / `phat:v1:recover:bw:<ts>` through `save()` — if that copy
+cannot be written, nothing is replaced. "Empty" is judged on what the boot read found, not on the
+arrays: a store that failed to read is unknown, and unknown takes the typed path. Refused outright
+while an unfinished session is on disk. Every write goes through the adapter, so the
+`window.storage` / `localStorage` split holds.
+
+**`rls.sql` lost its tail.** The Management API runs a submission as one transaction, so the
+self-test's `rollback` at the foot of `rls.sql` rolled back the policies above it while reporting
+success. The proof now lives in `supabase/rls-selftest.sql`, run as its own submission, and the
+lesson is written at the point in `rls.sql` where the block used to be.
+
+**Not changed:** `SCHEMA_VERSION` (still 5), no local migration, `tests.html` untouched and still
+`556 / 556 / 0` from `file://` with the network off. The `service_role` key appears nowhere; the
+publishable key is in `sync.js` and that is where it is supposed to be. `sw.js` goes to `v3`
+because the shell file list gained `sync.js` (OPTIONAL, never CORE — an upgrade, not a dependency);
+the CDN URL is deliberately not precached.
+
+**A throwaway account exists** (`test+e3@example.com`) with three test sessions under it. Delete it
+in the dashboard once Chady's account exists; the cascade removes its rows.

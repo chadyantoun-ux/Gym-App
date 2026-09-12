@@ -2001,6 +2001,407 @@
     }
   }
 
+  /* ============================================================ backup
+     E-3. The pure half of sync.js: serialisation for the push and the
+     validation for the restore. No network, no storage, no DOM, so the whole
+     round trip can be asserted from tests.html over file://.
+
+     THE SHAPE ON THE WIRE is one JSONB document per session, exactly the
+     object buildSession() wrote (supabase/schema.sql §0). Nothing here
+     shreds, reshapes, rounds or renames a stored value. A session goes up as
+     the bytes on disk and comes back as the same bytes.
+
+     THE RULE ON BAD DATA is the same as the save path's (B-02): refused and
+     NAMED, never coerced, never silently skipped. validateSessionDoc mirrors
+     phat_validate_session_doc in schema.sql line for line, so a document the
+     server would reject with 23514 is caught here first, with the same
+     sentence, and the client can say which session and why instead of
+     learning it from a failed request. */
+
+  /* A session's name for a sentence about it: its date when it has one, else
+     its id. Never empty, so a problem can always be pointed at something. */
+  function docLabel(doc) {
+    if (!isObj(doc)) return "(not a session)";
+    var d = sessionDate(doc);
+    if (d) return dayMon(d) + " (" + str(doc.dayId || "?") + ")";
+    return "id " + (str(doc.id) || "?");
+  }
+
+  /* A real local calendar day: the string parses AND round-trips, so
+     2026-02-30 (which Date.parse silently rolls to March) is refused. */
+  function realDate(ds) {
+    if (typeof ds !== "string" || !DATE_RE.test(ds)) return false;
+    var t = new Date(ds + "T12:00:00");
+    return !isNaN(t.getTime()) && localDate(t) === ds;
+  }
+
+  /* validateSessionDoc(doc) → { ok, problems:[string] }
+     Mirrors schema.sql phat_validate_session_doc: id present (number or
+     non-empty string), dayId a non-empty string, date YYYY-MM-DD and a real
+     day, planId (when present) a non-empty string, entries an object whose
+     sets carry w in 0..500 and whole r in 1..100, each as a number or a
+     numeric string. Every problem is collected, not just the first. */
+  function validateSessionDoc(doc) {
+    var p = [];
+    if (!isObj(doc)) return { ok: false, problems: ["session doc must be a JSON object"] };
+    var idOk = (typeof doc.id === "number" && isFinite(doc.id)) ||
+               (typeof doc.id === "string" && doc.id !== "");
+    if (!idOk) p.push("session.id is required and must be a number or a non-empty string");
+    if (typeof doc.dayId !== "string" || doc.dayId.trim() === "")
+      p.push("session.dayId is required and must be a non-empty string");
+    if (typeof doc.date !== "string" || !DATE_RE.test(doc.date))
+      p.push("session.date must be YYYY-MM-DD, got: " + (doc.date === undefined ? "(absent)" : str(doc.date)));
+    else if (!realDate(doc.date))
+      p.push("session.date is not a real calendar date: " + doc.date);
+    if (doc.planId !== undefined && (typeof doc.planId !== "string" || doc.planId.trim() === ""))
+      p.push("session.planId, when present, must be a non-empty string");
+    if (doc.dateBasis !== undefined && doc.dateBasis !== "local" && doc.dateBasis !== "utc")
+      p.push("session.dateBasis must be \"local\" or \"utc\", got: " + str(doc.dateBasis));
+    if (doc.entries !== undefined) {
+      if (!isObj(doc.entries)) p.push("session.entries must be an object keyed by exercise id");
+      else Object.keys(doc.entries).forEach(function (exId) {
+        var e = doc.entries[exId];
+        if (!isObj(e)) { p.push("entry " + exId + " must be an object"); return; }
+        if (e.sets === undefined) return;
+        if (!Array.isArray(e.sets)) { p.push("entry " + exId + ".sets must be an array"); return; }
+        e.sets.forEach(function (s) {
+          if (!isObj(s)) { p.push("entry " + exId + " has a set that is not an object"); return; }
+          if (s.w === undefined || s.w === null || s.r === undefined || s.r === null) {
+            p.push("entry " + exId + " has a set missing w or r"); return;
+          }
+          var tw = typeof s.w, tr = typeof s.r;
+          if (tw !== "number" && tw !== "string")
+            p.push("entry " + exId + " has a weight that is neither a number nor a numeric string");
+          else {
+            var pw = parseWeight(s.w);
+            if (!pw.ok && pw.reason === "range") p.push("entry " + exId + " weight out of range (0..500): " + str(s.w));
+            else if (!pw.ok) p.push("entry " + exId + " has an unreadable weight: \"" + str(s.w) + "\"");
+          }
+          if (tr !== "number" && tr !== "string")
+            p.push("entry " + exId + " has reps that are neither a number nor a numeric string");
+          else {
+            var pr = parseReps(s.r);
+            if (!pr.ok && pr.reason === "range") p.push("entry " + exId + " reps out of range (1..100): " + str(s.r));
+            else if (!pr.ok && tr === "number") p.push("entry " + exId + " reps must be a whole number: " + str(s.r));
+            else if (!pr.ok) p.push("entry " + exId + " has unreadable reps: \"" + str(s.r) + "\"");
+          }
+        });
+      });
+    }
+    return { ok: p.length === 0, problems: p };
+  }
+
+  /* validateBwDoc(doc) → { ok, problems:[string] }
+     Mirrors phat_validate_bw_doc: date YYYY-MM-DD and real, kg a number or
+     numeric string in 20..400. The server's range, not the input field's
+     30..300 — the server is what decides whether the row lands. */
+  function validateBwDoc(doc) {
+    var p = [];
+    if (!isObj(doc)) return { ok: false, problems: ["bodyweight doc must be a JSON object"] };
+    if (typeof doc.date !== "string" || !DATE_RE.test(doc.date))
+      p.push("bodyweight.date must be YYYY-MM-DD, got: " + (doc.date === undefined ? "(absent)" : str(doc.date)));
+    else if (!realDate(doc.date))
+      p.push("bodyweight.date is not a real calendar date: " + doc.date);
+    var n = null;
+    if (typeof doc.kg === "number" && isFinite(doc.kg)) n = doc.kg;
+    else if (typeof doc.kg === "string" && NUM_W.test(doc.kg)) n = Number(doc.kg);
+    if (n === null) p.push("bodyweight.kg must be a number or a numeric string");
+    else if (n < 20 || n > 400) p.push("bodyweight.kg out of range (20..400): " + str(doc.kg));
+    if (doc.dateBasis !== undefined && doc.dateBasis !== "local" && doc.dateBasis !== "utc")
+      p.push("bodyweight.dateBasis must be \"local\" or \"utc\", got: " + str(doc.dateBasis));
+    return { ok: p.length === 0, problems: p };
+  }
+
+  /* backupPayload(log, bw, plans)
+       → { sessions:[doc], bodyweight:[doc], plans:[doc],
+           logMeta:{}, planMeta:{},
+           counts:{ sessions, bodyweight, plans, refused },
+           problems:[{ kind, key, msg }], notes:[string] }
+
+     Takes the three stores AS STORED (the objects logPayload / bwPayload /
+     the plan store hold), and returns the rows sync.js upserts. It never
+     throws and never mutates its inputs.
+
+     - sessions / bodyweight / plans are the documents that will go up,
+       verbatim references to the stored objects — not copies, not rewrites.
+     - logMeta is the log store MINUS `sessions` (schema.sql user_state
+       forbids a sessions key there) and includes schemaVersion, includeCut,
+       reintro, deload and every key a future build adds. planMeta is the
+       plan store minus `plans`.
+     - A document the server would refuse is NOT in the rows and IS in
+       `problems`, named by date and reason, so the caller can say "backed up
+       29 of 30, and here is the one" rather than either pushing a request
+       that fails whole or dropping the row quietly. counts.refused is the
+       number left out.
+     - Two sessions sharing an id, or two bodyweight rows sharing a date, would
+       collide on the server's unique key inside one statement and fail the
+       whole batch. The FIRST session (in stored order) and the LAST bodyweight
+       row (migrateStore's own rule) go up; the other is a named problem.
+     - `notes` names anything in the stores this shape cannot carry: today
+       that is a bodyweight-store key other than schemaVersion and entries,
+       because bodyweight meta has no column. Nothing is dropped silently. */
+  function backupPayload(log, bw, plans) {
+    var out = {
+      sessions: [], bodyweight: [], plans: [],
+      logMeta: {}, planMeta: {},
+      counts: { sessions: 0, bodyweight: 0, plans: 0, refused: 0 },
+      problems: [], notes: []
+    };
+    try {
+      if (isObj(log)) {
+        Object.keys(log).forEach(function (k) { if (k !== "sessions") out.logMeta[k] = log[k]; });
+        if (log.sessions !== undefined && !Array.isArray(log.sessions)) {
+          out.problems.push({ kind: "log", key: "sessions", msg: "log.sessions is not an array; no session backed up" });
+        } else if (Array.isArray(log.sessions)) {
+          var seen = {};
+          log.sessions.forEach(function (s) {
+            var v = validateSessionDoc(s);
+            if (!v.ok) {
+              out.problems.push({ kind: "session", key: docLabel(s), msg: v.problems[0] });
+              return;
+            }
+            var key = str(s.id);
+            if (seen[key]) {
+              out.problems.push({ kind: "session", key: docLabel(s),
+                msg: "shares id " + key + " with " + docLabel(seen[key]) + "; only the first is backed up" });
+              return;
+            }
+            seen[key] = s;
+            out.sessions.push(s);
+          });
+        }
+      } else if (log !== undefined && log !== null) {
+        out.problems.push({ kind: "log", key: null, msg: "log store is not an object; nothing from it backed up" });
+      }
+
+      if (isObj(bw)) {
+        Object.keys(bw).forEach(function (k) {
+          if (k !== "entries" && k !== "schemaVersion")
+            out.notes.push("bodyweight store key not backed up: " + k);
+        });
+        if (bw.entries !== undefined && !Array.isArray(bw.entries)) {
+          out.problems.push({ kind: "bw", key: "entries", msg: "bw.entries is not an array; no bodyweight backed up" });
+        } else if (Array.isArray(bw.entries)) {
+          var byDate = {}, order = [];
+          bw.entries.forEach(function (e) {
+            var v = validateBwDoc(e);
+            if (!v.ok) {
+              out.problems.push({ kind: "bodyweight", key: isObj(e) ? str(e.date) : "(not a row)", msg: v.problems[0] });
+              return;
+            }
+            if (byDate[e.date]) {
+              out.problems.push({ kind: "bodyweight", key: e.date,
+                msg: "two rows share " + e.date + "; only the last is backed up" });
+            } else order.push(e.date);
+            byDate[e.date] = e;
+          });
+          order.forEach(function (d) { out.bodyweight.push(byDate[d]); });
+        }
+      } else if (bw !== undefined && bw !== null) {
+        out.problems.push({ kind: "bw", key: null, msg: "bodyweight store is not an object; nothing from it backed up" });
+      }
+
+      if (isObj(plans)) {
+        Object.keys(plans).forEach(function (k) { if (k !== "plans") out.planMeta[k] = plans[k]; });
+        if (plans.plans !== undefined && !Array.isArray(plans.plans)) {
+          out.problems.push({ kind: "plans", key: "plans", msg: "plans.plans is not an array; no plan backed up" });
+        } else if (Array.isArray(plans.plans)) {
+          var seenP = {};
+          plans.plans.forEach(function (pl) {
+            var pid = isObj(pl) && typeof pl.planId === "string" ? pl.planId.trim() : "";
+            if (!pid) { out.problems.push({ kind: "plan", key: "(no planId)", msg: "plan.planId is required and must be a non-empty string" }); return; }
+            if (pl.days !== undefined && !Array.isArray(pl.days)) { out.problems.push({ kind: "plan", key: pid, msg: "plan.days must be an array" }); return; }
+            if (seenP[pid]) { out.problems.push({ kind: "plan", key: pid, msg: "two plans share planId " + pid + "; only the first is backed up" }); return; }
+            seenP[pid] = true;
+            out.plans.push(pl);
+          });
+        }
+      } else if (plans !== undefined && plans !== null) {
+        out.problems.push({ kind: "plans", key: null, msg: "plan store is not an object; nothing from it backed up" });
+      }
+    } catch (err) {
+      out.problems.push({ kind: "log", key: null, msg: "backupPayload failed: " + (err && err.message) });
+    }
+    out.counts.sessions = out.sessions.length;
+    out.counts.bodyweight = out.bodyweight.length;
+    out.counts.plans = out.plans.length;
+    out.counts.refused = out.problems.filter(function (p) {
+      return p.kind === "session" || p.kind === "bodyweight" || p.kind === "plan";
+    }).length;
+    return out;
+  }
+
+  /* backupSig(payload) → a short string that changes whenever anything in
+     the payload changes. Used to answer "is there anything unpushed?" on app
+     open without a network round trip: equal to the signature stored at the
+     last SUCCESSFUL push means nothing has changed since, so a re-push would
+     be a no-op. Not cryptographic and not meant to be; a collision costs one
+     skipped no-op push, never a lost row, and BACK UP NOW ignores it. */
+  /* Key order is NOT identity: the same log read back from JSONB (which sorts
+     keys) or rebuilt by logPayload() (which appends includeCut last) must
+     sign the same, or every restore would be followed by a pointless push.
+     stableJson sorts object keys at every depth; arrays keep their order,
+     because a session's position in the log is data. */
+  function stableJson(v) {
+    if (Array.isArray(v)) return "[" + v.map(stableJson).join(",") + "]";
+    if (isObj(v)) {
+      return "{" + Object.keys(v).sort().map(function (k) {
+        return JSON.stringify(k) + ":" + stableJson(v[k]);
+      }).join(",") + "}";
+    }
+    return v === undefined ? "null" : JSON.stringify(v);
+  }
+  function backupSig(payload) {
+    var s = stableJson(isObj(payload) ? {
+      s: payload.sessions, b: payload.bodyweight, p: payload.plans,
+      l: payload.logMeta, m: payload.planMeta
+    } : null);
+    var h = 5381, i;
+    for (i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36) + "-" + s.length.toString(36);
+  }
+
+  /* JSONB DOES NOT KEEP KEY ORDER. Postgres stores an object's keys sorted
+     (by length, then bytes), so a session that went up as
+     {id, date, dayId, planId, entries} comes back {id, date, dayId, planId,
+     entries} only by luck, and a set that went up {w, r} comes back {r, w}.
+     Same values, same meaning, different bytes - and buildSession promises
+     a stable key order so tests can assert on the serialised string. So the
+     restore puts the builder's order back for every key this build writes,
+     and leaves any key it does not know AFTER them in the order the server
+     returned. Values are never touched; this is a re-ordering of references,
+     and an object with no known keys comes back unchanged. */
+  function orderKeys(o, first) {
+    if (!isObj(o)) return o;
+    var out = {}, i, k;
+    for (i = 0; i < first.length; i++) if (Object.prototype.hasOwnProperty.call(o, first[i])) out[first[i]] = o[first[i]];
+    for (k in o) if (Object.prototype.hasOwnProperty.call(o, k) && !Object.prototype.hasOwnProperty.call(out, k)) out[k] = o[k];
+    return out;
+  }
+  function canonSession(doc) {
+    var s = orderKeys(doc, ["id", "date", "dayId", "planId", "entries"]);
+    if (isObj(s.entries)) {
+      var ents = {};
+      Object.keys(s.entries).forEach(function (exId) {
+        var e = orderKeys(s.entries[exId], ["sets", "note", "rx"]);
+        if (Array.isArray(e.sets)) e.sets = e.sets.map(function (x) { return orderKeys(x, ["w", "r"]); });
+        if (isObj(e.rx)) e.rx = orderKeys(e.rx, ["s", "lo", "hi", "k"]);
+        ents[exId] = e;
+      });
+      s.entries = ents;
+    }
+    return s;
+  }
+  function canonBw(doc) { return orderKeys(doc, ["date", "kg"]); }
+
+  /* restorePayload(rows)
+       → { ok, log, bw, plans, counts:{ sessions, bodyweight, plans },
+           problems:[string], notes:[string] }
+
+     `rows` is what sync.js pulled: { sessions:[{doc}], bodyweight:[{doc}],
+     plans:[{doc}], user_state:{log_meta, plan_meta} | null }. Rows the
+     server soft-deleted are excluded by the query, not here.
+
+     Builds the three LOCAL store objects the way the app would have written
+     them: `log` is user_state.log_meta plus `sessions` (sorted by date, the
+     order every save keeps, each document re-ordered to the builder's key
+     order - see orderKeys above), `bw` is { schemaVersion, entries }, `plans`
+     is plan_meta plus `plans`, or null when the backup holds no plan at all.
+
+     REFUSED WHOLE on any problem (ok:false, log/bw/plans null): one document
+     that fails validateSessionDoc means the payload is not written to disk,
+     and `problems` names every failing document and why. A restore that
+     writes 29 good sessions and drops the 30th is B-02 in new clothes.
+
+     THE ONE FACT IT ASSERTS: when the backup carries no user_state row, or a
+     log_meta without a numeric schemaVersion, the rebuilt log is stamped
+     SCHEMA_VERSION and a note says so. That is true by construction — the
+     backup client did not exist before schema 5 — and it is what stops
+     migrateStore reading the store as v1 and marking every restored session
+     dateBasis:"utc". Sessions that really were UTC-dated carry the marker in
+     their own document and keep it. Never throws. */
+  function restorePayload(rows) {
+    var out = { ok: false, log: null, bw: null, plans: null,
+                counts: { sessions: 0, bodyweight: 0, plans: 0 }, problems: [], notes: [] };
+    try {
+      if (!isObj(rows)) { out.problems.push("restore payload is not an object"); return out; }
+      var sess = [], bws = [], pls = [];
+      var us = isObj(rows.user_state) ? rows.user_state : null;
+
+      if (rows.sessions !== undefined && !Array.isArray(rows.sessions)) out.problems.push("sessions is not an array");
+      else (rows.sessions || []).forEach(function (r, i) {
+        var doc = isObj(r) ? r.doc : undefined;
+        var v = validateSessionDoc(doc);
+        if (!v.ok) v.problems.forEach(function (m) { out.problems.push("session " + docLabel(doc) + " (row " + i + "): " + m); });
+        else sess.push(canonSession(doc));
+      });
+      if (rows.bodyweight !== undefined && !Array.isArray(rows.bodyweight)) out.problems.push("bodyweight is not an array");
+      else (rows.bodyweight || []).forEach(function (r, i) {
+        var doc = isObj(r) ? r.doc : undefined;
+        var v = validateBwDoc(doc);
+        if (!v.ok) v.problems.forEach(function (m) { out.problems.push("bodyweight row " + i + ": " + m); });
+        else bws.push(canonBw(doc));
+      });
+      if (rows.plans !== undefined && !Array.isArray(rows.plans)) out.problems.push("plans is not an array");
+      else (rows.plans || []).forEach(function (r, i) {
+        var doc = isObj(r) ? r.doc : undefined;
+        if (!isObj(doc) || typeof doc.planId !== "string" || doc.planId.trim() === "")
+          out.problems.push("plan row " + i + ": plan.planId is required and must be a non-empty string");
+        else if (doc.days !== undefined && !Array.isArray(doc.days))
+          out.problems.push("plan row " + i + ": plan.days must be an array");
+        else pls.push(doc);
+      });
+      if (us && us.log_meta !== undefined && us.log_meta !== null && !isObj(us.log_meta)) out.problems.push("user_state.log_meta is not an object");
+      if (us && us.plan_meta !== undefined && us.plan_meta !== null && !isObj(us.plan_meta)) out.problems.push("user_state.plan_meta is not an object");
+      if (us && isObj(us.log_meta) && us.log_meta.sessions !== undefined) out.problems.push("user_state.log_meta carries a sessions key");
+      if (out.problems.length) return out;
+
+      var log = {};
+      if (us && isObj(us.log_meta)) Object.keys(us.log_meta).forEach(function (k) { log[k] = us.log_meta[k]; });
+      if (typeof log.schemaVersion !== "number") {
+        log.schemaVersion = SCHEMA_VERSION;
+        out.notes.push(us ? "log_meta had no schemaVersion; stamped " + SCHEMA_VERSION
+                          : "backup has no user_state row; log stamped schema " + SCHEMA_VERSION + " with default state");
+      }
+      if (log.includeCut === undefined) log.includeCut = false;
+      log.sessions = sortSessions(sess);
+
+      var bw = { schemaVersion: SCHEMA_VERSION, entries: bws.slice().sort(function (a, b) {
+        return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }) };
+
+      var plans = null;
+      var pm = (us && isObj(us.plan_meta)) ? us.plan_meta : {};
+      if (pls.length || Object.keys(pm).length) {
+        plans = {};
+        Object.keys(pm).forEach(function (k) { plans[k] = pm[k]; });
+        plans.plans = pls;
+        if (typeof plans.schemaVersion !== "number") plans.schemaVersion = SCHEMA_VERSION;
+      }
+
+      out.ok = true; out.log = log; out.bw = bw; out.plans = plans;
+      out.counts = { sessions: sess.length, bodyweight: bws.length, plans: pls.length };
+      return out;
+    } catch (err) {
+      out.problems.push("restorePayload failed: " + (err && err.message));
+      return out;
+    }
+  }
+
+  /* agoText(fromMs, nowMs) → "just now" | "N min ago" | "N h ago" |
+     "yesterday" | "N days ago" | "" when fromMs is unusable. Minutes and
+     hours are elapsed time; from a day on it is the LOCAL calendar gap, so
+     23:50 versus 00:10 reads "yesterday" and never "0 days ago". */
+  function agoText(fromMs, nowMs) {
+    if (typeof fromMs !== "number" || !isFinite(fromMs)) return "";
+    var now = (typeof nowMs === "number" && isFinite(nowMs)) ? nowMs : Date.now();
+    var d = now - fromMs;
+    if (d < 60000) return "just now";
+    if (d < 3600000) return Math.floor(d / 60000) + " min ago";
+    var days = dayGap(localDate(new Date(fromMs)), localDate(new Date(now)));
+    if (days === null || days < 1) return Math.floor(d / 3600000) + " h ago";
+    return days === 1 ? "yesterday" : days + " days ago";
+  }
+
   /* ============================================================== advice
      The verdict engine. Every rule below is written by strength-coach and
      cited by id: P1 (audit §3), H1 (audit §9), S1 (audit §10), and the
@@ -6905,6 +7306,18 @@
     planTrainingWeekdays: planTrainingWeekdays,
     planRestWeekdays: planRestWeekdays,
     migrateStore: migrateStore,
+    /* E-3 — backup and restore, the pure half of sync.js. backupPayload
+       serialises the three stores into the rows the server upserts and NAMES
+       every document it will not send; restorePayload rebuilds the stores from
+       pulled rows and refuses WHOLE on one bad document. validateSessionDoc /
+       validateBwDoc mirror schema.sql. Nothing here touches network, storage
+       or the DOM. */
+    validateSessionDoc: validateSessionDoc,
+    validateBwDoc: validateBwDoc,
+    backupPayload: backupPayload,
+    backupSig: backupSig,
+    restorePayload: restorePayload,
+    agoText: agoText,
     /* WO-005 W2b — the pure sample-data generator. Writes nothing, reads no
        clock it was not handed, and every session it builds carries demo:true
        (WO-004 C-14). Not wired to any UI: W13b, the sandbox, is out of scope.

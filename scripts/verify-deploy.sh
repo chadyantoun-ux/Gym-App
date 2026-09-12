@@ -54,16 +54,16 @@ fi
 command -v curl >/dev/null 2>&1 || { echo "FATAL: curl not found"; exit 2; }
 
 # --------------------------------------------------------------------------
-# THE TEN. Every file a released build must serve, in the order deploy.md
+# THE ELEVEN. Every file a released build must serve, in the order deploy.md
 # uploads them. Format: <path>|<substring the content-type MUST contain>
 #
-# Six core files plus four icons. The icons are NOT optional: manifest.web-
+# Seven core files plus four icons (sync.js since E-3). The icons are NOT optional: manifest.web-
 # manifest names them by path, so a 404 on one is a degraded install (no
 # home-screen icon, and on iOS no icon at all), and sw.js refuses to commit a
 # cache entry for a non-200, which fails the install outright.
 #
-# Keep this list identical to the file list in docs/deploy.md. If you add an
-# eleventh file to the deploy, add it here in the same commit - a file that is
+# Keep this list identical to the file list in docs/deploy.md. If you add a
+# twelfth file to the deploy, add it here in the same commit - a file that is
 # deployed but unverified is the same risk this script was written for.
 # --------------------------------------------------------------------------
 CORE_FILES='
@@ -73,6 +73,7 @@ tests.html|text/html
 assets/archivo-inline.css|text/css
 manifest.webmanifest|json
 sw.js|javascript
+sync.js|javascript
 '
 
 # The icons the manifest names. A 404 here is a degraded install, and it was
@@ -180,7 +181,7 @@ echo
 # A subshell in a pipeline cannot update FAILED, so feed the loop from a file.
 printf '%s\n%s\n' "$CORE_FILES" "$ICON_FILES" | grep '|' > "$TMP/list"
 
-echo "--- the ten files a release must serve: six core, plus the four icons the manifest names"
+echo "--- the eleven files a release must serve: seven core, plus the four icons the manifest names"
 while IFS='|' read -r p c; do
   [ -n "$p" ] || continue
   check_one "$p" "$c"
