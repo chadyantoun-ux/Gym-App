@@ -175,7 +175,7 @@ tree, so a blanket add sweeps another agent's half-written file into your commit
 an unrelated commit. Nothing was lost, but code was committed before its author had finished or
 reported it, and the history now attributes it to the wrong change.
 
-**Never  a branch in the shared tree from inside an agent.** On 2026-09-12 a QA agent
+**Never `git checkout` a branch in the shared tree from inside an agent.** On 2026-09-12 a QA agent
 checked out its own lane's branch while a second lane was mid-flight; the second lane's commits landed on
 the wrong branch until the main session repointed it. Nothing was lost, but only because the two trees
 happened to be identical. The main session sets the branch before dispatch and the brief names it; two
