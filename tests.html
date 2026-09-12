@@ -55,7 +55,22 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 706 / 706 / 0, no skips.</b> <b>S38</b> (WO-009 W4, 2026-09-12) added 17: the photo map on the plan
+<b>Today: 718 / 718 / 0, no skips.</b> <b>S39</b> (WO-009 Lane A W6, the QA pass, 2026-09-12) added 12: the photo map
+<b>re-derived from &sect;17.2&rsquo;s own columns</b> (named id, fallback, eye-check cell) rather than from &sect;17.8&rsquo;s answer
+list, so S38 and S39 are two transcriptions from two places and agree; <code>assets/ex/map.json</code> (32 slots &rarr; 24 ids)
+against <code>assets/ex/manifest.json</code> (24 ids &rarr; 48 files, sizes, the pinned upstream SHA) against
+<code>figFor</code> &mdash; every mapped id has both frames, no manifest id is unmapped, <b>24 / 48</b> (&sect;17.8&rsquo;s
+&ldquo;23 / 46&rdquo; is a miscount, for the PM); the one non-3:2 pair named (<code>Hack_Squat</code>, square) so
+<code>index.html</code>&rsquo;s dimension table has exactly one row to carry; the &sect;17.3 register as the eye check left it
+(<code>d5b</code> <code>30&ndash;35&deg;</code> kept, <code>d5j</code> rope added, <code>d4h</code> moot), the &sect;17.5 branch
+(<code>d2d</code> / <code>d4e</code> both none) and the &sect;17.4 reversals; UX &sect;11.7 on all 42 cues; <code>SCHEMA_VERSION</code>
+5 with no new migration note; the restore path with <code>fig</code> on a backup copy (good: byte for byte; <code>../x</code>:
+refused whole, in words); and the traversal attack at its first layer &mdash; twenty path-shaped <code>fig</code> values refused
+by <code>validatePlan</code> naming the field, every shipped id a bare path segment. Mutation-checked: remapping <code>d2a</code>,
+shipping <code>d1e</code>&rsquo;s failed named id and dropping the angle from <code>d5b</code>&rsquo;s cue turn 13 tests red
+across S38 and S39. The browser half &mdash; cold offline, 57 cache entries, zero 404s, every photo decoding in every mapped
+slot, the draft surviving, byte-identical stores, the blocked-image states, 44 px, 200 % &mdash; is &ldquo;Already proven&rdquo;
+item 35. <b>S38</b> (WO-009 W4, 2026-09-12) added 17: the photo map on the plan
 document &mdash; the full <code>figFor</code> table for all 42 slots typed from addendum &sect;17.2/&sect;17.8 (32 ids,
 10 nulls, by id), <b>no <code>fig</code> key on any row the eye check failed or that has no source</b>
 (<code>d1b d1c d1f d2d d3b d3e d3f d3g d4e d4h</code>), none of the eight failed upstream ids anywhere on the plan, the
@@ -13592,6 +13607,295 @@ T("W4 - up to the end of S38 no fixture wrote a phat:* key (the suite tripwire, 
 });
 
 
+/* ============================================================ S39 - WO-009 Lane A W6, the QA pass on the photographs
+   What the browser rig of 2026-09-12 ("Already proven" item 35) found that
+   the pure half can pin, plus the W6 criteria the work order names for
+   file://. S38 pinned the map from the ANSWER (17.8's by-slot list). This
+   section re-derives it from the QUESTION - 17.2's row shape (named id,
+   fallback, eye-check status) - so the two transcriptions were made from
+   two columns and a mistake in either lands red. Then the two files a phone
+   installs from (assets/ex/map.json, assets/ex/manifest.json) are pinned
+   against each other and against the plan, the 17.3 register and the 17.5
+   branch are pinned as recorded, the restore path is pinned for a copy
+   carrying fig (good and bad), and the traversal attack is proved at the
+   first of its two layers (validatePlan). The second layer - figBody's
+   esc() and the src it builds - is index.html and is observed, not asserted
+   (see "Not testable"). */
+group("S39 WO-009 W6 / QA pass / 17.2 rows / map.json vs manifest.json / 17.3 register / 17.5 branch / restore / traversal");
+
+/* 17.2, typed from its columns: the id the row NAMES, the fallback the row
+   itself names (only d1e and d5c have one), and the Eye check cell as read
+   on 2026-09-12. `none` is 17.2's own status for d1c / d3b (no source). The
+   expected fig is derived below, never typed: pass -> the named id, or the
+   fallback where the row says the fallback passed instead. */
+var ROWS17 = {
+  d1a: { id: "Bent_Over_Barbell_Row", eye: "pass" },
+  d1b: { id: "Weighted_Pull_Ups", eye: "fail" },
+  d1c: { id: null, eye: "none" },
+  d1d: { id: "Dumbbell_Bench_Press", eye: "pass" },
+  d1e: { id: "Dips_-_Triceps_Version", eye: "fail", fallback: "Dips_-_Chest_Version", fallbackEye: "pass" },
+  d1f: { id: "Seated_Dumbbell_Press", eye: "fail" },
+  d1g: { id: "EZ-Bar_Curl", eye: "pass" },
+  d1h: { id: "EZ-Bar_Skullcrusher", eye: "pass" },
+  d2a: { id: "Barbell_Squat", eye: "pass" },
+  d2b: { id: "Hack_Squat", eye: "pass" },
+  d2c: { id: "Leg_Extensions", eye: "pass" },
+  d2d: { id: "Stiff-Legged_Barbell_Deadlift", eye: "fail" },
+  d2e: { id: "Lying_Leg_Curls", eye: "pass" },
+  d2f: { id: "Standing_Calf_Raises", eye: "pass" },
+  d2g: { id: "Seated_Calf_Raise", eye: "pass" },
+  d3a: { id: "Bent_Over_Barbell_Row", eye: "pass" },           /* with d1a */
+  d3b: { id: null, eye: "none" },
+  d3c: { id: "Seated_Cable_Rows", eye: "pass" },
+  d3d: { id: "One-Arm_Dumbbell_Row", eye: "pass" },
+  d3e: { id: "Close-Grip_Front_Lat_Pulldown", eye: "fail" },
+  d3f: { id: "Seated_Dumbbell_Press", eye: "fail" },           /* with d1f */
+  d3g: { id: "Upright_Barbell_Row", eye: "fail" },
+  d3h: { id: "Side_Lateral_Raise", eye: "pass" },
+  d4a: { id: "Barbell_Squat", eye: "pass" },                   /* with d2a */
+  d4b: { id: "Hack_Squat", eye: "pass" },                      /* with d2b */
+  d4c: { id: "Leg_Press", eye: "pass" },
+  d4d: { id: "Leg_Extensions", eye: "pass" },                  /* with d2c */
+  d4e: { id: "Romanian_Deadlift", eye: "fail" },
+  d4f: { id: "Lying_Leg_Curls", eye: "pass" },                 /* with d2e */
+  d4g: { id: "Seated_Leg_Curl", eye: "pass" },
+  d4h: { id: "Donkey_Calf_Raises", eye: "fail" },
+  d4i: { id: "Seated_Calf_Raise", eye: "pass" },               /* with d2g */
+  d5a: { id: "Dumbbell_Bench_Press", eye: "pass" },            /* with d1d */
+  d5b: { id: "Incline_Dumbbell_Press", eye: "pass" },
+  d5c: { id: "Machine_Bench_Press", eye: "pass", fallback: "Leverage_Chest_Press", fallbackEye: "fail" },
+  d5d: { id: "Incline_Cable_Flye", eye: "pass" },
+  d5e: { id: "Preacher_Curl", eye: "pass" },
+  d5f: { id: "Concentration_Curls", eye: "pass" },
+  d5g: { id: "Spider_Curl", eye: "pass" },
+  d5h: { id: "Close-Grip_Barbell_Bench_Press", eye: "pass" },
+  d5i: { id: "EZ-Bar_Skullcrusher", eye: "pass" },             /* with d1h */
+  d5j: { id: "Triceps_Pushdown_-_Rope_Attachment", eye: "pass" }
+};
+function figExpected17(row){
+  if (row.eye === "pass") return row.id;
+  if (row.fallback && row.fallbackEye === "pass") return row.fallback;
+  return null;
+}
+
+/* assets/ex/manifest.json, the rows a phone installs from, transcribed on
+   2026-09-12 from the file `scripts/make-photos.mjs` wrote at upstream
+   a859101. `photos` is one row per id with the pixel size of both frames;
+   `files` is the 48 paths in deploy order. A regenerated set (new id, new
+   size, new bytes) must be re-pinned HERE, and that is the point: a new
+   photo set is a sw.js VERSION bump by that file's own header rule, and a
+   pin that forces someone to look at the manifest is how the bump is not
+   forgotten. The on-disk file was checked against this literal in Node on
+   2026-09-12 (48 rows, 24 ids, every sha256 and every JPEG SOF size equal). */
+var MANIFEST_SHA = "a859101d633a01c4a1a920d6a8ce41dabba0705f";
+var MANIFEST_PHOTOS = {
+  "Barbell_Squat": [320, 213], "Bent_Over_Barbell_Row": [320, 213], "Close-Grip_Barbell_Bench_Press": [320, 213],
+  "Concentration_Curls": [320, 213], "Dips_-_Chest_Version": [320, 213], "Dumbbell_Bench_Press": [320, 213],
+  "EZ-Bar_Curl": [320, 213], "EZ-Bar_Skullcrusher": [320, 213], "Hack_Squat": [320, 320],
+  "Incline_Cable_Flye": [320, 213], "Incline_Dumbbell_Press": [320, 213], "Leg_Extensions": [320, 213],
+  "Leg_Press": [320, 213], "Lying_Leg_Curls": [320, 213], "Machine_Bench_Press": [320, 213],
+  "One-Arm_Dumbbell_Row": [320, 213], "Preacher_Curl": [320, 213], "Seated_Cable_Rows": [320, 213],
+  "Seated_Calf_Raise": [320, 213], "Seated_Leg_Curl": [320, 213], "Side_Lateral_Raise": [320, 213],
+  "Spider_Curl": [320, 213], "Standing_Calf_Raises": [320, 213], "Triceps_Pushdown_-_Rope_Attachment": [320, 213]
+};
+var MANIFEST_COUNTS = { slots: 32, ids: 24, count: 48, bytes: 740232, width: 320 };
+function manifestFiles(){ var out = [], k; for (k in MANIFEST_PHOTOS) { out.push("assets/ex/" + k + "-0.jpg"); out.push("assets/ex/" + k + "-1.jpg"); } return out.sort(); }
+function figSetOnPlan(){ var seen = {}, out = []; allEx(P.PHAT_PLAN).forEach(function(x){ var f = P.figFor(x.id); if (f !== null && !seen[f]) { seen[f] = true; out.push(f); } }); return out.sort(); }
+
+/* ------------------------------------------------------ 1. the map, re-derived from 17.2's rows */
+
+T("W6 (headline) - figFor over all 42 slots equals the fig DERIVED from 17.2's rows (named id + fallback + eye check), independently of S38's answer table: 32 pass, 8 fail, 2 none", function(a){
+  var ids = allEx(P.PHAT_PLAN).map(function(e){ return e.id; }), k, n = { ships: 0, fail: 0, none: 0 };
+  a.deep(ids.slice().sort(), Object.keys(ROWS17).sort(), "42 rows, the plan's ids exactly");
+  for (k in ROWS17) {
+    if (figExpected17(ROWS17[k]) !== null) n.ships++; else n[ROWS17[k].eye]++;
+    a.eq(P.figFor(k), figExpected17(ROWS17[k]), "figFor(" + k + ") vs 17.2 row " + JSON.stringify(ROWS17[k]));
+  }
+  a.deep(n, { ships: 32, fail: 8, none: 2 }, "the tally: 32 ship (31 named ids at pass + d1e on its fallback), 8 fail with no passing fallback, 2 none");
+  /* d1e is the one row whose FALLBACK shipped; d5c's fallback failed and its named id passed */
+  a.eq(P.figFor("d1e"), "Dips_-_Chest_Version");
+  a.ne(P.figFor("d1e"), "Dips_-_Triceps_Version", "the named id failed (feet cropped, order reversed, bystander)");
+  a.eq(P.figFor("d5c"), "Machine_Bench_Press");
+  a.ne(P.figFor("d5c"), "Leverage_Chest_Press", "the fallback failed and was not needed");
+  /* and S38's table agrees with this derivation, so the two transcriptions cannot have diverged */
+  for (k in FIG42) a.eq(figExpected17(ROWS17[k]), FIG42[k], "S38's FIG42[" + k + "] vs the 17.2 derivation");
+});
+
+T("W6 - every 17.2 row at fail or none has NO fig key; every row at pass has one; the eight failed ids and both unused fallbacks appear nowhere", function(a){
+  var k, e, figs = [];
+  for (k in ROWS17) {
+    e = P.exById(P.PHAT_PLAN, k);
+    a.eq(Object.prototype.hasOwnProperty.call(e, "fig"), ROWS17[k].eye === "pass" || (ROWS17[k].fallbackEye === "pass"), k + " carries a fig key iff its row passed");
+    if (typeof e.fig === "string") figs.push(e.fig);
+  }
+  var banned = ["Weighted_Pull_Ups", "Dips_-_Triceps_Version", "Seated_Dumbbell_Press", "Stiff-Legged_Barbell_Deadlift",
+                "Close-Grip_Front_Lat_Pulldown", "Upright_Barbell_Row", "Romanian_Deadlift", "Donkey_Calf_Raises",
+                "Leverage_Chest_Press", "Glute_Ham_Raise", "Dumbbell_Shrug", "Inverted_Row", "Bench_Dips", "Barbell_Hack_Squat"], i;
+  for (i = 0; i < banned.length; i++) a.ok(figs.indexOf(banned[i]) < 0, banned[i] + " must not be on the plan");
+});
+
+/* ------------------------------------------------------ 2. map.json vs manifest.json vs the plan */
+
+T("W6 (headline) - map.json (32 slots -> 24 ids) and manifest.json (24 ids -> 48 files) agree with each other and with figFor: every mapped id has both frames, no manifest id is unmapped, 24 / 48", function(a){
+  var mapIds = {}, k, i, ids = [], files = manifestFiles();
+  for (k in MAPJSON) mapIds[MAPJSON[k]] = true;
+  for (k in mapIds) ids.push(k);
+  ids.sort();
+  a.eq(ids.length, 24, "24 distinct ids in map.json");
+  a.deep(ids, Object.keys(MANIFEST_PHOTOS).sort(), "manifest ids == map ids, neither side has an extra");
+  a.deep(ids, figSetOnPlan(), "== the fig set on the plan");
+  a.eq(files.length, 48, "48 files");
+  for (i = 0; i < ids.length; i++) {
+    a.ok(files.indexOf("assets/ex/" + ids[i] + "-0.jpg") >= 0, ids[i] + " start frame in the manifest");
+    a.ok(files.indexOf("assets/ex/" + ids[i] + "-1.jpg") >= 0, ids[i] + " end frame in the manifest");
+  }
+  a.eq(Object.keys(MAPJSON).length, MANIFEST_COUNTS.slots, "manifest header slots");
+  a.eq(ids.length, MANIFEST_COUNTS.ids, "manifest header ids");
+  a.eq(files.length, MANIFEST_COUNTS.count, "manifest header count");
+  a.ok(MANIFEST_COUNTS.bytes <= 1500000, "the set is under W3's 1.5 MB ceiling: " + MANIFEST_COUNTS.bytes);
+  a.eq(MANIFEST_SHA.length, 40, "the upstream commit is pinned by full SHA");
+  /* 17.8's "23 distinct / 46 files" is a miscount; the coach's file is not in W6's list, so the
+     PM is told and the number is pinned here as 24 / 48 */
+  a.ne(ids.length, 23); a.ne(files.length, 46);
+});
+
+T("W6 - every photo is at most 320 wide and every frame's box is known: exactly ONE id is not 320 x 213 (Hack_Squat, square at source), so index.html's per-file dimension table has exactly one row to carry", function(a){
+  var k, odd = [];
+  for (k in MANIFEST_PHOTOS) {
+    a.ok(MANIFEST_PHOTOS[k][0] <= 320, k + " width " + MANIFEST_PHOTOS[k][0]);
+    a.eq(MANIFEST_PHOTOS[k][0], 320, k + " is resized to the cap, not smaller");
+    if (MANIFEST_PHOTOS[k][1] !== 213) odd.push(k);
+  }
+  a.deep(odd, ["Hack_Squat"], "the one non-3:2 pair (UX 11.6: W3 names it, W5 writes its real attributes - FIG_DIM in index.html; a second row here means a second row there)");
+  a.deep(MANIFEST_PHOTOS.Hack_Squat, [320, 320]);
+});
+
+/* ------------------------------------------------------ 3. the 17.3 register and the 17.5 branch */
+
+T("W6 / 17.3 - the F1p.3(a) register as the eye check left it: d5b's cue carries 30–35° (kept), d5j's carries the rope (added), d4h is none so its release is moot", function(a){
+  a.eq(P.figFor("d5b"), "Incline_Dumbbell_Press", "d5b ships a photograph");
+  a.ok(P.exById(P.PHAT_PLAN, "d5b").cue.indexOf("30–35°") >= 0, "so its cue MUST carry the angle (the photo shows an incline, not the incline): " + P.exById(P.PHAT_PLAN, "d5b").cue);
+  a.eq(P.figFor("d5j"), "Triceps_Pushdown_-_Rope_Attachment", "d5j ships a photograph");
+  a.ok(/\brope\b/i.test(P.exById(P.PHAT_PLAN, "d5j").cue), "so its cue MUST name the rope (the side view cannot show it spreading): " + P.exById(P.PHAT_PLAN, "d5j").cue);
+  a.eq(P.figFor("d4h"), null, "d4h is none (no block under the forefoot) - the hips-bent release never engaged");
+  a.ok(/hips bent/.test(P.exById(P.PHAT_PLAN, "d4h").cue), "and its cue is unchanged (17.3: the cue stays because it is a good cue, not because a figure needs it)");
+});
+
+T("W6 / 17.5 - the pair test's recorded branch: d2d none, d4e none, both fail on bar height; neither hinge ships a photograph", function(a){
+  a.eq(P.figFor("d2d"), null); a.eq(P.figFor("d4e"), null);
+  a.eq(Object.prototype.hasOwnProperty.call(P.exById(P.PHAT_PLAN, "d2d"), "fig"), false);
+  a.eq(Object.prototype.hasOwnProperty.call(P.exById(P.PHAT_PLAN, "d4e"), "fig"), false);
+  /* both cues still render - the cue-only state, 11.10 */
+  a.ok(P.exById(P.PHAT_PLAN, "d2d").cue.length > 0); a.ok(P.exById(P.PHAT_PLAN, "d4e").cue.length > 0);
+});
+
+T("W6 / 17.4 - the two reversible slots ship their DEFAULT lift's photo today (d2e Lying_Leg_Curls, d3d One-Arm_Dumbbell_Row); the reversal ids are not on the plan, and d2e/d4f still share", function(a){
+  a.eq(P.figFor("d2e"), "Lying_Leg_Curls"); a.eq(P.figFor("d4f"), "Lying_Leg_Curls");
+  a.eq(P.figFor("d3d"), "One-Arm_Dumbbell_Row");
+  var figs = allEx(P.PHAT_PLAN).map(function(x){ return x.fig; });
+  a.ok(figs.indexOf("Glute_Ham_Raise") < 0, "GHR failed its eye check; a d2e reversal would be none");
+  a.ok(figs.indexOf("Dumbbell_Shrug") < 0, "the shrug passed but B-65 has not been called");
+});
+
+/* ------------------------------------------------------ 4. UX 11.7 on the cues beside a photograph */
+
+T("W6 / UX 11.7 - all 42 cues: one sentence, <= 90 characters, no exclamation, no emoji, ends in a full stop; longest named", function(a){
+  var ex = allEx(P.PHAT_PLAN), i, c, longest = "", lid = "";
+  for (i = 0; i < ex.length; i++) {
+    c = ex[i].cue;
+    a.ok(typeof c === "string" && c.trim() !== "", ex[i].id + " has a cue");
+    a.ok(c.length <= 90, ex[i].id + " cue is " + c.length + " chars");
+    a.ok(c.indexOf("!") < 0, ex[i].id + " no exclamation");
+    a.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(c), ex[i].id + " no emoji");
+    a.match(c, /\.$/, ex[i].id + " ends in a full stop");
+    a.eq(c.split(/\.\s/).length, 1, ex[i].id + " is one sentence");
+    if (c.length > longest.length) { longest = c; lid = ex[i].id; }
+  }
+  a.eq(lid, "d3d", "the longest cue is d3d's, " + longest.length + " chars (2 lines at 200 % on a 400 px phone, measured - item 35)");
+});
+
+/* ------------------------------------------------------ 5. SCHEMA_VERSION and boot writes */
+
+T("W6 - SCHEMA_VERSION is 5; this branch adds no migration: a v4 store gets exactly the one schema-5 note main gave it, and no note anywhere mentions fig or photo", function(a){
+  a.eq(P.SCHEMA_VERSION, 5);
+  var log4 = E3LOG([E3SESS(1, "2026-09-09")], { schemaVersion: 4 }), bw = E3BW([{ date: "2026-09-09", kg: 85 }]);
+  var copy = P.copyPlan(P.PHAT_PLAN, "my PHAT", "2026-09-01").plan;
+  var plans = { schemaVersion: 5, plans: [copy], activePlanId: copy.planId };   /* the plan store has no v4 of its own to leave behind; a 4 here earns the pre-existing "plan store normalised" note (S25), which is not this branch's */
+  var sJ = JSON.stringify(log4.sessions), pJ = JSON.stringify(plans);
+  var r = P.migrateStore(log4, bw, plans);
+  a.eq(r.log.schemaVersion, 5, "the version moves");
+  a.eq(JSON.stringify(r.log.sessions), sJ, "sessions byte-identical");
+  a.eq(r.bwChanged, false); a.eq(r.plansChanged, false);
+  a.eq(JSON.stringify(r.plans), pJ, "the stored copy (with fig) byte-identical");
+  a.eq(r.notes.length, 1, JSON.stringify(r.notes));
+  a.match(r.notes[0].msg, /^Schema 5: entries may now carry rx/);
+  a.ok(!/fig|photo/i.test(JSON.stringify(r.notes)), "no note about the photographs: they are not a store fact");
+  /* and a v5 store with the same copy: nothing at all */
+  var log5 = E3LOG([E3SESS(1, "2026-09-09")]), plans5 = { schemaVersion: 5, plans: [copy], activePlanId: copy.planId };
+  var lJ = JSON.stringify(log5), p5J = JSON.stringify(plans5), bJ = JSON.stringify(bw);
+  var r5 = P.migrateStore(log5, bw, plans5);
+  a.eq(r5.changed, false); a.deep(r5.notes, []);
+  a.eq(JSON.stringify(r5.log), lJ); a.eq(JSON.stringify(r5.bw), bJ); a.eq(JSON.stringify(r5.plans), p5J);
+  a.eq(P.profilePass(r5.log, { bwCount: 1 }).changed, false, "profile already asked (null): the WO-008 pass is silent too - zero boot writes end to end (observed, item 35)");
+});
+
+/* ------------------------------------------------------ 6. the restore path with fig on a copy */
+
+T("W6 / R4 - a backup whose plan copy carries fig restores it byte for byte; a backup whose copy carries fig \"../x\" is refused WHOLE naming the plan and the field in words - nothing written", function(a){
+  var st = E3STORE(), copy = P.copyPlan(P.PHAT_PLAN, "Phone plan", "2026-09-01").plan;
+  var ps = { schemaVersion: P.SCHEMA_VERSION, plans: [copy], activePlanId: copy.planId };
+  var bp = P.backupPayload(st.log, st.bw, ps);
+  a.eq(bp.problems.length, 0, "the good copy goes up: " + JSON.stringify(bp.problems));
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  a.eq(P.exById(rp.plans.plans[0], "d2a").fig, "Barbell_Squat", "fig came back");
+  a.eq(Object.prototype.hasOwnProperty.call(P.exById(rp.plans.plans[0], "d1b"), "fig"), false, "and no key was minted onto a cue-only row");
+  a.eq(P.figFor("d2a"), "Barbell_Squat", "the restored copy is not what figFor reads anyway");
+  /* the attack: a hand-edited backup */
+  var evil = clone(copy); P.exById(evil, "d2a").fig = "../x";
+  var rows = ROWS(bp); rows.plans = [{ plan_id: evil.planId, doc: JSONB(evil) }];
+  var rp2 = P.restorePayload(rows);
+  a.eq(rp2.ok, false, "refused");
+  a.eq(rp2.log, null); a.eq(rp2.bw, null); a.eq(rp2.plans, null, "nothing to write");
+  a.eq(rp2.problems.length, 1, rp2.problems.join(" | "));
+  a.eq(rp2.problems[0], 'plan "Phone plan" (row 0): cannot open - exercise d2a has a malformed fig');
+  a.ok(!/\btype\b/.test(rp2.problems[0]), "no reason token in the sentence (B5)");
+  /* and the same document is refused on the way UP, so it never reaches a server every restore would refuse */
+  var bp2 = P.backupPayload(st.log, st.bw, { schemaVersion: P.SCHEMA_VERSION, plans: [evil], activePlanId: evil.planId });
+  a.ok(bp2.problems.length >= 1, "backupPayload names it: " + JSON.stringify(bp2.problems));
+});
+
+/* ------------------------------------------------------ 7. the traversal attack, layer one */
+
+T("W6 attack - validatePlan refuses every path-shaped fig on a copy, naming fig / type on the slot: ../x, ..\\x, %2e%2e/x, /etc/x, x/.., ./x, a NUL, a space, a quote, a tag, a URL, a query, a fragment, a dot", function(a){
+  var bad = ["../x", "..\\x", "%2e%2e/x", "/etc/x", "x/..", "./x", "x y", "Barbell Squat", "x\"y", "<img src=x>",
+             "https://evil.test/x", "x?y=1", "x#y", "x.jpg", ".", "..", "Barbell_Squat/", "․․/x", "Barbell_Squat\n", " Barbell_Squat"], i, c, v, f;
+  for (i = 0; i < bad.length; i++) {
+    c = P.copyPlan(P.PHAT_PLAN, "mine", TODAY).plan;
+    P.exById(c, "d2a").fig = bad[i];
+    v = P.validatePlan(c);
+    a.eq(v.ok, false, "must refuse fig=" + show(bad[i]));
+    f = v.problems.filter(function(q){ return q.scope === "ex" && q.field === "fig"; });
+    a.eq(f.length, 1, "exactly one problem for " + show(bad[i]) + ": " + JSON.stringify(v.problems));
+    a.deep(f[0], { scope: "ex", id: "d2a", field: "fig", reason: "type" });
+    a.eq(P.figFor("d2a"), "Barbell_Squat", "and figFor never saw it (reads the frozen shipped plan)");
+  }
+  /* layer one's gate on the shipped side: every fig on the plan is a bare path segment, so figBody's
+     "assets/ex/" + fig + "-0.jpg" cannot leave assets/ex/ - and PHAT_PLAN is frozen (S38), so nothing at
+     runtime can put a different string there */
+  var figs = allEx(P.PHAT_PLAN).map(function(x){ return x.fig; }).filter(function(f){ return f !== undefined; });
+  a.eq(figs.length, 32);
+  for (i = 0; i < figs.length; i++) a.match(figs[i], /^[A-Za-z0-9_\-]+$/, figs[i]);
+  for (i = 0; i < figs.length; i++) a.ok(figs[i].indexOf("..") < 0 && figs[i].indexOf("/") < 0 && figs[i].indexOf("\\") < 0, figs[i]);
+});
+
+/* ------------------------------------------------------ 8. the meta-tripwire, restated for this section */
+
+T("W6 - up to the end of S39 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S39 or earlier wrote into his history");
+});
+
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -13633,6 +13937,16 @@ T("SUITE TRIPWIRE - no fixture wrote a phat:* key on this origin during the run"
 });
 
 /* ============================================================ contract questions */
+contract("<b>WO-009 / R4 &mdash; a display-only field can block a restore.</b> <code>validatePlan</code> types " +
+  "<code>fig</code> (W4: a non-id is <code>type</code>), and <code>restorePayload</code> refuses WHOLE on a plan it cannot " +
+  "open (R4). So a hand-edited backup whose plan copy carries <code>fig: \"../x\"</code> is refused with <i>plan " +
+  "\"Phone plan\" (row 0): cannot open - exercise d2a has a malformed fig</i> and nothing is written &mdash; correct by " +
+  "both rulings, and pinned as such in S39. The consequence: a field the app never READS off a copy (<code>figFor</code> " +
+  "reads the shipped plan) can keep thirty sessions from coming back until the backup is fixed by hand. Two honest " +
+  "options for the PM: keep it (a plan the app cannot open is refused, whatever the field &mdash; one rule, no " +
+  "exceptions), or have <code>restorePayload</code> / <code>normalisePlanStore</code> DROP an invalid <code>fig</code> from a " +
+  "copy with a note, since it is inert there anyway. QA recommends the first: an exception list is how the next " +
+  "unread field gets waved through. Not a defect today; no backup in existence carries a <code>fig</code>.");
 contract("<b>migrateStore return shape - now settled.</b> The work order fixed the signature but not the " +
   "return value. <code>logic.js</code> returns " +
   "<code>{log, bw, changed, logChanged, bwChanged, notes}</code>. The suite unwraps tolerantly and asserts " +
@@ -14532,10 +14846,29 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "would pin the extraction. <b>(3) The mid-call carry</b> (the module flips <code>busy</code> inside the call, " +
     "<code>paintBackup</code> repaints the block, the typed values must survive) is <code>index.html</code> DOM state and was " +
     "observed on a held request, not asserted. Re-run item 34&rsquo;s rig when <code>pwTap</code>, <code>vPwBlock</code>, " +
-    "<code>paintBackup</code>&rsquo;s carry, <code>changePassword</code> or <code>authMessage</code> change.</p>";
+    "<code>paintBackup</code>&rsquo;s carry, <code>changePassword</code> or <code>authMessage</code> change.</p>" +
+    "<p><b>WO-009 Lane A &mdash; the photographs: three things are <code>index.html</code>&rsquo;s and are observed (item 35), " +
+    "not asserted.</b> <b>(1) <code>figBody(id)</code></b> builds the two <code>&lt;img&gt;</code> from " +
+    "<code>PHAT.figFor(id)</code> through <code>esc()</code> with <code>alt=\"\"</code>, <code>loading=\"lazy\"</code>, " +
+    "<code>decoding=\"async\"</code>, the file&rsquo;s real <code>width</code>/<code>height</code> and an inline " +
+    "<code>onerror</code> that removes the node. It reads <code>cueFor</code> and <code>shippedName</code>, which read " +
+    "<code>S</code>, so it stays in <code>index.html</code>; the second layer of the traversal defence (the src it builds) is " +
+    "therefore proved in the browser &mdash; a copy with <code>fig: \"../x\"</code> booted, the app ran PHAT with the copy marked " +
+    "<i>Cannot open</i>, every <code>src</code> on screen matched <code>^assets/ex/[A-Za-z0-9_-]+-[01]\.jpg$</code> and the server " +
+    "log held no traversal path. S39 proves the first layer (<code>validatePlan</code>) and that every shipped id is a bare " +
+    "segment on a frozen document, which is what makes the second layer unreachable. <b>(2) <code>FIG_DIM</code></b>, the " +
+    "per-file pixel table (<code>Hack_Squat</code> 320 &times; 320, everything else 320 &times; 213), is hardcoded in " +
+    "<code>index.html</code> because a runtime read of the manifest is a request the offline rule forbids. S39 pins that the " +
+    "manifest has exactly that one odd row; a second odd row goes red there and names this table. " +
+    "<b>(3) <code>hasFig</code></b> = <code>figFor(id) !== null &amp;&amp; shippedName(id)</code> &mdash; the rename gate. Observed: " +
+    "rename <i>Squat</i> to <i>Leg press</i> on a copy and the disclosure is gone; rename it back and both photographs return. " +
+    "<b>One consequence to be aware of, not a defect:</b> a hand-edited backup whose plan copy carries a malformed " +
+    "<code>fig</code> is refused WHOLE by <code>restorePayload</code> (R4), because <code>validatePlan</code> types the field " +
+    "(W4) and R4 refuses a plan it cannot open. A display-only field can therefore block a restore until the backup is " +
+    "fixed by hand; pinned as-is in S39 and named in the contract questions for the PM.</p>";
 
   document.getElementById("manual").innerHTML =
-    "<p><b>Eight items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Nine items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -14643,7 +14976,21 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "never <i>Changing the password.</i> for good. If iOS or GBoard offers a generated password, let it fill the first field and " +
     "see whether it fills the second; a mismatch is refused with no call, so nothing is lost either way. Sign out, sign in with " +
     "the new one. Every step of this is proven on desktop (item 34); what only her phone can answer is the lock and the " +
-    "keyboard&rsquo;s autofill.</span></li></ol>" +
+    "keyboard&rsquo;s autofill.</span></li>" +
+
+    "<li><b>Hold the phone at arm&rsquo;s length on the gym floor and open three disclosures (WO-009, UX &sect;11.8 1&ndash;3).</b> " +
+    "Start Day 2. On <i>Squat</i>, tap <i>movement &amp; cue</i>: two photographs side by side, start on the left, end on the " +
+    "right, the cue under them. Cover the cue with a thumb and answer, in one second each: what lift is this, which frame " +
+    "would I copy, which way am I moving. Then <i>Hack squat</i> (the one square pair) and, on Day 5, <i>Rope pressdown</i>. " +
+    "Then open <i>Weighted pull-up</i> on Day 1: the cue alone, no box, no broken picture. If the phone is in greyscale mode, " +
+    "leave it there.<br><span class=\"skipmsg\">Why a phone: everything measurable is measured (item 35): all 32 mapped slots " +
+    "render both photographs from the cache with the radio off, each 178 &times; 119 at 400 px (178 &times; 178 for the hack " +
+    "squat), stacked start-above-end at 200 % text with no horizontal overflow, <code>.showfig</code> 400 &times; 44, the set " +
+    "inputs at the same pixel after the tap and after the decode, the ten cue-only slots with no <code>&lt;img&gt;</code>. " +
+    "What no rig can answer is UX &sect;11.11 #1 and #5: whether a 320 px file in a 178 px slot is <b>sharp enough on your " +
+    "3&times; screen</b> to name the lift from, and whether 368 &times; 119 of white-ground photograph is <b>too bright under gym " +
+    "light</b>. If either fails, say which slot: the fix is W3&rsquo;s cap moving to 360 px (a byte budget question) or a " +
+    "treatment the UX spec has deliberately not pre-authorised &mdash; not a runtime change QA can make.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -15489,6 +15836,84 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "burst of replays failed once and passed on the next run &mdash; the auth rate limit item 32 met, not the control. " +
     "<b>file:// suite 689 / 689 / 0, three tripwires; no test added &mdash; the reasons are under &ldquo;Not testable&rdquo;.</b>" +
     "</span></li>" +
+    "<li><b>WO-009 Lane A &mdash; the photographs, cold offline at 400 px and 200 %: 57 cache entries, zero 404s, all 48 " +
+    "files and all 32 mapped slots decoding from the cache with the radio off, the draft surviving a reload after a " +
+    "disclosure, byte-identical stores, the blocked and misrouted image states, the rename gate, the traversal attack, " +
+    "<code>verify-deploy.sh</code> 59/59 and <code>offline-check.mjs</code> PASS.</b> <span class=\"msg\">" +
+    "Run 2026-09-12 against <code>wo-009-photos @ 11fe0ab</code> (W3 <code>14ece0f</code>, W4 <code>13f782e</code>, W5 " +
+    "<code>11fe0ab</code>). Rig: Playwright headless Chromium at 400 &times; 850, a Node static server on 127.0.0.1:8799 " +
+    "serving the working tree with every request and status logged and two switches (serve one photo as a 200 " +
+    "<code>text/html</code>; serve one as non-JPEG bytes under <code>image/jpeg</code>), the real <code>sw.js</code> " +
+    "registered. Seed: <code>demoStore(42)</code> with every <code>reintro</code> counter at 99 so the seven cut-tier slots " +
+    "are on screen, <code>profile: null</code> (WO-008&rsquo;s one-shot stamp already asked), and a saved plan copy in " +
+    "<code>phat:v1:plans</code>. 833 checks, 0 failed, 0 page or console errors. Not checked in. " +
+    "<b>(A) Install online.</b> Worker active, cache <code>phat-shell-v5</code>, <b>57 entries</b> (2 core + 7 optional + 48 " +
+    "photos), all 48 photo paths held; 70 requests / 58 distinct during install, <b>zero 404s</b>. The seeded store with " +
+    "the plan copy booted with <b>zero writes</b> (every <code>phat:v1:*</code> value byte-identical to the seed) and was " +
+    "byte-identical again after a second boot. " +
+    "<b>(B) Offline cold reload.</b> <code>window.PHAT.PHAT_PLAN</code> alive, cache still 57, all 48 files decode through " +
+    "<code>new Image()</code> with <code>naturalWidth &gt; 0</code>. Every exercise on all five days opened: <b>32 mapped " +
+    "slots</b>, each two <code>&lt;img&gt;</code> with <code>src</code> <code>-0</code> then <code>-1</code>, decoded " +
+    "320 &times; 213 (Hack squat 320 &times; 320), <code>alt=\"\"</code> present and empty, <code>loading=lazy</code>, " +
+    "<code>decoding=async</code>, <code>width</code>/<code>height</code> attributes equal to the manifest and to the decoded " +
+    "size, start left and end right on one row, each <b>178.0 &times; 118.5</b> (&le; 50 % of the 368 content width), aspect " +
+    "preserved, no border / opacity / filter / radius, the cue below, the box&rsquo;s children exactly " +
+    "<code>img, img, p.figcue</code>; <b>10 cue-only slots</b> (<code>d1b d1c d1f d2d d3b d3e d3f d3g d4e d4h</code>) with " +
+    "no <code>&lt;img&gt;</code>, no border, children exactly <code>p.figcue</code>; <code>.showfig</code> <b>400 &times; 44</b> on " +
+    "all 42; no horizontal overflow anywhere. The server saw exactly 48 photo requests across the whole run: nothing was " +
+    "re-fetched after install. <b>The set input&rsquo;s document top:</b> identical after the tap and after the decode on " +
+    "every slot (e.g. <code>d2a</code> 342.59 &rarr; 342.59); it moves AT the tap by the disclosure&rsquo;s height &mdash; " +
+    "160.6 px for a 3:2 pair, 220.1 px for the square pair, 30.1 px for a cue alone &mdash; which is UX &sect;11.4/&sect;11.10 " +
+    "&ldquo;the card moves once, at the tap&rdquo;, the same as the SVG era. The work order&rsquo;s phrasing &ldquo;identical " +
+    "before the tap&rdquo; cannot hold for a disclosure that sits above the card; the criterion that matters (no reflow when the " +
+    "bytes land) holds. " +
+    "<b>(C) The draft.</b> Day 2, three sets typed on Squat (100/5, 102.5/5, 105/4), blurred &rarr; <code>phat:v1:draft</code> " +
+    "on disk. Opened the disclosure, photos decoded from cache: <b>no <code>phat:*</code> key changed</b> (five keys compared " +
+    "byte for byte). Offline reload &rarr; the offer sheet, Resume &rarr; all six values back in the inputs; the draft " +
+    "differed across the reload in <code>savedAt</code> only (the unload write). Photos still decoded after Resume. " +
+    "<b>(D) 200 % text at 400 px, offline.</b> All 32 pairs stacked start above end, each 368 &times; 244.9, within the content " +
+    "width, the cue below both at &le; 2 lines (longest: <code>d3d</code>, 58 chars, 2 lines &mdash; UX &sect;11.11 #3&rsquo;s " +
+    "three-line worry does not occur at 58 chars); no horizontal overflow; <code>.showfig</code> 44 tall; input steady after " +
+    "decode. <b>(E) Greyscale</b> (<code>filter: grayscale(1)</code> on the root): the squat and hack-squat pairs still read as " +
+    "two moments of one lift; the dark-gym hack-squat pair stays legible on <code>--bg</code>. Screenshots in the scratchpad. " +
+    "<b>(F) Rename gate.</b> A copy with <code>d2a</code> renamed <i>Leg press</i> &rarr; no disclosure at all; renamed back " +
+    "&rarr; both photographs return. A copy with <code>d2a.fig = \"Leg_Press\"</code> (a valid id, wrong slot) &rarr; still " +
+    "<code>Barbell_Squat</code> on screen: a copy&rsquo;s <code>fig</code> is inert. " +
+    "<b>(G) Traversal.</b> <code>validatePlan</code> refused the copy with <code>fig: \"../x\"</code> naming " +
+    "<code>{scope:ex, id:d2a, field:fig, reason:type}</code>; booted with it in <code>phat:v1:plans</code>, the app ran PHAT " +
+    "(copy marked broken), <code>d2a</code> showed <code>assets/ex/Barbell_Squat-0.jpg</code> / <code>-1.jpg</code>, every " +
+    "<code>src</code> matched <code>^assets/ex/[A-Za-z0-9_-]+-[01]\\.jpg$</code>, and the server log held no path with " +
+    "<code>..</code> in it. " +
+    "<b>(H) Blocked images</b> (worker unregistered, caches dropped, register stubbed to reject). <code>-1.jpg</code> aborted at " +
+    "the network layer &rarr; one <code>&lt;img&gt;</code> left (the start), the node <b>removed</b> (children " +
+    "<code>img, p.figcue</code>), survivor still 178 wide, cue y and input y unchanged to the pixel (auto-fill kept the " +
+    "track), input steady through the error, no glyph. Both aborted &rarr; children exactly <code>p.figcue</code>; the row " +
+    "collapsed to the cue after the tap (input 342.6 &rarr; 212.1), which is &sect;11.10&rsquo;s accepted both-missing state. " +
+    "<b>(I) A non-image under a photo&rsquo;s name.</b> (a) <code>Hack_Squat-1.jpg</code> served as 200 <code>text/html</code> " +
+    "&rarr; <code>usable()</code> refused it: cache <b>56</b>, that path absent; offline, <code>d2b</code> showed the start frame " +
+    "alone with the end node removed; online, the <code>&lt;img&gt;</code> fetched the HTML, failed to decode and was removed. " +
+    "Origin fixed, worker stopped (CDP <code>ServiceWorker.stopAllWorkers</code>, a phone&rsquo;s next launch), one load " +
+    "&rarr; <b>the refresh filled the gap: 57</b>, the path present. (b) Non-JPEG bytes served AS <code>image/jpeg</code> &rarr; " +
+    "<code>usable()</code> cached them (it checks the content-type, not the bytes &mdash; stated in <code>sw.js</code>; a " +
+    "same-path re-shoot needs a VERSION bump anyway); offline, the <code>&lt;img&gt;</code> failed to decode and the node was " +
+    "removed: start + cue, no glyph. <code>usable()</code> itself, loaded in a Node vm: <code>.jpg</code> 200 " +
+    "<code>image/jpeg</code> true; 200 <code>text/html</code> false; 404 false; opaque false; 206 false; <code>.jpeg</code> " +
+    "<code>text/plain</code> false; no content-type true; <code>.js</code> as <code>text/html</code> false; VERSION " +
+    "<code>v5</code>, SHELL 57, PHOTOS 48. " +
+    "<b>(J) Deploy.</b> <code>sh scripts/verify-deploy.sh http://127.0.0.1:8790</code> against a stand-in serving the tree with " +
+    "Vercel-like content types: <b>PASS 59/59</b> (eleven + 48, every photo 200 <code>image/jpeg</code> byte-identical). One " +
+    "JPEG hidden at the ORIGIN &rarr; exit <b>1</b>, <code>FAIL assets/ex/Leg_Press-1.jpg HTTP 404</code>. One JPEG removed from " +
+    "a <code>git archive</code> extract passed as TREE &rarr; exit <b>2</b>, <i>the photo lists DISAGREE &hellip; in manifest, not " +
+    "on disk: assets/ex/Leg_Press-1.jpg</i>, nothing fetched. <code>node scripts/offline-check.mjs</code>: <b>PASS</b>, 57 " +
+    "entries, 48/48 precached, 7a 48/48, 7b 50 of 50 (25 mapped slots on a fresh log; the seven the reduced-volume tier " +
+    "hides are the ones (B) covered with the counters raised), zero page errors. " +
+    "<b>(K) On disk, in Node.</b> <code>map.json</code> equals <code>figFor</code> over all 42 slots; its 24 ids equal the " +
+    "manifest&rsquo;s 24; 48 JPEGs, every byte count and sha256 equal to the manifest, every SOF size equal to the " +
+    "manifest&rsquo;s <code>w</code>/<code>h</code>, none wider than 320, total <b>740,232 bytes</b>; <code>sw.js</code> PHOTOS " +
+    "equals the manifest&rsquo;s 48 paths; <code>LICENSE.md</code> and <code>SOURCES.md</code> carry the pinned SHA; " +
+    "<code>index.html</code> holds <code>POSES</code> / <code>PAT</code> / <code>diagram(</code> / <code>limb(</code> only in " +
+    "the three-line retirement comment; no hex literal in the CSS outside <code>:root</code>. " +
+    "<b>file:// suite 718 / 718 / 0, three tripwires.</b></span></li>" +
     "</ol>";
 })();
 </script>
