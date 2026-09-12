@@ -2376,3 +2376,65 @@ He was told; he chose. Built properly.
 **Rules out:** a fourth stick-figure rebuild; a slot mapped to "the nearest photo"; a hand-typed photo
 list in any of the three deploy enumerations; fetching a photo from any origin at runtime; any
 `SCHEMA_VERSION` move for a display field.
+
+## 2026-09-12 — WO-009 Lane B (W6): the change-password control passes for release at `5ce6466`; no test added, and why; Diana's password is the original
+
+Verified `wo-009-password @ 5ce6466` — `changePassword` and the `USER_UPDATED` gate in `sync.js` (`97d6cee`),
+`vPwBlock` / `pwTap` in `index.html` (`5ce6466`). Suite **689 / 689 / 0**, three tripwires, unchanged count. The
+evidence is `tests.html` "Already proven" item 34; the "Not testable" section carries the reasons no `file://` test
+exists; manual item 8 gains the two things only Diana's phone can answer (the lock mid-call, the keyboard's autofill).
+
+**Pass for release.** The PM's eight-step path, run against the live project through the real `sync.js` and the real
+CDN module on the account Chady supplied (`diana@saba.com`; sign-ups locked; the project's
+`security_update_password_require_reauthentication` confirmed **false** by the PM), with every `/auth/v1` request
+logged and **every `/rest/v1/*` request aborted at the network layer** so WO-008's sign-in and open-time pushes from
+an empty rig could not stamp her server row (four attempts, all aborted, none reached the server):
+
+1. Signed out: no fields, no button, nothing of the block in the DOM.
+2. Signed in: the block under the Restore note; identity line and `#bk-status` recorded.
+3. Both blank → nothing at all, 0 requests. Mismatch → `The two passwords do not match.`, 0. `abc`/`abc` →
+   `Password needs at least 6 characters.`, 0. Unequal is checked before short (`abc`/`abd` → mismatch); a blank
+   second field and a leading space are mismatches; no trim.
+4. Enter in the second field → the same path; Enter in the first → focus to the second, no tap.
+5. Current password twice → **one** `PUT /auth/v1/user 422` → `That is already your password.`, fields kept.
+6. New password twice, two clicks in one task and a third while busy, the PUT held 1.5 s → **one** `PUT 200`;
+   `Changing the password.` with the button disabled and **both typed values still in the fields mid-call** (the
+   carry through `paintBackup` held when the module flipped `busy`); then `Password changed.` in the advice
+   enclosure, announced polite once, fields empty. Identity line, `#bk-status`, Home `#who`, every `phat:v1:*`
+   value and the key list **byte-identical** before and after; **zero** `/rest/v1` attempts in the 4.5 s after —
+   the `USER_UPDATED` gate held (a wiped `S.sync.last` would have taken the red backup line with it).
+7. Sign out → the old password refused `Wrong email or password.` (`token 400`), the new one → `Signed in.`;
+   changed back → `Password changed.`; sign out; the original → `Signed in.`
+8. Offline → `No connection.` in the refusal shape, fields kept, 0 requests.
+9. **Last step, the original twice → `PUT 422`, `That is already your password.`** That is the proof the account is
+   on the password as handed over. Nothing else about the account was touched.
+
+Beyond the ask: the PUT cut at the socket mid-call → `No connection.` in 274 ms, fields kept, buttons live, disk
+unchanged, the next PUT normal; a simulated lock mid-call (hidden → visible, `pagehide`/`pageshow`, hidden-and-stay,
+a 6 s hold) → the refusal every time, never a spinner; `Sign out` forced through its disabled button mid-call →
+`Could not sign out. Wait for the current backup to finish.`, still signed in, the change resolves; with a real
+schema-5 session and a weight on disk, the three stores byte-identical at every checkpoint; at 400 px the two
+inputs and the button are 368 × 48 (63 / 63 / 56 at 200 % text), full width, no overflow, no corner.
+
+**Decision: no test added, and the count stays at 689.** Nothing in this lane has a pure half. `sync.js` is an ES
+module with a CDN import and does not load from `file://`; `authMessage` is not exported; `pwTap`'s three checks read
+two fields by id. A `PHAT.pwCheck(p1, p2)` in `logic.js` would pin the two sentences and their order in three lines
+and is named in "Not testable" as the move to make **if** they ever need pinning on `file://` — not asked for now,
+because the rig is the test and an extraction would pin the extraction (the same ruling as `authBusy`, item 33).
+Re-run item 34's rig when `pwTap`, `vPwBlock`, `paintBackup`'s carry, `changePassword` or `authMessage` change.
+
+**Two side observations, neither this lane's and neither blocking.** (1) `signOut` issues `POST /auth/v1/logout`
+twice; the second is abandoned `ERR_ABORTED` 5 ms after the first's 204. Unchanged since E-3, invisible to item
+33's response-only log, harmless (scope local, same token). For the PM to file or dismiss. (2) `supabase/README.md`
+§4.1 still reads "setting not yet read" with an empty table row while the PM has confirmed the value is `false`;
+the README is not in this order's file list for QA, so `backend-engineer` or the PM fills the row.
+
+**Deviations from the W9 text, accepted:** the status node is `#bk-pw-status`, not `#bk-status` (a password change
+is not a backup event and must not move the stamp line — the right call, and it is what made the byte-identity
+check in step 6 meaningful); the mismatch sentence is `The two passwords do not match.`, not `Passwords do not
+match.` (house voice, names the thing). Both are frontend's and both are better than the order's wording.
+
+**Rules out:** a `file://` test that stubs `PHAT_SYNC` to fake the module; a checklist item that asks Chady to change
+his own password to prove the control (Diana's phone is the one it exists for, and one lock mid-call is enough);
+treating `Password changed.` persisting across a Settings round trip as a defect (it is true until the next attempt,
+a sign-out or a user change).
