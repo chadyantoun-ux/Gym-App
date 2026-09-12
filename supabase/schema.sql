@@ -582,6 +582,13 @@ begin
     end if;
     return new;
   end if;
+  -- Account deletion cascades here with the auth.users row already gone.
+  -- conflicts.user_id references auth.users, so archiving would fail its own
+  -- FK and block the cascade - an account could never be deleted. When the
+  -- user no longer exists there is nothing to keep evidence for.
+  if not exists (select 1 from auth.users u where u.id = old.user_id) then
+    return old;
+  end if;
   insert into public.conflicts (user_id, kind, natural_key, doc, reason, client_updated_at)
   values (old.user_id, 'session', old.client_id, old.doc, 'row_deleted', old.client_updated_at);
   return old;
@@ -599,6 +606,13 @@ begin
       values (old.user_id, 'bodyweight', old.local_date::text, old.doc, 'superseded_by_update', old.client_updated_at);
     end if;
     return new;
+  end if;
+  -- Account deletion cascades here with the auth.users row already gone.
+  -- conflicts.user_id references auth.users, so archiving would fail its own
+  -- FK and block the cascade - an account could never be deleted. When the
+  -- user no longer exists there is nothing to keep evidence for.
+  if not exists (select 1 from auth.users u where u.id = old.user_id) then
+    return old;
   end if;
   insert into public.conflicts (user_id, kind, natural_key, doc, reason, client_updated_at)
   values (old.user_id, 'bodyweight', old.local_date::text, old.doc, 'row_deleted', old.client_updated_at);
@@ -620,6 +634,13 @@ begin
     end if;
     return new;
   end if;
+  -- Account deletion cascades here with the auth.users row already gone.
+  -- conflicts.user_id references auth.users, so archiving would fail its own
+  -- FK and block the cascade - an account could never be deleted. When the
+  -- user no longer exists there is nothing to keep evidence for.
+  if not exists (select 1 from auth.users u where u.id = old.user_id) then
+    return old;
+  end if;
   insert into public.conflicts (user_id, kind, natural_key, doc, reason, client_updated_at)
   values (old.user_id, 'user_state', 'user_state',
           jsonb_build_object('log_meta', old.log_meta, 'plan_meta', old.plan_meta),
@@ -639,6 +660,13 @@ begin
       values (old.user_id, 'plan', old.plan_id, old.doc, 'superseded_by_update', old.client_updated_at);
     end if;
     return new;
+  end if;
+  -- Account deletion cascades here with the auth.users row already gone.
+  -- conflicts.user_id references auth.users, so archiving would fail its own
+  -- FK and block the cascade - an account could never be deleted. When the
+  -- user no longer exists there is nothing to keep evidence for.
+  if not exists (select 1 from auth.users u where u.id = old.user_id) then
+    return old;
   end if;
   insert into public.conflicts (user_id, kind, natural_key, doc, reason, client_updated_at)
   values (old.user_id, 'plan', old.plan_id, old.doc, 'row_deleted', old.client_updated_at);
