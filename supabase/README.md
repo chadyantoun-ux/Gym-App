@@ -390,22 +390,27 @@ a public database.
 ## 4. One more thing to do in the dashboard
 
 RLS scopes rows to `auth.uid()`. It does **not** stop a stranger creating their *own* account in
-this project and writing their own rows. For a single-user app that is free storage for someone
+this project and writing their own rows. For a two-account app that is free storage for someone
 else and a support surface for you.
 
-**Authentication → Providers → Email → disable "Enable sign ups"** *after* creating Chady's one
-account. Create the account first or you will lock yourself out. The `CREATE ACCOUNT` button in
-Settings will then say `New accounts are switched off.` — that is the intended end state.
+**Authentication → Providers → Email → disable "Enable sign ups"** *after* **both** accounts exist —
+Chady's and Diana's, one per phone, each created from its own phone (§2.1 step 1). Create both
+first or you will lock the second one out; the order in §2.1 is the one that cannot. The `CREATE
+ACCOUNT` button in Settings will then say `New accounts are switched off.` — that is the intended end
+state. The data boundary between the two is RLS per user (§2): each account reads and writes only
+rows carrying its own `auth.uid()`, and the app refuses to push a phone's log to any account but the
+one that first backed it up (B-88, WO-008 W4).
 
 Also: do not enable anonymous sign-ins. Email confirmation is currently **off**
 (`mailer_autoconfirm`) so that sign-up from the Settings screen returns a session directly; the
 client reports an account created without a session rather than treating it as signed in, so
 turning confirmation back on later degrades honestly.
 
-**A throwaway account exists:** `test+e3@example.com`, created by the E-3 verification run, with
-three test sessions and one bodyweight row under it (and one `conflicts` row from a deliberate
-hard delete during the derived-column test). Delete the user in Authentication → Users once Chady's
-account exists; `on delete cascade` removes every row it owns.
+**Throwaway accounts exist:** `test+e3@example.com` (E-3 verification: three test sessions, one
+bodyweight row, one `conflicts` row from a deliberate hard delete), and whichever of
+`test+a@example.com`, `test+b@example.com` and `test+d@example.com` (WO-008 W7, all test data) still
+exist. Delete each in Authentication → Users once both real accounts exist; `on delete cascade`
+removes every row it owns.
 
 ---
 
@@ -614,9 +619,12 @@ Items 1–5 of the original list are answered: the project exists, the key is in
 log was empty so there was nothing to import, the draft and preferences do not back up, and it is
 backup-only. What remains:
 
-1. **Create your account** from Settings → Backup → `CREATE ACCOUNT` on the phone, once the build
-   is deployed. Then **disable sign-ups** in the dashboard (§4) and say when it is done.
-2. **Delete the throwaway account** `test+e3@example.com` (§4) after yours exists.
+1. **Create the two accounts, one per phone** — yours from your phone, Diana's from hers, each from
+   Settings → Backup → `CREATE ACCOUNT` (or `Sign in` on first run) on the live build, in the order
+   §2.1 gives. Never sign into the other account on a phone that already holds a log: since WO-008
+   W4 the app refuses the push (B-88), but the refusal is a wall, not an invitation. Then **disable
+   sign-ups** in the dashboard (§4) and say when it is done.
+2. **Delete the throwaway accounts** named in §4 after both real accounts exist.
 3. **Restore is the only path that shrinks the local log**, and only behind a typed `REPLACE` with
    an export and a kept copy in front of it. If you would rather it did not exist at all until a
    phone is actually lost, say so — it is one button and one function.
