@@ -656,6 +656,51 @@
   .cycle .exp{color:var(--faint); font-size:.75rem; line-height:1.5; margin-top:3px}
   .cycle .ghostbtn{margin-top:10px}
 
+  /* WO-008 W5. THE OWNER ROW (spec 18.2). A full-width button between the
+     next-session block and the cycle line: whose log this is, read off the
+     stamp on disk, so it paints identically offline. A row, not a card - no
+     surface, no border - EXCEPT in H3 (signed in as someone else), the one
+     state that is a refusal and wears the four-sided --red-hi border and the
+     literal "!" like every other refusal (spec 2.1). MIN-HEIGHT 48 IN EVERY
+     STATE, measured at 48 at 100% text for H1 and H3 both, so a repaint from
+     H1 to H3 when sync.js arrives cannot move the cycle line or the day list
+     under a thumb. It may grow at 200% text; it may not shrink. The main line
+     is ONE line with an ellipsis, the email first, so the local part - the
+     distinguishing part - is what survives truncation. Not uppercased: an
+     email in small caps reads as a different string. */
+  .who{display:flex; align-items:center; justify-content:space-between; gap:var(--s2);
+    width:100%; min-height:48px; margin:0; padding:0 var(--s4); text-align:left}
+  .who .wt{display:block; min-width:0; flex:1 1 auto}
+  .who .wk{font-size:.6875rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--faint); display:block; line-height:1.2}
+  .who .wl{display:block; color:var(--bone); font-size:.8125rem; line-height:1.45; margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .who .chev{flex:none}
+  .who.refuse{margin:0 var(--s4); padding:2px 10px; width:calc(100% - var(--s4) * 2);
+    border:2px solid var(--red-hi); border-radius:var(--r); background:var(--bg); min-height:48px}
+  /* Spec 18.3. The session header's second line: the owner, as text, under
+     the kicker. --dim, .75rem, one line, ellipsis, never uppercased. Static
+     for the life of the paint - onSync does not touch it (B-19). */
+  .sesswho{color:var(--dim); font-size:.75rem; line-height:1.5; margin-top:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* Spec 18.3. The Summary line directly above SAVE SESSION: .tiny's size at
+     --dim. Never an enclosure - nothing on Summary may look like the
+     blocked-save refusal except the blocked-save refusal (spec 2.2). */
+  .sumwho{color:var(--dim); overflow-wrap:anywhere}
+  /* Spec 18.4. First-run screens B and C. The heading on C carries an email,
+     so it is sized to fit one at 400 px and breaks anywhere rather than
+     overflow. The escape and the actions are the existing .primary /
+     .ghostbtn, full width, stacked. */
+  .obh{font-size:1.375rem; font-weight:800; letter-spacing:-.02em; line-height:1.15; margin:0;
+    overflow-wrap:anywhere}
+  .obacts .primary,.obacts .ghostbtn{margin-top:var(--s3)}
+  .obacts .refuse{margin-top:var(--s3); margin-bottom:0}
+  /* Spec 18.7 / coach 16.2. The ABSENT calorie line on Weight: the sub-line's
+     token (.advice p: .8125rem, --dim), no kicker, no enclosure, no control,
+     in the calorie-decision slot's position. */
+  .calabs p{color:var(--dim); font-size:.8125rem; line-height:1.45}
+  .calabs p+p{margin-top:6px}
+
   /* The D1 banner. Advice, not refusal, so it takes the 3px left rule and no
      glyph (spec 2.1) - a deload is a recommendation and must not wear the
      shape the app uses to refuse a save. Answerable where it stands: both
@@ -1221,7 +1266,20 @@ async function del(k){
    prefs.backup.user  now {id, email}; the E-3 string form is still read
             (PHAT.backupOwner reads both) and is rewritten as the object by
             the next stamp. The email is what every refusal names. */
+/* WO-008 W5 adds:
+   sub      gains "onboard-signin" (first-run screen B: the backup form under
+            a First run header, spec 18.4) and "onboard-choose" (screen C:
+            signed in, the one pull, restore or empty log). Both are states
+            of the Train tab like "onboard" is, and both write NOTHING - the
+            only writers on first run are still a completed restore and
+            START WITH AN EMPTY LOG.
+   ob       screen C's in-memory state: {status:"pulling"|"rows"|"empty"|
+            "failed", rp, msg}. Never stored; a reload lands on screen A.
+   prefsBad true when the prefs store could not be READ at boot - H7 on the
+            owner row (`Could not read who this log belongs to.`). In memory
+            only; the read is never retried and nothing is written. */
 const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
+         ob:null,prefsBad:false,
          plans:{plans:[],activePlanId:PHAT.PHAT_PLAN_ID},plansMeta:{},plan:PHAT.PHAT_PLAN,sessPlan:null,
          planBroken:false,edits:{},planView:"",pe:null,plErr:null,
          problems:[],logMeta:{profile:null},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
@@ -1682,6 +1740,8 @@ function linechart(rows,series,h){
        `{n} sessions logged` and the week is the cycle line's alone (C-10). */
 function vTrain(){
   if(S.sub==="onboard") return vOnboard();
+  if(S.sub==="onboard-signin") return vObSignin();
+  if(S.sub==="onboard-choose") return vObChoose();
   if(S.sub==="settings") return vSettings();
   return vHome();
 }
@@ -1780,6 +1840,100 @@ function deloadBanner(){
     </div></section>`;
 }
 
+/* ---- WO-008 W5. WHOSE LOG THIS IS (spec 18.1-18.3) ----------------------
+   Two identities, and every line names THE OWNER - the account that last
+   backed up from, or restored onto, this device (prefs.backup.user, a stamp
+   on disk) - never the signed-in account. The question between sets is
+   "whose log am I about to add a set to", and the answer is on disk, so the
+   line renders identically with the network off, the module unloaded and
+   from file://. The signed-in account is named only where it DIFFERS from
+   the owner, which is the B-88 state and the one thing worth a sentence.
+
+   whoState() -> {h, owner, me, ago}   h is spec 18.2's H1..H7:
+     H1  stamped, signed in as the owner OR unknown (offline / unloaded /
+         loading / failed) - the module not having answered is not a state
+         the row waits on
+     H2  stamped, module ready, signed out
+     H3  stamped, signed in as someone else - the only refusal shape
+     H4  no stamp, signed in - the first push claims the device
+     H5  no stamp, signed out or unknown
+     H6  a stamp with no email (a pre-W4 string stamp migrated offline)
+     H7  the prefs store could not be read
+   `me` is undefined when the module has not answered, null when it has and
+   nobody is signed in, the user otherwise. Nothing here reads the network. */
+function whoState(){
+  if(S.prefsBad) return {h:7,owner:null,me:null,ago:""};
+  const b=S.prefs.backup; let owner=PHAT.backupOwner(b);
+  const stamped=!!(b&&typeof b.at==="number"&&owner);
+  const me=syncOn()?S.sync.user:undefined;
+  const ago=stamped?PHAT.agoText(b.at):"";
+  if(stamped){
+    /* A string stamp with no email, and its owner signed in right now: the
+       account supplies the address the stamp lacks, and the row reads H1 -
+       "an account this phone has not seen sign in" would be false. The
+       stamp itself is not touched here; the owner's next push rewrites it. */
+    if(!owner.email&&me&&me.id===owner.id&&me.email) owner={id:owner.id,email:me.email};
+    if(!owner.email) return {h:6,owner:owner,me:me,ago:ago};
+    if(me===undefined||(me&&me.id===owner.id)) return {h:1,owner:owner,me:me,ago:ago};
+    if(me===null) return {h:2,owner:owner,me:me,ago:ago};
+    return {h:3,owner:owner,me:me,ago:ago};
+  }
+  return {h:me?4:5,owner:null,me:me,ago:""};
+}
+/* The Home row's main line, spec 18.2's table, verbatim. `{owner}` is the
+   stamp's email, `{me}` the signed-in email, `{ago}` the stamp's `at` - the
+   last backup that LANDED, never the last attempt. */
+function whoLine(w){
+  const o=w.owner?w.owner.email:"", m=(w.me&&w.me.email)||"";
+  switch(w.h){
+    case 1: return o+" · last backup "+w.ago;
+    case 2: return o+" · signed out · last backup "+w.ago;
+    case 3: return "Belongs to "+o+". Signed in as "+m+". Nothing backs up.";
+    case 4: return "On this device only. Backs up to "+m+" after the next save.";
+    case 5: return "On this device only. Not backed up.";
+    case 6: return "Backed up "+w.ago+" by an account this phone has not seen sign in.";
+    default: return "Could not read who this log belongs to.";
+  }
+}
+/* The row. A <button>, accessible name = its visible text in reading order.
+   H3 wears .refuse and the aria-hidden "!"; it has NO role="alert" - the
+   refusal was announced once when it happened (18.5), and a persistent alert
+   is read on every focus move. Height is fixed by CSS in every state. */
+function vWho(){
+  const w=whoState();
+  return `<button class="who${w.h===3?" refuse":""}" id="who">
+    <span class="wt"><span class="wk">This log</span>
+    <span class="wl">${w.h===3?'<span aria-hidden="true">! </span>':""}${esc(whoLine(w))}</span></span>
+    <span class="chev" aria-hidden="true">&rsaquo;</span></button>`;
+}
+/* Repainted IN PLACE, by id, when sync.js arrives or the account changes -
+   never render(): this fires from onSync, which can land mid-edit (B-19).
+   The row exists only on Home, so the id lookup is the whole gate. Silent:
+   the row changed, nothing happened to him. */
+function paintWho(){
+  const el=document.getElementById("who"); if(!el) return;
+  el.outerHTML=vWho();
+}
+/* The session header's line (18.3, S1-S3) and the Summary's line above SAVE
+   SESSION (U1-U5). Plain text, never a control, never a gate: SAVE SESSION
+   is never disabled by any of these. */
+function sessWhoLine(){
+  const w=whoState();
+  if(w.h===3) return "Log of "+w.owner.email+" · signed in as "+((w.me&&w.me.email)||"");
+  if(w.h===1||w.h===2||w.h===6) return "Log of "+(w.owner.email||"another account");
+  return "On this device only";
+}
+function sumWhoLine(){
+  const w=whoState(), m=(w.me&&w.me.email)||"";
+  switch(w.h){
+    case 1: return "Saves to this device. Backs up to "+w.owner.email+".";
+    case 2: return "Saves to this device. Backs up to "+w.owner.email+" when signed in.";
+    case 3: return "Saves to this device. Belongs to "+w.owner.email+", not to "+m+". Will not back up.";
+    case 4: return "Saves to this device. Backs up to "+m+".";
+    default: return "Saves to this device. Not backed up.";
+  }
+}
+
 function vHome(){
   const n=S.sessions.length;
   /* THE HEADER. One top-corner control, and it is the one §0.4 permits:
@@ -1818,6 +1972,14 @@ function vHome(){
         <span>Start session</span><span aria-hidden="true">&rsaquo;</span></button>
     </section>`;
   }
+
+  /* WO-008 W5. THE OWNER ROW (spec 18.2): directly below the next-session
+     block and above the cycle line - the last thing before the programme
+     state. NOT a programme-state line and not counted by 13.4; it never
+     says "deload" and it is not a .cycle. 48 px of the day list's no-scroll
+     budget; measured, see the W5 report. Demo mode: unchanged, it names the
+     real log's owner (C-14). */
+  h+=vWho();
 
   /* EXACTLY ONE PROGRAMME-STATE LINE (C-10 / B-52), and it is cycleLine's.
      `divergence` and `explain` belong to the SAME block — they answer the one
@@ -1952,8 +2114,73 @@ function vOnboard(){
          is exactly how it broke the first time. -->
     <p class="tiny mt12">Weigh daily &mdash; the trend is what the app reads.
       Optional: leaving it empty writes nothing.</p></div>
-  <div class="pad mt24" style="padding-bottom:var(--s6)">
-    <button class="primary" id="ob-start">Start with an empty log</button></div>`;
+  <div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
+    <button class="primary" id="ob-start">Start with an empty log</button>
+    <!-- WO-008 W5 (spec 18.4, screen A). EXACTLY TWO ACTIONS. Sign in is
+         shown in every network state: the next screen tells the truth about
+         the connection, and hiding the button offline would make first run
+         look different on the two phones for no reason he can see. Tapping
+         it writes nothing. -->
+    <button class="ghostbtn" id="ob-signin">Sign in</button></div>`;
+}
+
+/* ---- WO-008 W5. FIRST-RUN SCREEN B (spec 18.4): the existing backup form,
+   VERBATIM (vBackupBody, painted into #bk-body so paintBackup works here
+   unchanged), under a First run header with a Back that writes nothing, and
+   the escape - START WITH AN EMPTY LOG - on the screen in every state,
+   because the offline case is the common one in a gym. A sign-in here
+   schedules NO push (authTap routes to screen C instead); the typed email
+   and password are never stored by this file. */
+function vObSignin(){
+  return `<div class="hd"><button class="topbtn back" id="ob-back">
+      <span aria-hidden="true">&lsaquo;</span> Back</button>
+    <span class="kick">First run</span></div>
+  <div class="pad" style="padding-top:26px">
+    <h1 id="ob-h" tabindex="-1">Sign in to an account</h1>
+    <p class="sub">Its backup can be put on this phone. Nothing is written until you choose.</p></div>
+  <div class="setsec" id="bk"><div id="bk-body">${vBackupBody()}</div></div>
+  <div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
+    <button class="ghostbtn" id="ob-start">Start with an empty log</button></div>`;
+}
+/* ---- WO-008 W5. FIRST-RUN SCREEN C (spec 18.4): signed in, one pull, then
+   one of three states from the result. C1 (rows) offers RESTORE and Sign out
+   and deliberately NOT an empty log - an account with rows and a device that
+   would then push an empty log over them is B-76's shape. C2 (nothing backed
+   up) offers the empty log. C3 (could not read) offers Try again, the empty
+   log - refusing on a guess would strand her offline with a signed-in
+   account and no log - and Sign out. No Back: the way out of a signed-in
+   state is Sign out, on every variant. Nothing on this screen writes until
+   RESTORE completes or START WITH AN EMPTY LOG is tapped. */
+function vObChoose(){
+  const O=S.ob||{status:"pulling"};
+  const me=(S.sync.user&&S.sync.user.email)||"";
+  let h=`<div class="hd"><span class="kick">First run</span></div>
+  <div class="pad" style="padding-top:26px">
+    <h1 class="obh" id="ob-h" tabindex="-1">Signed in as ${esc(me)}.</h1>`;
+  if(O.status==="rows"){
+    const c=O.rp.counts;
+    h+=`<p class="sub">${esc(restoreCounts(c.sessions,c.bodyweight,c.plans))} are backed up under this account.</p></div>
+    <div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
+      <button class="primary" id="ob-restore">Restore ${esc(plural(c.sessions,"session"))}</button>
+      <button class="ghostbtn" id="ob-signout">Sign out</button></div>`;
+  }else if(O.status==="empty"){
+    h+=`<p class="sub">Nothing is backed up under this account yet.</p></div>
+    <div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
+      <button class="primary" id="ob-start">Start with an empty log</button>
+      <button class="ghostbtn" id="ob-signout">Sign out</button></div>`;
+  }else if(O.status==="failed"){
+    h+=`</div><div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
+      <div class="refuse" role="alert"><p><span aria-hidden="true">! </span>${esc(O.msg||"Could not read the backup.")}</p></div>
+      <button class="ghostbtn" id="ob-retry">Try again</button>
+      <button class="ghostbtn" id="ob-start">Start with an empty log</button>
+      <button class="ghostbtn" id="ob-signout">Sign out</button></div>`;
+  }else{
+    h+=`<p class="tiny mt12">Reading the backup.</p></div>
+    <div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
+      <button class="ghostbtn" id="ob-signout">Sign out</button></div>`;
+  }
+  if(O.err) h+=`<div class="pad"><div class="refuse" role="alert"><p><span aria-hidden="true">! </span>${esc(O.err)}</p></div></div>`;
+  return h;
 }
 
 /* ---- SETTINGS (spec §10.2–10.5) -----------------------------------------
@@ -2132,6 +2359,12 @@ function vSession(){
      redundant graphics; pipStrip() carries `Exercise {i} of {n}` as the
      accessible carrier (B-59, §0.5). */
   let h=`<div class="sesshead"><p class="kick">${esc(C.day.name)} &middot; ${i+1} of ${n}</p>`;
+  /* WO-008 W5 (spec 18.3). Whose log this set joins, as text under the
+     kicker - not a control, not a row between the header and the first set
+     (every pixel there is paid for by the set). Static for the life of the
+     paint: onSync does not repaint it (B-19); Summary repeats it at the
+     commit point. */
+  h+=`<p class="sesswho">${esc(sessWhoLine())}</p>`;
   if(!ag.sameDay) h+=`<p class="sub">It saves under ${esc(fmtDay(S.draft.date,ag.ageDays))}, not today.</p>`;
   h+=`</div>${pipStrip(i,n)}`;
 
@@ -2453,6 +2686,7 @@ function vSummary(){
     +(S.err?`<div class="pad mt24"><div class="warn hi" role="alert">
       <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div></div>`:"")
     +`<div class="pad mt24"><div id="bs-slot"></div></div>
+      <p class="tiny pad sumwho" id="sumwho">${esc(sumWhoLine())}</p>
       <div class="navrow"><button class="prev" id="sumback"
         aria-label="Back to ${esc(back)}">&larr; Back</button>
       <button class="next" id="finish">Save session</button></div>
@@ -2752,10 +2986,14 @@ function vWeight(){
      engine's two ABSENT lines in the calorie-decision slot - the sub-line's
      token, NO kicker, NO enclosure, NO control - and nothing else from this
      block. The average and the rate above are measurements and still render.
-     The lines are the engine's; nothing is assembled here. Placement is
-     W5's to refine (spec §18.7). */
+     The lines are the engine's; nothing is assembled here. */
+  /* WO-008 W5 (spec 18.7): the slot's position is the calorie decision's,
+     between the average and the entry; the token is the sub-line's
+     (.calabs p = .advice p); the enclosure and the `Calorie decision`
+     kicker do NOT render - a kicker over these two lines would label
+     silence as a decision, which is the claim PR1 exists to stop. */
   if(adv&&adv.absent===true){
-    h+=`<div class="pad mt16" id="calabsent">${(adv.absentLines||[]).map(t=>`<p class="sub">${esc(t)}</p>`).join("")}</div>`;
+    h+=`<div class="pad mt16 calabs" id="calabsent">${(adv.absentLines||[]).map(t=>`<p>${esc(t)}</p>`).join("")}</div>`;
   }
   else if(adv&&adv.state!=="empty"){
     h+=`<div class="pad mt16"><div class="advice">
@@ -2902,10 +3140,14 @@ function vDiet(){
      nothing else - no segment, no cell, no tick (its prefs key is never
      written on this store), no caveat. Checked before the could-not-read
      guard, because ABSENT is an answer and not a failure. */
+  /* WO-008 W5 (spec 18.7): one advice enclosure where the targets grid
+     would be - the place the feature would have appeared (C7a) - and
+     nothing else on the tab. Advice shape, not refusal: nothing is being
+     declined, the app is saying what it does not have. */
   if(v&&v.absent===true){
     return `<div class="hd"><span class="kick">${esc(v.kicker||"Diet")}</span>
       <span class="kick">${esc(v.kickerSub||"")}</span></div>
-      <div class="pad mt24" id="dietabsent">${(v.absentLines||[]).map(t=>`<p class="sub">${esc(t)}</p>`).join("")}</div>`;
+      <div class="pad mt16"><div class="advice" id="dietabsent">${(v.absentLines||[]).map(t=>`<p>${esc(t)}</p>`).join("")}</div></div>`;
   }
   let h=`<div class="hd"><span class="kick">${esc(D&&D.kicker?D.kicker:"Diet")}</span>
     <span class="kick">${esc(D&&D.kickerSub?D.kickerSub:"")}</span></div>`;
@@ -4279,6 +4521,15 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#rest-auto")){ await setRestAuto(true); return; }
   if(e.target.closest("#rest-manual")){ await setRestAuto(false); return; }
   if(e.target.closest("#ob-start")){ await finishOnboarding(); return; }
+  /* ---- WO-008 W5. The owner row and first-run screens B / C. Each of these
+     is a navigation or a read; the only writers reachable from here are the
+     two onboarding already had (finishOnboarding, restoreApply). */
+  if(e.target.closest("#who")){ openBackupSettings(); return; }
+  if(e.target.closest("#ob-signin")){ obSignin(); return; }
+  if(e.target.closest("#ob-back")){ obBack(); return; }
+  if(e.target.closest("#ob-retry")){ await obPull(); return; }
+  if(e.target.closest("#ob-restore")){ await obRestore(); return; }
+  if(e.target.closest("#ob-signout")){ await obSignout(); return; }
   /* ---- W12. The Diet segment is a VIEW and writes nothing at all; the
      protein tick writes one key. Both delegated from #view like everything
      else. B-19 does not apply on this screen: it holds no text field, so
@@ -5624,8 +5875,90 @@ async function finishOnboarding(){
   }
   S.prefs.onboarded=true;
   await save(PREFS,prefsPayload());
-  S.sub=""; render();
+  S.sub=""; S.ob=null; render();
   announce("Ready."+said);
+}
+
+/* ---- WO-008 W5. The owner row's tap (spec 18.2 rule 5): Settings, scrolled
+   so the Backup section rule is at the top, focus on the section label.
+   NO INPUT IS FOCUSED - focusing the email field would raise the keyboard on
+   a screen he opened to read. Nothing written. */
+function openBackupSettings(){
+  S.sub="settings"; S.exp=null; render();
+  if(S.sync.mod==="off") loadSync();
+  const h=document.getElementById("bk-h");
+  if(h){ h.scrollIntoView({block:"start"}); h.focus({preventScroll:true}); }
+}
+/* ---- WO-008 W5. First run, screens B and C (spec 18.4). ------------------
+   obSignin   A -> B. Already signed in (a session persisted from an earlier
+              attempt) -> straight to C; B would otherwise show the signed-in
+              form with BACK UP NOW on a first-run device.
+   obBack     B -> A. Writes nothing; focus back on Sign in (closeSheet's
+              `back` pattern).
+   obToC      B -> C, then the one pull.
+   obPull     Y.pull() once; the result picks C1 / C2 / C3. The payload is
+              validated WHOLE by PHAT.restorePayload like restoreStart does;
+              a refused payload is C3 with the first problem named.
+   obRestore  C1's RESTORE: straight to restoreApply - screen C IS the
+              one-tap sheet (it names the counts and the account). restoreApply
+              re-reads disk (B-74) and refuses if anything has appeared.
+   obSignout  C -> A signed out, nothing written. A sign-out that fails
+              (offline: the library keeps the local session) stays on C and
+              says so. */
+function obSignin(){
+  if(signedIn()){ obToC(); return; }
+  S.sub="onboard-signin"; S.sync.last=null; render();
+  if(S.sync.mod==="off") loadSync();
+  const h=document.getElementById("ob-h"); if(h) h.focus({preventScroll:true});
+}
+function obBack(){
+  S.sub="onboard"; S.sync.last=null; render();
+  const b=document.getElementById("ob-signin"); if(b) b.focus({preventScroll:true});
+}
+function obToC(){
+  S.sub="onboard-choose"; S.ob={status:"pulling"}; S.sync.last=null;
+  obPull();
+}
+async function obPull(){
+  const Y=window.PHAT_SYNC;
+  if(!signedIn()){ S.sub="onboard"; S.ob=null; render(); return; }
+  S.ob={status:"pulling"}; render();
+  const h=document.getElementById("ob-h"); if(h) h.focus({preventScroll:true});
+  const r=await Y.pull();
+  /* He left the screen while the read was in flight (signed out): the
+     result has nowhere to go and writes nothing. */
+  if(S.sub!=="onboard-choose") return;
+  /* The result paints screen C only if the Train tab is still up: a render
+     while he is typing a bodyweight on another tab is B-19. Screen C reads
+     S.ob when he comes back. */
+  const paint=()=>{ if(S.tab==="train") render(); };
+  if(!r.ok){ S.ob={status:"failed",msg:"Could not read the backup. "+(r.message||"")}; paint(); return; }
+  const rp=PHAT.restorePayload(r.rows);
+  if(!rp.ok){
+    const n=rp.problems.length;
+    S.ob={status:"failed",msg:"Could not read the backup. "+rp.problems[0]+(n>1?" (and "+(n-1)+" more)":"")+"."};
+    paint(); return;
+  }
+  if(!rp.counts.sessions&&!rp.counts.bodyweight&&!rp.counts.plans){ S.ob={status:"empty"}; paint(); return; }
+  S.ob={status:"rows",rp:rp}; paint();
+}
+async function obRestore(){
+  const O=S.ob;
+  if(!O||O.status!=="rows"||!O.rp||!O.rp.ok||!signedIn()) return;
+  S.sync.pulled=O.rp;
+  await restoreApply();
+}
+async function obSignout(){
+  const Y=window.PHAT_SYNC; if(!syncOn()) { S.sub="onboard"; S.ob=null; render(); return; }
+  const r=await Y.signOut();
+  if(r.ok){
+    S.sync.user=null; S.sync.last=null; S.sync.refused=null; S.ob=null; S.sub="onboard"; render();
+    announce("Signed out. Your log is still on this device.");
+    const b=document.getElementById("ob-signin"); if(b) b.focus({preventScroll:true});
+  }else{
+    S.ob=Object.assign({},S.ob||{status:"failed"},{err:"Could not sign out. "+(r.message||"")});
+    render(); announce("Could not sign out. "+(r.message||""),true);
+  }
 }
 
 /* ---- W9. The deload answer (Rule D1). Every one of these is a PURE setter
@@ -5739,7 +6072,10 @@ function loadSync(){
     /* Once, on open, if signed in and online: the push that catches a save
        whose push failed last time. backupSoon() compares signatures, so a log
        that already matches the last successful backup sends nothing. */
-    if(S.sync.user) backupSoon("open");
+    /* WO-008 W5 (spec 18.4): a device that has not finished first run pushes
+       NOTHING, on open as on sign-in - an empty log sent over an account's
+       real backup is B-76 with a different owner. */
+    if(S.sync.user&&S.prefs.onboarded) backupSoon("open");
   });
   s.addEventListener("error",()=>{
     S.sync.mod="failed"; s.remove();
@@ -5760,7 +6096,7 @@ function onSync(snap){
 }
 window.addEventListener("online",()=>{
   if(S.sync.mod==="off") loadSync();
-  else if(signedIn()) backupSoon("online");
+  else if(signedIn()&&S.prefs.onboarded) backupSoon("online");
 });
 
 /* ---- the debounce. One timer; every trigger resets it; the payload is built
@@ -5847,7 +6183,13 @@ async function authTap(kind){
   S.sync.last={busy:"auth"}; paintBackup();
   const r=kind==="up"?await Y.signUp(email,pass):await Y.signIn(email,pass);
   if(r.ok){
-    S.sync.user=r.user; S.sync.last=null; S.sync.refused=null; paintBackup();
+    S.sync.user=r.user; S.sync.last=null; S.sync.refused=null;
+    /* WO-008 W5 (spec 18.4). On first-run screen B a successful sign-in goes
+       to screen C - the one pull, then restore or empty log - and schedules
+       NOTHING. The gate below on `onboarded` already stops the push; this
+       is the navigation. */
+    if(S.sub==="onboard-signin"&&S.sync.user){ announce("Signed in."); obToC(); return; }
+    paintBackup();
     announce("Signed in.");
     /* WO-008 W4. Signing in is choosing an account, not backing up. The push
        that follows goes through runBackup's ownership check like any other,
@@ -5970,7 +6312,16 @@ async function restoreStart(){
 async function restoreApply(){
   const rp=S.sync.pulled; S.sync.pulled=null;
   if(!rp||!rp.ok) return;
-  const fail=(msg)=>{ S.sync.last={ok:false,phase:"restore",reason:"local",message:msg}; paintBackup(); announce(msg,true); };
+  /* WO-008 W5. Reached from first-run screen C as well as from Settings. On
+     first run a failure renders on screen C in the refusal enclosure with
+     C3's actions and `onboarded` still false; a success writes `onboarded`
+     (in the same prefs write as the stamp) and lands on Home. */
+  const fromOb=S.sub==="onboard-choose";
+  const fail=(msg)=>{
+    S.sync.last={ok:false,phase:"restore",reason:"local",message:msg};
+    if(fromOb){ S.ob={status:"failed",msg:msg}; render(); } else paintBackup();
+    announce(msg,true);
+  };
   /* B-74. Read AGAIN, now: the sheet sat open while REPLACE was typed and
      another tab may have saved under it. The keeps, the export and the
      empty-or-kept decision are all made on these bytes, never on S - the
@@ -6008,16 +6359,22 @@ async function restoreApply(){
      signature computed the way runBackup computes it: save() has already
      scheduled a push, and the signature match makes it a no-op rather than a
      round trip that re-sends what just came down. */
+  /* WO-008 W5. The log is on disk, so first run is over whatever happened
+     to the other stores: the flag rides the stamp's write when there is
+     one, and gets its own otherwise (spec 18.4: onboarded is written by a
+     completed restore, never by the sign-in). */
+  if(fromOb) S.prefs.onboarded=true;
   if(ok2&&ok3){
     const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),st.plans));
     S.prefs.backup={at:Date.now(),sig:sig,user:{id:S.sync.user.id,email:S.sync.user.email||null},n:rp.counts.sessions,m:rp.counts.bodyweight,x:0};
     await save(PREFS,prefsPayload());
-  }
+  }else if(fromOb) await save(PREFS,prefsPayload());
   const msg=ok2&&ok3
     ? "Restored "+restoreCounts(rp.counts.sessions,rp.counts.bodyweight,rp.counts.plans)+"."
     : "Restored "+plural(rp.counts.sessions,"session")+". Could not write "+(ok2?"the plans":"the weights")+" - try again.";
   S.sync.last={ok:ok2&&ok3,phase:"restore",message:msg,counts:rp.counts};
-  S.sub="settings"; render(true);
+  if(fromOb){ S.ob=null; S.sub=""; render(); }
+  else { S.sub="settings"; render(true); }
   announce(msg,!(ok2&&ok3));
 }
 
@@ -6026,7 +6383,10 @@ async function restoreApply(){
    auth fields across a repaint of the signed-out state, so a failed sign-in
    does not also eat the email he typed. */
 function vBackup(){
-  return `<div class="setsec" id="bk"><span class="lbl secrule">Backup</span><div id="bk-body">${vBackupBody()}</div></div>`;
+  /* WO-008 W5: the label takes focus (tabindex -1) when the Home owner row
+     opens Settings, so a screen reader lands on the section and no field
+     raises the keyboard (spec 18.2 rule 5). */
+  return `<div class="setsec" id="bk"><span class="lbl secrule" id="bk-h" tabindex="-1">Backup</span><div id="bk-body">${vBackupBody()}</div></div>`;
 }
 /* The stamp line, the owner's. "Never backed up." ONLY when there is no
    stamp: a device that has been backed up has been backed up, whoever is
@@ -6112,7 +6472,16 @@ function vBackupBody(){
     <p class="tiny">Restore replaces what is on this device with the backup. It asks first, and never touches an unfinished session.</p>`;
 }
 function paintBackup(){
-  if(S.sub!=="settings") return;
+  /* WO-008 W5. The Home owner row rides every backup-state repaint: the
+     module arriving, an account change, a stamp landing. In place, by id,
+     and only when Home is on screen (the id lookup is the gate). */
+  paintWho();
+  /* First-run screen B paints the same form into the same #bk-body. If the
+     module answers with a persisted session while B is up, B would show the
+     signed-in form - BACK UP NOW on a first-run device - so it routes to
+     screen C instead (spec 18.4). */
+  if(S.sub==="onboard-signin"&&S.sync.user){ obToC(); return; }
+  if(S.sub!=="settings"&&S.sub!=="onboard-signin") return;
   const box=document.getElementById("bk-body"); if(!box) return;
   /* ALWAYS carried across: the module emits a busy-flag change in the middle
      of a sign-in attempt, and a repaint that dropped the email he typed
@@ -6212,6 +6581,8 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
     S.prefs.proteinDate = typeof rp.value.proteinDate==="string" ? rp.value.proteinDate : "";
   }else if(rp.status==="error"){
     console.warn("[phat] prefs unreadable:",rp.reason);
+    /* WO-008 W5: the owner row says so (H7, spec 18.2). It stops nothing. */
+    S.prefsBad=true;
   }
   /* Non-destructive, idempotent, never throws. No date value is rewritten. */
   const m=PHAT.migrateStore(rawLog,rawBw,rawPlans);
