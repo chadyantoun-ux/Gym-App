@@ -1,6 +1,6 @@
 # Phat Gym Track
 
-Personal training log for a PHAT (Power Hypertrophy Adaptive Training) program. One user: Chady.
+Personal training log for a PHAT (Power Hypertrophy Adaptive Training) program. Two users, Chady and Diana, one account each on their own phone (WO-008).
 Used **on a phone, in a gym, between sets, one-handed, with chalky hands.** Every design and
 engineering decision is judged against that sentence.
 
@@ -110,7 +110,7 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 | Source control | GitHub, `main` is deployable at all times |
 | Hosting | Vercel, static, **no build step**, manual API deploy until the GitHub App is installed |
 | Database | Supabase Postgres 17 with RLS on every table |
-| Auth | Supabase Auth, email + password, single user |
+| Auth | Supabase Auth, email + password, two accounts, one per phone, RLS per user |
 | Client | Vanilla JS; `@supabase/supabase-js@2.116.0` from jsDelivr as ESM, in `sync.js` only |
 | Offline | `localStorage` is the source of truth during a workout; Supabase is backup, never a precondition |
 
