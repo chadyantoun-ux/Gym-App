@@ -1906,3 +1906,47 @@ both and Chady picks (§7 item 1).
 
 **Rules out:** any re-split that re-mints an id; deleting a non-empty day; removing `Build from empty`
 on the PM's say-so; shipping `moveExerciseToDay` with `phatProvenance` unchanged.
+
+### 2026-09-12 — WO-008: a second user, and what it turns from fact into question
+Chady: *"I want a log and page to users. One users for me and one users for Diana, my wife."*
+
+**The conflict, flagged and not worked around.** `CLAUDE.md:3` says *One user: Chady*; §2's stack
+says *single user*; the 2026-09-09 no-build decision is titled *while this stays one user's app*; and
+`handoff-brief.md` §1 — the source of truth for every number the app speaks — is one 180 cm, 85 kg
+bulking male. Two users breaks no §3 hard constraint. It makes those four written facts questions,
+and CLAUDE.md gets edited only on his authorisation (WO-008 §7 item 4). The standing diagnosis is
+restated in the order: sixth tooling request, zero sessions, and now two logs of nothing.
+
+**The forcing question is same phone or two phones, and the default is two.** Two phones is the
+shape the app already has — the device is the person, RLS already separates the server side — and it
+moves no stored byte. Same phone means every unkeyed store (`log`, `bw`, `draft`, `prefs`, `plans`,
+`planedit`, `phat:auth`) is namespaced per profile: a stop-condition-class change planned as W6 and
+**not dispatched** until he answers. If built, the shape follows schema 4's principle — the existing
+keys are profile 0 and nothing relocates; a second profile prefixes; the switch is a pointer write and
+a reload, never an in-memory swap.
+
+**B-88 is ruled, not asked: a device's stores belong to the account that first backed them up.**
+`runBackup` pushes whatever is on disk to whoever is signed in; `prefs.backup.user` already records
+the last account that pushed from or restored onto the device but only gates the unchanged-signature
+skip. Rule: a push (automatic or manual) or a restore under a different account, onto a device with
+non-empty stores, is **refused with the owner named** and writes nothing; an empty device may be
+claimed by anyone (the second-phone restore). Built whatever the same-phone answer is, because it is
+reachable today through the throwaway account. No override in this order — the way out is to sign in
+as the owner.
+
+**B-90 is the coach's before it is anyone's.** The diet targets, the weekly-average arithmetic and the
+calorie ladder (`You are not bulking. Add 200 kcal`) are his numbers compiled into `logic.js`, and the
+model has no person on it. PM position, open for the coach to overturn: an account with no profile
+gets the C7a ABSENT state on Weight and Diet — silence, not flipped signs — and Chady's existing
+store is stamped by an own-gated pass so his screens do not change on upgrade. Whether the 2.5 kg
+power step is right for a much lighter lifter is asked (W1 q4) and, if it opens a rule change, is its
+own order.
+
+**Sequence relative to WO-007.** Coach, UX and release run now; backend and frontend wait for WO-007
+W4 to land, because both orders edit `index.html` and the 2026-09-11 one-writer rule stands. If he
+wants WO-008 first, WO-007 W4 waits instead.
+
+**Rules out:** treating "one user" as still true anywhere the app or its docs say it, once he
+reaffirms; a push or restore that crosses accounts on a device with data; diet or calorie advice to an
+account with no profile; building a diet editor inside a login item (B-93 is filed for that); and
+namespacing the stores on the PM's default rather than his answer.
