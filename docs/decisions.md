@@ -1906,3 +1906,90 @@ both and Chady picks (§7 item 1).
 
 **Rules out:** any re-split that re-mints an id; deleting a non-empty day; removing `Build from empty`
 on the PM's say-so; shipping `moveExerciseToDay` with `phatProvenance` unchanged.
+
+### 2026-09-12 — WO-008: a second user, and what it turns from fact into question
+Chady: *"I want a log and page to users. One users for me and one users for Diana, my wife."*
+
+**The conflict, flagged and not worked around.** `CLAUDE.md:3` says *One user: Chady*; §2's stack
+says *single user*; the 2026-09-09 no-build decision is titled *while this stays one user's app*; and
+`handoff-brief.md` §1 — the source of truth for every number the app speaks — is one 180 cm, 85 kg
+bulking male. Two users breaks no §3 hard constraint. It makes those four written facts questions,
+and CLAUDE.md gets edited only on his authorisation (WO-008 §7 item 4). The standing diagnosis is
+restated in the order: sixth tooling request, zero sessions, and now two logs of nothing.
+
+**The forcing question is same phone or two phones, and the default is two.** Two phones is the
+shape the app already has — the device is the person, RLS already separates the server side — and it
+moves no stored byte. Same phone means every unkeyed store (`log`, `bw`, `draft`, `prefs`, `plans`,
+`planedit`, `phat:auth`) is namespaced per profile: a stop-condition-class change planned as W6 and
+**not dispatched** until he answers. If built, the shape follows schema 4's principle — the existing
+keys are profile 0 and nothing relocates; a second profile prefixes; the switch is a pointer write and
+a reload, never an in-memory swap.
+
+**B-88 is ruled, not asked: a device's stores belong to the account that first backed them up.**
+`runBackup` pushes whatever is on disk to whoever is signed in; `prefs.backup.user` already records
+the last account that pushed from or restored onto the device but only gates the unchanged-signature
+skip. Rule: a push (automatic or manual) or a restore under a different account, onto a device with
+non-empty stores, is **refused with the owner named** and writes nothing; an empty device may be
+claimed by anyone (the second-phone restore). Built whatever the same-phone answer is, because it is
+reachable today through the throwaway account. No override in this order — the way out is to sign in
+as the owner.
+
+**B-90 is the coach's before it is anyone's.** The diet targets, the weekly-average arithmetic and the
+calorie ladder (`You are not bulking. Add 200 kcal`) are his numbers compiled into `logic.js`, and the
+model has no person on it. PM position, open for the coach to overturn: an account with no profile
+gets the C7a ABSENT state on Weight and Diet — silence, not flipped signs — and Chady's existing
+store is stamped by an own-gated pass so his screens do not change on upgrade. Whether the 2.5 kg
+power step is right for a much lighter lifter is asked (W1 q4) and, if it opens a rule change, is its
+own order.
+
+**Sequence relative to WO-007.** Coach, UX and release run now; backend and frontend wait for WO-007
+W4 to land, because both orders edit `index.html` and the 2026-09-11 one-writer rule stands. If he
+wants WO-008 first, WO-007 W4 waits instead.
+
+**Rules out:** treating "one user" as still true anywhere the app or its docs say it, once he
+reaffirms; a push or restore that crosses accounts on a device with data; diet or calorie advice to an
+account with no profile; building a diet editor inside a login item (B-93 is filed for that); and
+namespacing the stores on the PM's default rather than his answer.
+
+## 2026-09-12 — WO-007 W5: the re-split passes QA at `1b638bc`; one RI1 edge reported, not ruled; a third suite tripwire
+
+Verified against `1b638bc` (frontend W4) with backend's W3 at `9ea729f` underneath. Suite **653 / 653 / 0**, no
+skips, three tripwires. `scripts/offline-check.mjs` PASS. `file://` boot at 400 px: zero console errors.
+
+**W5 is a pass for release.** Every criterion in W3 (D1–D6) and W4 (D7–D11, B1–B5) observed, and the four attacks
+run as written; the evidence is `tests.html` "Already proven" item 31 (110 browser checks, 400 px, offline after
+the service worker took control, again at 200 % text, zero page errors, zero requests). No existing assertion was
+changed. Five tests were added (S35) and one meta-test.
+
+**Ruled, QA:**
+- **The suite now proves its own origin rule.** A `Storage.prototype` spy installed before the first test records
+  every `phat:*` write for the whole run and a third tripwire asserts the list is empty. On `file://` and on the
+  deployed `/tests.html` the harness origin *is* the app's, so a fixture that wrote `phat:v1:log` would write into
+  his history; "no fixture writes a `phat:v1:*` key" was a rule applied from memory and is now a test. Verified to
+  fire: a fixture that sets and removes `phat:v1:qa-selfcheck` turns it red.
+- **D6 re-run independently, not taken on report.** All nineteen of backend's mutants die against the shipped
+  `logic.js` with the red counts backend recorded (within one), plus five of QA's own (undo ignoring `from.index`,
+  last-day removal, a move writing `keyLifts`, a move writing `speedSource`, reconcile zeroing gone days). Each
+  injection is checked to have matched the source exactly once before it counts — `logic.js` is CRLF on disk and
+  a first pass silently no-op'd six mutants until the runner normalised line endings. A mutant that did not land
+  is a failed injection, never a kill.
+- **The browser attack is replayed in the pure suite, in the browser's order.** S35's headline is the exact
+  six-day PPL ×2 the phone-sized run built (six added days, 42 moves, PHAT's five deleted): engines
+  byte-identical, `reintroOrder` exactly as SAVE PLAN stored it (no key for a day holding no cut slot), PV1 false,
+  and the nine warn-once sentences in the order the sheet showed them. A change that would alter what the phone
+  showed goes red on `file://` first.
+- **One edge pinned as OBSERVED, not accepted (S29's precedent).** Rule RI1's four examples do not cover a plain
+  out-and-back in one SAVE: `reconcileReintro` sets the counter to the *size* of the intersection, and the counter
+  is an *index* into the new order. Move `d3d` (back, counter 1, order `[d3d, d3g]`) off Back & shoulders and back
+  with two plain moves, save once: order `[d3g, d3d]`, counter 1, **Upright row reads as back and was never
+  offered**; DB row, which was, does not. Saved one move at a time the answer is 0 both times; undone, DB row stays
+  back. Observed on screen: counter 1, reads-as-back = Upright row, offer = DB row. **Backend's, coach to confirm
+  the rule: reconcile by identity, not cardinality** — the ids that read as back after a save are the ones that read
+  as back before it and are still on the day. P2 (no set lost; needs a counted day and an out-and-back before one
+  save), not a W6 blocker. The S35 test inverts when it is ruled; the PM should file it against B-87.
+- **The fall-through is confirmed both ways.** At `9ea729f` a stray editor tap (day-name field, exercise-name field,
+  "No exercises yet.") fell through `planClick` to the Train handler's `[data-day]` match on `.peday` and opened a
+  session; at `1b638bc` it does not. DOM delegation order; listed under "not testable", not pinned.
+
+**Rules out:** closing the RI1 edge by editing the observed pin; a fixture that writes any `phat:*` key on the
+harness origin; citing backend's mutant count without re-running it.

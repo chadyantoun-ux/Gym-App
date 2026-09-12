@@ -849,7 +849,9 @@
   .peex{border-top:1px solid var(--rule); padding:var(--s2) 0}
   .peex .pein{margin-top:0}
   .pectl{display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2); margin-top:var(--s2)}
-  .penrow{display:flex; align-items:center; gap:var(--s2)}
+  .penrow{display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2)}
+  /* WO-007: the name field keeps 12rem or takes the line; a long tag (HYPERTROPHY at 200 %) wraps under it rather than squeezing it. */
+  .penrow .pein{flex:1 1 12rem; width:auto; min-width:0}
   .penrow .cut,.rot .cut{color:var(--faint); font-size:.6875rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; flex:none}
   .petgt{min-height:var(--tap); min-width:5.5rem; padding:0 var(--s2); display:flex; align-items:center;
     justify-content:center; gap:6px; color:var(--amber); font-weight:800; font-size:.8125rem;
@@ -872,6 +874,37 @@
   .pebottom{padding:var(--s4) var(--s4) var(--s8)}
   .pebottom .ghostbtn{margin-top:var(--s3)}
   .pebottom .primary[disabled]{background:var(--surface); color:var(--faint); cursor:default}
+  /* ==== WO-007 W4: the re-split (spec 9.9) ===============================
+     The cross-day move is a TEXT button on its own line under line 1 - the
+     control line is already 348 px of 368 at 400 px, so a seventh glyph would
+     wrap alone and read as a fault (9.9.1). Bordered like .petgt, never
+     amber: amber is the live thing and this row is not it. */
+  .pemv{margin-top:var(--s2)}
+  .pemove{min-height:var(--tap); min-width:132px; padding:0 var(--s3); display:inline-flex;
+    align-items:center; border:2px solid var(--line); border-radius:var(--r); color:var(--bone);
+    background:transparent; font-size:.8125rem; font-weight:800; letter-spacing:.02em; text-align:left}
+  .pemove:active{background:var(--amber); color:var(--bg)}
+  /* The kind tag on a MIXED day (coach q2): same form as CUT, a word, never a
+     colour. Absent on a day whose heading still governs. */
+  .penrow .kind{color:var(--faint); font-size:.6875rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; flex:none}
+  /* The move sheet's list variant (9.9.3). The list scrolls; Not now is
+     pinned below it, so the safe tap is never below the fold. */
+  .mvlist{margin-top:var(--s3); max-height:46vh; overflow-y:auto; border:1px solid var(--rule); border-radius:var(--r)}
+  .mvrow{width:100%; min-height:48px; display:flex; align-items:center; justify-content:space-between;
+    gap:var(--s3); padding:var(--s2) var(--s3); text-align:left; background:transparent; border-left:3px solid transparent}
+  .mvrow+.mvrow{border-top:1px solid var(--rule)}
+  .mvrow .nm{color:var(--bone); font-size:1rem; font-weight:800; min-width:0; overflow-wrap:anywhere}
+  .mvrow .ct{color:var(--dim); font-size:.8125rem; flex:none}
+  /* Armed after a warn-once (K2): the sentence names the day; the rule is redundant. */
+  .mvrow[aria-pressed="true"]{border-left-color:var(--amber)}
+  .sheet .btns .mvno{min-height:52px}
+  .sheet .rule p+p{margin-top:6px}
+  /* The Plans list's way in (9.9.7): PRIMARY while no plan of his exists,
+     the same row as a ghost once one does. Build from empty stays dashed. */
+  .planrow.dup{background:transparent; border:2px solid var(--line); min-height:56px}
+  .planrow.dup.prim{background:var(--amber); border-color:var(--amber)}
+  .planrow.dup.prim .pn,.planrow.dup.prim .pm{color:var(--bg)}
+  .planrow.build{min-height:48px}
   .todo{padding:var(--s6) var(--s4)}
   .todo p{color:var(--dim); font-size:.875rem; line-height:1.55; margin-top:var(--s3); max-width:32em}
   .mb12{margin-bottom:var(--s3)} .mt12{margin-top:var(--s3)}
@@ -1177,7 +1210,7 @@ async function del(k){
             IN-MEMORY state: which days are open, the add form, the undo. */
 const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
          plans:{plans:[],activePlanId:PHAT.PHAT_PLAN_ID},plansMeta:{},plan:PHAT.PHAT_PLAN,sessPlan:null,
-         planBroken:false,edits:{},planView:"",pe:null,
+         planBroken:false,edits:{},planView:"",pe:null,plErr:null,
          problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
          exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,dietView:null,
          stores:{log:"absent",bw:"absent",plans:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null},
@@ -2945,6 +2978,36 @@ const SESSION_OPEN="Finish or discard the session in progress first.";
    THIS PLAN, DUPLICATE. A demo store must not be the base of anything that
    persists (C-14), and one writer refusing while two do not is a seam. */
 const DEMO_STORE="Sample data is loaded. Leave it before saving a plan.";
+/* WO-007. The coach's three warn-once sentences for the move sheet (W1 q1,
+   q3, q4), transcribed verbatim; the {…} slots are the only edits made.
+   PHAT.moveWarning decides WHICH one, with its own priority - nothing here
+   re-derives it. K2's shape: first tap shows it, the same day again moves. */
+const MOVE_WARN={
+  Q1:d=>d+" would hold power and hypertrophy work together. Each exercise keeps its own rule and rest. Put the power sets first. The six-week check will treat this plan as yours, not PHAT.",
+  Q3:(sp,src)=>sp+" would sit on the same day as "+src+", the lift it takes 65–70% from. PHAT puts speed work 2–3 days after the heavy lift. On the same day it is extra sets, not speed work. Keep them apart, or delete the speed work.",
+  Q4:(d,e)=>d+" already holds "+e.n+" at "+tgtText(e)+". This puts the same movement there twice. Keep one unless you mean both."
+};
+/* The Plans screen's placement line (coach W1 q8, Rule PV1), rendered ONLY
+   when phatProvenanceReport says the prescription stands and the placement
+   does not - never on a 5x5 edit, where placement is null. */
+const PLACEMENT_LINES=["This plan has moved PHAT's lifts across days.",
+  "Each exercise keeps its own rule and rest. The six-week check treats this as your plan, not PHAT."];
+/* The Type line inside a row's range detail (coach W1 q2): the rule and the
+   rest follow the exercise, and the sentence says so on any day. */
+const KIND_LINE={
+  power:"Rests 2–3 min and progresses by load on any day.",
+  hyp:"Rests 1–2 min and progresses by reps first on any day.",
+  speed:"Rests 60–90 s at 65–70% of its source triple on any day."
+};
+/* A MIXED day, in the coach's sense (q1): power beside hypertrophy or speed
+   work. PHAT's own hypertrophy days hold speed work by design and are not
+   mixed. On a mixed day the heading no longer governs, so each row wears
+   its kind as a word. */
+function mixedDay(d){
+  const ex=(d&&d.ex)||[];
+  return ex.some(e=>e&&e.k==="power")&&ex.some(e=>e&&(e.k==="hyp"||e.k==="speed"));
+}
+const ORD=n=>n+(n%100>=11&&n%100<=13?"th":n%10===1?"st":n%10===2?"nd":n%10===3?"rd":"th");
 
 /* Is a session in progress? On screen, offered on the Train tab, or on disk
    but unreadable - all three block a plan commit and a plan switch (D10):
@@ -3038,6 +3101,15 @@ function vPlanList(){
   if(S.planBroken) h+=`<p class="sub" style="margin-bottom:var(--s3)">The active plan cannot be opened. PHAT runs until it is fixed or another plan is chosen.</p>`;
   h+=planRow({id:PHAT.PHAT_PLAN_ID, name:PHAT.PHAT_PLAN.name, active:act===PHAT.PHAT_PLAN_ID||S.planBroken,
     meta:"Layne Norton, unedited &middot; read-only template"});
+  /* WO-007 (9.9.7, B-85): the way in is a copy of PHAT, directly under the
+     PHAT row because it is an action ON PHAT. Primary while he has no plan
+     of his own; the same row as a ghost once he does. The list-level
+     refusal (demo store, blocked store) sits above it, in the alert slot. */
+  if(S.plErr) h+=`<div class="warn hi mb12" role="alert">
+    <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.plErr)}</p></div>`;
+  h+=`<button class="planrow dup${stored.length?"":" prim"}" id="plan-dup-phat" aria-labelledby="plan-dup-phat-t" aria-describedby="plan-dup-phat-s">
+    <span class="ptxt"><span class="pn" id="plan-dup-phat-t">Duplicate PHAT and rearrange it</span>
+    <span class="pm" id="plan-dup-phat-s">Same exercises, same history. Move them between days, rename the days.</span></span></button>`;
   stored.forEach(p=>{
     const id=String(p.planId||"");
     const ok=planOk(p);
@@ -3053,10 +3125,17 @@ function vPlanList(){
     h+=planRow({id:k, name:p&&p.name?p.name:"New plan", unsaved:true,
       meta:esc(plural(Array.isArray(p.days)?p.days.length:0,"day")+" · "+plural(exCount(p),"exercise")+" · not saved yet")});
   });
-  h+=`<button class="planrow build" id="plan-new"><span class="ptxt"><span class="pn">+ Build from empty</span>
-    <span class="pm">Name the days, add the lifts, set the ranges</span></span></button></div>`;
-  /* What the ACTIVE plan does not declare - coach 8.4, once, here only. */
+  /* Demoted, not removed (WO-007 §2): below every plan he owns, dashed, the
+     `+` gone - the label is the verb. */
+  h+=`<button class="planrow build" id="plan-new" aria-labelledby="plan-new-t" aria-describedby="plan-new-s">
+    <span class="ptxt"><span class="pn" id="plan-new-t">Build from empty</span>
+    <span class="pm" id="plan-new-s">Name the days, add the lifts, set the ranges</span></span></button></div>`;
+  /* What the ACTIVE plan does not declare - coach 8.4, once, here only.
+     WO-007 (Rule PV1): the placement line joins it, once, in the same shape,
+     iff the prescription stands and the placement does not. */
   const ab=absentLines(S.plan);
+  let pv=null; try{ pv=PHAT.phatProvenanceReport(S.plan); }catch(err){ pv=null; }
+  if(pv&&pv.prescription===true&&pv.placement===false) ab.push(PLACEMENT_LINES);
   if(ab.length){
     h+=`<div class="pad mt16"><span class="lbl secrule">What ${esc(S.plan.name)} does not declare</span>`;
     ab.forEach(lines=>{ h+=`<div class="advice">${lines.map(t=>`<p>${esc(t)}</p>`).join("")}</div>`; });
@@ -3126,13 +3205,14 @@ function vPlanEdit(){
       h+=`<div class="pebody">
         <label class="bklbl" for="pe-dn-${esc(d.id)}">Day name</label>
         <input class="pein" id="pe-dn-${esc(d.id)}" data-peday="${esc(d.id)}" value="${esc(d.name)}" autocomplete="off" spellcheck="false">`;
-      const ex=d.ex||[];
+      const ex=d.ex||[], mixed=mixedDay(d);
       if(!ex.length) h+=`<p class="sub mt12">No exercises yet.</p>`;
       ex.forEach((e,ei)=>{
         const rng=S.pe.range===e.id;
         h+=`<div class="peex" data-ex="${esc(e.id)}">
           <label class="sr-only" for="pe-xn-${esc(e.id)}">Exercise name</label>
-          <div class="penrow"><input class="pein" id="pe-xn-${esc(e.id)}" data-peex="${esc(e.id)}" value="${esc(e.n)}" autocomplete="off" spellcheck="false">${e.cut===1?`<span class="cut">Cut</span>`:""}</div>
+          <div class="penrow"><input class="pein" id="pe-xn-${esc(e.id)}" data-peex="${esc(e.id)}" value="${esc(e.n)}" autocomplete="off" spellcheck="false">${
+            mixed?`<span class="kind">${esc(KIND_LBL[e.k]||e.k)}</span>`:""}${e.cut===1?`<span class="cut">Cut</span>`:""}</div>
           <div class="pectl">
             <button class="pebtn" data-pexmove="up" data-ex="${esc(e.id)}" aria-label="Move ${esc(e.n)} up"${ei===0?" disabled":""}>${GL.up}</button>
             <button class="pebtn" data-pexmove="down" data-ex="${esc(e.id)}" aria-label="Move ${esc(e.n)} down"${ei===ex.length-1?" disabled":""}>${GL.down}</button>
@@ -3141,6 +3221,9 @@ function vPlanEdit(){
             <button class="pebtn" data-pesets="+" data-ex="${esc(e.id)}" aria-label="${esc(e.n)}: one set more">+</button>
             <button class="pebtn pex" data-pedel="${esc(e.id)}" aria-label="Delete ${esc(e.n)} from this plan">${GL.x}</button>
           </div>`;
+        /* WO-007 (9.9.2): its own line, under the arrows, diagonally opposite
+           the cross. ABSENT with one day - nothing to move to. */
+        if(days.length>1) h+=`<div class="pemv"><button class="pemove" id="pe-mv-${esc(e.id)}" data-pemvto="${esc(e.id)}" aria-label="Move ${esc(e.n)} to another day">Move to another day</button></div>`;
         if(rng) h+=`<div class="perange">
             <div class="grp"><span class="unit">Reps from</span><span class="stepper">
               <button data-perep="lo" data-dir="-" data-ex="${esc(e.id)}" aria-label="${esc(e.n)}: reps from, down">&minus;</button>
@@ -3150,12 +3233,18 @@ function vPlanEdit(){
               <button data-perep="hi" data-dir="-" data-ex="${esc(e.id)}" aria-label="${esc(e.n)}: reps to, down">&minus;</button>
               <span class="pev">${e.hi}</span>
               <button data-perep="hi" data-dir="+" data-ex="${esc(e.id)}" aria-label="${esc(e.n)}: reps to, up">+</button></span></div>
-            <p class="tiny" style="flex:1 1 100%">${esc(KIND_LBL[e.k]||e.k)} &middot; ${esc(IMPL_LBL[e.implement]||e.implement)}. Changing the target starts a new prescription for this exercise.</p>
+            <p class="tiny" style="flex:1 1 100%">${esc(KIND_LBL[e.k]||e.k)} &middot; ${esc(IMPL_LBL[e.implement]||e.implement)}.${KIND_LINE[e.k]?" "+esc(KIND_LINE[e.k]):""} Changing the target starts a new prescription for this exercise.</p>
           </div>`;
         h+=`</div>`;
       });
       if(S.pe.form&&S.pe.form.dayId===d.id) h+=vExForm(plan,S.pe.form);
-      else h+=`<button class="ghostbtn mt12" data-peadd="${esc(d.id)}">+ Add exercise</button>`;
+      else{
+        h+=`<button class="ghostbtn mt12" data-peadd="${esc(d.id)}">+ Add exercise</button>`;
+        /* WO-007 (9.9.5, B-84): ONLY on a day holding nothing, and not on
+           the last day (removeDay refuses both; a control that always
+           refuses is worse than none). Absent, not disabled. */
+        if(!ex.length&&days.length>1) h+=`<button class="ghostbtn mt12" data-pedelday="${esc(d.id)}">Delete this day</button>`;
+      }
       h+=`</div>`;
     }
     h+=`</div>`;
@@ -3166,8 +3255,11 @@ function vPlanEdit(){
   /* ---- the bottom: undo, refusal, SAVE, DISCARD last. Never a corner. ---- */
   h+=`<div class="pebottom">`;
   h+=`<p class="tiny">Editing the plan never rewrites logged history.</p>`;
+  /* One undo slot, latest action wins (9.9.3): the label says which. */
   if(S.pe.undo&&S.pe.undo.planId===id)
-    h+=`<button class="ghostbtn" id="pe-undo">Undo: put ${esc(S.pe.undo.ex.n)} back</button>`;
+    h+=`<button class="ghostbtn" id="pe-undo">${S.pe.undo.kind==="move"
+      ?`Undo: move ${esc(S.pe.undo.exName)} back to ${esc(S.pe.undo.fromName)}`
+      :`Undo: put ${esc(S.pe.undo.ex.n)} back`}</button>`;
   if(S.pe.refuse&&!S.pe.refuseTop) h+=`<div class="refuse mt12" role="alert"><p><span aria-hidden="true">! </span>${esc(S.pe.refuse)}</p></div>`;
   h+=`<button class="primary mt12" id="pe-save"${unsaved?"":" disabled"}>Save plan</button>`;
   if(unsaved) h+=`<button class="ghostbtn" id="pe-discard">Discard changes</button>`;
@@ -3238,7 +3330,7 @@ function openPlan(id){
   const p=editPlan(id);
   if(!p) return;
   S.planView="edit"; S.pe={planId:id,open:{},form:null,undo:null,refuse:null,refuseTop:false,range:null};
-  S.err=null; render();
+  S.err=null; S.plErr=null; render();
 }
 /* Apply a pure editor's RESULT to the working copy. `r` is {ok, plan,
    problems}; on ok the copy is replaced whole, persisted, and the screen
@@ -3364,18 +3456,163 @@ function deleteEx(exId){
   if(!r.ok){ refuse("Could not delete it. Nothing changed.",false); return; }
   if(S.pe.form&&S.pe.form.dayId===dayId) S.pe.form=null;
   if(S.pe.range===exId) S.pe.range=null;
-  S.pe.undo={planId:S.pe.planId,dayId:dayId,index:index,ex:r.removed,snap:snap};
+  S.pe.undo={kind:"del",planId:S.pe.planId,dayId:dayId,index:index,ex:r.removed,snap:snap};
   applyEdit(r);
   toastUndo(r.removed.n+" deleted.",undoDeleteEx);
 }
 function undoDeleteEx(){
-  const u=S.pe&&S.pe.undo; if(!u||u.planId!==S.pe.planId) return;
+  const u=S.pe&&S.pe.undo; if(!u||u.kind!=="del"||u.planId!==S.pe.planId) return;
   const w=workOf(); if(!w) return;
   const r=PHAT.restoreExercise(w,u.dayId,u.index,u.ex,u.snap);
   if(!r.ok){ refuse("Could not put "+u.ex.n+" back.",false); return; }
   S.pe.undo=null; hideToast();
   applyEdit(r);
   toast(u.ex.n+" is back.",false);
+}
+/* The one persistent undo control dispatches on what was last offered. */
+function undoLast(){
+  const u=S.pe&&S.pe.undo; if(!u) return;
+  if(u.kind==="move") undoMoveEx(); else undoDeleteEx();
+}
+
+/* ---- WO-007: the cross-day move (spec 9.9.3) --------------------------
+   The sheet lists every OTHER day of the WORKING COPY with its count, in
+   plan order; the current day is named in the body and not offered. A tap
+   on a day row asks PHAT.moveWarning first: a warning renders in the sheet
+   in K2's shape and arms that row; the same row again moves; any other row
+   clears it. Nothing here writes until moveExerciseToDay says ok, and then
+   it goes through applyEdit -> saveEdits(), never save(PLANS). */
+function askMoveEx(exId){
+  const w=workOf(); if(!w) return;
+  const e=PHAT.exById(w,exId); if(!e) return;
+  const fromId=PHAT.dayIdOfEx(w,exId);
+  const from=w.days.find(d=>d.id===fromId); if(!from) return;
+  const others=w.days.filter(d=>d&&d.id!==fromId);
+  if(!others.length) return;
+  /* Two days with one name are told apart by position (9.9.10 item 4). */
+  const dup=nm=>w.days.filter(d=>d&&String(d.name)===String(nm)).length>1;
+  const label=d=>dup(d.name)?d.name+" · "+ORD(w.days.indexOf(d)+1):d.name;
+  const rows=others.map(d=>{
+    const n=(d.ex||[]).length, ct=plural(n,"exercise");
+    return `<button class="mvrow" data-sheetday="${esc(d.id)}" aria-pressed="false" aria-label="${esc(label(d))}, ${esc(ct)}">
+      <span class="nm">${esc(label(d))}</span><span class="ct">${esc(ct)}</span></button>`;
+  }).join("");
+  sheetState={move:exId, armed:null, back:"pe-mv-"+exId, armAt:0};
+  const m=document.getElementById("modal");
+  m.innerHTML=`<div class="scrim" data-sheet="cancel"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title">
+      <h2 id="dr-confirm-title" tabindex="-1">Move ${esc(e.n)}</h2>
+      <p class="det">Now on ${esc(from.name)}. Lands last on the day you pick.</p>
+      <div class="mvlist">${rows}</div>
+      <div id="dr-sheet-err"></div>
+      <div class="btns"><button class="ghostbtn mvno" data-sheet="safe">Not now</button></div>
+    </section>`;
+  const head=m.querySelector("#dr-confirm-title"); if(head) head.focus();
+}
+/* The coach's sentence for a warning, with the names filled in. Empty when
+   there is nothing to say - and empty means MOVE. */
+function moveWarnText(w,exId,toDayId){
+  let mw=null; try{ mw=PHAT.moveWarning(w,exId,toDayId); }catch(err){ mw=null; }
+  const which=mw&&mw.which?String(mw.which).toUpperCase():"";
+  if(!which) return "";
+  const e=PHAT.exById(w,exId), dst=w.days.find(d=>d.id===toDayId);
+  if(!e||!dst) return "";
+  const ex=dst.ex||[];
+  if(which==="Q1") return MOVE_WARN.Q1(dst.name);
+  if(which==="Q3"){
+    let ss={}; try{ ss=PHAT.planSpeedSource?PHAT.planSpeedSource(w)||{}:(w.speedSource||{}); }catch(err){ ss=w.speedSource||{}; }
+    /* Either the slot is the speed work and its source is on the day, or
+       the slot is the source and the day holds its speed work. */
+    let sp=null, src=null;
+    if(ss[exId]&&ex.some(x=>x.id===ss[exId])){ sp=e; src=ex.find(x=>x.id===ss[exId]); }
+    else{ const s=ex.find(x=>ss[x.id]===exId); if(s){ sp=s; src=e; } }
+    if(!sp||!src) return "";
+    return MOVE_WARN.Q3(sp.n,src.n);
+  }
+  if(which==="Q4"){
+    const same=ex.find(x=>x&&x.lift&&x.lift===e.lift);
+    if(!same) return "";
+    return MOVE_WARN.Q4(dst.name,same);
+  }
+  return "";
+}
+function moveSheetTap(toDayId){
+  const st=sheetState; if(!st||!st.move) return;
+  const w=workOf(); if(!w) return;
+  const exId=st.move;
+  const rows=Array.prototype.slice.call(document.querySelectorAll("#modal .mvrow"));
+  if(st.armed!==toDayId){
+    const msg=moveWarnText(w,exId,toDayId);
+    if(msg){
+      const dst=w.days.find(d=>d.id===toDayId);
+      st.armed=toDayId;
+      rows.forEach(b=>b.setAttribute("aria-pressed",b.dataset.sheetday===toDayId?"true":"false"));
+      const el=document.getElementById("dr-sheet-err");
+      if(el) el.innerHTML=`<div class="rule"><p>${esc(msg)}</p><p>Tap ${esc(dst?dst.name:"that day")} again to move it.</p></div>`;
+      return;
+    }
+  }
+  moveEx(exId,toDayId);
+}
+function moveEx(exId,toDayId){
+  const w=workOf(); if(!w) return;
+  const e=PHAT.exById(w,exId);
+  const fromId=PHAT.dayIdOfEx(w,exId);
+  const from=w.days.find(d=>d.id===fromId), dst=w.days.find(d=>d.id===toDayId);
+  if(!e||!from||!dst){ sheetErr("Could not move that exercise."); return; }
+  const r=PHAT.moveExerciseToDay(w,exId,toDayId);
+  if(!r.ok){ sheetErr("Could not move that exercise."); return; }
+  /* The trigger is about to leave the day, so the sheet must not hand focus
+     back to it; focus is placed by hand after the paint. */
+  if(sheetState) sheetState.back=null;
+  closeSheet();
+  if(S.pe.range===exId) S.pe.range=null;
+  S.pe.undo={kind:"move",planId:S.pe.planId,exId:exId,from:r.from,exName:e.n,fromName:from.name,toName:dst.name};
+  applyEdit(r);
+  toastUndo(e.n+" moved to "+dst.name+".",undoMoveEx);
+  focusAfterMove(fromId,r.from.index);
+}
+/* Focus after a move (9.9.3): the row now at that index in the origin day,
+   else its last row, else the day's + Add exercise. Never document.body. */
+function focusAfterMove(dayId,index){
+  const day=document.querySelector(`.peday[data-day="${CSS.escape(dayId)}"]`); if(!day) return;
+  const rows=day.querySelectorAll(".peex");
+  const row=rows[Math.min(index,rows.length-1)];
+  const el=(row&&row.querySelector("[data-pemvto]"))||day.querySelector("[data-peadd]");
+  if(el) el.focus({preventScroll:true});
+}
+/* UNDO. `from` goes back as the 4th argument - that restores the index AND
+   the declared reintro position (Rule RI1). A plain move back is not an undo
+   for a cut slot. */
+function undoMoveEx(){
+  const u=S.pe&&S.pe.undo; if(!u||u.kind!=="move"||u.planId!==S.pe.planId) return;
+  const w=workOf(); if(!w) return;
+  const r=PHAT.moveExerciseToDay(w,u.exId,u.from.dayId,u.from);
+  if(!r.ok){ refuse("Could not move "+u.exName+" back.",false); return; }
+  S.pe.undo=null; hideToast();
+  if(S.pe.range===u.exId) S.pe.range=null;
+  applyEdit(r);
+  toast(u.exName+" is back on "+u.fromName+".",false);
+  const el=document.getElementById("pe-mv-"+u.exId); if(el) el.focus({preventScroll:true});
+}
+/* ---- WO-007: deleting an emptied day (9.9.5, B-84). One sheet, no undo:
+   nothing is lost. The control is absent on a non-empty day, and the
+   handler and removeDay both refuse if a tap arrives anyway. */
+function askDeleteDay(dayId){
+  const w=workOf(); if(!w) return;
+  const d=w.days.find(x=>x.id===dayId); if(!d||(d.ex||[]).length) return;
+  askSheet({headline:"Delete "+d.name+"?", body:"It holds no exercises. Nothing is lost.",
+    danger:"Delete day", safe:"Keep it", back:"pe-addday",
+    onDanger:()=>{
+      const w2=workOf(); if(!w2) return;
+      const r=PHAT.removeDay(w2,dayId);
+      if(!r.ok){ sheetErr("Could not delete that day. Nothing changed."); return; }
+      closeSheet();
+      delete S.pe.open[dayId];
+      if(S.pe.form&&S.pe.form.dayId===dayId) S.pe.form=null;
+      applyEdit(r);
+      toast(d.name+" deleted.");
+    }});
 }
 /* USE THIS PLAN. Refused, in the same order and words as SAVE PLAN: a
    session in progress (D10, read from disk), a store this build could not
@@ -3408,6 +3645,7 @@ async function savePlan(){
   if(S.plansMeta.demo===true){ refuse(DEMO_STORE,false); return; }
   let v; try{ v=PHAT.validatePlan(w); }catch(err){ v={ok:false,problems:[]}; }
   if(!v.ok){ refuse(validateCopy(v.problems),false); return; }
+  const before=storedPlan(id);
   const r=PHAT.planStoreUpsert(S.plans,w);
   if(!r.ok){ refuse("Not saved. This plan cannot be stored.",false); return; }
   const prev=S.plans;
@@ -3415,6 +3653,17 @@ async function savePlan(){
   const ok=await save(PLANS,plansPayload());
   if(!ok){ S.plans=prev; refuse(S.err||"Could not save. Your edits are still here — try again.",false); return; }
   adoptPlans(plansPayload());
+  /* WO-007 Rule RI1: a day's reintro counter means the accessories it
+     ACTUALLY reintroduced, and a move can change the order under it.
+     Reconciled here, stored plan (before) against the working copy (after),
+     and written through the log-meta path ONLY when a counter moved - the
+     log store is not rewritten for a plan edit that changed no count. */
+  try{
+    const next=PHAT.reconcileReintro(S.logMeta,before,w);
+    if(next&&JSON.stringify(next.reintro||{})!==JSON.stringify(S.logMeta.reintro||{})){
+      S.logMeta=next; await save(LOG,logPayload());
+    }
+  }catch(err){}
   delete S.edits[id];
   await saveEdits();
   S.pe.undo=null; S.pe.refuse=null; S.pe.form=null;
@@ -3449,25 +3698,29 @@ function askDiscardEdits(){
 }
 /* Duplicate. Said BEFORE the copy exists (W14), in the spec's words. Not
    destructive, so the action is the primary and lowest; `Not now` above. */
-function askDuplicate(id){
+function askDuplicate(id,back){
   const src=storedPlan(id); if(!src) return;
+  /* WO-007: reached from the Plans LIST too (9.9.7 slot 2), where there is
+     no S.pe - the refusal then lands in the list's alert slot. */
+  const say=msg=>{ if(S.pe) refuse(msg,true); else { S.plErr=msg; announce(msg,true); render(true); } };
   askSheet({headline:"Duplicate "+src.name+"?", body:COPY_NOTE, plain:true,
-    danger:"Duplicate", safe:"Not now",
+    danger:"Duplicate", safe:"Not now", back:back||null,
     onDanger:async()=>{
       closeSheet();
-      if(S.blockWrites[PLANS]){ refuse(S.err||"Not saved. The plan store could not be read.",true); return; }
+      if(S.blockWrites[PLANS]){ say(S.err||"Not saved. The plan store could not be read."); return; }
       /* D7: the copy would be written INTO the demo store, and a demo store is
          the base of nothing that persists (C-14). Same sentence as SAVE PLAN. */
-      if(S.plansMeta.demo===true){ refuse(DEMO_STORE,true); return; }
+      if(S.plansMeta.demo===true){ say(DEMO_STORE); return; }
       const r=PHAT.copyPlan(src,null,PHAT.localDate());
-      if(!r.ok){ refuse("Could not copy it. Nothing changed.",true); return; }
+      if(!r.ok){ say("Could not copy it. Nothing changed."); return; }
       const up=PHAT.planStoreUpsert(S.plans,r.plan);
-      if(!up.ok){ refuse("Could not copy it. Nothing changed.",true); return; }
+      if(!up.ok){ say("Could not copy it. Nothing changed."); return; }
       const prev=S.plans;
       S.plans={plans:up.store.plans,activePlanId:up.store.activePlanId};
       const ok=await save(PLANS,plansPayload());
-      if(!ok){ S.plans=prev; refuse(S.err||"Could not save the copy. Nothing changed.",true); return; }
+      if(!ok){ S.plans=prev; say(S.err||"Could not save the copy. Nothing changed."); return; }
       adoptPlans(plansPayload());
+      S.plErr=null;
       openPlan(r.plan.planId);
       toast("Copied. This is "+r.plan.name+".");
     }});
@@ -3486,16 +3739,25 @@ async function planClick(e){
   const row=t.closest("[data-plan]");
   if(row){ openPlan(row.dataset.plan); return true; }
   if(t.closest("#plan-new")){ await buildFromEmpty(); return true; }
+  if(t.closest("#plan-dup-phat")){ askDuplicate(PHAT.PHAT_PLAN_ID,"plan-dup-phat"); return true; }
   if(!S.pe) return false;
   if(t.closest("#pe-back")){ commitName(document.activeElement); S.planView=""; S.pe=null; render(); return true; }
   if(t.closest("#pe-use")){ await usePlan(S.pe.planId); return true; }
   if(t.closest("#pe-dup")){ askDuplicate(S.pe.planId); return true; }
   if(t.closest("#pe-save")){ await savePlan(); return true; }
   if(t.closest("#pe-discard")){ askDiscardEdits(); return true; }
-  if(t.closest("#pe-undo")){ undoDeleteEx(); return true; }
+  if(t.closest("#pe-undo")){ undoLast(); return true; }
   const tg=t.closest("[data-petoggle]");
   if(tg){ const id=tg.dataset.petoggle; S.pe.open[id]=!S.pe.open[id]; if(!S.pe.open[id]&&S.pe.form&&S.pe.form.dayId===id) S.pe.form=null; render(true); return true; }
-  const w=workOf(); if(!w) return false;
+  /* From here on the editor OWNS the tap: a stray one (the day-name field,
+     "No exercises yet.", padding) must never fall through to the Train
+     handler, whose [data-day] lookup matches .peday and would start a
+     session on the active plan out of the editor. Found under WO-007 W4. */
+  const w=workOf(); if(!w) return true;
+  const mvto=t.closest("[data-pemvto]");
+  if(mvto){ askMoveEx(mvto.dataset.pemvto); return true; }
+  const dd=t.closest("[data-pedelday]");
+  if(dd){ askDeleteDay(dd.dataset.pedelday); return true; }
   const mv=t.closest("[data-pemove]");
   if(mv&&!mv.disabled){
     const i=w.days.findIndex(d=>d.id===mv.dataset.day);
@@ -3549,7 +3811,7 @@ async function planClick(e){
     if(t.closest("[data-pfadd]")){ addFromForm(); return true; }
     if(t.closest("#pf-cancel")){ S.pe.form=null; render(true); return true; }
   }
-  return false;
+  return true;
 }
 
 /* ---- The progress strip, built once here so no screen can re-invent it ----
@@ -4198,6 +4460,9 @@ document.getElementById("dr-offer").addEventListener("click",e=>{
   }
 });
 document.getElementById("modal").addEventListener("click",e=>{
+  /* WO-007: a day row in the move sheet (9.9.3). */
+  const dr=e.target.closest("[data-sheetday]");
+  if(dr&&sheetState&&sheetState.move){ moveSheetTap(dr.dataset.sheetday); return; }
   const b=e.target.closest("[data-sheet]"); if(!b||!sheetState) return;
   const a=b.dataset.sheet;
   if(a==="cancel"||a==="safe"){

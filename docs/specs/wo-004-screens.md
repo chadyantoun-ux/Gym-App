@@ -153,7 +153,7 @@ editor does not — it is the commit and it moves (§9.2).
 | 32 | diet | Protein check | full × 56 | two-line label |
 | 33 | trend | (none) | — | read-only screen |
 | 34 | plans | Plan row | full × 64 | two-line |
-| 35 | plans | `+ BUILD FROM EMPTY` | full × 48 | |
+| 35 | plans | `Build from empty` | full × 48 | **Amended WO-007:** demoted below stored plans, dashed (§9.9.7) |
 | 36 | editor | Day row (expand) | full × 52 | |
 | 37 | editor | Day `↑` / `↓` | 44 × 44 each | 13 px in the prototype |
 | 38 | editor | Exercise name field | full × 48 | |
@@ -166,6 +166,19 @@ editor does not — it is the commit and it moves (§9.2).
 | 45 | settings | Rest segment `AUTO-START` / `MANUAL` | ≥ 120 × 48 each | |
 | 46 | settings | `EXPORT EVERYTHING AS JSON` | full × 48 | |
 | 47 | settings | Demo enter / leave | full × 48 | |
+| 48 | editor | Exercise `Move to another day` | ≥ 132 × 44 | WO-007 §9.9.2. Own line under the control line; absent with one day |
+| 49 | editor | Move sheet day row | full × 48 | §9.9.3. One per other day |
+| 50 | editor | Move sheet `Not now` | full × 52 | Lowest, pinned |
+| 51 | editor | Empty day `Delete this day` | full × 48 | §9.9.5. Present only at zero exercises |
+| 52 | editor | Warn-once `Got it` | ≥ 88 × 44 | §9.9.6. Only once W1 fills the slot |
+| 53 | plans | `Duplicate PHAT and rearrange it` | full × 56 | §9.9.7. Primary until a stored plan exists, then ghost |
+| 54 | home | Owner row (`This log`) | full × 48 | WO-008 §18.2. Below the next-session block, never the header. Opens Settings at Backup |
+| 55 | onboarding | `Sign in` | full × 48 | §18.4. Second action, under `START WITH AN EMPTY LOG` |
+| 56 | first-run sign-in | `‹ Back` | 88 × 44 | §18.4. Top-left, non-destructive — permitted |
+| 57 | first-run sign-in | Email / password fields, `Sign in`, `Create account` | full × 48 each | §18.4. The existing `vBackupBody` form, unchanged |
+| 58 | first-run sign-in | `Start with an empty log` (escape) | full × 48 | §18.4. Present in every state of the form screen |
+| 59 | first-run, signed in | `Restore {n} sessions` | full × 56 | §18.4 state C1. Primary |
+| 60 | first-run, signed in | `Start with an empty log` / `Sign out` / `Try again` | full × 48 each | §18.4 states C1–C3 |
 
 **Deleted rather than resized:** the FULL VOLUME toggle (C-1), the 2.5/5 KG segment (C-3), and
 `SWITCH TO AN EMPTY LOG` (§2.4 — there is no control that empties the real log).
@@ -1313,7 +1326,7 @@ done instead of training, which is why the design's own honest note ships verbat
 | Read-only row | `PHAT` · `Layne Norton, unedited · read-only template` |
 | Unsaved edits | Badge `UNSAVED CHANGES` **NEW** on any plan with a live working copy (§9.6) |
 | Broken plan | Badge `Cannot open` **NEW**; the row does not open; the plan is never repaired and never dropped (§0.7) |
-| Build | `+ BUILD FROM EMPTY` — `Name the days, add the lifts, set the ranges` *(design)* |
+| Build | `+ BUILD FROM EMPTY` — `Name the days, add the lifts, set the ranges` *(design)* — **superseded by §9.9.7 (WO-007):** the primary is `Duplicate PHAT and rearrange it`; `Build from empty` is secondary, below the stored plans |
 | Honest note | `Editing the plan is the easiest thing in this app to do instead of training. PHAT is already a good plan. The number that moves is sessions logged.` *(design, verbatim)* |
 
 **Switching the active plan** changes no logged session. Sessions logged under plan A still resolve
@@ -1450,6 +1463,330 @@ a guess. **Fail silent, never fail confident.**
 
 Rewrite an `id`. Rewrite a `lift` on a rename. Renumber a `dayId`. Delete history. Produce an
 exercise without `k` and `implement`. Change the active plan as a side effect of an edit.
+
+## 9.9 Re-split — the cross-day move and the way in (WO-007 W2, 2026-09-12)
+
+Author: `ux-designer` · Implements: WO-007 §4 W2 · Consumed by: W4 (`frontend-engineer`), W5 (QA)
+Depends on: W3's `PHAT.moveExerciseToDay` / `PHAT.removeDay` · W1 for every string marked
+**[W1 slot]**, which is left empty here and is not mine to fill.
+
+**Chady's ask:** *"I don't want to build from empty, I might want to use the same exercises from phat
+but alternate them? maybe I want to do push / pull / legs."* Two things follow. The editor needs a
+way to move an exercise to another day with its id intact, and the Plans list has to stop leading
+with the route he said he does not want.
+
+### 9.9.1 The recommendation — a per-exercise "Move to another day" sheet. Not drag, not a matrix.
+
+**Ruled: the sheet.** Three candidates, one reason each is or is not the answer:
+
+| Candidate | Verdict | Reason |
+|---|---|---|
+| **Per-exercise sheet** — tap a control on the row, pick a day from a list | **Ships** | Two taps per move, both on ≥ 44 px targets, both readable without decoding a glyph. It reuses `askSheet`'s enclosure, scrim and focus handling, so it inherits behaviour QA has already proven. Nothing in it survives a `render()` — the sheet lives in `#modal`, outside `#view` — so B-19 cannot touch it |
+| Drag | Rejected | A drag is a held gesture. The editor re-renders `#view` by `innerHTML` on every edit (B-19), which destroys the dragged node mid-gesture; native mobile drag needs a library, which §3.1 forbids; and a chalky thumb on a 1 rem row is the wrong input for a gesture that has no cancel |
+| Day-assignment matrix — every exercise listed once with a day selector | Second-best | It is the right answer if the row cannot hold another control. It can (§9.9.2), so the matrix costs a new screen for no gain. If W4 finds the row cannot make 44 px on every control at 200 %, the matrix is the fallback and §9.9.3's sheet becomes the selector on each matrix row — the rest of this section holds |
+
+**The one number that decides the row layout.** At 400 px the content box is 368 px (`.pad` is
+16 px a side). The existing control line is five 44 px buttons, the 88 px target button and five
+8 px gaps: **348 px**. A seventh 44 px glyph is 400 px. It does not fit, and a lone glyph wrapped to
+a second line reads as a rendering fault. So the new control is **not a glyph and not on that
+line**.
+
+### 9.9.2 The control on the row
+
+```
+Flow:   Move an exercise to another day
+Entry:  Plan Editor, an editable plan with two or more days, an expanded day, any exercise row.
+Exit:   The exercise is on the day he picked, last in that day's order, id byte-identical;
+        or nothing changed.
+```
+
+```
+[REF] the exercise row after this change — line 1 is the shipped row, untouched
+
+┌ .peex ──────────────────────────────────────────────┐
+│ [ Bent-over row                            ]  CUT   │  name field, 48 px (unchanged)
+│ [↑] [↓] [−] [ 3 × 3–5 ] [+]                    [✕]  │  line 1, 348 px at 400 (unchanged)
+│ [ Move to another day ]                             │  line 2, NEW, left-aligned, ≥ 132 × 44
+└─────────────────────────────────────────────────────┘
+```
+
+| Rule | |
+|---|---|
+| Label | `Move to another day` **NEW**. A text button, not a glyph: this is the one control on the row that has no established symbol, and the visible label is the accessible name (`Move {ex} to another day`), which is what W4's criterion asks for |
+| Size | ≥ 132 × 44 at 400 px; auto width to fit its text; **never truncates**. At 200 % it may take the full row width and wrap to two lines; min-height 44 holds |
+| Position | Its own line, **below** line 1, left-aligned under `↑`/`↓`. Diagonally opposite `✕`, which stays at the right end of line 1 — the two controls that change *where* an exercise is are never adjacent |
+| Form | Bordered like `.petgt` (`--line`, 2 px, zero radius), `--bone` text, transparent fill. Not amber — amber is the live thing, and this row is not it |
+| Present when | The plan is editable **and** has ≥ 2 days |
+| Absent when | One day (nothing to move to), or the read-only plan. **Absent, not disabled** (§9.3). With one day the `+ Add day` button is already the next thing on screen |
+| Cost | Every exercise row grows by 52 px. Days are collapsed by default and he works one day at a time, so the scroll cost is one day's exercises, not the plan's |
+
+Line 1 is not re-arranged. Every control on it keeps its position, so nothing he has learned moves
+and B1 for the six existing controls is not re-opened.
+
+### 9.9.3 The sheet
+
+Opens in `#modal` on the tap. Same enclosure as `askSheet` (`.sheet`, scrim, `role="dialog"`,
+`aria-modal`, heading focused on open). It is a **list variant**: one row per destination day, no
+danger button, `Not now` last.
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ Move Bent-over row                       │  h2, tabindex=-1, focused on open
+│ Now on Upper power. Lands last on the    │  .det
+│ day you pick.                            │
+│ ┌──────────────────────────────────────┐ │
+│ │ Lower power              7 exercises │ │  row, full × 48, <button>
+│ ├──────────────────────────────────────┤ │
+│ │ Pull                     5 exercises │ │
+│ ├──────────────────────────────────────┤ │
+│ │ Push                     0 exercises │ │
+│ ├──────────────────────────────────────┤ │
+│ │ Legs                     1 exercise  │ │
+│ └──────────────────────────────────────┘ │
+│ [               Not now               ]  │  full × 52, lowest, pinned
+└──────────────────────────────────────────┘
+```
+
+| Rule | |
+|---|---|
+| Heading | `Move {ex}` **NEW** |
+| Body | `Now on {day}. Lands last on the day you pick.` **NEW** — the current day is *marked* here and *not offered* below. Both of W2's asks, no disabled row |
+| Rows | Every **other** day of the **working copy**, in the plan's day order. Left: `{day}`. Right: `{n} exercises` (`1 exercise` written out; `0 exercises` for an empty day — he can see what he is building, WO-007 W2). Counts come from the working copy, so unsaved moves are already in them |
+| Row size | Full width × ≥ 48. Whole row is the `<button>` |
+| Row text | Day name `--bone`, 1 rem, `overflow-wrap:anywhere`. Count `--dim` (7.0 : 1 on `--surface`); never `--faint` inside a sheet — §0.5 rule 2, the sheet ground is `--surface` |
+| `Not now` | Full × 52, `.ghostbtn`, **last**. If the list overflows the sheet, the list scrolls and `Not now` stays pinned at the sheet's bottom edge — the safe tap is never below the fold |
+| Cancel | `Not now`, scrim tap, `Escape`. Each closes with **no move** and returns focus to the row's `Move to another day` control (`cfg.back`) |
+| Destination | **End of the destination day.** W3's default `toIndex`. The destination's order is his and a move never displaces anything in it; the moved row is then at a known place — the bottom — where `↑` puts it wherever he wants |
+| Arm delay | None. No row in this sheet destroys anything |
+| Mixed-role / speed-beside-source / duplicate-lift | **[W1 slot]** — if the coach rules *warn once*, see §9.9.6; if *refuse*, the refused day's row is **absent from the list**, not disabled, and the body gains the coach's sentence. Nothing here until W1 returns |
+
+**Interactions, tap by tap.**
+
+| # | Tap | What changes |
+|---|---|---|
+| 1 | `Move to another day` on Bent-over row (Upper power) | Sheet opens over the editor. Focus on `Move Bent-over row`. Editor behind is unchanged |
+| 2 | `Pull · 5 exercises` | `PHAT.moveExerciseToDay(w, "d1a", "pull")` through `applyEdit` → `saveEdits()`. Sheet closes. Editor re-renders from the working copy: Bent-over row is gone from Upper power's list; Pull's collapsed day row reads `6 ex · {sets} sets`; Pull does **not** expand; scroll position is kept as for any other `applyEdit`. `UNSAVED CHANGES` is on. Toast `Bent-over row moved to Pull.` with `Undo` |
+| 3 | `Undo` (toast, or the editor's persistent undo control) | `moveExerciseToDay` back to `from.dayId, from.index` — the index, not the end. Toast `Bent-over row is back on Upper power.` The working copy is byte-identical to before tap 2 (W3 D3) |
+| — | `Not now` / scrim / `Escape` at step 2 | Sheet closes. Nothing written. Focus back on the trigger |
+
+**Focus after a move.** The trigger no longer exists — the row left the day. Focus goes to the
+`Move to another day` control of the row now occupying that index in the origin day; if the origin
+day is shorter than that, its last row's; if the origin day is now empty, its `+ Add exercise`.
+Never to `document.body`, never to the top of the page.
+
+**Undo — ruled: needed, not noise.** Moving back by hand is two more taps *and lands the exercise
+at the end of the origin day, not where it was*. Only undo restores `from.index`. And a list of
+48 px rows picked with a chalky thumb is exactly where a wrong day gets tapped. So a move gets the
+same undo as a delete: the toast control (§2.4, ≥ 88 × 48) and the editor's persistent undo
+button in `.pebottom`. **One undo slot, latest action wins**, as `toastUndo` already works; the
+persistent button's label says which action it now undoes: `Undo: put {ex} back` (delete,
+existing) or `Undo: move {ex} back to {day}` **NEW** (move). A pending delete-undo displaced by a
+move is not a loss — nothing leaves the stored plan until `SAVE PLAN`, and `DISCARD CHANGES`
+restores all of it.
+
+**States.**
+
+| State | Present |
+|---|---|
+| Plan has one day | Control absent. No line says so |
+| Read-only plan | Control absent (§9.3) |
+| Sheet open | Editor inert under the scrim. Every other day listed with its count, current day named in the body only |
+| Destination empty (`0 exercises`) | Listed like any other. After the move, that day's `No exercises yet.` is gone and its row reads `1 ex` |
+| Origin now empty | `No exercises yet.` + `+ Add exercise` + **`Delete this day`** (§9.9.5) |
+| Success | Row gone from origin, destination count up, toast + undo, `UNSAVED CHANGES` |
+| Refused by `moveExerciseToDay` (`ok:false`) | Sheet **stays open**; `sheetErr` renders `Could not move that exercise.` *(existing string)* under the list; `Not now` closes it. `reason` is never rendered (§9.7). Working copy untouched |
+| Working-copy write failed (W4 D10) | The existing `applyEdit` refusal, unchanged. On disk: pre-move or post-move, never a third document |
+| Session in progress on this plan | The move is allowed in the working copy — WO-006 D10 blocks `SAVE PLAN`, not editing. Unchanged |
+| Offline | Identical. Nothing here reads the network |
+
+**A11y.**
+
+- Trigger: `<button aria-label="Move {ex} to another day">` with visible text `Move to another
+  day`. Visible label is a prefix of the name — WCAG 2.5.3 holds.
+- Sheet: `role="dialog" aria-modal="true" aria-labelledby=` the `Move {ex}` heading. Heading
+  `tabindex="-1"`, focused on open; first Tab lands on the first day row; `Not now` last in the
+  Tab order. `Escape` cancels.
+- Day rows are `<button>`; accessible name `{day}, {n} exercises` — the dialog heading supplies
+  "move" so the row does not repeat it.
+- Announcements through `#bs-live` only, via `toastUndo` → `announce()`: `{ex} moved to {day}.` and
+  on undo `{ex} is back on {day}.` The toast node stays `aria-hidden` (§2.6). Nothing in the sheet is
+  a live region.
+- Greyscale: state is carried by the row's *absence* from the origin day, the destination's count
+  and the toast sentence. No colour carries anything.
+- Contrast: heading `--bone` 12.7 : 1 on `--surface`; body and counts `--dim` 7.0 : 1; row rule
+  `--rule` 3.3 : 1 as a border only.
+
+### 9.9.4 Adding the destination first
+
+A PPL does not exist until he has made the days. The flow he will actually run is: `+ Add day`
+three times, name them, then open each PHAT day and send its exercises out. The sheet does **not**
+offer `+ New day` as a destination — that would fuse `addDay` and `moveExerciseToDay` into one tap
+with one undo and one write, and neither W3's contract nor `toastUndo`'s single slot expresses that.
+Out of scope, stated so W4 does not add it.
+
+### 9.9.5 Deleting an emptied day — W4 needs the strings, so they are here
+
+Not in W2's scope line; included so no sentence is invented in a view. W4's rule stands: the control
+exists **only** on a day with zero exercises, absent otherwise, confirmed by one sheet, no undo
+(nothing is lost).
+
+| Element | String |
+|---|---|
+| Control, inside the expanded empty day, below `+ Add exercise` | `Delete this day` **NEW** — full × 48, `.ghostbtn`, never in the day header row |
+| Headline | `Delete {day}?` **NEW** |
+| Body | `It holds no exercises. Nothing is lost.` **NEW** |
+| Destructive, 300 ms arm | `Delete day` **NEW** |
+| Safe, lowest | `Keep it` *(existing)* |
+| Toast | `{day} deleted.` **NEW** — no undo control |
+| Refused (`removeDay` returns `ok:false`) | `Could not delete that day. Nothing changed.` **NEW**, in the sheet via `sheetErr` |
+
+### 9.9.6 The warn-once slot — reserved for `strength-coach`, empty here
+
+W1 questions 1, 3 and 4 may return *warn once* for a mixed-role day, speed work beside its source,
+or two slots of one `lift` on a day. **No sentence about what a move means for the training is
+written in this section.** What is specified is where such a sentence would render, so W4 has a
+place and W1 has a shape:
+
+| Rule | |
+|---|---|
+| Where | In `.pebottom`, directly above `SAVE PLAN`, in the **advice** enclosure (§2.1.1: 3 px `--dim` left rule, kicker, no `!`). Above the commit because the commit is where it matters; never in the sheet, which is a picker and not a reader |
+| Kicker | **[W1 slot]** |
+| Body | **[W1 slot]** — one or two sentences, verbatim from the coach, `{ex}` / `{day}` substitutions only |
+| Dismiss | `Got it` **NEW**, ≥ 88 × 44, right-aligned inside the block. Dismissal is remembered **per plan per condition** in the working copy's metadata, never in `phat:v1:plans`, so it survives a reload but not a discard |
+| Never | Blocks a move, blocks `SAVE PLAN`, re-renders after dismissal, or renders while the slot is empty |
+| If W1 returns *refuse* instead | §9.9.3: the offending destination is absent from the sheet and the body carries the coach's sentence. This block is not used |
+| If W1 returns *silent* | Nothing renders. No empty enclosure |
+
+Likewise **[W1 slot]** for question 2 (the row's `Type` line after a move) and question 8 (a new
+ABSENT line on the Plans screen). Both render in their existing places with no change in shape.
+
+### 9.9.7 The Plans list — the way in (B-85)
+
+```
+Flow:   Start a plan of his own
+Entry:  Plans tab.
+Exit:   The editor, open on a copy of PHAT (primary) or on an empty plan (secondary).
+```
+
+**Ruled order.** Same skeleton as §9.1; two rows move and one changes clothes.
+
+```
+[REF]
+  Plans · {n} plans
+  ┌ PHAT ──────────────────────────────── ACTIVE ┐   1  the template, read-only, as today
+  │ Layne Norton, unedited · read-only template │
+  └─────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────┐   2  PRIMARY, full × 56
+  │ Duplicate PHAT and rearrange it             │
+  │ Same exercises, same history. Move them     │
+  │ between days, rename the days.              │
+  └─────────────────────────────────────────────┘
+  ┌ Push / pull / legs ───────────── UNSAVED … ┐   3  stored plans, then unsaved-only ones
+  │ 6 days · 42 exercises · 0 sessions logged   │
+  └─────────────────────────────────────────────┘
+  ┌ Build from empty ────────────────────────── ┐   4  SECONDARY, dashed, full × 48
+  │ Name the days, add the lifts, set the ranges│
+  └─────────────────────────────────────────────┘
+  What {plan} does not declare                      5  ABSENT lines, unchanged
+  One honest note                                   6  verbatim, unchanged
+```
+
+| Slot | Rule |
+|---|---|
+| 1 | Unchanged. The screen's question is *which programme am I on*; the active plan is the first readable thing, and on first run that is PHAT |
+| 2 | **`Duplicate PHAT and rearrange it`** **NEW** with the sub-line `Same exercises, same history. Move them between days, rename the days.` **NEW**. Directly under the PHAT row because it is an action *on* PHAT. Tap → the existing duplicate sheet (`Duplicate PHAT?` · `The copy keeps this plan's history. Both plans read and write the same exercise history.` · `Duplicate` · `Not now`), then the existing path: the copy is stored, the editor opens on it, toast `Copied. This is {name}.` |
+| 2, why the sheet stays | One tap would be nicer. But a duplicate is written to `phat:v1:plans` at once, and plan deletion is out (ruled 2026-09-12). A mis-tap on a one-tap primary creates a plan he cannot remove. The sheet is the cheapest guard that does not need a delete |
+| 2, fill | **Primary (amber) while no stored plan exists.** Once one does, the same row renders as `.ghostbtn` in the same position — amber is reserved for the live thing, and after he has a plan of his own the live thing is that plan, not a second copy |
+| 3 | Stored plans in store order, then unsaved-only working copies. Unchanged |
+| 4 | **`Build from empty`** **NEW** *(was `+ Build from empty`)* with its existing sub-line `Name the days, add the lifts, set the ranges`. Below every plan he owns. Dashed border, full × 48, `--bone` title, `--dim` sub. Kept, not removed: he said "don't want", not "remove" (WO-007 §2). The `+` goes from both creation rows — the labels are verbs |
+| 5, 6 | Unchanged. The honest note ships verbatim: `Editing the plan is the easiest thing in this app to do instead of training. PHAT is already a good plan. The number that moves is sessions logged.` |
+
+**A first-time tap.** On a fresh install the first tappable thing after the PHAT row is slot 2. One
+tap, one `Duplicate`, and he is in the editor on a copy of PHAT with 42 exercises, `speedSource`,
+`keyLifts`, `cut` tiers and `derivedFrom` all intact — the route WO-007 §2 needs him on.
+
+**States.**
+
+| State | Present |
+|---|---|
+| No stored plans (first run) | PHAT · **primary** duplicate · Build from empty · ABSENT · note |
+| One or more stored plans | PHAT · duplicate as ghost · plans · Build from empty · ABSENT · note |
+| Demo store loaded | Duplicate refuses with `Sample data is loaded. Leave it before saving a plan.` *(existing)*. Build from empty is unaffected (it writes a working copy, not the store) |
+| Plan store blocked (`S.blockWrites[PLANS]`) | Duplicate refuses with the existing store refusal. Row stays; refusal in the `S.err` slot at the top of the list, `role="alert"` |
+| Broken active plan | `The active plan cannot be opened. PHAT runs until it is fixed or another plan is chosen.` *(existing)* above slot 1. Unchanged |
+| Offline | Identical |
+
+**A11y.** Slot 2 is a `<button>` with accessible name = its title; the sub-line is `aria-describedby`.
+Slot 4 the same. Tab order is the visual order. No live region change: opening a sheet is his own
+tap. Primary fill `--bg` on `--amber` 9.3 : 1; ghost `--bone` on `--bg` 14.8 : 1.
+
+### 9.9.8 Strings — every new one, in one table
+
+| String | Where | Owner | Status |
+|---|---|---|---|
+| `Move to another day` | Row control | UX | **NEW** |
+| `Move {ex} to another day` | Row control `aria-label` | UX | **NEW** |
+| `Move {ex}` | Sheet heading | UX | **NEW** |
+| `Now on {day}. Lands last on the day you pick.` | Sheet body | UX | **NEW** |
+| `{n} exercises` / `1 exercise` | Sheet row, right | UX | **NEW** (via `plural`) |
+| `Not now` | Sheet, last | — | existing |
+| `{ex} moved to {day}.` | Toast + `#bs-live`, with `Undo` | UX | **NEW** |
+| `{ex} is back on {day}.` | Toast + `#bs-live` after undo | UX | **NEW** |
+| `Undo: move {ex} back to {day}` | Persistent undo button, `.pebottom` | UX | **NEW** |
+| `Could not move that exercise.` | Sheet refusal | — | existing |
+| `Delete this day` | Empty day, below `+ Add exercise` | UX | **NEW** |
+| `Delete {day}?` / `It holds no exercises. Nothing is lost.` / `Delete day` | Confirmation | UX | **NEW** |
+| `{day} deleted.` | Toast | UX | **NEW** |
+| `Could not delete that day. Nothing changed.` | Sheet refusal | UX | **NEW** |
+| `Got it` | Warn-once dismiss | UX | **NEW** — renders only once W1 fills the slot |
+| Warn-once kicker and body | `.pebottom` advice block | `strength-coach` | **[W1 slot]** — empty |
+| Refuse sentence, if any | Sheet body | `strength-coach` | **[W1 slot]** — empty |
+| Type line on a moved row | Row `.perange` | `strength-coach` | **[W1 slot]** — unchanged until ruled |
+| Plans-screen ABSENT line for a re-split plan | Plans list slot 5 | `strength-coach` | **[W1 slot]** |
+| `Duplicate PHAT and rearrange it` | Plans list slot 2 | UX | **NEW** — the string W6 greps the live `index.html` for |
+| `Same exercises, same history. Move them between days, rename the days.` | Slot 2 sub-line | UX | **NEW** |
+| `Build from empty` | Plans list slot 4 | UX | **changed** from `+ Build from empty` |
+| `Name the days, add the lifts, set the ranges` | Slot 4 sub-line | — | existing |
+
+Every `{ex}` and `{day}` passes through `esc()` (W4 B3). No string above makes a claim about
+training; the ones that would are the empty slots.
+
+### 9.9.9 Control inventory — rows added to §0.4.1
+
+| # | Screen | Control | Min hit area | Notes |
+|---|---|---|---|---|
+| 48 | editor | Exercise `Move to another day` | ≥ 132 × 44 | Own line under line 1; absent with one day |
+| 49 | editor | Move sheet day row | full × 48 | One per other day |
+| 50 | editor | Move sheet `Not now` | full × 52 | Lowest, pinned |
+| 51 | editor | Empty day `Delete this day` | full × 48 | Present only at zero exercises |
+| 52 | editor | Warn-once `Got it` | ≥ 88 × 44 | Only once W1 fills the slot |
+| 53 | plans | `Duplicate PHAT and rearrange it` | full × 56 | Primary until a stored plan exists, then ghost |
+| 35 | plans | `Build from empty` | full × 48 | **Amended**: demoted below stored plans, dashed |
+
+### 9.9.10 What I could not settle
+
+1. **The three coach verdicts** (mixed roles, speed beside source, duplicate lift) and the `Type`
+   line after a move. Slots reserved in §9.9.3 and §9.9.6; nothing written. `strength-coach`, W1.
+2. **Whether a moved `cut` accessory keeps its place in the destination's reintroduction order.**
+   Not a screen question, but the sheet's `{n} exercises` count and the day row's `{n} ex` count
+   include cut accessories; if the coach's answer to W1 question 6 changes what a day "holds", W4
+   should say so on the count. Default: count every exercise on the day.
+3. **The single undo slot.** Ruled above as one slot, latest action. If QA finds a realistic path
+   where a delete's undo is lost to a following move and that matters, the fix is a two-deep undo,
+   which is a `toastUndo` change and not a screen change.
+4. **A destination day named the same as another.** `addDay` permits it; the sheet would show two
+   `Pull` rows distinguished only by count. Not fixed here — day names are his — but W4 should
+   append the day's position (`Pull · 3rd`) only if two names collide. Left as a note, not a rule.
+5. **200 % measurement of line 1.** It already wraps at 200 % today; that every wrapped control still
+   measures ≥ 44 is W4 B1's to prove by `getBoundingClientRect`, not mine to assert from CSS.
+
+### 9.9.11 Out of scope, deliberately
+
+`+ New day` inside the sheet (§9.9.4). Moving an exercise between plans. Deleting a non-empty day.
+Deleting a plan. A first-open hint in the editor telling him how to re-split — the control's label
+is the hint, and a permanent instruction is a line he learns to ignore. Alternating A/B weekly
+plans. A `wd` weekday map for added days. Any change to the Session, Train, Trend or Weight screens.
 
 ---
 
@@ -2048,3 +2385,443 @@ and no copy was written beyond the one sentence in ruling 1.
 **Deliberately left open, per the stop condition.** Nothing else. Every question raised tonight was
 answerable from this spec, `wo-003-train-weight.md`, `logic.js` and the handoff brief, except the one
 sentence above, which is a sign-off and not a gap.
+
+---
+
+# 18. Two accounts — identity on screen, sign-in on first run, the ownership refusals (WO-008 W2, 2026-09-12)
+
+Author: `ux-designer` · Implements: WO-008 §4 W2 · Consumed by: W5 (`frontend-engineer`), W4
+(`backend-engineer`, for the `{owner}` fallback and the first-run push rule), W7 (QA) · Reads:
+`index.html` `vHome` (1724), `vOnboard` (1861), `vSession` (2043), `authTap` (5508), `runBackup`
+(5461), `restoreStart` (5567), `bkStatusLine` (5677), `vBackupBody` (5705), boot prefs load (5805).
+
+**The uncomfortable answer first.** This section adds one row to Home, one line to the session header,
+one line to Summary and one screen to first run, for a second account whose log will hold zero
+sessions the day it exists — the same day the first one still does. It is specified in full because
+B-88 is live and a name on the screen is the cheapest fix for a set landing in the wrong log. Nothing
+here makes a set easier to log.
+
+**What this section does not write.** Any sentence the Weight or Diet tab says to an account with no
+profile. That is `strength-coach`'s (WO-008 W1, running in parallel). §18.7 specifies the *slot* and
+the *placement* and leaves the sentence marked.
+
+## 18.1 The two facts, and which one the screen names
+
+There are two identities and the code conflates them:
+
+| Fact | Source | Available offline | What it answers |
+|---|---|---|---|
+| **The owner** — the account that last backed up from, or restored onto, this device | `prefs.backup.user` (after W4: `{id, email}`; `null` if never backed up) | **Yes** — a stamp on disk | *Whose log is this* |
+| **The signed-in account** | `S.sync.user` (module only; `null` until `sync.js` loads, and `loadSync` does not run offline) | **No** | *Where would a backup go right now* |
+
+**Ruled: every identity line in the app names the owner, never the signed-in account.** The question
+between sets is "whose log am I about to add a set to", and the answer is on disk. The signed-in
+account is named only where it *differs* from the owner — that difference is the B-88 state, and it is
+the one thing worth a sentence. Consequences:
+
+1. The line renders identically with the network off, the module unloaded, and from `file://`. No
+   spinner, no "loading", no state that waits on `sync.js`. `[Certain]` — the stamp is read at boot
+   (`index.html:5813`).
+2. Signed out is not an error. It is the same log, on the same device, not being copied anywhere.
+   The line says that and nothing more.
+3. A device that has never been backed up has no owner and the line says so as a fact, not a prompt.
+   `Sign in` is one tap away in Settings; the line does not nag.
+4. **Display names are out.** No field holds one, no screen asks for one, and first run adds no field
+   (§10.1 rule 2 still binds). The email is the name. Emails are never uppercased by CSS — an email in
+   small caps reads as a different string.
+
+**The one state where the signed-in account is named** — owner `A`, signed in as `B` — is rendered
+in the refusal shape (§2.1: four-sided border, `!`), because the app really is declining to do
+something (back up). It is the only identity state that takes that shape. Signed out and never
+backed up take **no enclosure at all**.
+
+## 18.2 Home — the owner row
+
+```
+Flow:   Identity on Home
+Entry:  Every paint of Home. No trigger.
+Exit:   Tap → Settings, scrolled to the Backup section (heading focused). Nothing written.
+```
+
+**Placement.** Directly **below the next-session block and above the cycle line** — the first thing
+after the answer to the screen's question, and the last thing before the programme state. Not the
+header (`.hd` is inside the top 15 % and `{n} sessions logged` is already there). Not the bottom (the
+macros strip is below the fold on shorter viewports). It is a full-width `<button>`, 48 px, no border,
+no surface — a row, not a card. It is **not a programme-state line** and does not count against
+§13.4's "exactly one"; a QA grep for programme-state lines must not match it.
+
+**Budget.** 48 px of the day list's no-scroll budget at 393 × 852. By arithmetic (header 46 + block
+175 + row 48 + cycle 50 + label 49 + five rows 280 + dock 52 ≈ 700) it fits with room. **W5 measures.**
+If it does not fit, the row and the day list both stay above the fold and the frontend finds the
+pixels elsewhere; neither is dropped.
+
+```
+[REF] layout, Home, populated, owner stamped, signed in as the owner or offline
+
+│  12 SESSIONS LOGGED                        SETTINGS  │  ← unchanged header
+│ ┌──────────────────────────────────────────────────┐ │
+│ │ 3 DAYS SINCE THIS DAY                            │ │
+│ │ Upper power                                      │ │  ← next-session block, unchanged
+│ │ [           START SESSION                     ›] │ │
+│ └──────────────────────────────────────────────────┘ │
+│  THIS LOG                                            │  ← 18.2 owner row, 48 px, tappable
+│  chady@b-script.com · last backup 3 days ago      ›  │
+│  Week 3 of real training. Reduced volume holds.      │  ← cycle line, unchanged
+│  OR PICK ANY DAY                                     │
+```
+
+**States and copy.** `{owner}` = `prefs.backup.user.email`, `{me}` = `S.sync.user.email`,
+`{ago}` = `PHAT.agoText(prefs.backup.at)`. Kicker line first, then the row's main line.
+
+| # | Owner stamp | Signed in (module) | Kicker | Main line | Shape |
+|---|---|---|---|---|---|
+| H1 | `A` | `A`, or unknown (offline / unloaded / loading / failed) | `This log` | `{owner} · last backup {ago}` | Plain row |
+| H2 | `A` | none — module ready, signed out | `This log` | `{owner} · signed out · last backup {ago}` | Plain row |
+| H3 | `A` | `B` | `This log` | `! Belongs to {owner}. Signed in as {me}. Nothing backs up.` | **Refusal** enclosure |
+| H4 | none | `A` | `This log` | `On this device only. Backs up to {me} after the next save.` | Plain row |
+| H5 | none | none / unknown | `This log` | `On this device only. Not backed up.` | Plain row |
+| H6 | stamp present, `email` null (a pre-W4 stamp migrated offline) | any | `This log` | `Backed up {ago} by an account this phone has not seen sign in.` | Plain row |
+| H7 | prefs unreadable | any | `This log` | `Could not read who this log belongs to.` | Plain row, no enclosure — it stops nothing |
+
+Rules.
+
+1. **Nothing waits.** H1 renders the moment Home paints, from the stamp. When `sync.js` arrives and
+   `onSync` fires, the row is repainted **in place by id** (`paintWho()`, the `paintBackup()`
+   pattern) — never `render()`. The row's height is fixed at 48 px in every state, so H1 → H3 does not
+   move the cycle line or the day list under a thumb.
+2. **H4 is transient by design.** With no stamp the first push claims the device (W4: `ownerId`
+   null → ok). After that push lands, the stamp exists and the row reads H1. If the push fails, H4
+   stands and Settings carries the failure; the row does not.
+3. **H3 is the only enclosure.** It uses `.refuse` exactly as `bkStatusLine` does — 2 px border, the
+   literal `!`, `aria-hidden` on the glyph. It has **no `role="alert"`**: the event was announced once
+   through `announce()` when the refusal happened (§18.5); the row is the persistent state, and a
+   persistent alert is read on every focus move.
+4. **Demo mode:** the row is unchanged and names the real log's owner. The demo store never pushes
+   (C-14) and the row never claims it does.
+5. **Tap → Settings**, `S.sub="settings"`, then scroll so the `Backup` section rule is at the top of
+   the viewport and move focus to it (`tabindex="-1"` on the section label). No input is focused —
+   focusing the email field would raise the keyboard on a screen he opened to read.
+6. **Overflow.** One line, `text-overflow: ellipsis`, the email first so the local part — the
+   distinguishing part — is what survives truncation. The accessible name is the full text.
+7. **`{ago}` is the stamp's `at`.** It is the last backup that *landed*, which is what "backed up"
+   means; it is never the last attempt.
+
+## 18.3 Session and Summary — the owner line
+
+**Where I depart from the work order, and why.** WO-008 W2's criterion puts the session-screen
+identity outside the top 15 % of the viewport. I disagree because that rule exists to keep *controls*
+out of the grip zone (§0.4), and this line is not a control; on the session screen every pixel between
+the header and the first set row is paid for by the set, and a 48 px row there is worse for the only
+thing that matters than a 12 px line in the header. Here is what I do instead: the session line rides
+the **header**, as text, and the identity is repeated at the **commit point** — Summary, directly
+above `SAVE SESSION`, in the thumb zone, where the set actually joins a log. The risk is that the header
+line is the least-read line on the session screen; that is acceptable because it is the second
+reading of a fact Home showed one tap earlier and Summary repeats a third time. **PM to amend the
+criterion for the session screen or overrule; W5 does not build a row between header and set.**
+
+**Session header** (`.sesshead`). A second line under the kicker, before the pips, before the
+`It saves under {date}` line when that renders. `.75rem`, `--dim`, not uppercased, one line, ellipsis.
+It is static for the life of the paint: `onSync` does not repaint it (a mid-set repaint is B-19), and
+a sign-in that happens during a session is reflected on Summary and on the next Home.
+
+| # | State (as §18.2) | Session header line |
+|---|---|---|
+| S1 | H1 / H2 / H6 | `Log of {owner}` |
+| S2 | H3 | `Log of {owner} · signed in as {me}` |
+| S3 | H4 / H5 / H7 | `On this device only` |
+
+**Summary** — one line directly above `SAVE SESSION`, same type as `.tiny` but `--dim`, present in
+every state, never an enclosure (nothing on Summary may look like the blocked-save refusal except the
+blocked-save refusal, §2.2):
+
+| # | State | Line above `SAVE SESSION` |
+|---|---|---|
+| U1 | H1 | `Saves to this device. Backs up to {owner}.` |
+| U2 | H2 | `Saves to this device. Backs up to {owner} when signed in.` |
+| U3 | H3 | `Saves to this device. Belongs to {owner}, not to {me}. Will not back up.` |
+| U4 | H4 | `Saves to this device. Backs up to {me}.` |
+| U5 | H5 / H6 / H7 | `Saves to this device. Not backed up.` |
+
+`SAVE SESSION` is never disabled by any of these. **Logging never waits on auth** (§3.2). The line
+is a statement of where the number goes, not a gate on it.
+
+## 18.4 First run — `Sign in` beside `Start with an empty log`
+
+```
+Flow:   Claim a fresh phone with an existing account
+Entry:  Onboarding (§10.1) — both stores absent, no notice, not onboarded, no draft.
+Exit:   Home, with `onboarded` written by exactly one of: START WITH AN EMPTY LOG, or a completed
+        restore. Never by the sign-in itself.
+```
+
+**Screen A — onboarding, amended.** §10.1's content is unchanged. Under `START WITH AN EMPTY LOG`
+(primary, 52) a second action, `Sign in` (ghost, 48). **Exactly two actions**; `LOAD SIX WEEKS OF
+SAMPLE DATA` and `OR PICK ANOTHER PLAN` remain what they were (W13b / §10.1 rule 3) and are not
+actions on the log. `Sign in` is shown in every network state — the next screen tells the truth about
+the connection; hiding the button offline would make first run look different on the two phones for
+no reason he can see. The optional `Today's weight` field is **not carried** to screen B; it is
+optional, and a restore replaces the bodyweight store anyway. Nothing on screen A writes until a
+button is tapped.
+
+```
+[REF] screen A, bottom
+
+│  [          START WITH AN EMPTY LOG            ]   │  primary, 52
+│  [                 SIGN IN                     ]   │  ghost, 48
+```
+
+**Screen B — first-run sign-in.** `S.sub="onboard-signin"`. Header: `‹ Back` top-left (88 × 44,
+non-destructive, permitted by §0.4) and the kicker `First run`. Then a heading, then **the existing
+`vBackupBody()` form verbatim** — its four module states (file, offline, loading, failed), its two
+fields, `Sign in`, `Create account`, and its inline refusal block — painted into `#bk-body` so
+`paintBackup()` works here unchanged (W5: `paintBackup` is gated on `S.sub==="settings"`; it gains
+`"onboard-signin"`). Below the form, in every state, `Start with an empty log` (ghost, 48): the
+escape is on the screen, not one Back away, because the offline case is the common one in a gym.
+
+```
+[REF] screen B
+
+│  ‹ BACK                                  FIRST RUN │
+│  Sign in to an account                             │  h1
+│  Its backup can be put on this phone. Nothing is   │  .sub
+│  written until you choose.                         │
+│  EMAIL                                             │
+│  [                                              ]  │  48
+│  PASSWORD                                          │
+│  [                                              ]  │  48
+│  [ SIGN IN ]  [ CREATE ACCOUNT ]                   │  existing, 48 each, stacked full-width
+│                                                    │
+│  [          START WITH AN EMPTY LOG            ]   │  ghost, 48 — the escape, every state
+```
+
+| State | Form area shows | Notes |
+|---|---|---|
+| B-offline / file / failed | The module's existing sentence (`Backup needs a connection. None right now.` etc.) + ` Your log is on this device and saves as normal.` | No fields, no `Sign in`. The escape button is the way forward |
+| B-loading | `Backup is loading.` | No spinner beyond the sentence |
+| B-form | Fields + `Sign in` + `Create account` | Focus on the heading, not the field |
+| B-busy | `Signing in.`, buttons disabled | Existing |
+| B-refused | Existing `.refuse` with the module's message (`Email and password, both.` / wrong password / `New accounts are switched off.`) | Typed values preserved across the repaint (existing `paintBackup` rule) |
+| `‹ Back` from any state | Screen A, unchanged | **Nothing written.** `onboarded` still false; no store key touched. The typed email and password are gone — they were never stored |
+
+**Sign-in on first run does not schedule a push.** Today `authTap` calls `backupSoon("signin")` on
+success. On a first-run device that is a push of an empty log to whichever account signed in — at best
+a no-op, at worst B-76 with a different owner. **W5: on `S.sub==="onboard-signin"`, a successful
+sign-in routes to screen C and schedules nothing.** The first push happens only after
+`START WITH AN EMPTY LOG` (through the ordinary save path) or never (a restore stamps the device as
+already backed up, `restoreApply` 5657). *Dependency on W4: `storeOwner` with `hasData:false` returns
+ok, so nothing in the pure layer blocks this; the rule is the view's.*
+
+**Screen C — signed in, choose.** Reached only from a successful sign-in on screen B. On arrival the
+app **pulls once** (`Y.pull()` → `PHAT.restorePayload`, the first half of `restoreStart`) and
+renders one of three states from the result. She is online by definition here — she just signed in.
+
+| # | Pull result | Copy | Actions, top to bottom |
+|---|---|---|---|
+| C1 | ≥ 1 session, weight or plan | `Signed in as {me}.` / `{n} sessions and {m} weights are backed up under this account.` (`restoreCounts` form, plans named when present) | `Restore {n} sessions` **primary, 56** · `Sign out` ghost, 48 |
+| C2 | Zero rows | `Signed in as {me}.` / `Nothing is backed up under this account yet.` | `Start with an empty log` **primary, 52** · `Sign out` ghost, 48 |
+| C3 | Pull failed, or the payload was refused | `Signed in as {me}.` / `Could not read the backup. ` + the module's message, in the refusal enclosure | `Try again` ghost, 48 · `Start with an empty log` ghost, 48 · `Sign out` ghost, 48 |
+
+Rules for C.
+
+1. **C1 does not offer an empty log.** An account with rows and a device that would then push an
+   empty log over them is a data-loss path on the server (B-76's shape). The honest choices are: bring
+   the backup down, or leave. `Sign out` returns to screen A signed out, nothing written.
+2. **`Restore {n} sessions` on C1 goes straight to `restoreApply`** — no `Restore from backup?` sheet.
+   The device is empty (onboarding gates on both stores absent) so the sheet would be the one-tap
+   variant, and screen C *is* that sheet: it names the counts and the account. `restoreApply` still
+   re-reads disk (B-74) and refuses if anything has appeared. On success: `onboarded` is written,
+   `S.sub=""`, Home renders with the owner row in H1 naming `{me}`; announced `Restored {counts}.`
+   (existing). On failure: `restoreApply`'s existing `fail()` message renders on screen C in the
+   refusal enclosure, actions as C3, `onboarded` still false.
+3. **C2's `Start with an empty log`** is `finishOnboarding()` unchanged (one key). Home renders in H4;
+   the stamp lands on the first save's push.
+4. **C3's `Try again`** repeats the pull. `Start with an empty log` here is allowed — the app could not
+   see rows, and refusing on a guess would strand her offline with a signed-in account and no log.
+   The first push after that claims the device (H4 → H1) *only if* W4's `storeOwner` says ok, which
+   with `hasData:false` it does. *Flagged for `backend-engineer`: if that first push can overwrite a
+   server log that C3 failed to read, the push after a C3 → empty-log path must be a merge or a
+   refusal, not a replace. Not mine to rule; the screen does not depend on the answer.*
+5. **Back from C:** there is no `‹ Back` on C. The way out of a signed-in state is `Sign out`, and it
+   is on every variant.
+
+**Preserved across every path:** `phat:v1:log`, `bw`, `plans`, `draft` — absent before, absent after
+anything but a completed restore or `START WITH AN EMPTY LOG`. `phat:auth` is `sync.js`'s key and is
+written by a sign-in; that is choosing an account, which is what the work order permits.
+
+## 18.5 The ownership refusals — B-88
+
+**Rule (W4's):** a device's log belongs to the account that first backed it up. When the signed-in
+account differs from the owner and the device holds data, the automatic push, the manual push and the
+restore are each refused, nothing is written, `prefs.backup` is untouched.
+
+**Three sentences, final.** Each names the owner, names what did **not** happen, and offers the one
+way out. No override control. `{owner}` and `{me}` as §18.2.
+
+| # | Trigger | Sentence |
+|---|---|---|
+| R-a | Automatic push after sign-in, or after any save, while signed in as `{me}` on a device owned by `{owner}` | `This device's log belongs to {owner}. Nothing was backed up to {me}. Sign in as {owner} to back it up.` |
+| R-b | `BACK UP NOW` | `Not backed up. This device's log belongs to {owner}, not to {me}. Sign in as {owner} to back it up.` |
+| R-c | `Restore from backup` | `Not restored. This device's log belongs to {owner}. The backup under {me} was not read and nothing on this device changed. Sign in as {owner} to restore.` |
+
+**When the owner's email is unknown** (H6 — a stamp migrated with `email:null`): `{owner}` reads
+`another account` and the way-out clause reads `Sign in as that account`. So R-b becomes
+`Not backed up. This device's log belongs to another account, not to {me}. Sign in as that account to
+back it up.` Same substitution in R-a and R-c. The app does not invent an address.
+
+**Where each renders.**
+
+| | Settings, `#bk-status` | `announce()` | Home owner row |
+|---|---|---|---|
+| R-a | `.refuse`, `role="alert"`, the sentence, then the stamp line (`Last backup {ago}.` — the owner's, which is the true last backup of this log) | Once, **assertive** — a write that did not land | H3 |
+| R-b | Same | Once, assertive | H3 |
+| R-c | Same. Renders **before** the pull and before any sheet: `restoreStart` asks `storeOwner` first | Once, assertive | H3 |
+
+**Rules.**
+
+1. The sentence is rendered once in `#bk-status` and said once through the live region. Never both
+   with `aria-live` on the block (§2.6 — two regions over one content are read twice). `.refuse`
+   already carries `role="alert"`; that is the one carrier in Settings.
+2. **R-a fires once per sign-in, not once per save.** After the first refusal the automatic push is
+   not re-attempted on every save while the same mismatched account is signed in — one alert per
+   condition, not one per set. The manual button re-tries and re-refuses on demand. *W5 owns the
+   latch; W4's `storeOwner` is pure and does not know about repeats.*
+3. The stamp line under the refusal stays the owner's. `bkStatusLine` today prints `Never backed up.`
+   when `b.user !== me` (5680) — under two accounts that sentence is **false** and is replaced by the
+   owner's stamp: `Last backup {ago}, by {owner}.` A device that has been backed up has been backed
+   up, whoever is looking.
+4. `Sign out` remains enabled in this state. It is the way out.
+5. **Nothing here disables logging.** The session screen, Summary and `SAVE SESSION` behave exactly
+   as in H1.
+
+## 18.6 Settings — the signed-in line, amended
+
+`vBackupBody`'s `Signed in as {me}. Backs up after every saved session and weight.` is true only in H1
+and H4. Amended by state:
+
+| State | Line |
+|---|---|
+| H1 / H4 | unchanged |
+| H3 | `Signed in as {me}. This device's log belongs to {owner}.` — then `#bk-status` carries R-a/R-b/R-c |
+| H2 (signed out, stamped) | The signed-out form is unchanged; its first sentence becomes `Keeps a copy of your log off this phone. This one was last backed up {ago} by {owner}. Logging works the same signed in or out.` |
+| H5 (signed out, never backed up) | Existing sentence, unchanged |
+
+## 18.7 The ABSENT Weight / Diet slot — placement only `[W1 SLOT — strength-coach]`
+
+The sentences are W1's and are **not written here**. What is ruled here is where the one absent line
+goes and what does not render around it, per C7a ("once, in the place the feature would have
+appeared").
+
+| Screen | Where the absent line renders | What does not render in ABSENT |
+|---|---|---|
+| Weight | The calorie-decision slot (§7.3), same advice enclosure, same kicker | The calorie ladder; `I changed my calories today` and its hold controls (nothing to hold); the `+0.2 to +0.3` subline. **Whether the kg/week rate itself renders is W1 q2's** — the entry, the last-7 list and the 7-day average with its day count are measurements and stay |
+| Diet | One advice enclosure where the targets grid would be | The `TRAINING DAY / REST DAY` segment, every target cell, the protein check, the calibration note — all are views of numbers that do not exist |
+| Home macros strip | **Nothing.** The strip already renders only when `dietTargets().text.strip` is a non-empty string; ABSENT returns none and the strip is absent. Home does not repeat Diet's absent line — C7a says once, and Diet is the place | The strip |
+
+For **Chady's account nothing changes** (W4 stamps the existing store `phat-brief`).
+
+`[W1 SLOT — strength-coach: the literal `absentLine` for Weight and for Diet, in the C7a shape.
+Until it is returned, both slots render nothing and no number.]`
+
+## 18.8 Strings — every new one, in one table
+
+`{owner}` · `{me}` · `{ago}` · `{n}` · `{m}` as above. All NEW, all status or refusal copy, no
+training claim; coach review is a courtesy, not a gate.
+
+```
+This log
+{owner} · last backup {ago}
+{owner} · signed out · last backup {ago}
+Belongs to {owner}. Signed in as {me}. Nothing backs up.
+On this device only. Backs up to {me} after the next save.
+On this device only. Not backed up.
+Backed up {ago} by an account this phone has not seen sign in.
+Could not read who this log belongs to.
+Log of {owner}
+Log of {owner} · signed in as {me}
+On this device only
+Saves to this device. Backs up to {owner}.
+Saves to this device. Backs up to {owner} when signed in.
+Saves to this device. Belongs to {owner}, not to {me}. Will not back up.
+Saves to this device. Backs up to {me}.
+Saves to this device. Not backed up.
+Sign in
+Sign in to an account
+Its backup can be put on this phone. Nothing is written until you choose.
+Signed in as {me}.
+{n} sessions and {m} weights are backed up under this account.
+Nothing is backed up under this account yet.
+Could not read the backup.
+Restore {n} sessions
+Try again
+This device's log belongs to {owner}. Nothing was backed up to {me}. Sign in as {owner} to back it up.
+Not backed up. This device's log belongs to {owner}, not to {me}. Sign in as {owner} to back it up.
+Not restored. This device's log belongs to {owner}. The backup under {me} was not read and nothing on this device changed. Sign in as {owner} to restore.
+another account / Sign in as that account
+Last backup {ago}, by {owner}.
+Signed in as {me}. This device's log belongs to {owner}.
+Keeps a copy of your log off this phone. This one was last backed up {ago} by {owner}. Logging works the same signed in or out.
+```
+
+Unchanged and relied on: `Signed out. Your log is still on this device.` · `Signed in.` ·
+`Restored {counts}.` · `Backup needs a connection. None right now.` · `Backup does not run from a
+file. Open the installed app.` · `Backup could not load. Close the app and open it again to retry.` ·
+`Email and password, both.` · `New accounts are switched off.` · `Start with an empty log` ·
+`Restore from backup` · `Back up now` · `Sign out` · `Create account`.
+
+## 18.9 A11y
+
+- **Owner row (Home):** a `<button>`, accessible name = its visible text in reading order
+  (`This log, chady@b-script.com, last backup 3 days ago`). `aria-describedby` not needed. In H3 the
+  `!` is `aria-hidden`; the words carry the refusal. No `role="alert"` on the row (§18.2 rule 3).
+- **Session header line and Summary line:** plain text, in DOM order after the kicker / before
+  `SAVE SESSION`. Not live regions.
+- **Live announcements:** sign-in and sign-out use the existing `announce()` strings. Each refusal is
+  announced **once, assertive**. Auth-state repaints of the owner row are silent — the row changed,
+  nothing happened to him.
+- **Screen B focus order:** `‹ Back` → heading (`tabindex="-1"`, receives focus on arrival) → Email →
+  Password → `Sign in` → `Create account` → `Start with an empty log`. Screen C: heading → the
+  actions top to bottom. Escape / `‹ Back` returns focus to `Sign in` on screen A (`closeSheet`'s
+  `back` pattern).
+- **Contrast:** kicker `.kick` at `--faint` (`.55`, 5.3 : 1 on `--bg`) at 11 px — the floor, met.
+  Email at `--bone`. Sub-lines at `--dim` (`.70`). Session header line at `--dim`, `.75rem` (12 px).
+  Nothing in this section sits on `--surface`, so the `.55` surface floor does not bite. The refusal
+  border is `--red-hi`, ≥ 3 : 1, and is never the sole carrier — the sentence is.
+- **Greyscale test:** H1, H2, H3, H5 each read from words alone. H3 additionally by the four-sided
+  border and the `!`. `Sign in` and `Start with an empty log` are told apart by label and by
+  fill-versus-outline, not by hue.
+- **200 % text:** the owner row wraps to two lines *within* its 48 px minimum (it may grow; it may
+  not shrink); the email keeps its ellipsis. Screen B and C stack every button full width.
+
+## 18.10 Control inventory — rows added to §0.4.1
+
+Rows 54–60, inserted into the table above. Every control ≥ 44 on both axes; the owner row and every
+first-run action are full width.
+
+## 18.11 What I could not settle
+
+1. **The top-15 % criterion on the session screen.** I depart from it (§18.3) and say why. PM rules.
+2. **The first push after a C3 → `Start with an empty log` path.** If `Y.push` replaces rather than
+   merges, a device that could not read its account's backup and then pushes an empty log can erase
+   the copy on the server. §18.4 rule 4 names it; `backend-engineer` rules whether that push must be a
+   merge, a refusal, or is already safe. The screens do not change either way.
+3. **`{owner}` with `email:null`.** H6 and the `another account` substitution exist only because a
+   pre-W4 stamp can be migrated offline with no email to hand. If W4 can guarantee an email on every
+   stamp (for instance by refusing to write a stamp without one, and back-filling on the next
+   sign-in), H6 and the substitution are deleted. W4's call.
+4. **R-a's once-per-sign-in latch.** Where it lives (a flag on `S.sync`) and what resets it (a
+   sign-out, or the owner signing in) are W5's; I have only said that one alert per condition is the
+   behaviour.
+5. **Whether the owner row should also carry the sync state after W4** (`Backing up.` while a push
+   runs). Not now: the row names a fact about the log, and a busy indicator is a fact about the
+   network. It stays in Settings.
+6. **Same phone (W6).** Nothing here designs a switcher. If §7 q1 comes back *same phone*, the owner
+   row becomes the switch's entry point and gets a second pass; its placement and size already allow
+   that.
+
+## 18.12 Out of scope, deliberately
+
+A display name or any profile field · seeing the other account's log · an override to re-claim a
+device's log for a different account (B-88's note: not in this order) · any sentence on Weight or
+Diet for an account with no profile (W1) · the diet editor (B-93) · per-user plans (already true;
+plans are per store) · a sixth tab or any change to the tab dock · a sign-in prompt anywhere outside
+first run and Settings.
