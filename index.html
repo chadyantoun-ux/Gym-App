@@ -1208,10 +1208,23 @@ async function del(k){
             the store is a plan built from empty and not yet saved.
    planView "" (the list) | "edit" (one plan's screen). pe is the editor's
             IN-MEMORY state: which days are open, the add form, the undo. */
+/* WO-008 W4 adds:
+   logMeta.profile  the diet profile on the LOG store (coach §16, Rule PR1).
+            {diet:"phat-brief"} | null | absent - see logic.js V_PROFILE. THE
+            BOOT DEFAULT IS null, NOT ABSENT, on purpose: a store this build
+            creates from nothing must carry the key, so the boot pass
+            (PHAT.profilePass, which fires only on a store with NO key) can
+            never mistake a second phone's first session for evidence that the
+            store is Chady's. adoptLog replaces this with whatever is on disk.
+            It rides logPayload() into user_state.log_meta and comes back on a
+            restore: the profile travels with the ACCOUNT, not the device.
+   prefs.backup.user  now {id, email}; the E-3 string form is still read
+            (PHAT.backupOwner reads both) and is rewritten as the object by
+            the next stamp. The email is what every refusal names. */
 const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:null,err:null,
          plans:{plans:[],activePlanId:PHAT.PHAT_PLAN_ID},plansMeta:{},plan:PHAT.PHAT_PLAN,sessPlan:null,
          planBroken:false,edits:{},planView:"",pe:null,plErr:null,
-         problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
+         problems:[],logMeta:{profile:null},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
          exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,dietView:null,
          stores:{log:"absent",bw:"absent",plans:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null},
          prefsMeta:{},exp:null,
@@ -1223,9 +1236,20 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
             success (B-16); the last SUCCESSFUL backup persists in
             prefs.backup so "Backed up 3 days ago" survives a relaunch.
             `pulled` holds a restore between the read and the confirmation. */
-         sync:{mod:"off",user:null,busy:null,last:null,pulled:null}};
+         sync:{mod:"off",user:null,busy:null,last:null,pulled:null,
+         /* WO-008 W4 (B-88). `refused` is the id of the signed-in account
+            whose AUTOMATIC push was already refused as foreign on this
+            device: one alert per condition, not one per saved set (spec
+            §18.5 rule 2). Cleared when the account changes. The manual
+            button ignores it - BACK UP NOW re-tries and re-refuses. */
+         refused:null}};
 const logPayload=()=>Object.assign({},S.logMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,sessions:S.sessions,includeCut:S.includeCut});
+/* WO-008 W4. The one read of the diet profile, handed to every gated engine
+   (Rule PR1: calorieAdvice, dietTargets; Rule C7c: stallAdvice). The engines
+   fail closed, so a call site that forgets this argument renders ABSENT, not
+   Chady's diet - which is the right failure. */
+const dietProfile=()=>S.logMeta?S.logMeta.profile:undefined;
 const bwPayload=()=>Object.assign({},S.bwMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,entries:S.bw});
 /* WO-006. plansMeta carries every key of the stored plan store this build
@@ -1240,7 +1264,9 @@ const prefsPayload=()=>Object.assign({},S.prefsMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,restAuto:!!S.prefs.restAuto,onboarded:!!S.prefs.onboarded,
    proteinDate:String(S.prefs.proteinDate||"")},
   /* E-3. The last successful backup: {at, sig, user, n, m, x}. Device state,
-     so it lives here and not in the log; absent until the first push lands. */
+     so it lives here and not in the log; absent until the first push lands.
+     WO-008 W4: `user` is {id, email} - the OWNER of this device's stores
+     (B-88). The E-3 string form is still read; see the boot reader. */
   S.prefs.backup?{backup:S.prefs.backup}:{});
 
 /* ============================================================ utils */
@@ -1870,8 +1896,10 @@ function vHome(){
      It sits ABOVE the figures so the reading order is key-then-numbers in
      both. New copy — flagged for `ux-designer`. */
   let dt=null;
-  try{ dt=PHAT.dietTargets(PHAT.localDate(),S.plan); }catch(err){ dt=null; }
-  if(dt&&dt.label&&dt.text&&typeof dt.text.strip==="string"&&dt.text.strip){
+  try{ dt=PHAT.dietTargets(PHAT.localDate(),S.plan,null,dietProfile()); }catch(err){ dt=null; }
+  /* Rule PR1: on a store with no diet profile the strip renders NOTHING - not
+     the row, not the ABSENT line. Once means once, and the Diet tab is where. */
+  if(dt&&dt.absent!==true&&dt.label&&dt.text&&typeof dt.text.strip==="string"&&dt.text.strip){
     h+=`<div class="pad mt16"><span class="lbl secrule">Today's macros</span>
       <div class="mstrip">
         <p class="day">${esc(dt.label)}</p>
@@ -2566,7 +2594,10 @@ function stallCard(){
   let a=null;
   try{
     a=PHAT.stallAdvice({plan:S.plan, sessions:S.sessions,
-      todayStr:PHAT.localDate(), state:S.logMeta, keyLifts:keyLiftRows()});
+      todayStr:PHAT.localDate(), state:S.logMeta, keyLifts:keyLiftRows(),
+      /* Rule C7c: the brief's diagnosis needs the diet profile as well as
+         provenance. Passed explicitly; the engine fails closed without it. */
+      profile:dietProfile()});
   }catch(err){ return ""; }
   if(!a) return "";
   /* WO-006 B4: the ABSENT line is the Plans screen's, once. Nothing here. */
@@ -2685,7 +2716,7 @@ function vWeight(){
      in the band ladder cannot also take the average down with it. */
   let W=null, adv=null;
   try{ W=PHAT.bwWindows(S.bw,today); }catch(err){ W=null; }
-  try{ adv=PHAT.calorieAdvice(S.bw,today,S.logMeta&&S.logMeta.calChangedAt); }catch(err){ adv=null; }
+  try{ adv=PHAT.calorieAdvice(S.bw,today,S.logMeta&&S.logMeta.calChangedAt,dietProfile()); }catch(err){ adv=null; }
   const n=b.length;
 
   let h=`<div class="hd"><span class="kick">Bodyweight</span>
@@ -2717,7 +2748,16 @@ function vWeight(){
      instruction may appear. In the four not-enough-data states adv.subline is
      "" and adv.tone is "none", so no sub-line and no acknowledgement control
      render without a further test here — the engine already decided. */
-  if(adv&&adv.state!=="empty"){
+  /* Rule PR1 (coach §16.2, WO-008 W4): a store with no diet profile gets the
+     engine's two ABSENT lines in the calorie-decision slot - the sub-line's
+     token, NO kicker, NO enclosure, NO control - and nothing else from this
+     block. The average and the rate above are measurements and still render.
+     The lines are the engine's; nothing is assembled here. Placement is
+     W5's to refine (spec §18.7). */
+  if(adv&&adv.absent===true){
+    h+=`<div class="pad mt16" id="calabsent">${(adv.absentLines||[]).map(t=>`<p class="sub">${esc(t)}</p>`).join("")}</div>`;
+  }
+  else if(adv&&adv.state!=="empty"){
     h+=`<div class="pad mt16"><div class="advice">
       <span class="kick">Calorie decision</span>
       <p class="lead">${esc(adv.text)}</p>`;
@@ -2856,7 +2896,17 @@ function vDiet(){
      there is no fallback set of macros in this file to fall back TO, and
      inventing one is the single thing this screen exists to stop. */
   let v=null;
-  try{ v=PHAT.dietTargets(PHAT.localDate(),S.plan,S.dietView); }catch(err){ v=null; }
+  try{ v=PHAT.dietTargets(PHAT.localDate(),S.plan,S.dietView,dietProfile()); }catch(err){ v=null; }
+  /* Rule PR1 (coach §16.2, WO-008 W4): the WHOLE tab is ABSENT on a store
+     with no diet profile. Kicker, the engine's sub-kicker, its two lines, and
+     nothing else - no segment, no cell, no tick (its prefs key is never
+     written on this store), no caveat. Checked before the could-not-read
+     guard, because ABSENT is an answer and not a failure. */
+  if(v&&v.absent===true){
+    return `<div class="hd"><span class="kick">${esc(v.kicker||"Diet")}</span>
+      <span class="kick">${esc(v.kickerSub||"")}</span></div>
+      <div class="pad mt24" id="dietabsent">${(v.absentLines||[]).map(t=>`<p class="sub">${esc(t)}</p>`).join("")}</div>`;
+  }
   let h=`<div class="hd"><span class="kick">${esc(D&&D.kicker?D.kicker:"Diet")}</span>
     <span class="kick">${esc(D&&D.kickerSub?D.kickerSub:"")}</span></div>`;
   /* The guard covers the copy table as well as the figures: a logic.js that
@@ -4344,7 +4394,7 @@ document.getElementById("view").addEventListener("click",async e=>{
 function announceWeight(receipt){
   let line="";
   try{
-    const a=PHAT.calorieAdvice(S.bw,PHAT.localDate(),S.logMeta&&S.logMeta.calChangedAt);
+    const a=PHAT.calorieAdvice(S.bw,PHAT.localDate(),S.logMeta&&S.logMeta.calChangedAt,dietProfile());
     if(a&&a.text) line=" "+a.text;
   }catch(err){}
   announce(receipt+line);
@@ -5527,7 +5577,7 @@ function setDietView(view){
   render();
   let said="";
   try{
-    const v=PHAT.dietTargets(PHAT.localDate(),S.plan,S.dietView);
+    const v=PHAT.dietTargets(PHAT.localDate(),S.plan,S.dietView,dietProfile());
     if(v&&v.label) said=v.label+". "+(v.text&&v.text.strip?v.text.strip:"");
   }catch(err){ said=""; }
   if(said) announce(said);
@@ -5705,7 +5755,7 @@ function onSync(snap){
   const was=S.sync.user?S.sync.user.id:null;
   S.sync.user=snap&&snap.user?snap.user:null;
   S.sync.busy=snap?snap.busy:null;
-  if((S.sync.user?S.sync.user.id:null)!==was) S.sync.last=null;
+  if((S.sync.user?S.sync.user.id:null)!==was){ S.sync.last=null; S.sync.refused=null; }
   paintBackup();
 }
 window.addEventListener("online",()=>{
@@ -5740,15 +5790,34 @@ async function runBackup(manual,reason){
       if(manual) announce("Backup refused: "+S.sync.last.message+" Your log is unchanged on this device.");
       paintBackup(); return;
     }
+    /* B-88 (WO-008 W4). WHOSE LOG IS THIS. The device's stores belong to the
+       account that first backed them up (the stamp in prefs.backup); a
+       different account gets a refusal that names the owner, and NOTHING is
+       sent, written or stamped. `hasData` is read from DISK, now (B-74):
+       what is on this phone, not what this tab loaded. A device with nothing
+       on it may be claimed by anyone - that is the second-phone case. */
+    const me=S.sync.user, owner=PHAT.backupOwner(S.prefs.backup);
+    const D=await storesOnDisk();
+    const so=PHAT.storeOwner({ownerId:owner?owner.id:null,userId:me.id,hasData:!D.empty});
+    if(!so.allowed){
+      const msg=PHAT.ownerRefusal(manual?"manual":"auto",owner,me.email||"");
+      const again=!manual&&S.sync.refused===me.id;
+      S.sync.last={ok:false,phase:"push",at:0,reason:"owner",message:msg,counts:p.counts,problems:[],notes:[],manual:!!manual};
+      if(!again) announce(msg,true);
+      S.sync.refused=me.id;
+      paintBackup(); return;
+    }
     const sig=PHAT.backupSig(p);
     const b=S.prefs.backup;
     /* Nothing changed since the last backup that landed: send nothing. A
        manual tap always sends - "BACK UP NOW" means now. */
-    if(!manual&&b&&b.sig===sig&&b.user===S.sync.user.id){ return; }
+    if(!manual&&b&&b.sig===sig&&owner&&owner.id===me.id){ return; }
     S.sync.last={busy:"push"}; paintBackup();
     const r=await Y.push(p);
     if(r.ok){
-      S.prefs.backup={at:r.at,sig:sig,user:S.sync.user.id,n:p.counts.sessions,m:p.counts.bodyweight,x:p.counts.refused};
+      /* The stamp: {id, email}, so every refusal can name the owner. This is
+         also where a string-shaped E-3 stamp gains its email. */
+      S.prefs.backup={at:r.at,sig:sig,user:{id:me.id,email:me.email||null},n:p.counts.sessions,m:p.counts.bodyweight,x:p.counts.refused};
       /* The stamp's own write. Not a backed-up key, so it cannot re-trigger. */
       await save(PREFS,prefsPayload());
     }
@@ -5778,9 +5847,15 @@ async function authTap(kind){
   S.sync.last={busy:"auth"}; paintBackup();
   const r=kind==="up"?await Y.signUp(email,pass):await Y.signIn(email,pass);
   if(r.ok){
-    S.sync.user=r.user; S.sync.last=null; paintBackup();
+    S.sync.user=r.user; S.sync.last=null; S.sync.refused=null; paintBackup();
     announce("Signed in.");
-    backupSoon("signin");
+    /* WO-008 W4. Signing in is choosing an account, not backing up. The push
+       that follows goes through runBackup's ownership check like any other,
+       so a sign-in on a device whose log is someone else's pushes nothing.
+       And a device that has not finished first run pushes NOTHING at all
+       (spec §18.4): an empty log sent over an account's real backup is B-76
+       with a different owner. Onboarding's own choices push, or restore. */
+    if(S.prefs.onboarded) backupSoon("signin");
   }else{
     S.sync.last={ok:false,phase:"auth",message:r.message||"Could not sign in."}; paintBackup();
     announce(r.message||"Could not sign in.",true);
@@ -5835,6 +5910,20 @@ async function restoreStart(){
      replaces the log and the plan store under whatever a second tab holds. */
   const why=PHAT.restoreRefusal({draft:await sessionOnDisk(),edits:S.edits});
   if(why){ S.sync.last={ok:false,phase:"restore",message:why}; paintBackup(); return; }
+  /* B-88 (WO-008 W4). BEFORE THE PULL and before any sheet: a restore from an
+     account that does not own this device's log is refused while the log
+     still holds data. Read from disk, now. Nothing is read from the server,
+     nothing is written, nothing under phat:v1:recover:* is touched. */
+  {
+    const me=S.sync.user, owner=PHAT.backupOwner(S.prefs.backup);
+    const D0=await storesOnDisk();
+    const so=PHAT.storeOwner({ownerId:owner?owner.id:null,userId:me.id,hasData:!D0.empty});
+    if(!so.allowed){
+      const msg=PHAT.ownerRefusal("restore",owner,me.email||"");
+      S.sync.last={ok:false,phase:"restore",reason:"owner",message:msg};
+      announce(msg,true); paintBackup(); return;
+    }
+  }
   S.sync.last={busy:"pull"}; paintBackup();
   const r=await Y.pull();
   if(!r.ok){ S.sync.last={ok:false,phase:"restore",reason:r.reason,message:"Could not read the backup. "+(r.message||"")}; paintBackup(); return; }
@@ -5921,7 +6010,7 @@ async function restoreApply(){
      round trip that re-sends what just came down. */
   if(ok2&&ok3){
     const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),st.plans));
-    S.prefs.backup={at:Date.now(),sig:sig,user:S.sync.user.id,n:rp.counts.sessions,m:rp.counts.bodyweight,x:0};
+    S.prefs.backup={at:Date.now(),sig:sig,user:{id:S.sync.user.id,email:S.sync.user.email||null},n:rp.counts.sessions,m:rp.counts.bodyweight,x:0};
     await save(PREFS,prefsPayload());
   }
   const msg=ok2&&ok3
@@ -5939,15 +6028,29 @@ async function restoreApply(){
 function vBackup(){
   return `<div class="setsec" id="bk"><span class="lbl secrule">Backup</span><div id="bk-body">${vBackupBody()}</div></div>`;
 }
+/* The stamp line, the owner's. "Never backed up." ONLY when there is no
+   stamp: a device that has been backed up has been backed up, whoever is
+   looking (spec §18.5 rule 3 - the old `b.user!==me` test printed it over a
+   real backup under two accounts). When the viewer is not the owner the
+   line names the owner, or "another account" for a stamp with no email. */
+function bkStampLine(){
+  const b=S.prefs.backup, owner=PHAT.backupOwner(b), me=S.sync.user?S.sync.user.id:null;
+  if(!b||typeof b.at!=="number") return "Never backed up.";
+  const ago=PHAT.agoText(b.at)+(b.x?", "+plural(b.x,"item")+" left out":"");
+  if(owner&&me&&owner.id!==me) return "Last backup "+ago+", by "+(owner.email||"another account")+".";
+  return "Last backup "+ago+".";
+}
 function bkStatusLine(){
-  const L=S.sync.last, b=S.prefs.backup, me=S.sync.user?S.sync.user.id:null;
+  const L=S.sync.last;
   if(L&&L.busy) return `<p class="tiny" id="bk-status">${L.busy==="pull"?"Reading the backup.":L.busy==="auth"?"Signing in.":"Backing up."}</p>`;
-  const stamp=(b&&b.user===me&&typeof b.at==="number")
-    ? "Last backup "+PHAT.agoText(b.at)+(b.x?", "+plural(b.x,"item")+" left out":"")+"."
-    : "Never backed up.";
+  const stamp=bkStampLine();
   if(L&&L.ok===false){
+    /* An ownership refusal (B-88) is its own sentence, verbatim from the
+       engine: it already says what did not happen. Only a push that FAILED
+       gets the "Backup failed:" prefix. */
     return `<div class="refuse" role="alert" id="bk-status"><p><span aria-hidden="true">! </span>${esc(
-      L.phase==="push"?"Backup failed: "+(L.message||"unknown")+" Your log is unchanged on this device."
+      L.reason==="owner"?L.message
+      :L.phase==="push"?"Backup failed: "+(L.message||"unknown")+" Your log is unchanged on this device."
       :L.message)}</p><p>${esc(stamp)}</p></div>`;
   }
   if(L&&L.ok===true&&L.phase==="push"){
@@ -5978,7 +6081,13 @@ function vBackupBody(){
   }
   if(!S.sync.user){
     const L=S.sync.last, busy=!!(L&&L.busy);
-    return `<p class="tiny">Keeps a copy of your log off this phone. Logging works the same signed in or out.</p>
+    /* Spec §18.6 H2: signed out on a device that has a stamp names the
+       owner and the time; H5 (never backed up) is the existing sentence. */
+    const b=S.prefs.backup, ow=PHAT.backupOwner(b);
+    const intro=(b&&typeof b.at==="number")
+      ? "Keeps a copy of your log off this phone. This one was last backed up "+PHAT.agoText(b.at)+" by "+((ow&&ow.email)||"another account")+". Logging works the same signed in or out."
+      : "Keeps a copy of your log off this phone. Logging works the same signed in or out.";
+    return `<p class="tiny">${esc(intro)}</p>
       <label class="bklbl" for="bk-email">Email</label>
       <input class="bkin" id="bk-email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false">
       <label class="bklbl" for="bk-pass">Password</label>
@@ -5989,7 +6098,13 @@ function vBackupBody(){
       <button class="ghostbtn" id="bk-signup"${busy?" disabled":""}>Create account</button>`;
   }
   const busy=!!(S.sync.last&&S.sync.last.busy)||!!S.sync.busy;
-  return `<p class="tiny">Signed in as ${esc(S.sync.user.email||"")}. Backs up after every saved session and weight.</p>
+  /* Spec §18.6 H3: signed in as someone other than the device's owner. The
+     status block under it carries the refusal, when one has fired. */
+  const ow=PHAT.backupOwner(S.prefs.backup);
+  const line=(ow&&ow.id!==S.sync.user.id)
+    ? "Signed in as "+(S.sync.user.email||"")+". This device's log belongs to "+(ow.email||"another account")+"."
+    : "Signed in as "+(S.sync.user.email||"")+". Backs up after every saved session and weight.";
+  return `<p class="tiny">${esc(line)}</p>
     ${bkStatusLine()}
     <button class="ghostbtn" id="bk-push"${busy?" disabled":""}>Back up now</button>
     <button class="ghostbtn" id="bk-restore"${busy?" disabled":""}>Restore from backup</button>
@@ -6077,6 +6192,18 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
        which is the honest reading of a stamp this build cannot vouch for. */
     S.prefs.backup = (rp.value.backup&&typeof rp.value.backup==="object"&&typeof rp.value.backup.at==="number")
       ? rp.value.backup : null;
+    /* WO-008 W4. `user` is read in both shapes - the E-3 string id and the
+       {id, email} object - through PHAT.backupOwner, and normalised in memory
+       to the object so every reader sees one shape. Not written here: the
+       next stamp (a push or a restore that lands) writes the object form, and
+       a string stamp migrated offline carries email:null until the owner's
+       own push fills it. No boot write. */
+    if(S.prefs.backup){
+      const ow=PHAT.backupOwner(S.prefs.backup);
+      const nb={}; Object.keys(S.prefs.backup).forEach(k=>{ nb[k]=S.prefs.backup[k]; });
+      nb.user=ow?{id:ow.id,email:ow.email}:null;
+      S.prefs.backup=nb;
+    }
     S.prefs.restAuto = rp.value.restAuto===undefined ? true : !!rp.value.restAuto;
     S.prefs.onboarded = !!rp.value.onboarded;
     /* A stored tick from any day but today reads as off. It is kept, not
@@ -6088,7 +6215,18 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   }
   /* Non-destructive, idempotent, never throws. No date value is rewritten. */
   const m=PHAT.migrateStore(rawLog,rawBw,rawPlans);
-  adoptLog(m.log); adoptBw(m.bw);
+  /* WO-008 W4. The diet-profile pass, AFTER the schema passes and BEFORE the
+     store is adopted. It fires only on a log store that has no `profile` key
+     at all - a store written before this build - and never on one that has
+     been asked (null) or answered. It stamps {diet:"phat-brief"} on evidence
+     the store was in use before two accounts existed, and writes null when it
+     cannot tell (coach §16.8: silence is the recoverable error; his stamp
+     comes back from his account with one Restore). The bodyweight count is
+     handed in from the same boot read. An absent log store is left absent:
+     nothing is invented, and the first save writes S.logMeta's null. */
+  const pp=PHAT.profilePass(m.log,{bwCount:(m.bw&&Array.isArray(m.bw.entries))?m.bw.entries.length:0});
+  if(pp.note) console.info("[phat] profile pass:",pp.note.msg);
+  adoptLog(pp.log); adoptBw(m.bw);
   adoptPlans(rawPlans===undefined?null:(m.plans&&typeof m.plans==="object"?m.plans:rawPlans));
   if(m.plansChanged) await save(PLANS,plansPayload());
   /* The working copies. A store that will not parse is treated as none and
@@ -6107,7 +6245,7 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   /* Only writes when the migration actually marked or added something. An
      empty store boots with zero writes; the version lands on the first real
      save. Sorting alone does not trigger a write — order is not data. */
-  if(m.logChanged) await save(LOG,logPayload());
+  if(m.logChanged||pp.changed) await save(LOG,logPayload());
   if(m.bwChanged) await save(BWK,bwPayload());
   if(m.notes&&m.notes.length) console.info("[phat] migration:",m.notes);
   /* Read the draft here, before the first render and before any day can be

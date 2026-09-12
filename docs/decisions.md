@@ -2088,3 +2088,69 @@ not change, and the "matched exactly once" assertion written down as a standing 
 **Rules out:** treating a warn-once as a refusal; re-widening PV1 to the PM's original "any move drops it";
 closing B-95 by editing the observed pin; bumping `sw.js` for a release whose file list did not change; reading
 this close as reversing the recommendation to log before rebuilding.
+
+## 2026-09-12 — WO-008 W4: the profile stamp is evidence-gated and one-shot per store; SCHEMA_VERSION stays 5; a device's stores belong to the account that first backed them up
+
+**The uncomfortable answer first.** The bytes on Chady's phone and on Diana's phone cannot be told apart by
+schema age (coach addendum §16.8), and after W3's runbook they cannot be told apart by the owner stamp either —
+both phones will carry a string stamp with `n:0, m:0`. So the pass does the only honest thing: it stamps
+`{diet:"phat-brief"}` on **evidence the store was in use before two accounts existed**, and when it cannot tell
+it writes `profile: null` and never asks that store again. **If Chady's phone holds no session, no weight, no
+calorie stamp and no pre-WO-001 marker, his store is answered null and his Diet tab and calorie ladder go
+ABSENT until a stamped store pushes to his account and he restores.** That is the coach's recorded consequence
+(§16.8) and it is the price of not handing Diana his diet. There is no control in this order that re-stamps a
+store by hand; if he finds himself in that state, that control is a one-line follow-up (B-93's first field),
+not a reason to loosen the pass.
+
+**The evidence rule, as shipped (`PHAT.profilePass(log, {bwCount})`).** Runs at boot on the migrated log store,
+after every schema pass and before the store is adopted, **only on a store with no own `profile` key**. Stamps
+iff the store is not `demo:true` and at least one of: `utcDatedBefore` set (migrated from schema 1 — older than
+WO-001, [Certain] his); ≥ 1 session; ≥ 1 bodyweight entry; `calChangedAt` set (an act that exists only inside
+Rule W1). Otherwise writes `null`. Idempotent by construction: a store that carries the key — `null` or the
+stamp — comes back as the same reference, `changed:false`, whatever evidence it has gained since. That is the
+whole defence against the hazard: Diana's first logged session must not become evidence, and it cannot, because
+by then her store has already been asked.
+
+**Why every store this build creates carries `profile: null` from birth.** The gate is key presence, so a store
+born without the key would be asked on its next boot and stamped on its own sessions. Three creation points,
+all closed: `S.logMeta` boots as `{profile:null}` (the first save on a fresh device writes it); `restorePayload`
+sets `null` on a `log_meta` that lacks the key (a pre-W4 backup restored onto any phone is never re-asked — the
+restore-shaped hazard); and the E-3 test fixtures carry it. A backup whose `log_meta` carries the stamp brings it
+down untouched, which is how the profile travels with the account.
+
+**No `SCHEMA_VERSION` bump — and why `V_PROFILE` is not compared to it.** The store's shape did not move: one
+additive key. A version gate is an age gate, and age is exactly what cannot decide this. `V_PROFILE = 1` names
+the pass (its note reads `Profile pass 1: …`; a second pass, if ever ruled, gets `2` and is gated apart by it);
+it is never compared to the store's `schemaVersion`, and `migrateStore` neither reads nor writes `profile`.
+WO-002's importer owes nothing new: a schema-2…5 store without the key loads, is asked once, and answers.
+
+**Rule PR1 as implemented — fail closed, byte-identical when open.** `calorieAdvice(entries, today,
+calChangedAt, profile)` and `dietTargets(date, plan, view, profile)` return the C7a ABSENT object for anything
+but an object whose `diet === "phat-brief"` (the NAME is the test, so a B-93 field added to the brief's profile
+does not lock the tab). For the stamp, the returned object is **byte-identical to `main @ 9ee456f`** — no
+`absent:false` field is added to a stamped store's output — pinned in S36 against literals frozen from that
+commit's `logic.js`. Every existing three-argument call in `index.html` and `tests.html` became four-argument;
+none was loosened. Rule C7c: `stallAdvice` reads `ctx.profile` in the stalled state only and reports `copy:
+"phat" | "generic"`; `provenance` still reports the plan fact alone.
+
+**B-88 — `storeOwner({ownerId, userId, hasData}) → {allowed, reason}`.** No user → refused (`no-user`); no data
+on disk → allowed (`fresh`, the second-phone case — a stale stamp on an empty device protects nothing); no owner →
+allowed (`claim`); same account → allowed (`owner`); otherwise refused (`foreign`). `hasData` is `!D.empty` from
+`storesOnDisk()` — a store that cannot be read counts as data. Wired before the signature skip in `runBackup`
+(automatic and manual), before the pull in `restoreStart` (nothing under `phat:v1:recover:*` is touched), and
+sign-in itself pushes only through that gate — and not at all on a device that has not finished first run
+(`S.prefs.onboarded`), per UX §18.4. A refusal sets `S.sync.last` with `reason:"owner"`, announces once
+assertively, and writes nothing; the automatic refusal is latched per signed-in account (`S.sync.refused`) so a
+mismatched account gets one alert per sign-in, not one per saved set (UX §18.5 rule 2 — the latch is W5's to
+move if it wants it elsewhere).
+
+**`prefs.backup.user` is `{id, email}`; the E-3 string is read, not rewritten.** `PHAT.backupOwner` reads both
+shapes and is the only reader; boot normalises in memory and writes nothing. The object lands on the next stamp
+a push or a restore writes, which is also how a string stamp gains its email — the owner's own next push. Until
+then the refusals say `another account` / `Sign in as that account` (UX §18.5 H6), and the app invents no
+address. `bkStatusLine`'s `Never backed up.` now prints only when there is no stamp; a viewer who is not the
+owner reads `Last backup {ago}, by {owner}.`
+
+**Rules out:** gating the stamp on `schemaVersion` or any age; a stamp on a `demo:true` store; re-asking a store
+that carries the key; adding `absent:false` to a stamped store's engine output; an override that re-claims a
+device's log for another account (B-88's note stands); a boot write to `prefs` for the stamp-shape migration.
