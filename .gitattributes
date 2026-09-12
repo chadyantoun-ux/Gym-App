@@ -9,3 +9,9 @@
 # future .gitattributes rule can never sweep them into text conversion and
 # corrupt an icon.
 *.png binary
+
+# WO-009 W3 added 48 exercise photographs under assets/ex/. Git already
+# detects a JPEG as binary from its NUL bytes, and the deploy extract uses
+# git cat-file blob which never converts either way; this line is the same
+# belt and braces as *.png - no future text rule can sweep them in.
+*.jpg binary
