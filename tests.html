@@ -55,7 +55,19 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 689 / 689 / 0, no skips.</b> <b>WO-009 Lane B</b> (the change-password control, QA pass 2026-09-12) added <b>no</b> test:
+<b>Today: 706 / 706 / 0, no skips.</b> <b>S38</b> (WO-009 W4, 2026-09-12) added 17: the photo map on the plan
+document &mdash; the full <code>figFor</code> table for all 42 slots typed from addendum &sect;17.2/&sect;17.8 (32 ids,
+10 nulls, by id), <b>no <code>fig</code> key on any row the eye check failed or that has no source</b>
+(<code>d1b d1c d1f d2d d3b d3e d3f d3g d4e d4h</code>), none of the eight failed upstream ids anywhere on the plan, the
+ten shared-cue pairs agreeing, 24 distinct ids as safe path segments (&sect;17.8&rsquo;s &ldquo;23 / 46 files&rdquo; is a
+miscount), UX &sect;11.5 (every mapped slot has a cue; a <code>fig</code> with no cue is refused on the shipped document
+and tolerated on a copy where it is inert), <code>validatePlan</code> refusing eleven non-id <code>fig</code> values
+naming the field, <code>copyPlan</code> and the editors carrying it, <code>figFor</code> reading the shipped plan only,
+zero boot writes on a store holding a pre-<code>fig</code> copy and on one holding a post-<code>fig</code> copy, no
+engine and no session reading it, <code>demoStore</code> byte-identical with it stripped, and the
+<code>assets/ex/map.json</code> literal equal to <code>figFor</code> over every slot. One S25 shape pin gained
+<code>fig</code> in d1a&rsquo;s key list (it is a field of the exercise, which is that pin&rsquo;s point). Before S38 the
+count read 689. <b>WO-009 Lane B</b> (the change-password control, QA pass 2026-09-12) added <b>no</b> test:
 every line of it is either <code>sync.js</code> (an ES module with a CDN import, which never loads from <code>file://</code>) or
 <code>pwTap</code> in <code>index.html</code> (reads two fields by id, calls the module, paints). The evidence is the browser run
 against the live project under &ldquo;Already proven&rdquo; item 34 &mdash; the eight-step path, the mid-call carry, the cut wire,
@@ -6129,7 +6141,10 @@ T("W2/W3 FINDING - removeExercise's undo is NOT complete: the scrubbed plan-scop
   a.eq(r.ok, true);
   a.deep(r.plan.keyLifts, ["d1d","d2a","d2d"], "the reference is dropped, correctly - no dangling id");
   a.eq(Object.prototype.hasOwnProperty.call(r.plan.speedSource, "d3a"), false);
-  a.deep(Object.keys(r.removed).sort(), ["cue","hi","id","implement","k","lift","lo","n","s"],
+  /* `fig` joined the list on WO-009 W4 (2026-09-12): it is a field OF the
+     exercise (d1a's photograph id), which is exactly what this pin says
+     `removed` carries. The point stands: nothing about the scrubbed refs. */
+  a.deep(Object.keys(r.removed).sort(), ["cue","fig","hi","id","implement","k","lift","lo","n","s"],
     "`removed` carries the exercise and nothing else - no record of what was scrubbed");
   /* The naive undo a UI would write, and what it leaves behind. */
   r.plan.days[0].ex.unshift(JSON.parse(JSON.stringify(r.removed)));
@@ -13248,6 +13263,332 @@ T("S37 - D7: sign-out is sync.js's key alone - no PHAT export names phat:auth, a
 
 T("W7 - up to the end of S37 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
   a.deep(PHAT_KEY_WRITES, [], "a fixture in S37 or earlier wrote into his history");
+});
+
+/* ============================================================ S38 - WO-009 W4, the photo map on the plan document
+   `fig` on PHAT_PLAN, PHAT.figFor, assets/ex/map.json. The map is the coach's
+   table - docs/coach-audit-addendum.md 17.2 as filled in by the eye check of
+   2026-09-12 (17.8) - and ONLY rows at `pass` carry an id. The table below is
+   typed from 17.2/17.8 here, independently of logic.js, so a later "tidy-up"
+   that remaps a slot, or puts a `fig` back on a row the eye check failed,
+   goes red on file:// before it reaches a phone (the B-55 lesson: transcribe
+   from the coach's table, pin the transcription). */
+group("S38 WO-009 W4 / fig on PHAT_PLAN / figFor / map.json / addendum 17.2 + 17.8 / UX 11.5");
+
+/* All 42, by slot id. null = the slot renders its cue alone. Source: 17.2's
+   `Eye check` column and 17.8's by-slot list. d1e is the row's own FALLBACK
+   (the named `Dips_-_Triceps_Version` failed; `Dips_-_Chest_Version` passed). */
+var FIG42 = {
+  d1a: "Bent_Over_Barbell_Row", d1b: null, d1c: null, d1d: "Dumbbell_Bench_Press",
+  d1e: "Dips_-_Chest_Version", d1f: null, d1g: "EZ-Bar_Curl", d1h: "EZ-Bar_Skullcrusher",
+  d2a: "Barbell_Squat", d2b: "Hack_Squat", d2c: "Leg_Extensions", d2d: null,
+  d2e: "Lying_Leg_Curls", d2f: "Standing_Calf_Raises", d2g: "Seated_Calf_Raise",
+  d3a: "Bent_Over_Barbell_Row", d3b: null, d3c: "Seated_Cable_Rows", d3d: "One-Arm_Dumbbell_Row",
+  d3e: null, d3f: null, d3g: null, d3h: "Side_Lateral_Raise",
+  d4a: "Barbell_Squat", d4b: "Hack_Squat", d4c: "Leg_Press", d4d: "Leg_Extensions", d4e: null,
+  d4f: "Lying_Leg_Curls", d4g: "Seated_Leg_Curl", d4h: null, d4i: "Seated_Calf_Raise",
+  d5a: "Dumbbell_Bench_Press", d5b: "Incline_Dumbbell_Press", d5c: "Machine_Bench_Press",
+  d5d: "Incline_Cable_Flye", d5e: "Preacher_Curl", d5f: "Concentration_Curls", d5g: "Spider_Curl",
+  d5h: "Close-Grip_Barbell_Bench_Press", d5i: "EZ-Bar_Skullcrusher", d5j: "Triceps_Pushdown_-_Rope_Attachment"
+};
+/* The ten cue-only rows, named (17.8): 8 `fail` + 2 `none` by design. */
+var FIG_FAIL = ["d1b", "d1f", "d3f", "d2d", "d3e", "d3g", "d4e", "d4h"];
+var FIG_NONE_BY_DESIGN = ["d1c", "d3b"];
+var FIG_CUE_ONLY = FIG_FAIL.concat(FIG_NONE_BY_DESIGN);
+/* The 17.2 shared-cue pairs. Eight share an id; two share the absence. */
+var FIG_PAIRS = [["d1a","d3a"],["d1c","d3b"],["d1d","d5a"],["d1f","d3f"],["d1h","d5i"],
+                 ["d2a","d4a"],["d2b","d4b"],["d2c","d4d"],["d2e","d4f"],["d2g","d4i"]];
+/* The ids that failed, so a "fix" that maps one of them anywhere goes red. */
+var FIG_FAILED_IDS = ["Weighted_Pull_Ups", "Dips_-_Triceps_Version", "Seated_Dumbbell_Press",
+  "Stiff-Legged_Barbell_Deadlift", "Close-Grip_Front_Lat_Pulldown", "Upright_Barbell_Row",
+  "Romanian_Deadlift", "Donkey_Calf_Raises", "Leverage_Chest_Press", "Glute_Ham_Raise"];
+var FIG_RE_T = /^[A-Za-z0-9_\-]+$/;
+function figMapped(){ var out = {}, k; for (k in FIG42) if (FIG42[k] !== null) out[k] = FIG42[k]; return out; }
+function figDistinct(){ var seen = {}, k, out = []; for (k in FIG42) if (FIG42[k] !== null && !seen[FIG42[k]]) { seen[FIG42[k]] = true; out.push(FIG42[k]); } return out.sort(); }
+function stripFig(plan){ var c = clone(plan); allEx(c).forEach(function(e){ delete e.fig; }); return c; }
+
+/* ------------------------------------------------------ 1. the surface and the freeze */
+
+T("W4 - PHAT.figFor is exported, pure, and PHAT_PLAN is still deep-frozen with `fig` on it", function(a){
+  a.isFn(P.figFor, "figFor");
+  a.ok(Object.isFrozen(P.PHAT_PLAN), "the document");
+  a.ok(Object.isFrozen(P.exById(P.PHAT_PLAN, "d1a")), "a slot carrying fig");
+  a.ok(Object.isFrozen(P.exById(P.PHAT_PLAN, "d1b")), "a slot without");
+  var before = JSON.stringify(P.PHAT_PLAN);
+  try { P.exById(P.PHAT_PLAN, "d1a").fig = "Leg_Press"; } catch (e) {}
+  try { P.exById(P.PHAT_PLAN, "d1b").fig = "Weighted_Pull_Ups"; } catch (e) {}
+  try { delete P.exById(P.PHAT_PLAN, "d5j").fig; } catch (e) {}
+  a.eq(JSON.stringify(P.PHAT_PLAN), before, "three attempted writes, byte-identical");
+  a.eq(P.figFor("d1a"), "Bent_Over_Barbell_Row", "and figFor still reads the frozen value");
+});
+
+/* ------------------------------------------------------ 2. the full table, all 42 by id */
+
+T("W4 (headline) - figFor over all 42 slots equals the 17.2/17.8 table typed here: 32 ids, 10 nulls, by id", function(a){
+  var ids = allEx(P.PHAT_PLAN).map(function(e){ return e.id; });
+  a.eq(ids.length, 42, "42 slots");
+  a.deep(ids.slice().sort(), Object.keys(FIG42).sort(), "the plan's ids are exactly the table's ids");
+  var got = {}, n = 0, z = 0, i;
+  for (i = 0; i < ids.length; i++) {
+    got[ids[i]] = P.figFor(ids[i]);
+    if (got[ids[i]] === null) z++; else n++;
+    a.eq(got[ids[i]], FIG42[ids[i]], "figFor(" + ids[i] + ")");
+  }
+  a.deep(got, FIG42, "the whole table");
+  a.eq(n, 32, "32 ship a photograph");
+  a.eq(z, 10, "10 render the cue alone");
+  a.eq(P.figFor("d1e"), "Dips_-_Chest_Version", "d1e ships the row's fallback, not the failed named id");
+  a.eq(P.figFor("d2a"), "Barbell_Squat", "WO acceptance: d2a returns the coach's id");
+  a.eq(P.figFor("d1c"), null, "WO acceptance: d1c is none");
+});
+
+T("W4 - NO `fig` key on any row not at pass: d1b d1c d1f d2d d3b d3e d3f d3g d4e d4h carry no key at all, not an empty one", function(a){
+  var i, e;
+  a.eq(FIG_CUE_ONLY.length, 10);
+  for (i = 0; i < FIG_CUE_ONLY.length; i++) {
+    e = P.exById(P.PHAT_PLAN, FIG_CUE_ONLY[i]);
+    a.ok(e, FIG_CUE_ONLY[i] + " exists");
+    a.eq(Object.prototype.hasOwnProperty.call(e, "fig"), false, FIG_CUE_ONLY[i] + " must carry no fig key (17.2: fail and none transcribe as no fig)");
+    a.eq(P.figFor(FIG_CUE_ONLY[i]), null, FIG_CUE_ONLY[i]);
+    a.ok(typeof e.cue === "string" && e.cue.trim() !== "", FIG_CUE_ONLY[i] + " still renders its cue");
+  }
+  /* and the converse: every slot carrying a key is in the mapped 32 */
+  var withKey = allEx(P.PHAT_PLAN).filter(function(x){ return Object.prototype.hasOwnProperty.call(x, "fig"); }).map(function(x){ return x.id; });
+  a.deep(withKey.sort(), Object.keys(figMapped()).sort(), "exactly the 32 passing rows carry a key");
+});
+
+T("W4 - none of the ids the eye check FAILED appears anywhere on the plan (a wrong figure is worse than none - F1p)", function(a){
+  var figs = allEx(P.PHAT_PLAN).map(function(x){ return x.fig; }).filter(function(f){ return f !== undefined; });
+  var i, j;
+  for (i = 0; i < FIG_FAILED_IDS.length; i++)
+    for (j = 0; j < figs.length; j++)
+      a.ne(figs[j], FIG_FAILED_IDS[i], FIG_FAILED_IDS[i] + " failed the eye check and must not ship");
+});
+
+T("W4 - the ten shared-cue pairs: eight share an id, d1f/d3f share the absence, d1c/d3b were never mapped; none is split", function(a){
+  var i, x, y;
+  for (i = 0; i < FIG_PAIRS.length; i++) {
+    x = P.figFor(FIG_PAIRS[i][0]); y = P.figFor(FIG_PAIRS[i][1]);
+    a.eq(x, y, FIG_PAIRS[i].join("/") + " must agree");
+  }
+  a.eq(P.figFor("d1f"), null); a.eq(P.figFor("d3f"), null);
+  a.eq(P.figFor("d1c"), null); a.eq(P.figFor("d3b"), null);
+  a.eq(P.figFor("d3a"), P.figFor("d1a"), "a speed slot shares its source lift's photo (a still cannot show bar speed)");
+  a.eq(P.figFor("d4a"), P.figFor("d2a"));
+  a.eq(P.figFor("d5a"), P.figFor("d1d"));
+});
+
+T("W4 - 24 distinct ids, every one a safe path segment; 17.8's `23 distinct / 46 files` is a miscount (23 passing named ids + the d1e fallback), so W3's set is 48 files", function(a){
+  var d = figDistinct(), i;
+  a.eq(d.length, 24);
+  for (i = 0; i < d.length; i++) a.match(d[i], FIG_RE_T, d[i] + " must be usable as assets/ex/<id>-0.jpg with no escaping");
+  a.ok(d.indexOf("Dips_-_Chest_Version") >= 0, "the fallback is one of the 24");
+  a.ok(d.indexOf("Seated_Dumbbell_Press") < 0, "the one passing-shaped id 17.8 struck is not");
+  /* the set the plan actually carries is the same set */
+  var seen = {}, got = [];
+  allEx(P.PHAT_PLAN).forEach(function(x){ if (typeof x.fig === "string" && !seen[x.fig]) { seen[x.fig] = true; got.push(x.fig); } });
+  a.deep(got.sort(), d, "the plan's distinct fig set");
+});
+
+/* ------------------------------------------------------ 3. UX 11.5: a mapped slot has a cue; validatePlan */
+
+T("W4 / UX 11.5 - every mapped slot carries a non-empty cue, and validatePlan accepts the shipped plan with `fig` on it", function(a){
+  var m = figMapped(), k, e;
+  for (k in m) {
+    e = P.exById(P.PHAT_PLAN, k);
+    a.ok(typeof e.cue === "string" && e.cue.trim() !== "", k + " has a photograph so it must have the cue (the cue is the accessible carrier; the photo is decorative)");
+  }
+  var v = P.validatePlan(P.PHAT_PLAN);
+  a.eq(v.ok, true, JSON.stringify(v.problems));
+  a.deep(v.problems, []);
+});
+
+T("W4 - validatePlan refuses a `fig` that is not a non-empty [A-Za-z0-9_-] string, naming the field: 3, \"\", null, a path, a URL, a space, an object", function(a){
+  var bad = [3, "", null, "a/b", "https://x/y.jpg", "Barbell Squat", {}, [], true, "..", "Squat.jpg"], i, p, v, f;
+  for (i = 0; i < bad.length; i++) {
+    p = PLANOK("p_f"); p.days[0].ex[0].cue = "Keep it."; p.days[0].ex[0].fig = bad[i];
+    v = P.validatePlan(p);
+    a.eq(v.ok, false, "must refuse fig=" + show(bad[i]));
+    f = v.problems.filter(function(q){ return q.scope === "ex" && q.field === "fig"; });
+    a.eq(f.length, 1, "exactly one problem naming fig for " + show(bad[i]) + ": " + JSON.stringify(v.problems));
+    a.eq(f[0].reason, "type");
+    a.eq(f[0].id, "p_f_x1", "and the slot");
+  }
+  /* WO acceptance, literally: fig: 3 is rejected naming the field */
+  p = PLANOK("p_f"); p.days[0].ex[0].fig = 3;
+  a.deep(P.validatePlan(p).problems, [{ scope: "ex", id: "p_f_x1", field: "fig", reason: "type" }]);
+});
+
+T("W4 - validatePlan accepts a plan with no fig keys, and a copy of PHAT that carries them (copyPlan preserves fig - unknown-key survival, confirmed)", function(a){
+  a.eq(P.validatePlan(PLANOK("p_n")).ok, true, "no fig anywhere");
+  var c = P.copyPlan(P.PHAT_PLAN, "mine", TODAY);
+  a.eq(c.ok, true);
+  var k, m = figMapped();
+  for (k in m) a.eq(P.exById(c.plan, k).fig, m[k], "the copy carries " + k + "'s fig byte for byte");
+  for (k = 0; k < FIG_CUE_ONLY.length; k++) a.eq(Object.prototype.hasOwnProperty.call(P.exById(c.plan, FIG_CUE_ONLY[k]), "fig"), false, "and no key appears on " + FIG_CUE_ONLY[k]);
+  var v = P.validatePlan(c.plan);
+  a.eq(v.ok, true, JSON.stringify(v.problems));
+  /* an edit on the copy keeps it: rename, retarget, move */
+  var r = P.renameExercise(c.plan, "d2a", "Back squat");
+  a.eq(r.ok, true); a.eq(P.exById(r.plan, "d2a").fig, "Barbell_Squat", "rename keeps the key (the VIEW gates on shippedName, not the document)");
+  var t = P.setExerciseTarget(r.plan, "d2a", { s: 4, lo: 4, hi: 6 });
+  a.eq(t.ok, true); a.eq(P.exById(t.plan, "d2a").fig, "Barbell_Squat", "retarget keeps it");
+  a.eq(P.validatePlan(t.plan).ok, true);
+});
+
+T("W4 / UX 11.5 - a `fig` with no cue is refused on the SHIPPED document (planId phat) naming cue:missing, and tolerated on a copy where fig is inert", function(a){
+  /* a PHAT-shaped document: same planId, one slot with a photo and no cue */
+  var shipped = { planId: P.PHAT_PLAN_ID, name: "PHAT", days: [{ id: "d1", name: "Day", ex: [
+    { id: "d1a", n: "Row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_row", fig: "Bent_Over_Barbell_Row" } ] }] };
+  var v = P.validatePlan(shipped);
+  a.eq(v.ok, false, "a photograph with no cue is an instruction nobody can read");
+  a.deep(v.problems, [{ scope: "ex", id: "d1a", field: "cue", reason: "missing" }]);
+  shipped.days[0].ex[0].cue = "   ";
+  a.deep(P.validatePlan(shipped).problems, [{ scope: "ex", id: "d1a", field: "cue", reason: "missing" }], "blank is missing");
+  shipped.days[0].ex[0].cue = "Keep the torso at the same angle for every rep.";
+  a.eq(P.validatePlan(shipped).ok, true, "with the cue it passes");
+  /* the same rows on a COPY: fig is inert there (figFor reads the shipped plan), so a
+     restore must never be refused over it */
+  var copy = clone(shipped); copy.planId = "p_copy"; delete copy.days[0].ex[0].cue;
+  a.eq(P.validatePlan(copy).ok, true, "a copy with fig and no cue is not refused: " + JSON.stringify(P.validatePlan(copy).problems));
+  copy.days[0].ex[0].fig = 3;
+  a.eq(P.validatePlan(copy).ok, false, "but a wrong-typed fig is still refused on a copy");
+});
+
+/* ------------------------------------------------------ 4. figFor reads the SHIPPED plan and nothing else */
+
+T("W4 - figFor(\"nonsense\") is null, as is every non-id; a user-added exercise never gets a photo; a fig hand-written onto a copy changes nothing", function(a){
+  var junk = ["nonsense", "", " ", undefined, null, 42, {}, [], "D1A", "phat", "d1", "l_row", "d1a_x"], i;
+  for (i = 0; i < junk.length; i++) a.eq(P.figFor(junk[i]), null, "figFor(" + show(junk[i]) + ")");
+  a.eq(P.figFor("d1a"), "Bent_Over_Barbell_Row", "figFor takes ONE argument, the id - no plan, so no stored copy can be handed to it");
+  a.eq(P.figFor(" d1a "), "Bent_Over_Barbell_Row", "OBSERVED and kept: the id is trimmed, exactly as exById and every other id reader trims it");
+  a.eq(P.figFor.length, 1);
+  var c = P.copyPlan(P.PHAT_PLAN, "mine", TODAY).plan;
+  var add = P.addExercise(c, "d1", { n: "Pendlay row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", cue: "Reset on the floor.", fig: "Bent_Over_Barbell_Row" });
+  a.eq(add.ok, true);
+  a.eq(P.figFor(add.exId), null, "a user-added exercise has no shipped slot, so no photograph");
+  a.eq(Object.prototype.hasOwnProperty.call(P.exById(add.plan, add.exId), "fig"), false, "and addExercise does not copy a fig from the spec");
+  /* a copy whose d1a fig is hand-set to a different, failed or empty id */
+  var d1a = P.exById(add.plan, "d1a");
+  d1a.fig = "Leg_Press";
+  a.eq(P.figFor("d1a"), "Bent_Over_Barbell_Row", "the copy's fig is inert");
+  d1a.fig = "Weighted_Pull_Ups";
+  a.eq(P.figFor("d1a"), "Bent_Over_Barbell_Row");
+  delete d1a.fig;
+  a.eq(P.figFor("d1a"), "Bent_Over_Barbell_Row", "a stored copy that predates fig resolves through the shipped row");
+  var d1b = P.exById(add.plan, "d1b"); d1b.fig = "Weighted_Pull_Ups";
+  a.eq(P.figFor("d1b"), null, "a copy cannot put a photo on a failed row");
+});
+
+/* ------------------------------------------------------ 5. no version, no migration, zero boot writes */
+
+T("W4 - ZERO BOOT WRITES: a store holding a saved plan copy made BEFORE fig existed boots through migrateStore with plansChanged:false, changed:false, no notes, byte-identical", function(a){
+  var pre = stripFig(P.copyPlan(P.PHAT_PLAN, "my PHAT", "2026-09-01").plan);   /* what a pre-W4 copy on disk looks like */
+  a.eq(hasKeyDeep(pre, "fig"), false, "fixture: no fig anywhere on the stored copy");
+  var plans = { schemaVersion: P.SCHEMA_VERSION, plans: [pre], activePlanId: pre.planId };
+  var log = E3LOG([E3SESS(1, "2026-09-09")]), bw = E3BW([{ date: "2026-09-09", kg: 85 }]);
+  var pJ = JSON.stringify(plans), lJ = JSON.stringify(log), bJ = JSON.stringify(bw);
+  var n = PHAT_KEY_WRITES.length;
+  var r = P.migrateStore(log, bw, plans);
+  a.eq(r.changed, false, "nothing to write");
+  a.eq(r.plansChanged, false); a.eq(r.logChanged, false); a.eq(r.bwChanged, false);
+  a.deep(r.notes, []);
+  a.eq(JSON.stringify(r.plans), pJ, "the plan store is byte-identical - no fig was minted onto the copy");
+  a.eq(JSON.stringify(r.log), lJ); a.eq(JSON.stringify(r.bw), bJ);
+  a.eq(hasKeyDeep(r.plans, "fig"), false, "and still no fig on disk: the map lives on the constant, not in any store");
+  a.eq(P.normalisePlanStore(plans).changed, false, "normalisePlanStore agrees");
+  a.eq(PHAT_KEY_WRITES.length, n, "no phat:* write");
+  /* the pre-fig copy still resolves every photo through the shipped row */
+  a.eq(P.figFor("d2a"), "Barbell_Squat");
+});
+
+T("W4 - a copy made AFTER fig (carries the keys) boots the same way: zero writes, keys kept, keys not required", function(a){
+  var post = P.copyPlan(P.PHAT_PLAN, "my PHAT", TODAY).plan;
+  a.eq(hasKeyDeep(post, "fig"), true, "fixture: the copy carries fig");
+  var plans = { schemaVersion: P.SCHEMA_VERSION, plans: [post], activePlanId: post.planId };
+  var pJ = JSON.stringify(plans);
+  var r = P.migrateStore(E3LOG([]), E3BW([]), plans);
+  a.eq(r.changed, false); a.eq(r.plansChanged, false); a.deep(r.notes, []);
+  a.eq(JSON.stringify(r.plans), pJ, "byte-identical");
+  /* and the restore path accepts both shapes without a problem naming fig */
+  var pre = stripFig(post);
+  var v1 = P.validatePlan(post), v2 = P.validatePlan(pre);
+  a.eq(v1.ok, true, JSON.stringify(v1.problems)); a.eq(v2.ok, true, JSON.stringify(v2.problems));
+});
+
+T("W4 - no engine reads fig: verdict, speedLoad, planKeyLifts, phatProvenance, stallAdvice and buildSession are byte-identical on the same plan with fig stripped, and a built session carries no fig", function(a){
+  var stripped = stripFig(P.PHAT_PLAN);
+  a.ne(JSON.stringify(stripped), JSON.stringify(P.PHAT_PLAN), "fixture: the two documents differ (by fig only)");
+  var d = P.demoStore(42), log = clone(d.log);
+  var ex1 = P.exById(P.PHAT_PLAN, "d1a"), ex2 = P.exById(stripped, "d1a");
+  a.eq(JSON.stringify(P.verdict(VCTX(ex1, SETS(100, 5, 100, 5, 100, 5), null, ""))),
+       JSON.stringify(P.verdict(VCTX(ex2, SETS(100, 5, 100, 5, 100, 5), null, ""))), "verdict");
+  a.eq(JSON.stringify(P.speedLoad(log.sessions, "d3a", TODAY, "Row", P.PHAT_PLAN)),
+       JSON.stringify(P.speedLoad(log.sessions, "d3a", TODAY, "Row", stripped)), "speedLoad");
+  a.eq(JSON.stringify(P.planKeyLifts(P.PHAT_PLAN)), JSON.stringify(P.planKeyLifts(stripped)), "planKeyLifts");
+  a.eq(JSON.stringify(P.phatProvenance(P.PHAT_PLAN)), JSON.stringify(P.phatProvenance(stripped)), "phatProvenance");
+  var c1 = P.copyPlan(P.PHAT_PLAN, "x", TODAY).plan, c2 = P.copyPlan(stripped, "x", TODAY).plan;
+  a.eq(JSON.stringify(P.phatProvenance(c1)), JSON.stringify(P.phatProvenance(c2)), "phatProvenance on a copy: fig is not a prescription field");
+  a.eq(JSON.stringify(P.stallAdvice({ plan: P.PHAT_PLAN, sessions: log.sessions, todayStr: TODAY, state: log, profile: PB })),
+       JSON.stringify(P.stallAdvice({ plan: stripped, sessions: log.sessions, todayStr: TODAY, state: log, profile: PB })), "stallAdvice");
+  var dr = draft(entry("d1a", sets("100:5", "100:5", "100:5")), TODAY);
+  var b1 = P.buildSession(dr, "d1", TODAY, 1768000000000, "phat", P.PHAT_PLAN);
+  var b2 = P.buildSession(dr, "d1", TODAY, 1768000000000, "phat", stripped);
+  a.ok(b1, "fixture: the session builds");
+  a.eq(JSON.stringify(b1), JSON.stringify(b2), "buildSession never copies fig into a session");
+  a.eq(hasKeyDeep(b1, "fig"), false, "a session carries no fig (rx is s/lo/hi/k, not the slot)");
+});
+
+T("W4 - demoStore is unaffected: demoStore(42) carries no fig at any depth, and is byte-identical to demoStore on the same plan with fig stripped", function(a){
+  var d = P.demoStore(42);
+  a.eq(hasKeyDeep(d, "fig"), false, "no fig in any generated session, entry, rx or weight row");
+  a.eq(d.log.sessions.length, 30, "30 sessions, as S30/S31 pin");
+  var d2 = P.demoStore({ seed: 42, plan: stripFig(P.PHAT_PLAN) });
+  a.eq(JSON.stringify(d2), JSON.stringify(d), "fig has no effect on the demo output");
+});
+
+/* ------------------------------------------------------ 6. assets/ex/map.json equals figFor over every slot */
+
+/* The literal below IS assets/ex/map.json's 32 rows, transcribed here so the
+   equality holds on file:// where a sibling JSON cannot be read. The test
+   after it reads the real file when the page is served over http (the
+   deployed /tests.html) and SKIPS with the reason on file://. Release's
+   manifest.json lists ids (24 -> 48 files); this lists slots (32). */
+var MAPJSON = {
+  "d1a": "Bent_Over_Barbell_Row", "d1d": "Dumbbell_Bench_Press", "d1e": "Dips_-_Chest_Version",
+  "d1g": "EZ-Bar_Curl", "d1h": "EZ-Bar_Skullcrusher",
+  "d2a": "Barbell_Squat", "d2b": "Hack_Squat", "d2c": "Leg_Extensions", "d2e": "Lying_Leg_Curls",
+  "d2f": "Standing_Calf_Raises", "d2g": "Seated_Calf_Raise",
+  "d3a": "Bent_Over_Barbell_Row", "d3c": "Seated_Cable_Rows", "d3d": "One-Arm_Dumbbell_Row", "d3h": "Side_Lateral_Raise",
+  "d4a": "Barbell_Squat", "d4b": "Hack_Squat", "d4c": "Leg_Press", "d4d": "Leg_Extensions",
+  "d4f": "Lying_Leg_Curls", "d4g": "Seated_Leg_Curl", "d4i": "Seated_Calf_Raise",
+  "d5a": "Dumbbell_Bench_Press", "d5b": "Incline_Dumbbell_Press", "d5c": "Machine_Bench_Press",
+  "d5d": "Incline_Cable_Flye", "d5e": "Preacher_Curl", "d5f": "Concentration_Curls", "d5g": "Spider_Curl",
+  "d5h": "Close-Grip_Barbell_Bench_Press", "d5i": "EZ-Bar_Skullcrusher", "d5j": "Triceps_Pushdown_-_Rope_Attachment"
+};
+function figFromPlan(){ var out = {}; allEx(P.PHAT_PLAN).forEach(function(x){ var f = P.figFor(x.id); if (f !== null) out[x.id] = f; }); return out; }
+
+T("W4 - map.json (the literal) equals figFor over every slot: same 32 keys, same ids, and equals the 17.2 table's non-null rows", function(a){
+  a.eq(Object.keys(MAPJSON).length, 32);
+  a.deep(figFromPlan(), MAPJSON, "figFor over the plan");
+  a.deep(figMapped(), MAPJSON, "the 17.2 table");
+  var k; for (k in MAPJSON) a.ok(FIG_CUE_ONLY.indexOf(k) < 0, k + " is a cue-only row and must not be in map.json");
+});
+
+/* NOT a test here, on purpose: assets/ex/map.json ON DISK cannot be read from
+   file:// (Chromium refuses a sibling XHR/fetch), and a test that skips on
+   the origin this page is meant to run from is a skip carried forward. The
+   on-disk file was checked against figFor on 2026-09-12 by loading logic.js
+   in Node and comparing every non-`_` key: 32 rows, equal. The literal above
+   is that file's rows; scripts/make-photos.mjs reads the same file and dies
+   on an id that is not a safe path segment, and scripts/verify-deploy.sh
+   asserts manifest count = sw.js PHOTOS count = files on disk. A remap in
+   either place lands red in one of those three, never silently. */
+
+/* ------------------------------------------------------ 7. the meta-tripwire, restated for this section */
+
+T("W4 - up to the end of S38 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S38 or earlier wrote into his history");
 });
 
 
