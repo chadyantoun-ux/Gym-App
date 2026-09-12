@@ -5234,8 +5234,8 @@ were fetched from the pinned SHA and viewed; so were the 8 frames for the four f
   not a cosmetic one — nothing here went to `none` on a bystander or a shirt logo alone.
 - `none` by design (2): d1c d3b.
 
-**Distinct ids to ship: 23** (the 22 passing named ids that map to a shipping slot — `Seated_Dumbbell_Press`
-is out — plus `Dips_-_Chest_Version`). W3's set is **46 files**, not 62.
+**Distinct ids to ship: 24** (the 23 passing named ids that map to a shipping slot — `Seated_Dumbbell_Press`
+is out — plus `Dips_-_Chest_Version`). W3's set is **48 files**, not 62.
 
 **17.5 pair test — outcome: none of the four listed branches; both fail on their own terms.** The two
 bottom frames are both shot at the top of the hinge with the bar at the kneecap, neither at mid-shin.
