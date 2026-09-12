@@ -172,6 +172,13 @@ editor does not — it is the commit and it moves (§9.2).
 | 51 | editor | Empty day `Delete this day` | full × 48 | §9.9.5. Present only at zero exercises |
 | 52 | editor | Warn-once `Got it` | ≥ 88 × 44 | §9.9.6. Only once W1 fills the slot |
 | 53 | plans | `Duplicate PHAT and rearrange it` | full × 56 | §9.9.7. Primary until a stored plan exists, then ghost |
+| 54 | home | Owner row (`This log`) | full × 48 | WO-008 §18.2. Below the next-session block, never the header. Opens Settings at Backup |
+| 55 | onboarding | `Sign in` | full × 48 | §18.4. Second action, under `START WITH AN EMPTY LOG` |
+| 56 | first-run sign-in | `‹ Back` | 88 × 44 | §18.4. Top-left, non-destructive — permitted |
+| 57 | first-run sign-in | Email / password fields, `Sign in`, `Create account` | full × 48 each | §18.4. The existing `vBackupBody` form, unchanged |
+| 58 | first-run sign-in | `Start with an empty log` (escape) | full × 48 | §18.4. Present in every state of the form screen |
+| 59 | first-run, signed in | `Restore {n} sessions` | full × 56 | §18.4 state C1. Primary |
+| 60 | first-run, signed in | `Start with an empty log` / `Sign out` / `Try again` | full × 48 each | §18.4 states C1–C3 |
 
 **Deleted rather than resized:** the FULL VOLUME toggle (C-1), the 2.5/5 KG segment (C-3), and
 `SWITCH TO AN EMPTY LOG` (§2.4 — there is no control that empties the real log).
@@ -2378,3 +2385,443 @@ and no copy was written beyond the one sentence in ruling 1.
 **Deliberately left open, per the stop condition.** Nothing else. Every question raised tonight was
 answerable from this spec, `wo-003-train-weight.md`, `logic.js` and the handoff brief, except the one
 sentence above, which is a sign-off and not a gap.
+
+---
+
+# 18. Two accounts — identity on screen, sign-in on first run, the ownership refusals (WO-008 W2, 2026-09-12)
+
+Author: `ux-designer` · Implements: WO-008 §4 W2 · Consumed by: W5 (`frontend-engineer`), W4
+(`backend-engineer`, for the `{owner}` fallback and the first-run push rule), W7 (QA) · Reads:
+`index.html` `vHome` (1724), `vOnboard` (1861), `vSession` (2043), `authTap` (5508), `runBackup`
+(5461), `restoreStart` (5567), `bkStatusLine` (5677), `vBackupBody` (5705), boot prefs load (5805).
+
+**The uncomfortable answer first.** This section adds one row to Home, one line to the session header,
+one line to Summary and one screen to first run, for a second account whose log will hold zero
+sessions the day it exists — the same day the first one still does. It is specified in full because
+B-88 is live and a name on the screen is the cheapest fix for a set landing in the wrong log. Nothing
+here makes a set easier to log.
+
+**What this section does not write.** Any sentence the Weight or Diet tab says to an account with no
+profile. That is `strength-coach`'s (WO-008 W1, running in parallel). §18.7 specifies the *slot* and
+the *placement* and leaves the sentence marked.
+
+## 18.1 The two facts, and which one the screen names
+
+There are two identities and the code conflates them:
+
+| Fact | Source | Available offline | What it answers |
+|---|---|---|---|
+| **The owner** — the account that last backed up from, or restored onto, this device | `prefs.backup.user` (after W4: `{id, email}`; `null` if never backed up) | **Yes** — a stamp on disk | *Whose log is this* |
+| **The signed-in account** | `S.sync.user` (module only; `null` until `sync.js` loads, and `loadSync` does not run offline) | **No** | *Where would a backup go right now* |
+
+**Ruled: every identity line in the app names the owner, never the signed-in account.** The question
+between sets is "whose log am I about to add a set to", and the answer is on disk. The signed-in
+account is named only where it *differs* from the owner — that difference is the B-88 state, and it is
+the one thing worth a sentence. Consequences:
+
+1. The line renders identically with the network off, the module unloaded, and from `file://`. No
+   spinner, no "loading", no state that waits on `sync.js`. `[Certain]` — the stamp is read at boot
+   (`index.html:5813`).
+2. Signed out is not an error. It is the same log, on the same device, not being copied anywhere.
+   The line says that and nothing more.
+3. A device that has never been backed up has no owner and the line says so as a fact, not a prompt.
+   `Sign in` is one tap away in Settings; the line does not nag.
+4. **Display names are out.** No field holds one, no screen asks for one, and first run adds no field
+   (§10.1 rule 2 still binds). The email is the name. Emails are never uppercased by CSS — an email in
+   small caps reads as a different string.
+
+**The one state where the signed-in account is named** — owner `A`, signed in as `B` — is rendered
+in the refusal shape (§2.1: four-sided border, `!`), because the app really is declining to do
+something (back up). It is the only identity state that takes that shape. Signed out and never
+backed up take **no enclosure at all**.
+
+## 18.2 Home — the owner row
+
+```
+Flow:   Identity on Home
+Entry:  Every paint of Home. No trigger.
+Exit:   Tap → Settings, scrolled to the Backup section (heading focused). Nothing written.
+```
+
+**Placement.** Directly **below the next-session block and above the cycle line** — the first thing
+after the answer to the screen's question, and the last thing before the programme state. Not the
+header (`.hd` is inside the top 15 % and `{n} sessions logged` is already there). Not the bottom (the
+macros strip is below the fold on shorter viewports). It is a full-width `<button>`, 48 px, no border,
+no surface — a row, not a card. It is **not a programme-state line** and does not count against
+§13.4's "exactly one"; a QA grep for programme-state lines must not match it.
+
+**Budget.** 48 px of the day list's no-scroll budget at 393 × 852. By arithmetic (header 46 + block
+175 + row 48 + cycle 50 + label 49 + five rows 280 + dock 52 ≈ 700) it fits with room. **W5 measures.**
+If it does not fit, the row and the day list both stay above the fold and the frontend finds the
+pixels elsewhere; neither is dropped.
+
+```
+[REF] layout, Home, populated, owner stamped, signed in as the owner or offline
+
+│  12 SESSIONS LOGGED                        SETTINGS  │  ← unchanged header
+│ ┌──────────────────────────────────────────────────┐ │
+│ │ 3 DAYS SINCE THIS DAY                            │ │
+│ │ Upper power                                      │ │  ← next-session block, unchanged
+│ │ [           START SESSION                     ›] │ │
+│ └──────────────────────────────────────────────────┘ │
+│  THIS LOG                                            │  ← 18.2 owner row, 48 px, tappable
+│  chady@b-script.com · last backup 3 days ago      ›  │
+│  Week 3 of real training. Reduced volume holds.      │  ← cycle line, unchanged
+│  OR PICK ANY DAY                                     │
+```
+
+**States and copy.** `{owner}` = `prefs.backup.user.email`, `{me}` = `S.sync.user.email`,
+`{ago}` = `PHAT.agoText(prefs.backup.at)`. Kicker line first, then the row's main line.
+
+| # | Owner stamp | Signed in (module) | Kicker | Main line | Shape |
+|---|---|---|---|---|---|
+| H1 | `A` | `A`, or unknown (offline / unloaded / loading / failed) | `This log` | `{owner} · last backup {ago}` | Plain row |
+| H2 | `A` | none — module ready, signed out | `This log` | `{owner} · signed out · last backup {ago}` | Plain row |
+| H3 | `A` | `B` | `This log` | `! Belongs to {owner}. Signed in as {me}. Nothing backs up.` | **Refusal** enclosure |
+| H4 | none | `A` | `This log` | `On this device only. Backs up to {me} after the next save.` | Plain row |
+| H5 | none | none / unknown | `This log` | `On this device only. Not backed up.` | Plain row |
+| H6 | stamp present, `email` null (a pre-W4 stamp migrated offline) | any | `This log` | `Backed up {ago} by an account this phone has not seen sign in.` | Plain row |
+| H7 | prefs unreadable | any | `This log` | `Could not read who this log belongs to.` | Plain row, no enclosure — it stops nothing |
+
+Rules.
+
+1. **Nothing waits.** H1 renders the moment Home paints, from the stamp. When `sync.js` arrives and
+   `onSync` fires, the row is repainted **in place by id** (`paintWho()`, the `paintBackup()`
+   pattern) — never `render()`. The row's height is fixed at 48 px in every state, so H1 → H3 does not
+   move the cycle line or the day list under a thumb.
+2. **H4 is transient by design.** With no stamp the first push claims the device (W4: `ownerId`
+   null → ok). After that push lands, the stamp exists and the row reads H1. If the push fails, H4
+   stands and Settings carries the failure; the row does not.
+3. **H3 is the only enclosure.** It uses `.refuse` exactly as `bkStatusLine` does — 2 px border, the
+   literal `!`, `aria-hidden` on the glyph. It has **no `role="alert"`**: the event was announced once
+   through `announce()` when the refusal happened (§18.5); the row is the persistent state, and a
+   persistent alert is read on every focus move.
+4. **Demo mode:** the row is unchanged and names the real log's owner. The demo store never pushes
+   (C-14) and the row never claims it does.
+5. **Tap → Settings**, `S.sub="settings"`, then scroll so the `Backup` section rule is at the top of
+   the viewport and move focus to it (`tabindex="-1"` on the section label). No input is focused —
+   focusing the email field would raise the keyboard on a screen he opened to read.
+6. **Overflow.** One line, `text-overflow: ellipsis`, the email first so the local part — the
+   distinguishing part — is what survives truncation. The accessible name is the full text.
+7. **`{ago}` is the stamp's `at`.** It is the last backup that *landed*, which is what "backed up"
+   means; it is never the last attempt.
+
+## 18.3 Session and Summary — the owner line
+
+**Where I depart from the work order, and why.** WO-008 W2's criterion puts the session-screen
+identity outside the top 15 % of the viewport. I disagree because that rule exists to keep *controls*
+out of the grip zone (§0.4), and this line is not a control; on the session screen every pixel between
+the header and the first set row is paid for by the set, and a 48 px row there is worse for the only
+thing that matters than a 12 px line in the header. Here is what I do instead: the session line rides
+the **header**, as text, and the identity is repeated at the **commit point** — Summary, directly
+above `SAVE SESSION`, in the thumb zone, where the set actually joins a log. The risk is that the header
+line is the least-read line on the session screen; that is acceptable because it is the second
+reading of a fact Home showed one tap earlier and Summary repeats a third time. **PM to amend the
+criterion for the session screen or overrule; W5 does not build a row between header and set.**
+
+**Session header** (`.sesshead`). A second line under the kicker, before the pips, before the
+`It saves under {date}` line when that renders. `.75rem`, `--dim`, not uppercased, one line, ellipsis.
+It is static for the life of the paint: `onSync` does not repaint it (a mid-set repaint is B-19), and
+a sign-in that happens during a session is reflected on Summary and on the next Home.
+
+| # | State (as §18.2) | Session header line |
+|---|---|---|
+| S1 | H1 / H2 / H6 | `Log of {owner}` |
+| S2 | H3 | `Log of {owner} · signed in as {me}` |
+| S3 | H4 / H5 / H7 | `On this device only` |
+
+**Summary** — one line directly above `SAVE SESSION`, same type as `.tiny` but `--dim`, present in
+every state, never an enclosure (nothing on Summary may look like the blocked-save refusal except the
+blocked-save refusal, §2.2):
+
+| # | State | Line above `SAVE SESSION` |
+|---|---|---|
+| U1 | H1 | `Saves to this device. Backs up to {owner}.` |
+| U2 | H2 | `Saves to this device. Backs up to {owner} when signed in.` |
+| U3 | H3 | `Saves to this device. Belongs to {owner}, not to {me}. Will not back up.` |
+| U4 | H4 | `Saves to this device. Backs up to {me}.` |
+| U5 | H5 / H6 / H7 | `Saves to this device. Not backed up.` |
+
+`SAVE SESSION` is never disabled by any of these. **Logging never waits on auth** (§3.2). The line
+is a statement of where the number goes, not a gate on it.
+
+## 18.4 First run — `Sign in` beside `Start with an empty log`
+
+```
+Flow:   Claim a fresh phone with an existing account
+Entry:  Onboarding (§10.1) — both stores absent, no notice, not onboarded, no draft.
+Exit:   Home, with `onboarded` written by exactly one of: START WITH AN EMPTY LOG, or a completed
+        restore. Never by the sign-in itself.
+```
+
+**Screen A — onboarding, amended.** §10.1's content is unchanged. Under `START WITH AN EMPTY LOG`
+(primary, 52) a second action, `Sign in` (ghost, 48). **Exactly two actions**; `LOAD SIX WEEKS OF
+SAMPLE DATA` and `OR PICK ANOTHER PLAN` remain what they were (W13b / §10.1 rule 3) and are not
+actions on the log. `Sign in` is shown in every network state — the next screen tells the truth about
+the connection; hiding the button offline would make first run look different on the two phones for
+no reason he can see. The optional `Today's weight` field is **not carried** to screen B; it is
+optional, and a restore replaces the bodyweight store anyway. Nothing on screen A writes until a
+button is tapped.
+
+```
+[REF] screen A, bottom
+
+│  [          START WITH AN EMPTY LOG            ]   │  primary, 52
+│  [                 SIGN IN                     ]   │  ghost, 48
+```
+
+**Screen B — first-run sign-in.** `S.sub="onboard-signin"`. Header: `‹ Back` top-left (88 × 44,
+non-destructive, permitted by §0.4) and the kicker `First run`. Then a heading, then **the existing
+`vBackupBody()` form verbatim** — its four module states (file, offline, loading, failed), its two
+fields, `Sign in`, `Create account`, and its inline refusal block — painted into `#bk-body` so
+`paintBackup()` works here unchanged (W5: `paintBackup` is gated on `S.sub==="settings"`; it gains
+`"onboard-signin"`). Below the form, in every state, `Start with an empty log` (ghost, 48): the
+escape is on the screen, not one Back away, because the offline case is the common one in a gym.
+
+```
+[REF] screen B
+
+│  ‹ BACK                                  FIRST RUN │
+│  Sign in to an account                             │  h1
+│  Its backup can be put on this phone. Nothing is   │  .sub
+│  written until you choose.                         │
+│  EMAIL                                             │
+│  [                                              ]  │  48
+│  PASSWORD                                          │
+│  [                                              ]  │  48
+│  [ SIGN IN ]  [ CREATE ACCOUNT ]                   │  existing, 48 each, stacked full-width
+│                                                    │
+│  [          START WITH AN EMPTY LOG            ]   │  ghost, 48 — the escape, every state
+```
+
+| State | Form area shows | Notes |
+|---|---|---|
+| B-offline / file / failed | The module's existing sentence (`Backup needs a connection. None right now.` etc.) + ` Your log is on this device and saves as normal.` | No fields, no `Sign in`. The escape button is the way forward |
+| B-loading | `Backup is loading.` | No spinner beyond the sentence |
+| B-form | Fields + `Sign in` + `Create account` | Focus on the heading, not the field |
+| B-busy | `Signing in.`, buttons disabled | Existing |
+| B-refused | Existing `.refuse` with the module's message (`Email and password, both.` / wrong password / `New accounts are switched off.`) | Typed values preserved across the repaint (existing `paintBackup` rule) |
+| `‹ Back` from any state | Screen A, unchanged | **Nothing written.** `onboarded` still false; no store key touched. The typed email and password are gone — they were never stored |
+
+**Sign-in on first run does not schedule a push.** Today `authTap` calls `backupSoon("signin")` on
+success. On a first-run device that is a push of an empty log to whichever account signed in — at best
+a no-op, at worst B-76 with a different owner. **W5: on `S.sub==="onboard-signin"`, a successful
+sign-in routes to screen C and schedules nothing.** The first push happens only after
+`START WITH AN EMPTY LOG` (through the ordinary save path) or never (a restore stamps the device as
+already backed up, `restoreApply` 5657). *Dependency on W4: `storeOwner` with `hasData:false` returns
+ok, so nothing in the pure layer blocks this; the rule is the view's.*
+
+**Screen C — signed in, choose.** Reached only from a successful sign-in on screen B. On arrival the
+app **pulls once** (`Y.pull()` → `PHAT.restorePayload`, the first half of `restoreStart`) and
+renders one of three states from the result. She is online by definition here — she just signed in.
+
+| # | Pull result | Copy | Actions, top to bottom |
+|---|---|---|---|
+| C1 | ≥ 1 session, weight or plan | `Signed in as {me}.` / `{n} sessions and {m} weights are backed up under this account.` (`restoreCounts` form, plans named when present) | `Restore {n} sessions` **primary, 56** · `Sign out` ghost, 48 |
+| C2 | Zero rows | `Signed in as {me}.` / `Nothing is backed up under this account yet.` | `Start with an empty log` **primary, 52** · `Sign out` ghost, 48 |
+| C3 | Pull failed, or the payload was refused | `Signed in as {me}.` / `Could not read the backup. ` + the module's message, in the refusal enclosure | `Try again` ghost, 48 · `Start with an empty log` ghost, 48 · `Sign out` ghost, 48 |
+
+Rules for C.
+
+1. **C1 does not offer an empty log.** An account with rows and a device that would then push an
+   empty log over them is a data-loss path on the server (B-76's shape). The honest choices are: bring
+   the backup down, or leave. `Sign out` returns to screen A signed out, nothing written.
+2. **`Restore {n} sessions` on C1 goes straight to `restoreApply`** — no `Restore from backup?` sheet.
+   The device is empty (onboarding gates on both stores absent) so the sheet would be the one-tap
+   variant, and screen C *is* that sheet: it names the counts and the account. `restoreApply` still
+   re-reads disk (B-74) and refuses if anything has appeared. On success: `onboarded` is written,
+   `S.sub=""`, Home renders with the owner row in H1 naming `{me}`; announced `Restored {counts}.`
+   (existing). On failure: `restoreApply`'s existing `fail()` message renders on screen C in the
+   refusal enclosure, actions as C3, `onboarded` still false.
+3. **C2's `Start with an empty log`** is `finishOnboarding()` unchanged (one key). Home renders in H4;
+   the stamp lands on the first save's push.
+4. **C3's `Try again`** repeats the pull. `Start with an empty log` here is allowed — the app could not
+   see rows, and refusing on a guess would strand her offline with a signed-in account and no log.
+   The first push after that claims the device (H4 → H1) *only if* W4's `storeOwner` says ok, which
+   with `hasData:false` it does. *Flagged for `backend-engineer`: if that first push can overwrite a
+   server log that C3 failed to read, the push after a C3 → empty-log path must be a merge or a
+   refusal, not a replace. Not mine to rule; the screen does not depend on the answer.*
+5. **Back from C:** there is no `‹ Back` on C. The way out of a signed-in state is `Sign out`, and it
+   is on every variant.
+
+**Preserved across every path:** `phat:v1:log`, `bw`, `plans`, `draft` — absent before, absent after
+anything but a completed restore or `START WITH AN EMPTY LOG`. `phat:auth` is `sync.js`'s key and is
+written by a sign-in; that is choosing an account, which is what the work order permits.
+
+## 18.5 The ownership refusals — B-88
+
+**Rule (W4's):** a device's log belongs to the account that first backed it up. When the signed-in
+account differs from the owner and the device holds data, the automatic push, the manual push and the
+restore are each refused, nothing is written, `prefs.backup` is untouched.
+
+**Three sentences, final.** Each names the owner, names what did **not** happen, and offers the one
+way out. No override control. `{owner}` and `{me}` as §18.2.
+
+| # | Trigger | Sentence |
+|---|---|---|
+| R-a | Automatic push after sign-in, or after any save, while signed in as `{me}` on a device owned by `{owner}` | `This device's log belongs to {owner}. Nothing was backed up to {me}. Sign in as {owner} to back it up.` |
+| R-b | `BACK UP NOW` | `Not backed up. This device's log belongs to {owner}, not to {me}. Sign in as {owner} to back it up.` |
+| R-c | `Restore from backup` | `Not restored. This device's log belongs to {owner}. The backup under {me} was not read and nothing on this device changed. Sign in as {owner} to restore.` |
+
+**When the owner's email is unknown** (H6 — a stamp migrated with `email:null`): `{owner}` reads
+`another account` and the way-out clause reads `Sign in as that account`. So R-b becomes
+`Not backed up. This device's log belongs to another account, not to {me}. Sign in as that account to
+back it up.` Same substitution in R-a and R-c. The app does not invent an address.
+
+**Where each renders.**
+
+| | Settings, `#bk-status` | `announce()` | Home owner row |
+|---|---|---|---|
+| R-a | `.refuse`, `role="alert"`, the sentence, then the stamp line (`Last backup {ago}.` — the owner's, which is the true last backup of this log) | Once, **assertive** — a write that did not land | H3 |
+| R-b | Same | Once, assertive | H3 |
+| R-c | Same. Renders **before** the pull and before any sheet: `restoreStart` asks `storeOwner` first | Once, assertive | H3 |
+
+**Rules.**
+
+1. The sentence is rendered once in `#bk-status` and said once through the live region. Never both
+   with `aria-live` on the block (§2.6 — two regions over one content are read twice). `.refuse`
+   already carries `role="alert"`; that is the one carrier in Settings.
+2. **R-a fires once per sign-in, not once per save.** After the first refusal the automatic push is
+   not re-attempted on every save while the same mismatched account is signed in — one alert per
+   condition, not one per set. The manual button re-tries and re-refuses on demand. *W5 owns the
+   latch; W4's `storeOwner` is pure and does not know about repeats.*
+3. The stamp line under the refusal stays the owner's. `bkStatusLine` today prints `Never backed up.`
+   when `b.user !== me` (5680) — under two accounts that sentence is **false** and is replaced by the
+   owner's stamp: `Last backup {ago}, by {owner}.` A device that has been backed up has been backed
+   up, whoever is looking.
+4. `Sign out` remains enabled in this state. It is the way out.
+5. **Nothing here disables logging.** The session screen, Summary and `SAVE SESSION` behave exactly
+   as in H1.
+
+## 18.6 Settings — the signed-in line, amended
+
+`vBackupBody`'s `Signed in as {me}. Backs up after every saved session and weight.` is true only in H1
+and H4. Amended by state:
+
+| State | Line |
+|---|---|
+| H1 / H4 | unchanged |
+| H3 | `Signed in as {me}. This device's log belongs to {owner}.` — then `#bk-status` carries R-a/R-b/R-c |
+| H2 (signed out, stamped) | The signed-out form is unchanged; its first sentence becomes `Keeps a copy of your log off this phone. This one was last backed up {ago} by {owner}. Logging works the same signed in or out.` |
+| H5 (signed out, never backed up) | Existing sentence, unchanged |
+
+## 18.7 The ABSENT Weight / Diet slot — placement only `[W1 SLOT — strength-coach]`
+
+The sentences are W1's and are **not written here**. What is ruled here is where the one absent line
+goes and what does not render around it, per C7a ("once, in the place the feature would have
+appeared").
+
+| Screen | Where the absent line renders | What does not render in ABSENT |
+|---|---|---|
+| Weight | The calorie-decision slot (§7.3), same advice enclosure, same kicker | The calorie ladder; `I changed my calories today` and its hold controls (nothing to hold); the `+0.2 to +0.3` subline. **Whether the kg/week rate itself renders is W1 q2's** — the entry, the last-7 list and the 7-day average with its day count are measurements and stay |
+| Diet | One advice enclosure where the targets grid would be | The `TRAINING DAY / REST DAY` segment, every target cell, the protein check, the calibration note — all are views of numbers that do not exist |
+| Home macros strip | **Nothing.** The strip already renders only when `dietTargets().text.strip` is a non-empty string; ABSENT returns none and the strip is absent. Home does not repeat Diet's absent line — C7a says once, and Diet is the place | The strip |
+
+For **Chady's account nothing changes** (W4 stamps the existing store `phat-brief`).
+
+`[W1 SLOT — strength-coach: the literal `absentLine` for Weight and for Diet, in the C7a shape.
+Until it is returned, both slots render nothing and no number.]`
+
+## 18.8 Strings — every new one, in one table
+
+`{owner}` · `{me}` · `{ago}` · `{n}` · `{m}` as above. All NEW, all status or refusal copy, no
+training claim; coach review is a courtesy, not a gate.
+
+```
+This log
+{owner} · last backup {ago}
+{owner} · signed out · last backup {ago}
+Belongs to {owner}. Signed in as {me}. Nothing backs up.
+On this device only. Backs up to {me} after the next save.
+On this device only. Not backed up.
+Backed up {ago} by an account this phone has not seen sign in.
+Could not read who this log belongs to.
+Log of {owner}
+Log of {owner} · signed in as {me}
+On this device only
+Saves to this device. Backs up to {owner}.
+Saves to this device. Backs up to {owner} when signed in.
+Saves to this device. Belongs to {owner}, not to {me}. Will not back up.
+Saves to this device. Backs up to {me}.
+Saves to this device. Not backed up.
+Sign in
+Sign in to an account
+Its backup can be put on this phone. Nothing is written until you choose.
+Signed in as {me}.
+{n} sessions and {m} weights are backed up under this account.
+Nothing is backed up under this account yet.
+Could not read the backup.
+Restore {n} sessions
+Try again
+This device's log belongs to {owner}. Nothing was backed up to {me}. Sign in as {owner} to back it up.
+Not backed up. This device's log belongs to {owner}, not to {me}. Sign in as {owner} to back it up.
+Not restored. This device's log belongs to {owner}. The backup under {me} was not read and nothing on this device changed. Sign in as {owner} to restore.
+another account / Sign in as that account
+Last backup {ago}, by {owner}.
+Signed in as {me}. This device's log belongs to {owner}.
+Keeps a copy of your log off this phone. This one was last backed up {ago} by {owner}. Logging works the same signed in or out.
+```
+
+Unchanged and relied on: `Signed out. Your log is still on this device.` · `Signed in.` ·
+`Restored {counts}.` · `Backup needs a connection. None right now.` · `Backup does not run from a
+file. Open the installed app.` · `Backup could not load. Close the app and open it again to retry.` ·
+`Email and password, both.` · `New accounts are switched off.` · `Start with an empty log` ·
+`Restore from backup` · `Back up now` · `Sign out` · `Create account`.
+
+## 18.9 A11y
+
+- **Owner row (Home):** a `<button>`, accessible name = its visible text in reading order
+  (`This log, chady@b-script.com, last backup 3 days ago`). `aria-describedby` not needed. In H3 the
+  `!` is `aria-hidden`; the words carry the refusal. No `role="alert"` on the row (§18.2 rule 3).
+- **Session header line and Summary line:** plain text, in DOM order after the kicker / before
+  `SAVE SESSION`. Not live regions.
+- **Live announcements:** sign-in and sign-out use the existing `announce()` strings. Each refusal is
+  announced **once, assertive**. Auth-state repaints of the owner row are silent — the row changed,
+  nothing happened to him.
+- **Screen B focus order:** `‹ Back` → heading (`tabindex="-1"`, receives focus on arrival) → Email →
+  Password → `Sign in` → `Create account` → `Start with an empty log`. Screen C: heading → the
+  actions top to bottom. Escape / `‹ Back` returns focus to `Sign in` on screen A (`closeSheet`'s
+  `back` pattern).
+- **Contrast:** kicker `.kick` at `--faint` (`.55`, 5.3 : 1 on `--bg`) at 11 px — the floor, met.
+  Email at `--bone`. Sub-lines at `--dim` (`.70`). Session header line at `--dim`, `.75rem` (12 px).
+  Nothing in this section sits on `--surface`, so the `.55` surface floor does not bite. The refusal
+  border is `--red-hi`, ≥ 3 : 1, and is never the sole carrier — the sentence is.
+- **Greyscale test:** H1, H2, H3, H5 each read from words alone. H3 additionally by the four-sided
+  border and the `!`. `Sign in` and `Start with an empty log` are told apart by label and by
+  fill-versus-outline, not by hue.
+- **200 % text:** the owner row wraps to two lines *within* its 48 px minimum (it may grow; it may
+  not shrink); the email keeps its ellipsis. Screen B and C stack every button full width.
+
+## 18.10 Control inventory — rows added to §0.4.1
+
+Rows 54–60, inserted into the table above. Every control ≥ 44 on both axes; the owner row and every
+first-run action are full width.
+
+## 18.11 What I could not settle
+
+1. **The top-15 % criterion on the session screen.** I depart from it (§18.3) and say why. PM rules.
+2. **The first push after a C3 → `Start with an empty log` path.** If `Y.push` replaces rather than
+   merges, a device that could not read its account's backup and then pushes an empty log can erase
+   the copy on the server. §18.4 rule 4 names it; `backend-engineer` rules whether that push must be a
+   merge, a refusal, or is already safe. The screens do not change either way.
+3. **`{owner}` with `email:null`.** H6 and the `another account` substitution exist only because a
+   pre-W4 stamp can be migrated offline with no email to hand. If W4 can guarantee an email on every
+   stamp (for instance by refusing to write a stamp without one, and back-filling on the next
+   sign-in), H6 and the substitution are deleted. W4's call.
+4. **R-a's once-per-sign-in latch.** Where it lives (a flag on `S.sync`) and what resets it (a
+   sign-out, or the owner signing in) are W5's; I have only said that one alert per condition is the
+   behaviour.
+5. **Whether the owner row should also carry the sync state after W4** (`Backing up.` while a push
+   runs). Not now: the row names a fact about the log, and a busy indicator is a fact about the
+   network. It stays in Settings.
+6. **Same phone (W6).** Nothing here designs a switcher. If §7 q1 comes back *same phone*, the owner
+   row becomes the switch's entry point and gets a second pass; its placement and size already allow
+   that.
+
+## 18.12 Out of scope, deliberately
+
+A display name or any profile field · seeing the other account's log · an override to re-claim a
+device's log for a different account (B-88's note: not in this order) · any sentence on Weight or
+Diet for an account with no profile (W1) · the diet editor (B-93) · per-user plans (already true;
+plans are per store) · a sixth tab or any change to the tab dock · a sign-in prompt anywhere outside
+first run and Settings.
