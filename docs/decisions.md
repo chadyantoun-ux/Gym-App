@@ -1662,3 +1662,50 @@ which the design's own honest note argues against. **Open for Chady to override*
 means PHAT, mirroring sessions; the plan working copy lives under its own key that is **never** in
 `BACKED_UP`; and a restore writes `recover:plans:<ts>` before it touches `phat:v1:plans`, or does
 nothing. `SCHEMA_VERSION` does not move.
+
+## 2026-09-11 — WO-006 W2: the plan store gets the log's restore guarantee, and how a bad plan is refused
+
+**Restore treats `phat:v1:plans` exactly as it treats the log (B-71).** `restoreApply` no longer decides
+anything: `PHAT.restoreSteps` returns the recover copies and the store writes as two ordered lists and
+`index.html` executes them through `save()` in that order — every `recover:*` copy before any replace,
+`recover:plans:<ts>` before `phat:v1:plans` — so the seam order is a `file://` assertion (S32) and not
+only a browser measurement. A plans copy is kept exactly when the backup carries a plan store (so the
+key will be written) and the local one was read `ok`; nothing is kept for an absent store, and an
+unreadable one was already kept aside at boot. A backup with no plan store writes no plans key (R3).
+`localEmpty()` is now `PHAT.restoreLocalEmpty` and counts a stored plan or a non-PHAT active id as
+non-empty: a device with zero sessions and one built plan gets the typed path. Both close the B-20
+extraction E-3's QA asked for. **Rules out:** any restore write to `phat:v1:plans` that is not preceded
+by a successful `recover:plans` write when there was something to keep.
+
+**Restore is refused while a plan working copy exists (R2)**, before any pull, with `Save or discard
+your changes to <plan> first.` — the same shape as the draft refusal, decided by `PHAT.restoreRefusal`.
+The session refusal outranks it.
+
+**A plan the app cannot open refuses the restore WHOLE (R4), and is refused-and-named on push.** R4's
+text ("a plan that fails renders `Cannot open` and is never repaired or dropped") was read with the PM's
+dispatch brief ("refused whole and names why; never write a plan the app cannot open"): `restorePayload`
+runs `normalisePlanStore` (boot's additive repair — a missing `lift` or id is minted, nothing rewritten)
+and then `validatePlan` per plan, and one failure returns nothing to write, naming the plan and the
+field in words (`plan "Mine" (row 0): cannot open - exercise x_1 has no type or implement`) — never a
+`reason` token (B5). "Never dropped" means the one bad plan is never filtered out so the rest can land
+(B-02 in new clothes); "never repaired" means normalisation is the only change and validation failures
+are not patched over. A row with `planId:"phat"` refuses too — PHAT is code and a stored twin would
+shadow it. **The push side is symmetrical:** `backupPayload` now refuses and names a plan that fails
+`validatePlan`, like a `7.5.0` session, so a hand-edited store cannot put on the server a plan that every
+later restore would refuse. The alternative — write the bad plan and show `Cannot open` — was rejected
+because it replaces a store the app can open with one it cannot, on the strength of a typed REPLACE
+that promised sessions.
+
+**Coach-signed copy change (strength-coach W3, 2026-09-11).** The four ABSENT strings in `logic.js`
+are replaced with the coach's exact literals; three of the old second lines told him to set a source
+lift, mark accessories cut, or name key lifts — none of which the editor can do — and D1 opened with
+ST1's nine words while always rendering beside it. `SP1_ABSENT` = `No source lift set for this speed
+work, so there is no number to give.` / `Use 65–70% of a weight you could triple.`; `V1_ABSENT` =
+`This plan has no reduced-volume tier. Every exercise runs from week 1.`; `ST1_ABSENT` = `This plan
+names no key lifts, so the six-week check cannot run.`; `D1_ABSENT` = `Without key lifts the app cannot
+recommend a deload from your numbers. It will still flag nine straight weeks without a lighter one.`
+**Also ruled:** on the absent branch `speedLoad().text` is the ADVICE line alone (the ceiling belongs
+under the bar), never the explanation (which belongs on Plans via `absentLines`), and the session card
+prints `text` for speed work unconditionally. The literals are pinned in S32 as the coach's change, not
+a test bent to code. `docs/coach-audit-addendum.md` §8.4 still carries the old strings and is the
+coach's to amend.

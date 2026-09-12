@@ -1171,7 +1171,7 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
          planBroken:false,edits:{},planView:"",pe:null,
          problems:[],logMeta:{},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
          exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,dietView:null,
-         stores:{log:"absent",bw:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null},
+         stores:{log:"absent",bw:"absent",plans:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null},
          prefsMeta:{},exp:null,
          /* E-3. The backup client's state, IN MEMORY. `mod` is whether sync.js
             loaded: "off" (never attempted - file://, or offline at boot),
@@ -2092,10 +2092,12 @@ function vSession(){
      "65-70% of your power-day top set" (B-12). Everything else prints the
      provenance line, and ONLY across a prescription change - on an unchanged
      prescription the per-row ghosts already say it, once per row. */
-  /* WO-006 B4 / coach 8.4: SP1's ABSENT line renders on the Plans screen and
-     nowhere else. A speed slot with no source lift prints no load line here;
-     the verdict slot still carries the instruction, which needs no number. */
-  const rxline=(e.k==="speed")?((sl&&sl.absent!==true)?sl.text:""):(changed?ep.line:"");
+  /* WO-006 B4 / coach 8.4, as amended by the coach's W3 ruling (2026-09-11):
+     SP1's EXPLANATION renders on the Plans screen and nowhere else, but the
+     ADVICE - the 65-70% ceiling - belongs under the bar, so `text` prints
+     for speed work unconditionally. On the absent branch speedLoad puts only
+     the advice line in `text`; the explanation stays in absentLines. */
+  const rxline=(e.k==="speed")?(sl?sl.text:""):(changed?ep.line:"");
   if(rxline) h+=`<p class="rx">${esc(rxline)}</p>`;
   if(C.tier&&Array.isArray(C.tier.kept)&&C.tier.kept.indexOf(e.id)>=0)
     h+=`<p class="rx">Not in today's volume. It has numbers in it.</p>`;
@@ -5420,22 +5422,41 @@ async function signOutTap(){
   paintBackup();
 }
 
-/* ---- RESTORE. The dangerous path, and the rules (work order E-3):
+/* ---- RESTORE. The dangerous path, and the rules (work order E-3, extended
+   to the plan store by WO-006 W2):
      - read first, validate WHOLE (PHAT.restorePayload refuses on one bad
-       document and names it), and only then ask - with the real counts.
-     - onto an EMPTY local log: one confirmation, then replace.
-     - onto a NON-EMPTY local log: a TYPED confirmation (WO-004 C-14), the
-       local log is exported first, and a verbatim copy is kept on this device
-       under phat:v1:recover:* - the same keep-aside the boot path uses for an
-       unreadable store. If that copy cannot be written, nothing is replaced.
+       document - a session, a weight, or since W2 a plan that fails
+       validatePlan - and names it), and only then ask, with the real counts.
+     - refused before any pull while a session is unfinished, or while a plan
+       working copy is on disk (R2). PHAT.restoreRefusal decides; the copy is
+       its, and it is the same shape for both.
+     - onto an EMPTY device: one confirmation, then replace.
+     - onto a NON-EMPTY device: a TYPED confirmation (WO-004 C-14), the local
+       log is exported first, and a verbatim copy of every store the restore
+       will replace is kept on this device under phat:v1:recover:* - log,
+       bodyweight, and the plan store when the backup carries one (R1) - the
+       same keep-aside the boot path uses for an unreadable store. If any copy
+       cannot be written, nothing is replaced.
+     - a backup with no plan store leaves phat:v1:plans untouched (R3).
      - every write goes through save(), so the window.storage / localStorage
        split is respected and blocked writes are refused (CLAUDE.md §7).
+   THE ORDER OF WRITES IS DATA: PHAT.restoreSteps returns the keeps and the
+   writes as two lists and this function executes them in that order and
+   nothing else, so the seam order is asserted in tests.html (R5) and not
+   only measured in a browser.
    "Empty" is judged on what was READ, not on the arrays: a store that failed
-   to read is not empty, it is unknown, and unknown gets the typed path. */
-const localEmpty=()=>S.stores.log!=="error"&&S.stores.bw!=="error"&&!S.sessions.length&&!S.bw.length;
+   to read is not empty, it is unknown, and unknown gets the typed path. A
+   stored plan, or a non-PHAT active plan, is not empty either. */
+const localEmpty=()=>PHAT.restoreLocalEmpty({stores:S.stores,sessions:S.sessions.length,bw:S.bw.length,
+  plans:S.plans.plans.length,activePlanId:S.plans.activePlanId});
+/* "3 sessions, 2 weights and 1 plan" - plans named only when there are any,
+   because the shipped plan is code and is never a thing a restore moves. */
+const restoreCounts=(n,m,p)=>p?plural(n,"session")+", "+plural(m,"weight")+" and "+plural(p,"plan")
+                            :plural(n,"session")+" and "+plural(m,"weight");
 async function restoreStart(){
   const Y=window.PHAT_SYNC; if(!signedIn()) return;
-  if(S.draft||S.offer){ S.sync.last={ok:false,phase:"restore",message:"Finish or discard the unfinished session first."}; paintBackup(); return; }
+  const why=PHAT.restoreRefusal({draft:!!(S.draft||S.offer),edits:S.edits});
+  if(why){ S.sync.last={ok:false,phase:"restore",message:why}; paintBackup(); return; }
   S.sync.last={busy:"pull"}; paintBackup();
   const r=await Y.pull();
   if(!r.ok){ S.sync.last={ok:false,phase:"restore",reason:r.reason,message:"Could not read the backup. "+(r.message||"")}; paintBackup(); return; }
@@ -5446,22 +5467,28 @@ async function restoreStart(){
       message:"Backup refused, nothing changed: "+rp.problems[0]+(n>1?" (and "+(n-1)+" more)":"")+"."};
     paintBackup(); return;
   }
-  if(!rp.counts.sessions&&!rp.counts.bodyweight){
+  if(!rp.counts.sessions&&!rp.counts.bodyweight&&!rp.counts.plans){
     S.sync.last={ok:false,phase:"restore",reason:"empty",message:"The backup is empty. Nothing to restore."};
     paintBackup(); return;
   }
   S.sync.pulled=rp; S.sync.last=null; paintBackup();
-  const n=rp.counts.sessions, m=rp.counts.bodyweight, ln=S.sessions.length, lm=S.bw.length;
+  const n=rp.counts.sessions, m=rp.counts.bodyweight, pn=rp.counts.plans;
+  const ln=S.sessions.length, lm=S.bw.length, lp=S.plans.plans.length;
   if(localEmpty()){
     askSheet({headline:"Restore from backup?",
-      body:plural(n,"session")+" and "+plural(m,"weight")+" land on this device. It holds nothing now.",
+      body:restoreCounts(n,m,pn)+" land on this device. It holds nothing now.",
       danger:"Restore "+plural(n,"session"), safe:"Not now", back:"bk-restore",
       onDanger:()=>{ closeSheet(); restoreApply(false); },
       onSafe:()=>{ S.sync.pulled=null; }});
   }else{
+    /* The plan sentence says which way the plans go, because R1 and R3 are
+       different outcomes and he is typing REPLACE on the strength of it. */
+    const planLine=!lp?"":rp.plans
+      ?" Your "+plural(lp,"plan")+" here "+(lp===1?"is":"are")+" replaced by "+plural(pn,"plan")+" from the backup."
+      :" Your "+plural(lp,"plan")+" here "+(lp===1?"stays":"stay")+".";
     askSheet({headline:"Replace this device's log?",
-      body:"This replaces "+plural(ln,"session")+" and "+plural(lm,"weight")+" on this device with "+n+" and "+m+" from the backup. "+
-           "What is on this device is exported first, and a copy is kept here.",
+      body:"This replaces "+plural(ln,"session")+" and "+plural(lm,"weight")+" on this device with "+n+" and "+m+" from the backup."+
+           planLine+" What is on this device is exported first, and a copy is kept here.",
       typed:"REPLACE", danger:"Replace "+plural(ln,"session"), safe:"Keep this device's log", back:"bk-restore",
       onDanger:()=>{ closeSheet(); restoreApply(true); },
       onSafe:()=>{ S.sync.pulled=null; }});
@@ -5471,41 +5498,43 @@ async function restoreApply(nonEmpty){
   const rp=S.sync.pulled; S.sync.pulled=null;
   if(!rp||!rp.ok) return;
   const fail=(msg)=>{ S.sync.last={ok:false,phase:"restore",reason:"local",message:msg}; paintBackup(); announce(msg,true); };
-  if(nonEmpty){
-    exportAll();
-    const ts=Date.now();
-    const k1=await save(LOG.replace("phat:v1:","phat:v1:recover:")+":"+ts,{key:LOG,savedAt:ts,reason:"restore",value:logPayload()});
-    const k2=await save(BWK.replace("phat:v1:","phat:v1:recover:")+":"+ts,{key:BWK,savedAt:ts,reason:"restore",value:bwPayload()});
-    if(!k1||!k2){ fail("Could not keep a copy of this device's log. Nothing changed."); return; }
+  const st=PHAT.restoreSteps(rp,
+    {empty:!nonEmpty,stores:S.stores,log:logPayload(),bw:bwPayload(),plans:plansPayload(),blocked:S.blockWrites},
+    {log:LOG,bw:BWK,plans:PLANS},Date.now());
+  if(!st.ok){ fail(st.message); return; }
+  if(nonEmpty) exportAll();
+  /* The keeps, all of them, before any write. One failure and nothing is
+     replaced - named by which store's copy did not land. */
+  for(const k of st.keeps){
+    const ok=await save(k.key,k.value);
+    if(!ok){ fail("Could not keep a copy of this device's "+k.label+". Nothing changed."); return; }
   }
-  /* Non-destructive and idempotent on a store this build wrote; on an older
-     backup it adds what the schema adds and rewrites no value. */
-  const m=PHAT.migrateStore(rp.log,rp.bw,rp.plans===null?undefined:rp.plans);
-  const log=m.log&&typeof m.log==="object"?m.log:rp.log;
-  const bw=m.bw&&typeof m.bw==="object"?m.bw:rp.bw;
-  const plansStore=rp.plans?(m.plans&&typeof m.plans==="object"?m.plans:rp.plans):null;
-  const ok1=await save(LOG,log);
-  if(!ok1){ fail("Could not write the restored log. Nothing changed. "+(S.err||"")); return; }
-  const ok2=await save(BWK,bw);
-  let ok3=true;
-  if(plansStore) ok3=await save(PLANS,plansStore);
-  adoptLog(log); if(ok2) adoptBw(bw);
+  /* The writes, log first. A failed log write stops everything with nothing
+     changed; a failed later write is reported, never hidden (E-3's
+     half-applied contract question stands - it is not made silent here). */
+  const wrote={};
+  for(let i=0;i<st.writes.length;i++){
+    const w=st.writes[i];
+    wrote[w.key]=await save(w.key,w.value);
+    if(i===0&&!wrote[w.key]){ fail("Could not write the restored log. Nothing changed. "+(S.err||"")); return; }
+  }
+  const ok2=wrote[BWK]===true, ok3=st.plans?wrote[PLANS]===true:true;
+  adoptLog(st.log); if(ok2) adoptBw(st.bw);
   /* WO-006 W1: the store just written is the store in memory, or the next
-     SAVE PLAN would overwrite the restored plans with the pre-restore ones.
-     The rest of the restore/plans contract is WO-006 W2's. */
-  if(plansStore&&ok3) adoptPlans(plansStore);
-  S.stores={log:"ok",bw:ok2?"ok":S.stores.bw};
+     SAVE PLAN would overwrite the restored plans with the pre-restore ones. */
+  if(st.plans&&ok3) adoptPlans(st.plans);
+  S.stores={log:"ok",bw:ok2?"ok":S.stores.bw,plans:(st.plans&&ok3)?"ok":S.stores.plans};
   /* The restored log IS the backup, so it is stamped as backed up, with the
      signature computed the way runBackup computes it: save() has already
      scheduled a push, and the signature match makes it a no-op rather than a
      round trip that re-sends what just came down. */
   if(ok2&&ok3){
-    const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),plansStore));
+    const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),st.plans));
     S.prefs.backup={at:Date.now(),sig:sig,user:S.sync.user.id,n:rp.counts.sessions,m:rp.counts.bodyweight,x:0};
     await save(PREFS,prefsPayload());
   }
   const msg=ok2&&ok3
-    ? "Restored "+plural(rp.counts.sessions,"session")+" and "+plural(rp.counts.bodyweight,"weight")+"."
+    ? "Restored "+restoreCounts(rp.counts.sessions,rp.counts.bodyweight,rp.counts.plans)+"."
     : "Restored "+plural(rp.counts.sessions,"session")+". Could not write "+(ok2?"the plans":"the weights")+" - try again.";
   S.sync.last={ok:ok2&&ok3,phase:"restore",message:msg,counts:rp.counts};
   S.sub="settings"; render(true);
@@ -5632,7 +5661,7 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      failed to parse also yields an empty array, and showing a first-run
      screen over a log that is really there is how a real history gets treated
      as a fresh start (WO-001's readRaw distinction). */
-  S.stores={log:rl.status, bw:rb.status};
+  S.stores={log:rl.status, bw:rb.status, plans:rpl.status};
   if(rl.status==="error") setNotice(await preserveUnreadable(LOG,rl),S.blockWrites[LOG]?2:0);
   if(rb.status==="error") setNotice(await preserveUnreadable(BWK,rb),S.blockWrites[BWK]?2:0);
   /* WO-006. The plan store, the same three ways: absent is PHAT active and

@@ -168,7 +168,19 @@ disk POSTed 30 <code>demo:true</code> documents to <code>/rest/v1/sessions</code
 The ruling QA is applying (refuse and name on push, refuse whole on restore) is written above the three tests and in
 <code>docs/decisions.md</code>; they go green when backend implements it, and they are not carried-forward failures
 &mdash; they are the fix&rsquo;s proof, written first. Pre/post: against <code>main</code>&rsquo;s <code>logic.js</code>
-(<code>f9d0551</code>) 35 of S30&rsquo;s 37 go red; the two that pass in both regimes are the two named GUARDs.</p>
+(<code>f9d0551</code>) 35 of S30&rsquo;s 37 go red; the two that pass in both regimes are the two named GUARDs.<br>
+<b>S32</b> is WO-006 W2, restore and the plan store (R1&ndash;R5), plus strength-coach&rsquo;s W3 rulings. The restore
+path&rsquo;s decisions are now pure &mdash; <code>restoreLocalEmpty</code>, <code>restoreRefusal</code>,
+<code>restoreSteps</code>, <code>planProblemText</code> &mdash; and <code>index.html</code> executes what
+<code>restoreSteps</code> returns in the order returned, so the seam order (every <code>recover:*</code> copy before any
+store write, <code>recover:plans</code> before <code>phat:v1:plans</code>) is asserted here and confirmed once in a
+browser under &ldquo;Already proven&rdquo; item 28. Pinned: the plans keep is the local store <em>by reference</em>;
+no keep for an absent or unreadable plan store; a backup with no plan store writes and keeps nothing for plans (R3); a
+working copy refuses the restore naming the plan (R2); <code>restorePayload</code> normalises the restored store and
+refuses WHOLE on a plan that fails <code>validatePlan</code>, in words and never a reason token (R4), and
+<code>backupPayload</code> refuses-and-names the same plan on the way up so it never reaches a server every restore
+would then refuse; the four ABSENT strings as the coach&rsquo;s 2026-09-11 literals; and <code>speedLoad().text</code>
+carrying the advice line alone on the absent branch.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -11415,6 +11427,343 @@ T("W14 - copyPlan keeps ids AND the four rule tables, and a session logged on d1
   a.eq(P.lastFor([s], "d1a").sets[0].w, 100);
 });
 
+/* ============================================================ S32 - WO-006 W2, restore and the plan store
+   R1-R5 as pure functions from file://. index.html's restoreStart /
+   restoreApply now DO NOTHING but execute what PHAT.restoreRefusal and
+   PHAT.restoreSteps return, in the order returned, through save() - so the
+   seam order (recover copy before replace, plans included) is an assertion
+   here and the browser run under "Already proven" item 28 confirms the
+   caller obeys it. Plus strength-coach's W3 rulings on the four ABSENT
+   strings, pinned as literals (the coach's own copy change, decisions.md
+   2026-09-11), and the SP1 card rule: `text` carries the ADVICE line on the
+   absent branch, never the explanation. */
+group("S32 WO-006 W2 restore / plans / R1-R5 / coach W3");
+
+var W2KEYS = { log: "phat:v1:log", bw: "phat:v1:bw", plans: "phat:v1:plans" };
+function W2PLANS(plan){
+  var p = plan || MYPHAT();
+  return { schemaVersion: P.SCHEMA_VERSION, plans: [p], activePlanId: p.planId };
+}
+function W2LOCAL(over){
+  var st = E3STORE(), o = over || {};
+  var L = { empty: false, stores: { log: "ok", bw: "ok", plans: "ok" }, log: st.log, bw: st.bw, plans: W2PLANS(), blocked: {} }, k;
+  for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) L[k] = o[k];
+  return L;
+}
+function W2RP(plans){
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, plans === undefined ? W2PLANS() : plans);
+  if (bp.problems.length) throw new Error("fixture backup has problems: " + E3PROBLEMS(bp));
+  var rp = P.restorePayload(ROWS(bp));
+  if (!rp.ok) throw new Error("fixture restore refused: " + rp.problems.join(" | "));
+  return rp;
+}
+function W2BROKEN(){
+  /* A stored plan the app cannot open: one exercise with no k / implement. */
+  var p = MINIPLAN(); delete p.days[0].ex[0].k; delete p.days[0].ex[0].implement; return p;
+}
+
+/* ------------------------------------------------------ surface */
+
+T("W2 - window.PHAT exposes the four restore exports", function(a){
+  var need = ["restoreLocalEmpty", "restoreRefusal", "restoreSteps", "planProblemText"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none", "missing PHAT functions from WO-006 W2");
+});
+
+T("W2 - the four restore functions read no storage and no global state", function(a){
+  needFns(a, "restoreLocalEmpty", "restoreRefusal", "restoreSteps", "planProblemText");
+  var ls; try { ls = window.localStorage; } catch (e) { ls = null; }
+  a.ok(!!ls, "localStorage unavailable, so the spy cannot be installed - re-run in a normal window");
+  var calls = 0, realSet = ls.setItem, realGet = ls.getItem, realDel = ls.removeItem;
+  ls.setItem = function(){ calls++; return realSet.apply(ls, arguments); };
+  ls.getItem = function(){ calls++; return realGet.apply(ls, arguments); };
+  ls.removeItem = function(){ calls++; return realDel.apply(ls, arguments); };
+  var stashed = window.storage, hits = 0;
+  window.storage = { get: function(){ hits++; }, set: function(){ hits++; } };
+  try {
+    P.restoreLocalEmpty({ stores: { log: "ok", bw: "ok", plans: "ok" }, sessions: 0, bw: 0, plans: 0, activePlanId: "phat" });
+    P.restoreRefusal({ draft: false, edits: { p: { plan: { name: "x" } } } });
+    P.restoreSteps(W2RP(), W2LOCAL(), W2KEYS, 1700000000000);
+    P.planProblemText({ scope: "ex", id: "x_1", field: "k", reason: "enum" });
+  } finally {
+    ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel;
+    window.storage = stashed;
+  }
+  a.eq(calls, 0, "localStorage calls"); a.eq(hits, 0, "window.storage calls");
+});
+
+/* ------------------------------------------------------ R1: the keeps, then the writes, plans included */
+
+T("R1 - restoreSteps orders EVERY recover copy before ANY store write, and the plans keep lands before phat:v1:plans", function(a){
+  var ts = 1700000000000, local = W2LOCAL(), st = P.restoreSteps(W2RP(), local, W2KEYS, ts);
+  a.eq(st.ok, true, st.message);
+  a.deep(st.keeps.map(function(k){ return k.key; }),
+    ["phat:v1:recover:log:" + ts, "phat:v1:recover:bw:" + ts, "phat:v1:recover:plans:" + ts],
+    "three keeps, log then bw then plans, each under recover:<store>:<ts>");
+  a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log", "phat:v1:bw", "phat:v1:plans"], "three writes, log first");
+  /* The caller executes keeps then writes. The lists are disjoint by prefix,
+     so no ordering the caller could choose within a list puts a replace
+     before a copy. */
+  a.ok(st.keeps.every(function(k){ return k.key.indexOf("phat:v1:recover:") === 0; }), "every keep is a recover key");
+  a.ok(st.writes.every(function(w){ return w.key.indexOf("phat:v1:recover:") < 0; }), "no write is a recover key");
+  a.deep(st.keeps.map(function(k){ return k.label; }), ["log", "weights", "plans"], "each keep names the store, for the failure sentence");
+});
+
+T("R1 - the plans keep is the LOCAL store VERBATIM, in the boot path's keep-aside shape", function(a){
+  var ts = 1700000000001, local = W2LOCAL(), st = P.restoreSteps(W2RP(), local, W2KEYS, ts);
+  var k = st.keeps[2];
+  a.eq(k.key, "phat:v1:recover:plans:" + ts);
+  a.eq(k.value.key, "phat:v1:plans"); a.eq(k.value.savedAt, ts); a.eq(k.value.reason, "restore");
+  a.eq(JSON.stringify(k.value.value), JSON.stringify(local.plans), "byte-identical to what the device held");
+  a.ok(k.value.value === local.plans, "the same object - nothing is rebuilt, reordered or normalised on the way into the copy");
+  /* and the log / bw keeps are the same shape the E-3 run observed */
+  a.eq(st.keeps[0].value.key, "phat:v1:log"); a.eq(JSON.stringify(st.keeps[0].value.value), JSON.stringify(local.log));
+  a.eq(st.keeps[1].value.key, "phat:v1:bw"); a.eq(JSON.stringify(st.keeps[1].value.value), JSON.stringify(local.bw));
+});
+
+T("R1 - the plans write is the restored store, normalised and byte-stable: what goes on disk is what restorePayload validated", function(a){
+  var rp = W2RP(), st = P.restoreSteps(rp, W2LOCAL(), W2KEYS, 1);
+  a.eq(JSON.stringify(st.writes[2].value), JSON.stringify(rp.plans), "the write is restorePayload's plans, unchanged by restoreSteps");
+  a.eq(st.plans, st.writes[2].value, "and st.plans is that same object, for adoptPlans");
+  a.eq(P.migrateStore(rp.log, rp.bw, rp.plans).plansChanged, false, "migrateStore is a no-op on it - normalisation already happened in restorePayload");
+  a.eq(st.writes[0].value, st.log); a.eq(st.writes[1].value, st.bw);
+});
+
+T("R1 - no plans keep when the device has nothing to keep: an ABSENT plan store, or an UNREADABLE one (boot already kept it aside)", function(a){
+  var rp = W2RP(), ts = 5;
+  var absent = P.restoreSteps(rp, W2LOCAL({ stores: { log: "ok", bw: "ok", plans: "absent" } }), W2KEYS, ts);
+  a.deep(absent.keeps.map(function(k){ return k.key; }), ["phat:v1:recover:log:5", "phat:v1:recover:bw:5"], "absent: log and bw keeps only");
+  a.deep(absent.writes.map(function(w){ return w.key; }), ["phat:v1:log", "phat:v1:bw", "phat:v1:plans"], "but the plans write still happens - the backup carries a plan");
+  var unread = P.restoreSteps(rp, W2LOCAL({ stores: { log: "ok", bw: "ok", plans: "error" } }), W2KEYS, ts);
+  a.deep(unread.keeps.map(function(k){ return k.key; }), ["phat:v1:recover:log:5", "phat:v1:recover:bw:5"],
+    "unreadable: no keep of plansPayload(), which would be the empty default and not the bytes on disk - preserveUnreadable kept those at boot");
+  var noLocal = P.restoreSteps(rp, W2LOCAL({ plans: null }), W2KEYS, ts);
+  a.eq(noLocal.keeps.length, 2, "no local plans object handed in: nothing to copy");
+});
+
+T("R1 - an EMPTY device produces no keeps at all, and the writes are unchanged", function(a){
+  var st = P.restoreSteps(W2RP(), W2LOCAL({ empty: true }), W2KEYS, 9);
+  a.deep(st.keeps, []);
+  a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log", "phat:v1:bw", "phat:v1:plans"]);
+});
+
+T("R1 - a store this build could not read and could not copy aside REFUSES the whole restore before a single step, naming the store", function(a){
+  var rp = W2RP();
+  var b1 = P.restoreSteps(rp, W2LOCAL({ blocked: { "phat:v1:plans": true } }), W2KEYS, 1);
+  a.eq(b1.ok, false); a.match(b1.message, /^Nothing restored\. The saved plans on this device could not be read and must not be overwritten\. Reload first\.$/);
+  a.eq(b1.keeps, undefined, "no steps on a refusal");
+  var b2 = P.restoreSteps(rp, W2LOCAL({ blocked: { "phat:v1:bw": true } }), W2KEYS, 1);
+  a.eq(b2.ok, false); a.match(b2.message, /saved weights on this device/);
+  var b3 = P.restoreSteps(rp, W2LOCAL({ blocked: { "phat:v1:log": true } }), W2KEYS, 1);
+  a.eq(b3.ok, false); a.match(b3.message, /saved log on this device/);
+  /* a blocked plans key does NOT refuse a restore that will not write plans */
+  var b4 = P.restoreSteps(W2RP(null), W2LOCAL({ blocked: { "phat:v1:plans": true } }), W2KEYS, 1);
+  a.eq(b4.ok, true, "the backup has no plan store, so the blocked plans key is never written and is no reason to refuse");
+  a.eq(P.restoreSteps({ ok: false }, W2LOCAL(), W2KEYS, 1).ok, false, "a refused payload produces no steps");
+  a.eq(P.restoreSteps(null, W2LOCAL(), W2KEYS, 1).ok, false);
+  a.eq(P.restoreSteps(rp, W2LOCAL(), {}, 1).ok, false, "no keys, no steps - never a write to key undefined");
+});
+
+/* ------------------------------------------------------ R3: a backup with no plans leaves the local store alone */
+
+T("R3 - a backup holding no plan store writes no plans key and keeps no plans copy; the local plan store is untouched", function(a){
+  var rp = W2RP(null);
+  a.eq(rp.plans, null, "restorePayload: no plan store when the backup has none");
+  var st = P.restoreSteps(rp, W2LOCAL(), W2KEYS, 3);
+  a.eq(st.ok, true);
+  a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log", "phat:v1:bw"], "two writes - phat:v1:plans is not among them");
+  a.deep(st.keeps.map(function(k){ return k.key; }), ["phat:v1:recover:log:3", "phat:v1:recover:bw:3"], "two keeps - nothing to keep for a store that is not replaced");
+  a.eq(st.plans, null, "and nothing for adoptPlans, so the store in memory stays what boot read");
+});
+
+/* ------------------------------------------------------ R2: refused while a plan working copy exists */
+
+T("R2 - restoreRefusal: a plan working copy refuses the restore, naming the plan, in the draft refusal's shape", function(a){
+  a.eq(P.restoreRefusal({ draft: false, edits: {} }), null, "nothing open: no refusal");
+  a.eq(P.restoreRefusal({}), null);
+  a.eq(P.restoreRefusal(null), null);
+  a.eq(P.restoreRefusal({ draft: true, edits: {} }), "Finish or discard the unfinished session first.", "the E-3 sentence, unchanged");
+  a.eq(P.restoreRefusal({ draft: false, edits: { p_1: { plan: { planId: "p_1", name: "My PHAT" } } } }),
+    "Save or discard your changes to My PHAT first.");
+  a.eq(P.restoreRefusal({ edits: { p_1: { plan: { planId: "p_1", name: "  " } } } }),
+    "Save or discard your changes to an unnamed plan first.", "a copy built from empty with no name yet");
+  a.eq(P.restoreRefusal({ edits: { p_1: { plan: { name: "A" } }, p_2: { plan: { name: "B" } } } }),
+    "Save or discard your changes to A and 1 other plan first.");
+  a.eq(P.restoreRefusal({ edits: { p_1: { plan: { name: "A" } }, p_2: { plan: { name: "B" } }, p_3: { plan: { name: "C" } } } }),
+    "Save or discard your changes to A and 2 other plans first.");
+  a.eq(P.restoreRefusal({ draft: true, edits: { p_1: { plan: { name: "A" } } } }),
+    "Finish or discard the unfinished session first.", "the session outranks the edit: it is the one with numbers in it");
+  a.eq(P.restoreRefusal({ edits: { p_1: { savedAt: 1 }, p_2: null, p_3: "x" } }), null,
+    "a working-copy entry with no plan document is not a working copy (boot drops those too)");
+});
+
+/* ------------------------------------------------------ R4: the restored plan store is validated before it touches disk */
+
+T("R4 - restorePayload refuses WHOLE on a plan the app cannot open, names the plan and the field in words, and returns nothing to write", function(a){
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined);
+  var rows = ROWS(bp); rows.plans = [{ plan_id: "p_mini", doc: JSONB(W2BROKEN()) }];
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, false, "refused");
+  a.eq(rp.log, null); a.eq(rp.bw, null); a.eq(rp.plans, null, "nothing to write - not even the 30 good sessions (B-02 in new clothes)");
+  a.eq(rp.problems.length, 1, rp.problems.join(" | "));
+  a.eq(rp.problems[0], 'plan "Mini" (row 0): cannot open - exercise x_1 has no type or implement (and 1 more)');
+  a.ok(!/\b(enum|missing|duplicate|range|unclonable)\b/.test(rp.problems[0]), "no reason token reaches the sentence (B5): " + rp.problems[0]);
+});
+
+T("R4 - a plan missing only a `lift` is REPAIRED the way boot repairs it (additive), not refused; the returned store is normalised and idempotent", function(a){
+  var p = MINIPLAN(); delete p.days[0].ex[1].lift;
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined);
+  var rows = ROWS(bp); rows.plans = [{ plan_id: "p_mini", doc: JSONB(p) }];
+  rows.user_state.plan_meta = { schemaVersion: P.SCHEMA_VERSION, activePlanId: "p_mini" };
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  a.eq(typeof rp.plans.plans[0].days[0].ex[1].lift, "string", "lift minted");
+  a.ne(rp.plans.plans[0].days[0].ex[1].lift, "", "and not empty");
+  a.eq(rp.plans.plans[0].days[0].ex[0].lift, "l_sq", "the one that had a lift keeps it");
+  a.eq(rp.plans.plans[0].days[0].ex[1].n, "Squat", "no other value touched");
+  a.ok(rp.notes.some(function(n){ return /plan store normalised/.test(n); }), "and it says so: " + rp.notes.join(" | "));
+  a.eq(P.validatePlan(rp.plans.plans[0]).ok, true, "what comes back validates");
+  a.eq(P.migrateStore(rp.log, rp.bw, rp.plans).plansChanged, false, "a second pass changes nothing");
+  a.eq(rp.plans.activePlanId, "p_mini", "plan_meta's active id survives");
+});
+
+T("R4 - a row carrying the shipped plan's id is refused: PHAT is code, and a stored twin would shadow it", function(a){
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined);
+  var rows = ROWS(bp); rows.plans = [{ plan_id: "phat", doc: JSONB(P.copyPlan(P.PHAT_PLAN, "X", TODAY).plan) }];
+  rows.plans[0].doc.planId = "phat";
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, false);
+  a.match(rp.problems[0], /^plan row 0: planId phat is the shipped plan and is never stored$/);
+});
+
+T("R4 - two bad plans are BOTH named; a good plan beside them is not restored on its own", function(a){
+  var bad1 = W2BROKEN(), bad2 = MINIPLAN(); bad2.planId = "p_two"; bad2.name = "";
+  var good = MINIPLAN(); good.planId = "p_ok"; good.name = "Fine";
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined);
+  var rows = ROWS(bp);
+  rows.plans = [{ plan_id: "p_ok", doc: JSONB(good) }, { plan_id: "p_mini", doc: JSONB(bad1) }, { plan_id: "p_two", doc: JSONB(bad2) }];
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, false); a.eq(rp.plans, null, "the good one is not written alone - refuse whole, never the mixed store");
+  a.eq(rp.problems.length, 2, rp.problems.join(" | "));
+  a.match(rp.problems[0], /^plan "Mini" \(row 1\): cannot open - exercise x_1 has no type or implement/);
+  a.eq(rp.problems[1], 'plan "p_two" (row 2): cannot open - the plan has no name', "an unnamed plan is labelled by its id");
+});
+
+T("R4 - the round trip of a VALID user plan is unchanged by the new gate: restorePayload still returns it byte-identical", function(a){
+  var c = MYPHAT(), plans = W2PLANS(c), rp = W2RP(plans);
+  a.eq(rp.ok, true);
+  a.ok(deepEq(rp.plans.plans[0], c), "every value of the 42-slot copy survives");
+  a.eq(P.backupSig(P.backupPayload(rp.log, rp.bw, rp.plans)), P.backupSig(P.backupPayload(E3STORE().log, E3STORE().bw, plans)), "and signs the same, so no re-push");
+  a.eq(rp.counts.plans, 1);
+});
+
+T("R4 (push side) - backupPayload refuses and NAMES a plan the app cannot open, so it never reaches a server every restore would then refuse", function(a){
+  var plans = { schemaVersion: P.SCHEMA_VERSION, activePlanId: "phat", plans: [MINIPLAN(), W2BROKEN()] };
+  plans.plans[1].planId = "p_bad"; plans.plans[1].name = "Broken";
+  var bp = P.backupPayload(E3LOG([]), E3BW([]), plans);
+  a.eq(bp.plans.length, 1, "the good plan goes"); a.eq(bp.plans[0].planId, "p_mini");
+  a.eq(bp.counts.plans, 1); a.eq(bp.counts.refused, 1, "the refused one is counted, like a 7.5.0 session");
+  a.eq(bp.problems.length, 1);
+  a.eq(bp.problems[0].kind, "plan"); a.eq(bp.problems[0].key, "p_bad");
+  a.eq(bp.problems[0].msg, "cannot open - exercise x_1 has no type or implement (and 1 more)");
+  a.eq(bp.blocked, null, "refusing one plan is not a block");
+});
+
+/* ------------------------------------------------------ planProblemText: words, never the token */
+
+T("W2 / B5 - planProblemText turns every problem validatePlan can raise into a sentence that never contains the reason token", function(a){
+  /* One plan carrying every fault at once. */
+  var p = { planId: "p_x", name: "", days: [
+    42,
+    { id: "", name: "", ex: "nope" },
+    { id: "y_a", name: "A", ex: [
+      "x",
+      { id: "", n: "", s: 0, lo: 0, hi: 200, k: "cardio", implement: "kettlebell", lift: "", cut: 2, cue: 7 },
+      { id: "y_a", n: "Dup of day id", s: 3, lo: 5, hi: 3, k: "power", implement: "bb", lift: "l" }
+    ] }
+  ], keyLifts: ["a", "b", "c", "d", "e"], speedSource: [], reintroOrder: 5 };
+  var v = P.validatePlan(p);
+  a.eq(v.ok, false);
+  a.ok(v.problems.length >= 15, "the fixture raises many problems: " + v.problems.length);
+  var seen = {}, i, t, tok;
+  for (i = 0; i < v.problems.length; i++) {
+    t = P.planProblemText(v.problems[i]);
+    tok = String(v.problems[i].reason);
+    a.ok(typeof t === "string" && t.length > 0, "a sentence for " + JSON.stringify(v.problems[i]));
+    a.ok(!new RegExp("\\b" + tok + "\\b").test(t), "token '" + tok + "' leaked into: " + t + " for " + JSON.stringify(v.problems[i]));
+    a.ok(!/^\s*(missing|enum|range|type|duplicate)\s*$/.test(t), "not a bare token");
+    seen[t] = 1;
+  }
+  /* the sentences the editor's validateCopy already uses, matched here */
+  a.eq(P.planProblemText({ scope: "plan", id: "p", field: "name", reason: "missing" }), "the plan has no name");
+  a.eq(P.planProblemText({ scope: "day", id: "y_a", field: "name", reason: "missing" }), "day y_a has no name");
+  a.eq(P.planProblemText({ scope: "ex", id: "x_1", field: "n", reason: "missing" }), "exercise x_1 has no name");
+  a.eq(P.planProblemText({ scope: "ex", id: "x_1", field: "k", reason: "enum" }), "exercise x_1 has no type or implement");
+  a.eq(P.planProblemText({ scope: "ex", id: "x_1", field: "implement", reason: "enum" }), "exercise x_1 has no type or implement");
+  a.eq(P.planProblemText({ scope: "ex", id: "x_1", field: "hi", reason: "range" }), "exercise x_1 has a target outside 1 to 20 sets and 1 to 100 reps");
+  a.eq(P.planProblemText({ scope: "ex", id: "x_1", field: "id", reason: "duplicate" }), "exercise x_1 is listed twice");
+  a.eq(P.planProblemText({ scope: "plan", id: "p", field: "keyLifts", reason: "range" }), "the plan names more than 4 key lifts");
+  a.eq(P.planProblemText({ scope: "plan", id: "p", field: "speedSource", reason: "type" }), "the plan's speedSource table is malformed");
+  a.eq(P.planProblemText({ scope: "plan", id: null, field: null, reason: "missing" }), "the plan is not a plan document");
+  a.eq(P.planProblemText(null), "the plan does not validate");
+});
+
+/* ------------------------------------------------------ localEmpty, now honest about plans */
+
+T("W2 - restoreLocalEmpty: empty is what boot READ, and a stored plan or a non-PHAT active plan makes a device non-empty", function(a){
+  var ok = { log: "ok", bw: "ok", plans: "ok" };
+  a.eq(P.restoreLocalEmpty({ stores: { log: "absent", bw: "absent", plans: "absent" }, sessions: 0, bw: 0, plans: 0, activePlanId: "phat" }), true, "a fresh install");
+  a.eq(P.restoreLocalEmpty({ stores: ok, sessions: 0, bw: 0, plans: 0, activePlanId: "phat" }), true, "read ok, all empty, PHAT active");
+  a.eq(P.restoreLocalEmpty({ stores: ok, sessions: 1, bw: 0, plans: 0, activePlanId: "phat" }), false, "one session");
+  a.eq(P.restoreLocalEmpty({ stores: ok, sessions: 0, bw: 1, plans: 0, activePlanId: "phat" }), false, "one weight");
+  a.eq(P.restoreLocalEmpty({ stores: ok, sessions: 0, bw: 0, plans: 1, activePlanId: "phat" }), false, "one stored plan, even with PHAT active and zero sessions (R1)");
+  a.eq(P.restoreLocalEmpty({ stores: ok, sessions: 0, bw: 0, plans: 0, activePlanId: "p_gone" }), false, "a non-PHAT active id is a fact about the device, even if the plan is missing");
+  a.eq(P.restoreLocalEmpty({ stores: { log: "error", bw: "ok", plans: "ok" }, sessions: 0, bw: 0, plans: 0, activePlanId: "phat" }), false, "an unreadable log is unknown, not empty");
+  a.eq(P.restoreLocalEmpty({ stores: { log: "ok", bw: "error", plans: "ok" }, sessions: 0, bw: 0, plans: 0, activePlanId: "phat" }), false, "unreadable bodyweight");
+  a.eq(P.restoreLocalEmpty({ stores: { log: "ok", bw: "ok", plans: "error" }, sessions: 0, bw: 0, plans: 0, activePlanId: "phat" }), false, "an unreadable plan store is unknown too");
+  a.eq(P.restoreLocalEmpty({ stores: ok, sessions: 0, bw: 0, plans: 0 }), true, "no activePlanId at all reads as PHAT");
+  a.eq(P.restoreLocalEmpty(null), true, "nothing known and nothing counted is empty - the caller always passes the real snapshot");
+});
+
+/* ------------------------------------------------------ coach W3: the four ABSENT strings, and SP1 on the card */
+
+T("coach W3 - the four ABSENT strings are the coach's 2026-09-11 literals, and none tells him to use a control the editor does not have", function(a){
+  var r = P.newPlan("", "2026-09-11"), p = r.plan;
+  var d = P.addDay(p, "Day A"), x = P.addExercise(d.plan, d.dayId, { n: "Speed squat", s: 6, lo: 2, hi: 3, k: "speed", implement: "bb" });
+  var sp = P.speedLoad([], x.exId, "2026-09-11", null, x.plan);
+  var v1 = P.volumeTier({ dayId: d.dayId, program: x.plan.days, sessions: [], state: {}, todayStr: "2026-09-11", draft: null, plan: x.plan });
+  var st = P.stallAdvice({ plan: p, sessions: [], todayStr: "2026-09-11", state: {}, keyLifts: P.planKeyLifts(p) });
+  var dl = P.deloadCheck({ sessions: [], todayStr: "2026-09-11", stallReport: null, keyLifts: P.planKeyLifts(p), state: {}, plan: p });
+  a.eq(sp.absent, true); a.eq(v1.absent, true); a.eq(st.absent, true); a.eq(dl.absent, true);
+  a.deep(sp.absentLines, [
+    "No source lift set for this speed work, so there is no number to give.",
+    "Use 65–70% of a weight you could triple."
+  ], "SP1_ABSENT, two lines: explanation, then advice");
+  a.deep(v1.absentLines, ["This plan has no reduced-volume tier. Every exercise runs from week 1."], "V1_ABSENT, one line");
+  a.deep(st.absentLines, ["This plan names no key lifts, so the six-week check cannot run."], "ST1_ABSENT, one line");
+  a.deep(dl.absentLines, ["Without key lifts the app cannot recommend a deload from your numbers. It will still flag nine straight weeks without a lighter one."], "D1_ABSENT, one line");
+  var all = sp.absentLines.concat(v1.absentLines, st.absentLines, dl.absentLines).join(" | ");
+  a.ok(!/Set one in the plan|Mark accessories|Name up to four|in the plan to|Until then/.test(all),
+    "no line names a control the editor lacks (set a source lift / mark cut / name key lifts): " + all);
+  a.ne(dl.absentLines[0].slice(0, 40), st.absentLines[0].slice(0, 40), "D1 no longer opens with ST1's words - they render together on the Plans screen");
+});
+
+T("coach W3 - on the absent branch speedLoad puts the ADVICE line in `text`, never the explanation, so the card under the bar carries the ceiling", function(a){
+  var r = P.newPlan("", "2026-09-11"), d = P.addDay(r.plan, "Day A");
+  var x = P.addExercise(d.plan, d.dayId, { n: "Speed squat", s: 6, lo: 2, hi: 3, k: "speed", implement: "bb" });
+  var sp = P.speedLoad([], x.exId, "2026-09-11", null, x.plan);
+  a.eq(sp.absent, true); a.eq(sp.reason, "no-source-lift");
+  a.eq(sp.text, "Use 65–70% of a weight you could triple.", "text is the advice line alone");
+  a.ne(sp.text, sp.absentLine, "and NOT the joined absentLine, which carries the explanation");
+  a.eq(sp.text.indexOf("No source lift"), -1, "the explanation is the Plans screen's, through absentLines");
+  a.eq(sp.absentLines[1], sp.text, "the same string in both places, so the two cannot drift");
+  a.ok(sp.instruction.length > 0, "the instruction still ships");
+  /* PRESENT-THIN is untouched by the ruling: a source that exists but has no triple keeps its own copy */
+  var thin = P.speedLoad([], "d3a", TODAY, "Bent-over row", P.PHAT_PLAN);
+  a.eq(thin.absent, false); a.eq(thin.reason, "no-source");
+  a.match(thin.text, /^Log a heavy triple on Bent-over row/);
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -12195,7 +12544,9 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "under \"Already proven\".</b> Two things in <code>index.html</code> would move into this page if extracted " +
     "(B-20, standing request): <code>localEmpty()</code> (\"empty is judged on what the boot read found\") and the " +
     "write sequence in <code>restoreApply</code> as a pure plan the caller executes, so the seam order is an " +
-    "assertion and not a Playwright run.</p>";
+    "assertion and not a Playwright run. <b>Honoured by WO-006 W2:</b> <code>PHAT.restoreLocalEmpty</code> and " +
+    "<code>PHAT.restoreSteps</code> (plus <code>restoreRefusal</code>), asserted in S32; what is left to a browser " +
+    "is only that <code>restoreApply</code> executes the returned lists in order, which item 28 observed.</p>";
 
   /* ---------------------------------------------------------------------
      The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a
@@ -12326,7 +12677,17 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "leaves its <code>localStorage</code> behind. Not checked in, same reason. <b>Re-run items 21, 22 and 24 " +
     "whenever <code>save()</code>, <code>restoreApply</code>, <code>runBackup</code> or <code>sync.js</code> " +
     "changes.</b> The one defect these runs found is C-14 (the three reds in S30 and the first E-3 contract " +
-    "question); every other claim in the E-3 report held.</p><ol>" +
+    "question); every other claim in the E-3 report held.</p>" +
+    "<p><b>Item 28 is WO-006 W2, from a run on 2026-09-11</b> against the real <code>index.html</code> on branch " +
+    "<code>w14-w15-plans</code>. Rig: a Node static server on <code>http://127.0.0.1:8791</code> serving the working " +
+    "tree, Playwright headless Chromium at 400 &times; 800, <b>no live project</b>: <code>./sync.js</code> was " +
+    "answered by a stub module whose <code>pull()</code> returns fixture rows built with the real " +
+    "<code>logic.js</code> (<code>backupPayload</code> &rarr; JSONB reorder &rarr; rows), so the whole path from " +
+    "<i>Restore from backup</i> to disk is the shipping code and only the wire is faked. " +
+    "<code>Storage.prototype.setItem</code> spied from an init script. Service workers were blocked in the context, " +
+    "which makes the app's own <code>reg.scope</code> log line throw once at boot &mdash; a rig artefact, filtered, " +
+    "not reachable in a real browser. Not checked in, same reason as the rest. <b>Re-run it whenever " +
+    "<code>restoreApply</code>, <code>restoreSteps</code> or <code>save()</code> changes.</b></p><ol>" +
 
     "<li><b>Draft survives a lock.</b> <span class=\"skipmsg\">Proven: a <code>visibilitychange</code> to " +
     "hidden wrote <code>{w:\"100\",r:\"5\"}</code> to <code>phat:v1:draft</code> with no blur and without " +
@@ -12558,6 +12919,42 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<code>200 []</code> on all six while the throwaway account held 33+ sessions; an anonymous " +
     "<code>POST /rest/v1/sessions</code> &rarr; <code>401 42501 permission denied for table " +
     "sessions</code>.</span></li>" +
+
+    /* ---- 2026-09-11: WO-006 W2, restore and the plan store ---- */
+    "<li><b>WO-006 W2 &mdash; the plan store gets the log's restore guarantee: recover copy before replace, " +
+    "refused under a working copy, refused whole on a plan the app cannot open.</b> <span class=\"skipmsg\">" +
+    "Observed 2026-09-11, seven scenarios, each on a fresh context. Device seeded with 5 sessions, 4 weights and " +
+    "<code>phat:v1:plans</code> holding one PHAT copy <i>Phone plan</i>, active; the backup carried 30 sessions, " +
+    "36 weights and one copy <i>Server plan</i>. " +
+    "<b>(A) Typed path.</b> Sheet: <i>This replaces 5 sessions and 4 weights on this device with 30 and 36 from " +
+    "the backup. Your 1 plan here is replaced by 1 plan from the backup. What is on this device is exported " +
+    "first, and a copy is kept here.</i> After REPLACE, the write order off the spy: " +
+    "<code>recover:log:&lt;ts&gt;</code> @1021 &rarr; <code>recover:bw:&lt;ts&gt;</code> @1021 &rarr; " +
+    "<b><code>recover:plans:&lt;ts&gt;</code> @1021</b> &rarr; <code>phat:v1:log</code> @1022 &rarr; " +
+    "<code>phat:v1:bw</code> @1022 &rarr; <b><code>phat:v1:plans</code> @1022</b> &rarr; <code>phat:v1:prefs</code> " +
+    "@1027. The recover copy's <code>value.value</code> was byte-identical to the pre-restore " +
+    "<code>phat:v1:plans</code> (<code>key:\"phat:v1:plans\", reason:\"restore\"</code>); afterwards the store held " +
+    "<i>Server plan</i>, active; status <i>Restored 30 sessions, 36 weights and 1 plan.</i> " +
+    "<b>(B) R2.</b> With <code>phat:v1:planedit</code> holding a working copy of <i>Phone plan</i> renamed " +
+    "<i>Phone plan (edited)</i>: <i>! Save or discard your changes to Phone plan (edited) first.</i> in the " +
+    "refusal shape, <b>0</b> pulls attempted, <b>0</b> writes, all four keys byte-identical. " +
+    "<b>(C) R3.</b> Backup with no plan store: sheet read <i>&hellip; Your 1 plan here stays. &hellip;</i>; " +
+    "write order <code>recover:log</code> &rarr; <code>recover:bw</code> &rarr; <code>log</code> &rarr; " +
+    "<code>bw</code> &rarr; <code>prefs</code>; <b>no</b> <code>recover:plans</code> key, <code>phat:v1:plans</code> " +
+    "byte-identical, <i>Phone plan</i> still active. " +
+    "<b>(D) R4.</b> Backup whose plan row had <code>k</code> and <code>implement</code> deleted from " +
+    "<code>d1a</code>: <i>! Backup refused, nothing changed: plan \"Server plan\" (row 0): cannot open - exercise " +
+    "d1a has no type or implement (and 1 more).</i> after one pull, 0 writes, every key byte-identical. No sheet. " +
+    "<b>(E) localEmpty is plan-aware.</b> Zero sessions, zero weights, one stored plan: the TYPED sheet, not the " +
+    "one-tap one (<i>This replaces 0 sessions and 0 weights &hellip; Your 1 plan here is replaced &hellip;</i>), " +
+    "and the same seven-write order as (A) with the plans keep byte-identical. " +
+    "<b>(F) The <code>phat:v1:plans</code> write throws</b> (simulated quota): all three recover copies on disk, " +
+    "log and bw replaced, plans byte-identical to before, <i>! Restored 30 sessions. Could not write the plans - " +
+    "try again.</i> in the refusal shape, <code>prefs.backup</code> not stamped &mdash; half-applied and SAID, the " +
+    "E-3 contract question unchanged. " +
+    "<b>(G) The <code>recover:plans</code> write throws:</b> writes stop at the third key, <i>! Could not keep a " +
+    "copy of this device's plans. Nothing changed.</i>, log still 5 sessions, plans byte-identical &mdash; nothing " +
+    "replaced. Zero page errors in every scenario once the rig's SW artefact is filtered.</span></li>" +
     "</ol>";
 })();
 </script>

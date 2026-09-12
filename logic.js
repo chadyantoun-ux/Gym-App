@@ -2476,6 +2476,16 @@
             if (pl.days !== undefined && !Array.isArray(pl.days)) { out.problems.push({ kind: "plan", key: pid, msg: "plan.days must be an array" }); return; }
             if (isDemo(pl)) { out.problems.push({ kind: "plan", key: pid, msg: "plan " + DEMO_MSG }); return; }
             if (seenP[pid]) { out.problems.push({ kind: "plan", key: pid, msg: "two plans share planId " + pid + "; only the first is backed up" }); return; }
+            /* WO-006 W2. A plan the app cannot open is refused and NAMED,
+               the way a 7.5.0 session is: it stays on this device under
+               `Cannot open`, and it never reaches a server from which every
+               later restore would then be refused whole (R4's other half). */
+            var vp = validatePlan(pl);
+            if (!vp.ok) {
+              out.problems.push({ kind: "plan", key: pid, msg: "cannot open - " + planProblemText(vp.problems[0]) +
+                (vp.problems.length > 1 ? " (and " + (vp.problems.length - 1) + " more)" : "") });
+              return;
+            }
             seenP[pid] = true;
             out.plans.push(pl);
           });
@@ -2579,6 +2589,17 @@
      row (session, weight, plan) or a state row carrying demo:true refuses
      whole too (C-14): a restore must never build the mixed array.
 
+     THE PLAN STORE IS HELD TO THE SAME RULE (WO-006 W2, R4). The rebuilt
+     store goes through normalisePlanStore - the boot path's additive repair,
+     which mints a missing id or lift and rewrites nothing - and then every
+     plan through validatePlan. A plan that still fails refuses the WHOLE
+     restore, named by plan and by field in words (never a reason token,
+     WO-006 B5): the app must never write a plan it cannot open, and it must
+     never "fix" the restore by dropping the one bad plan and writing the
+     rest. A row carrying the shipped plan's id refuses too: PHAT is code,
+     never a stored document, and a stored twin would shadow it in the list.
+     `plans` comes back NORMALISED, so migrateStore on it is a no-op.
+
      THE ONE FACT IT ASSERTS: when the backup carries no user_state row, or a
      log_meta without a numeric schemaVersion, the rebuilt log is stamped
      SCHEMA_VERSION and a note says so. That is true by construction — the
@@ -2615,6 +2636,8 @@
         var doc = isObj(r) ? r.doc : undefined;
         if (!isObj(doc) || typeof doc.planId !== "string" || doc.planId.trim() === "")
           out.problems.push("plan row " + i + ": plan.planId is required and must be a non-empty string");
+        else if (doc.planId.trim() === PHAT_PLAN_ID)
+          out.problems.push("plan row " + i + ": planId " + PHAT_PLAN_ID + " is the shipped plan and is never stored");
         else if (doc.days !== undefined && !Array.isArray(doc.days))
           out.problems.push("plan row " + i + ": plan.days must be an array");
         else if (isDemo(doc)) out.problems.push("plan row " + i + ": plan " + DEMO_MSG + "; not restored");
@@ -2647,6 +2670,21 @@
         Object.keys(pm).forEach(function (k) { plans[k] = pm[k]; });
         plans.plans = pls;
         if (typeof plans.schemaVersion !== "number") plans.schemaVersion = SCHEMA_VERSION;
+        /* R4. Normalise first (additive: a plan missing only a `lift` is
+           repaired the way boot would repair it, not refused), then validate
+           what would actually be written. */
+        var npr = normalisePlanStore(plans);
+        if (npr.changed) {
+          plans = npr.store;
+          out.notes.push("plan store normalised" + (npr.added.length ? " (" + npr.added.join(", ") + ")" : "") + "; no existing value changed");
+        }
+        plans.plans.forEach(function (p, i) {
+          var v = validatePlan(p);
+          if (v.ok) return;
+          var extra = v.problems.length > 1 ? " (and " + (v.problems.length - 1) + " more)" : "";
+          out.problems.push("plan " + planLabel(p) + " (row " + i + "): cannot open - " + planProblemText(v.problems[0]) + extra);
+        });
+        if (out.problems.length) return out;
       }
 
       out.ok = true; out.log = log; out.bw = bw; out.plans = plans;
@@ -2656,6 +2694,141 @@
       out.problems.push("restorePayload failed: " + (err && err.message));
       return out;
     }
+  }
+
+  /* A plan's name for a sentence about it: its name when it has one, else
+     its id, quoted. Never empty. */
+  function planLabel(p) {
+    if (!isObj(p)) return "(not a plan)";
+    var n = typeof p.name === "string" ? p.name.trim() : "";
+    return '"' + (n || str(p.planId) || "?") + '"';
+  }
+
+  /* planProblemText(problem) → one clause, in words, for a validatePlan
+     problem. The `reason` token ("missing", "enum", "range", "type",
+     "duplicate") is a developer signal and never copy (decisions.md
+     2026-09-10; WO-006 B5), so this is the one place it is turned into a
+     sentence. Names the field and the id; never the token. */
+  function planProblemText(p) {
+    if (!isObj(p)) return "the plan does not validate";
+    var id = str(p.id).trim(), f = str(p.field), sc = str(p.scope), r = str(p.reason);
+    var who = sc === "ex" ? "exercise " + (id || "?") : sc === "day" ? "day " + (id || "?") : "the plan";
+    if (sc === "plan") {
+      if (f === "planId") return "the plan has no id";
+      if (f === "name") return "the plan has no name";
+      if (f === "days") return "the plan's days are not a list";
+      if (f === "keyLifts" && r === "range") return "the plan names more than " + PLAN_KEYLIFT_MAX + " key lifts";
+      if (f) return "the plan's " + f + " table is malformed";
+      return "the plan is not a plan document";
+    }
+    if (!f) return who + " is not an object";
+    if (f === "id") return r === "duplicate" ? who + " is listed twice" : who + " has no id";
+    if (f === "name" || f === "n") return who + " has no name";
+    if (f === "ex") return who + " has no exercise list";
+    if (f === "k" || f === "implement") return who + " has no type or implement";
+    if (f === "s" || f === "lo" || f === "hi") return who + " has a target outside 1 to 20 sets and " + R_MIN + " to " + R_MAX + " reps";
+    if (f === "lift") return who + " has no lift";
+    if (f === "cut") return who + " has a cut flag that is not 1";
+    if (f === "cue") return who + " has a cue that is not text";
+    return who + " has a malformed " + f;
+  }
+
+  /* ---------------------------------------------------------- the restore
+     WO-006 W2 (and the B-20 request from E-3 QA): the decisions inside
+     index.html's restoreStart / restoreApply as pure functions, so the seam
+     ORDER - recover copy before replace, plans included - is an assertion
+     from file:// and not only a Playwright run. index.html executes what
+     these return through save(), in the order returned, and nothing else.
+
+     restoreLocalEmpty(local) → true when the device holds NOTHING a restore
+     could destroy. Judged on what boot READ, not on the arrays: a store that
+     failed to read is unknown, and unknown is not empty. The plan store
+     counts (R1): a device with a stored plan, or a non-PHAT active id, is not
+     empty even with zero sessions.
+       local: { stores:{log, bw, plans}, sessions:N, bw:N, plans:N, activePlanId } */
+  var SESSION_OPEN_MSG = "Finish or discard the unfinished session first.";
+  function restoreLocalEmpty(local) {
+    var L = isObj(local) ? local : {};
+    var st = isObj(L.stores) ? L.stores : {};
+    if (st.log === "error" || st.bw === "error" || st.plans === "error") return false;
+    if ((L.sessions | 0) > 0 || (L.bw | 0) > 0 || (L.plans | 0) > 0) return false;
+    var a = str(L.activePlanId).trim();
+    return a === "" || a === PHAT_PLAN_ID;
+  }
+
+  /* restoreRefusal(local) → the sentence that refuses a restore before any
+     pull, or null. Two conditions, one shape each (R2): a session in progress
+     (on screen or offered), and a plan working copy on disk - a restore that
+     replaced the plan store under an unsaved edit would leave the edit
+     pointing at a document that no longer exists.
+       local: { draft:bool, edits:{planId:{plan}} } */
+  function restoreRefusal(local) {
+    var L = isObj(local) ? local : {};
+    if (L.draft) return SESSION_OPEN_MSG;
+    var ed = isObj(L.edits) ? L.edits : {};
+    var ids = Object.keys(ed).filter(function (k) { return isObj(ed[k]) && isObj(ed[k].plan); });
+    if (!ids.length) return null;
+    var p = ed[ids[0]].plan;
+    var name = (typeof p.name === "string" && p.name.trim() !== "") ? p.name.trim() : "an unnamed plan";
+    var more = ids.length - 1;
+    return "Save or discard your changes to " + name +
+           (more > 0 ? " and " + more + " other plan" + (more === 1 ? "" : "s") : "") + " first.";
+  }
+
+  /* restoreSteps(rp, local, keys, ts)
+       → { ok:true, keeps:[{key, value, label}], writes:[{key, value, label}], log, bw, plans }
+       | { ok:false, message }
+
+     THE WRITE SEQUENCE, as data. `keeps` are the verbatim recover copies
+     (phat:v1:recover:<store>:<ts>) and come first; every one must land
+     before any write, or nothing is replaced. `writes` are the stores, log
+     first. A plans keep is produced exactly when the backup carries a plan
+     store (so phat:v1:plans WILL be written) and the local one was read ok -
+     nothing to keep for an absent store, and an unreadable one was kept
+     aside at boot by preserveUnreadable. A backup with no plan store writes
+     no plans key and keeps none (R3): the local plans are untouched.
+
+     Refuses before producing a step when a store that would be written is
+     blocked (its boot read failed and could not be copied aside): a restore
+     that replaced the log and then could not write the plans is the
+     half-applied state E-3's seam test observed, and this closes the one
+     path to it that is knowable in advance.
+
+       rp:    restorePayload's result (ok:true)
+       local: { empty:bool, stores:{log,bw,plans}, log, bw, plans, blocked:{key:true} }
+       keys:  { log, bw, plans } - the store keys, so the names live in one file
+       ts:    the epoch the recover keys carry */
+  function restoreSteps(rp, local, keys, ts) {
+    var L = isObj(local) ? local : {}, K = isObj(keys) ? keys : {};
+    var st = isObj(L.stores) ? L.stores : {}, blocked = isObj(L.blocked) ? L.blocked : {};
+    if (!isObj(rp) || rp.ok !== true) return { ok: false, message: "Nothing to restore." };
+    if (typeof K.log !== "string" || typeof K.bw !== "string" || typeof K.plans !== "string")
+      return { ok: false, message: "Nothing restored. The store keys were not given." };
+    /* Non-destructive and idempotent on a store this build wrote; on an
+       older backup it adds what the schema adds and rewrites no value. */
+    var m = migrateStore(rp.log, rp.bw, rp.plans === null || rp.plans === undefined ? undefined : rp.plans);
+    var log = isObj(m.log) ? m.log : rp.log;
+    var bw = isObj(m.bw) ? m.bw : rp.bw;
+    var plans = isObj(rp.plans) ? (isObj(m.plans) ? m.plans : rp.plans) : null;
+    var label = { log: "log", bw: "weights", plans: "plans" };
+    var willWrite = [["log", K.log], ["bw", K.bw]];
+    if (plans) willWrite.push(["plans", K.plans]);
+    for (var i = 0; i < willWrite.length; i++) {
+      if (blocked[willWrite[i][1]] === true)
+        return { ok: false, message: "Nothing restored. The saved " + label[willWrite[i][0]] +
+                 " on this device could not be read and must not be overwritten. Reload first." };
+    }
+    var rk = function (k) { return k.replace("phat:v1:", "phat:v1:recover:") + ":" + ts; };
+    var keep = function (k, v, lb) { return { key: rk(k), value: { key: k, savedAt: ts, reason: "restore", value: v }, label: lb }; };
+    var keeps = [];
+    if (!L.empty) {
+      keeps.push(keep(K.log, L.log, "log"));
+      keeps.push(keep(K.bw, L.bw, "weights"));
+      if (plans && st.plans === "ok" && isObj(L.plans)) keeps.push(keep(K.plans, L.plans, "plans"));
+    }
+    var writes = [{ key: K.log, value: log, label: "log" }, { key: K.bw, value: bw, label: "weights" }];
+    if (plans) writes.push({ key: K.plans, value: plans, label: "plans" });
+    return { ok: true, keeps: keeps, writes: writes, log: log, bw: bw, plans: plans };
   }
 
   /* agoText(fromMs, nowMs) → "just now" | "N min ago" | "N h ago" |
@@ -4206,9 +4379,12 @@
      The MEASUREMENT is stallReport and is not gated. Epley, r <= 8, two 21-day
      blocks, 1.025 - that arithmetic is true on any plan and travels. The
      diagnosis does not. */
+  /* One line since strength-coach's W3 ruling (2026-09-11, decisions.md):
+     the old second line told him to "name up to four in the plan", and the
+     editor has no control for that - an instruction the app cannot honour
+     reads as the app being broken. */
   var ST1_ABSENT = [
-    "This plan names no key lifts, so the six-week check cannot run.",
-    "Name up to four in the plan to switch it on."
+    "This plan names no key lifts, so the six-week check cannot run."
   ];
   var ST1_PHAT_LINES = [
     "This is the check we agreed on. The split isn't the problem and neither is the diet.",
@@ -4693,14 +4869,19 @@
   var SP1_WIDE = 56;
   var SP1_INSTRUCTION = "If a rep slows down, the set is over. Cut the weight, not the sets.";
 
-  /* Rule C7a's ABSENT copy for SP1 (addendum 8.4), verbatim. The second line
-     is character-identical to the thin-data fallback above on purpose: the
-     ADVICE is the same, only the reason differs. `Log a heavy triple on X` is
-     a lie when the plan names no X to log it on, and that is the whole
-     distinction between ABSENT and not-enough-data. */
+  /* Rule C7a's ABSENT copy for SP1 (addendum 8.4), as amended by
+     strength-coach's W3 ruling (2026-09-11, decisions.md). The first line is
+     the EXPLANATION and belongs on the Plans screen; the second is the
+     ADVICE and belongs under the bar - speedLoad puts exactly that one in
+     `text` on the absent branch, because a speed card with no load ceiling
+     at all is a card that lets him guess in kilograms. The old first line
+     said "set one in the plan", which the editor cannot do; the old second
+     said "until then", which promised a control that does not exist. `Log a
+     heavy triple on X` is a lie when the plan names no X to log it on, and
+     that is the whole distinction between ABSENT and not-enough-data. */
   var SP1_ABSENT = [
-    "No source lift set for this speed work. Set one in the plan to get a number.",
-    "Until then: 65–70% of a weight you could triple."
+    "No source lift set for this speed work, so there is no number to give.",
+    "Use 65–70% of a weight you could triple."
   ];
 
   /* The heaviest qualifying set on `srcId` inside [today-days .. today], or
@@ -4779,7 +4960,11 @@
       if (isObj(ex) && ex.k === "speed") {
         out.reason = "no-source-lift";
         markAbsent(out, SP1_ABSENT);
-        out.text = out.absentLine;
+        /* The ADVICE line only, never the explanation (coach W3 ruling,
+           2026-09-11): the card prints `text` unconditionally for speed
+           work, and the explanation renders once, on the Plans screen,
+           through absentLines. */
+        out.text = SP1_ABSENT[1];
         return out;
       }
       out.reason = "unknown";
@@ -5201,9 +5386,10 @@
   /* Rule C7a's ABSENT copy for V1 (addendum 8.4), verbatim. Plan screen only -
      never on Train, never on the session card. There is no version of this
      that belongs next to a set he is about to lift. */
+  /* One line since strength-coach's W3 ruling (2026-09-11): "mark
+     accessories as cut in the plan" named a control the editor does not have. */
   var V1_ABSENT = [
-    "This plan has no reduced-volume tier. Every exercise runs from week 1.",
-    "Mark accessories as cut in the plan to phase them in."
+    "This plan has no reduced-volume tier. Every exercise runs from week 1."
   ];
 
   /* How many sessions he has actually logged. It is the count in the ABSENT
@@ -5915,9 +6101,12 @@
      It states what is off AND what still works, because "the app cannot spot a
      stall" on its own reads as a fault rather than a consequence of the plan
      he built. */
+  /* Amended by strength-coach's W3 ruling (2026-09-11) so it no longer opens
+     with ST1_ABSENT's nine words: the two always render together on the
+     Plans screen and read as one line printed twice. */
   var D1_ABSENT = [
-    "This plan names no key lifts, so the app cannot spot a stall or recommend a deload from " +
-    "your numbers. It will still flag nine straight weeks without a lighter one."
+    "Without key lifts the app cannot recommend a deload from your numbers. It will still flag " +
+    "nine straight weeks without a lighter one."
   ];
   var D1_T3_GENERIC = "Nine weeks straight with no lighter week. Take one: same weights, two sets " +
                       "per exercise, stop two reps short of the top of the range.";
@@ -7604,6 +7793,11 @@
     backupPayload: backupPayload,
     backupSig: backupSig,
     restorePayload: restorePayload,
+    /* WO-006 W2. The restore path's decisions, pure (B-20). */
+    planProblemText: planProblemText,
+    restoreLocalEmpty: restoreLocalEmpty,
+    restoreRefusal: restoreRefusal,
+    restoreSteps: restoreSteps,
     agoText: agoText,
     /* WO-005 W2b — the pure sample-data generator. Writes nothing, reads no
        clock it was not handed, and every session it builds carries demo:true
