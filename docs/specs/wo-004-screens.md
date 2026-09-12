@@ -153,7 +153,7 @@ editor does not — it is the commit and it moves (§9.2).
 | 32 | diet | Protein check | full × 56 | two-line label |
 | 33 | trend | (none) | — | read-only screen |
 | 34 | plans | Plan row | full × 64 | two-line |
-| 35 | plans | `+ BUILD FROM EMPTY` | full × 48 | |
+| 35 | plans | `Build from empty` | full × 48 | **Amended WO-007:** demoted below stored plans, dashed (§9.9.7) |
 | 36 | editor | Day row (expand) | full × 52 | |
 | 37 | editor | Day `↑` / `↓` | 44 × 44 each | 13 px in the prototype |
 | 38 | editor | Exercise name field | full × 48 | |
@@ -166,6 +166,12 @@ editor does not — it is the commit and it moves (§9.2).
 | 45 | settings | Rest segment `AUTO-START` / `MANUAL` | ≥ 120 × 48 each | |
 | 46 | settings | `EXPORT EVERYTHING AS JSON` | full × 48 | |
 | 47 | settings | Demo enter / leave | full × 48 | |
+| 48 | editor | Exercise `Move to another day` | ≥ 132 × 44 | WO-007 §9.9.2. Own line under the control line; absent with one day |
+| 49 | editor | Move sheet day row | full × 48 | §9.9.3. One per other day |
+| 50 | editor | Move sheet `Not now` | full × 52 | Lowest, pinned |
+| 51 | editor | Empty day `Delete this day` | full × 48 | §9.9.5. Present only at zero exercises |
+| 52 | editor | Warn-once `Got it` | ≥ 88 × 44 | §9.9.6. Only once W1 fills the slot |
+| 53 | plans | `Duplicate PHAT and rearrange it` | full × 56 | §9.9.7. Primary until a stored plan exists, then ghost |
 
 **Deleted rather than resized:** the FULL VOLUME toggle (C-1), the 2.5/5 KG segment (C-3), and
 `SWITCH TO AN EMPTY LOG` (§2.4 — there is no control that empties the real log).
@@ -1313,7 +1319,7 @@ done instead of training, which is why the design's own honest note ships verbat
 | Read-only row | `PHAT` · `Layne Norton, unedited · read-only template` |
 | Unsaved edits | Badge `UNSAVED CHANGES` **NEW** on any plan with a live working copy (§9.6) |
 | Broken plan | Badge `Cannot open` **NEW**; the row does not open; the plan is never repaired and never dropped (§0.7) |
-| Build | `+ BUILD FROM EMPTY` — `Name the days, add the lifts, set the ranges` *(design)* |
+| Build | `+ BUILD FROM EMPTY` — `Name the days, add the lifts, set the ranges` *(design)* — **superseded by §9.9.7 (WO-007):** the primary is `Duplicate PHAT and rearrange it`; `Build from empty` is secondary, below the stored plans |
 | Honest note | `Editing the plan is the easiest thing in this app to do instead of training. PHAT is already a good plan. The number that moves is sessions logged.` *(design, verbatim)* |
 
 **Switching the active plan** changes no logged session. Sessions logged under plan A still resolve
@@ -1450,6 +1456,330 @@ a guess. **Fail silent, never fail confident.**
 
 Rewrite an `id`. Rewrite a `lift` on a rename. Renumber a `dayId`. Delete history. Produce an
 exercise without `k` and `implement`. Change the active plan as a side effect of an edit.
+
+## 9.9 Re-split — the cross-day move and the way in (WO-007 W2, 2026-09-12)
+
+Author: `ux-designer` · Implements: WO-007 §4 W2 · Consumed by: W4 (`frontend-engineer`), W5 (QA)
+Depends on: W3's `PHAT.moveExerciseToDay` / `PHAT.removeDay` · W1 for every string marked
+**[W1 slot]**, which is left empty here and is not mine to fill.
+
+**Chady's ask:** *"I don't want to build from empty, I might want to use the same exercises from phat
+but alternate them? maybe I want to do push / pull / legs."* Two things follow. The editor needs a
+way to move an exercise to another day with its id intact, and the Plans list has to stop leading
+with the route he said he does not want.
+
+### 9.9.1 The recommendation — a per-exercise "Move to another day" sheet. Not drag, not a matrix.
+
+**Ruled: the sheet.** Three candidates, one reason each is or is not the answer:
+
+| Candidate | Verdict | Reason |
+|---|---|---|
+| **Per-exercise sheet** — tap a control on the row, pick a day from a list | **Ships** | Two taps per move, both on ≥ 44 px targets, both readable without decoding a glyph. It reuses `askSheet`'s enclosure, scrim and focus handling, so it inherits behaviour QA has already proven. Nothing in it survives a `render()` — the sheet lives in `#modal`, outside `#view` — so B-19 cannot touch it |
+| Drag | Rejected | A drag is a held gesture. The editor re-renders `#view` by `innerHTML` on every edit (B-19), which destroys the dragged node mid-gesture; native mobile drag needs a library, which §3.1 forbids; and a chalky thumb on a 1 rem row is the wrong input for a gesture that has no cancel |
+| Day-assignment matrix — every exercise listed once with a day selector | Second-best | It is the right answer if the row cannot hold another control. It can (§9.9.2), so the matrix costs a new screen for no gain. If W4 finds the row cannot make 44 px on every control at 200 %, the matrix is the fallback and §9.9.3's sheet becomes the selector on each matrix row — the rest of this section holds |
+
+**The one number that decides the row layout.** At 400 px the content box is 368 px (`.pad` is
+16 px a side). The existing control line is five 44 px buttons, the 88 px target button and five
+8 px gaps: **348 px**. A seventh 44 px glyph is 400 px. It does not fit, and a lone glyph wrapped to
+a second line reads as a rendering fault. So the new control is **not a glyph and not on that
+line**.
+
+### 9.9.2 The control on the row
+
+```
+Flow:   Move an exercise to another day
+Entry:  Plan Editor, an editable plan with two or more days, an expanded day, any exercise row.
+Exit:   The exercise is on the day he picked, last in that day's order, id byte-identical;
+        or nothing changed.
+```
+
+```
+[REF] the exercise row after this change — line 1 is the shipped row, untouched
+
+┌ .peex ──────────────────────────────────────────────┐
+│ [ Bent-over row                            ]  CUT   │  name field, 48 px (unchanged)
+│ [↑] [↓] [−] [ 3 × 3–5 ] [+]                    [✕]  │  line 1, 348 px at 400 (unchanged)
+│ [ Move to another day ]                             │  line 2, NEW, left-aligned, ≥ 132 × 44
+└─────────────────────────────────────────────────────┘
+```
+
+| Rule | |
+|---|---|
+| Label | `Move to another day` **NEW**. A text button, not a glyph: this is the one control on the row that has no established symbol, and the visible label is the accessible name (`Move {ex} to another day`), which is what W4's criterion asks for |
+| Size | ≥ 132 × 44 at 400 px; auto width to fit its text; **never truncates**. At 200 % it may take the full row width and wrap to two lines; min-height 44 holds |
+| Position | Its own line, **below** line 1, left-aligned under `↑`/`↓`. Diagonally opposite `✕`, which stays at the right end of line 1 — the two controls that change *where* an exercise is are never adjacent |
+| Form | Bordered like `.petgt` (`--line`, 2 px, zero radius), `--bone` text, transparent fill. Not amber — amber is the live thing, and this row is not it |
+| Present when | The plan is editable **and** has ≥ 2 days |
+| Absent when | One day (nothing to move to), or the read-only plan. **Absent, not disabled** (§9.3). With one day the `+ Add day` button is already the next thing on screen |
+| Cost | Every exercise row grows by 52 px. Days are collapsed by default and he works one day at a time, so the scroll cost is one day's exercises, not the plan's |
+
+Line 1 is not re-arranged. Every control on it keeps its position, so nothing he has learned moves
+and B1 for the six existing controls is not re-opened.
+
+### 9.9.3 The sheet
+
+Opens in `#modal` on the tap. Same enclosure as `askSheet` (`.sheet`, scrim, `role="dialog"`,
+`aria-modal`, heading focused on open). It is a **list variant**: one row per destination day, no
+danger button, `Not now` last.
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ Move Bent-over row                       │  h2, tabindex=-1, focused on open
+│ Now on Upper power. Lands last on the    │  .det
+│ day you pick.                            │
+│ ┌──────────────────────────────────────┐ │
+│ │ Lower power              7 exercises │ │  row, full × 48, <button>
+│ ├──────────────────────────────────────┤ │
+│ │ Pull                     5 exercises │ │
+│ ├──────────────────────────────────────┤ │
+│ │ Push                     0 exercises │ │
+│ ├──────────────────────────────────────┤ │
+│ │ Legs                     1 exercise  │ │
+│ └──────────────────────────────────────┘ │
+│ [               Not now               ]  │  full × 52, lowest, pinned
+└──────────────────────────────────────────┘
+```
+
+| Rule | |
+|---|---|
+| Heading | `Move {ex}` **NEW** |
+| Body | `Now on {day}. Lands last on the day you pick.` **NEW** — the current day is *marked* here and *not offered* below. Both of W2's asks, no disabled row |
+| Rows | Every **other** day of the **working copy**, in the plan's day order. Left: `{day}`. Right: `{n} exercises` (`1 exercise` written out; `0 exercises` for an empty day — he can see what he is building, WO-007 W2). Counts come from the working copy, so unsaved moves are already in them |
+| Row size | Full width × ≥ 48. Whole row is the `<button>` |
+| Row text | Day name `--bone`, 1 rem, `overflow-wrap:anywhere`. Count `--dim` (7.0 : 1 on `--surface`); never `--faint` inside a sheet — §0.5 rule 2, the sheet ground is `--surface` |
+| `Not now` | Full × 52, `.ghostbtn`, **last**. If the list overflows the sheet, the list scrolls and `Not now` stays pinned at the sheet's bottom edge — the safe tap is never below the fold |
+| Cancel | `Not now`, scrim tap, `Escape`. Each closes with **no move** and returns focus to the row's `Move to another day` control (`cfg.back`) |
+| Destination | **End of the destination day.** W3's default `toIndex`. The destination's order is his and a move never displaces anything in it; the moved row is then at a known place — the bottom — where `↑` puts it wherever he wants |
+| Arm delay | None. No row in this sheet destroys anything |
+| Mixed-role / speed-beside-source / duplicate-lift | **[W1 slot]** — if the coach rules *warn once*, see §9.9.6; if *refuse*, the refused day's row is **absent from the list**, not disabled, and the body gains the coach's sentence. Nothing here until W1 returns |
+
+**Interactions, tap by tap.**
+
+| # | Tap | What changes |
+|---|---|---|
+| 1 | `Move to another day` on Bent-over row (Upper power) | Sheet opens over the editor. Focus on `Move Bent-over row`. Editor behind is unchanged |
+| 2 | `Pull · 5 exercises` | `PHAT.moveExerciseToDay(w, "d1a", "pull")` through `applyEdit` → `saveEdits()`. Sheet closes. Editor re-renders from the working copy: Bent-over row is gone from Upper power's list; Pull's collapsed day row reads `6 ex · {sets} sets`; Pull does **not** expand; scroll position is kept as for any other `applyEdit`. `UNSAVED CHANGES` is on. Toast `Bent-over row moved to Pull.` with `Undo` |
+| 3 | `Undo` (toast, or the editor's persistent undo control) | `moveExerciseToDay` back to `from.dayId, from.index` — the index, not the end. Toast `Bent-over row is back on Upper power.` The working copy is byte-identical to before tap 2 (W3 D3) |
+| — | `Not now` / scrim / `Escape` at step 2 | Sheet closes. Nothing written. Focus back on the trigger |
+
+**Focus after a move.** The trigger no longer exists — the row left the day. Focus goes to the
+`Move to another day` control of the row now occupying that index in the origin day; if the origin
+day is shorter than that, its last row's; if the origin day is now empty, its `+ Add exercise`.
+Never to `document.body`, never to the top of the page.
+
+**Undo — ruled: needed, not noise.** Moving back by hand is two more taps *and lands the exercise
+at the end of the origin day, not where it was*. Only undo restores `from.index`. And a list of
+48 px rows picked with a chalky thumb is exactly where a wrong day gets tapped. So a move gets the
+same undo as a delete: the toast control (§2.4, ≥ 88 × 48) and the editor's persistent undo
+button in `.pebottom`. **One undo slot, latest action wins**, as `toastUndo` already works; the
+persistent button's label says which action it now undoes: `Undo: put {ex} back` (delete,
+existing) or `Undo: move {ex} back to {day}` **NEW** (move). A pending delete-undo displaced by a
+move is not a loss — nothing leaves the stored plan until `SAVE PLAN`, and `DISCARD CHANGES`
+restores all of it.
+
+**States.**
+
+| State | Present |
+|---|---|
+| Plan has one day | Control absent. No line says so |
+| Read-only plan | Control absent (§9.3) |
+| Sheet open | Editor inert under the scrim. Every other day listed with its count, current day named in the body only |
+| Destination empty (`0 exercises`) | Listed like any other. After the move, that day's `No exercises yet.` is gone and its row reads `1 ex` |
+| Origin now empty | `No exercises yet.` + `+ Add exercise` + **`Delete this day`** (§9.9.5) |
+| Success | Row gone from origin, destination count up, toast + undo, `UNSAVED CHANGES` |
+| Refused by `moveExerciseToDay` (`ok:false`) | Sheet **stays open**; `sheetErr` renders `Could not move that exercise.` *(existing string)* under the list; `Not now` closes it. `reason` is never rendered (§9.7). Working copy untouched |
+| Working-copy write failed (W4 D10) | The existing `applyEdit` refusal, unchanged. On disk: pre-move or post-move, never a third document |
+| Session in progress on this plan | The move is allowed in the working copy — WO-006 D10 blocks `SAVE PLAN`, not editing. Unchanged |
+| Offline | Identical. Nothing here reads the network |
+
+**A11y.**
+
+- Trigger: `<button aria-label="Move {ex} to another day">` with visible text `Move to another
+  day`. Visible label is a prefix of the name — WCAG 2.5.3 holds.
+- Sheet: `role="dialog" aria-modal="true" aria-labelledby=` the `Move {ex}` heading. Heading
+  `tabindex="-1"`, focused on open; first Tab lands on the first day row; `Not now` last in the
+  Tab order. `Escape` cancels.
+- Day rows are `<button>`; accessible name `{day}, {n} exercises` — the dialog heading supplies
+  "move" so the row does not repeat it.
+- Announcements through `#bs-live` only, via `toastUndo` → `announce()`: `{ex} moved to {day}.` and
+  on undo `{ex} is back on {day}.` The toast node stays `aria-hidden` (§2.6). Nothing in the sheet is
+  a live region.
+- Greyscale: state is carried by the row's *absence* from the origin day, the destination's count
+  and the toast sentence. No colour carries anything.
+- Contrast: heading `--bone` 12.7 : 1 on `--surface`; body and counts `--dim` 7.0 : 1; row rule
+  `--rule` 3.3 : 1 as a border only.
+
+### 9.9.4 Adding the destination first
+
+A PPL does not exist until he has made the days. The flow he will actually run is: `+ Add day`
+three times, name them, then open each PHAT day and send its exercises out. The sheet does **not**
+offer `+ New day` as a destination — that would fuse `addDay` and `moveExerciseToDay` into one tap
+with one undo and one write, and neither W3's contract nor `toastUndo`'s single slot expresses that.
+Out of scope, stated so W4 does not add it.
+
+### 9.9.5 Deleting an emptied day — W4 needs the strings, so they are here
+
+Not in W2's scope line; included so no sentence is invented in a view. W4's rule stands: the control
+exists **only** on a day with zero exercises, absent otherwise, confirmed by one sheet, no undo
+(nothing is lost).
+
+| Element | String |
+|---|---|
+| Control, inside the expanded empty day, below `+ Add exercise` | `Delete this day` **NEW** — full × 48, `.ghostbtn`, never in the day header row |
+| Headline | `Delete {day}?` **NEW** |
+| Body | `It holds no exercises. Nothing is lost.` **NEW** |
+| Destructive, 300 ms arm | `Delete day` **NEW** |
+| Safe, lowest | `Keep it` *(existing)* |
+| Toast | `{day} deleted.` **NEW** — no undo control |
+| Refused (`removeDay` returns `ok:false`) | `Could not delete that day. Nothing changed.` **NEW**, in the sheet via `sheetErr` |
+
+### 9.9.6 The warn-once slot — reserved for `strength-coach`, empty here
+
+W1 questions 1, 3 and 4 may return *warn once* for a mixed-role day, speed work beside its source,
+or two slots of one `lift` on a day. **No sentence about what a move means for the training is
+written in this section.** What is specified is where such a sentence would render, so W4 has a
+place and W1 has a shape:
+
+| Rule | |
+|---|---|
+| Where | In `.pebottom`, directly above `SAVE PLAN`, in the **advice** enclosure (§2.1.1: 3 px `--dim` left rule, kicker, no `!`). Above the commit because the commit is where it matters; never in the sheet, which is a picker and not a reader |
+| Kicker | **[W1 slot]** |
+| Body | **[W1 slot]** — one or two sentences, verbatim from the coach, `{ex}` / `{day}` substitutions only |
+| Dismiss | `Got it` **NEW**, ≥ 88 × 44, right-aligned inside the block. Dismissal is remembered **per plan per condition** in the working copy's metadata, never in `phat:v1:plans`, so it survives a reload but not a discard |
+| Never | Blocks a move, blocks `SAVE PLAN`, re-renders after dismissal, or renders while the slot is empty |
+| If W1 returns *refuse* instead | §9.9.3: the offending destination is absent from the sheet and the body carries the coach's sentence. This block is not used |
+| If W1 returns *silent* | Nothing renders. No empty enclosure |
+
+Likewise **[W1 slot]** for question 2 (the row's `Type` line after a move) and question 8 (a new
+ABSENT line on the Plans screen). Both render in their existing places with no change in shape.
+
+### 9.9.7 The Plans list — the way in (B-85)
+
+```
+Flow:   Start a plan of his own
+Entry:  Plans tab.
+Exit:   The editor, open on a copy of PHAT (primary) or on an empty plan (secondary).
+```
+
+**Ruled order.** Same skeleton as §9.1; two rows move and one changes clothes.
+
+```
+[REF]
+  Plans · {n} plans
+  ┌ PHAT ──────────────────────────────── ACTIVE ┐   1  the template, read-only, as today
+  │ Layne Norton, unedited · read-only template │
+  └─────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────┐   2  PRIMARY, full × 56
+  │ Duplicate PHAT and rearrange it             │
+  │ Same exercises, same history. Move them     │
+  │ between days, rename the days.              │
+  └─────────────────────────────────────────────┘
+  ┌ Push / pull / legs ───────────── UNSAVED … ┐   3  stored plans, then unsaved-only ones
+  │ 6 days · 42 exercises · 0 sessions logged   │
+  └─────────────────────────────────────────────┘
+  ┌ Build from empty ────────────────────────── ┐   4  SECONDARY, dashed, full × 48
+  │ Name the days, add the lifts, set the ranges│
+  └─────────────────────────────────────────────┘
+  What {plan} does not declare                      5  ABSENT lines, unchanged
+  One honest note                                   6  verbatim, unchanged
+```
+
+| Slot | Rule |
+|---|---|
+| 1 | Unchanged. The screen's question is *which programme am I on*; the active plan is the first readable thing, and on first run that is PHAT |
+| 2 | **`Duplicate PHAT and rearrange it`** **NEW** with the sub-line `Same exercises, same history. Move them between days, rename the days.` **NEW**. Directly under the PHAT row because it is an action *on* PHAT. Tap → the existing duplicate sheet (`Duplicate PHAT?` · `The copy keeps this plan's history. Both plans read and write the same exercise history.` · `Duplicate` · `Not now`), then the existing path: the copy is stored, the editor opens on it, toast `Copied. This is {name}.` |
+| 2, why the sheet stays | One tap would be nicer. But a duplicate is written to `phat:v1:plans` at once, and plan deletion is out (ruled 2026-09-12). A mis-tap on a one-tap primary creates a plan he cannot remove. The sheet is the cheapest guard that does not need a delete |
+| 2, fill | **Primary (amber) while no stored plan exists.** Once one does, the same row renders as `.ghostbtn` in the same position — amber is reserved for the live thing, and after he has a plan of his own the live thing is that plan, not a second copy |
+| 3 | Stored plans in store order, then unsaved-only working copies. Unchanged |
+| 4 | **`Build from empty`** **NEW** *(was `+ Build from empty`)* with its existing sub-line `Name the days, add the lifts, set the ranges`. Below every plan he owns. Dashed border, full × 48, `--bone` title, `--dim` sub. Kept, not removed: he said "don't want", not "remove" (WO-007 §2). The `+` goes from both creation rows — the labels are verbs |
+| 5, 6 | Unchanged. The honest note ships verbatim: `Editing the plan is the easiest thing in this app to do instead of training. PHAT is already a good plan. The number that moves is sessions logged.` |
+
+**A first-time tap.** On a fresh install the first tappable thing after the PHAT row is slot 2. One
+tap, one `Duplicate`, and he is in the editor on a copy of PHAT with 42 exercises, `speedSource`,
+`keyLifts`, `cut` tiers and `derivedFrom` all intact — the route WO-007 §2 needs him on.
+
+**States.**
+
+| State | Present |
+|---|---|
+| No stored plans (first run) | PHAT · **primary** duplicate · Build from empty · ABSENT · note |
+| One or more stored plans | PHAT · duplicate as ghost · plans · Build from empty · ABSENT · note |
+| Demo store loaded | Duplicate refuses with `Sample data is loaded. Leave it before saving a plan.` *(existing)*. Build from empty is unaffected (it writes a working copy, not the store) |
+| Plan store blocked (`S.blockWrites[PLANS]`) | Duplicate refuses with the existing store refusal. Row stays; refusal in the `S.err` slot at the top of the list, `role="alert"` |
+| Broken active plan | `The active plan cannot be opened. PHAT runs until it is fixed or another plan is chosen.` *(existing)* above slot 1. Unchanged |
+| Offline | Identical |
+
+**A11y.** Slot 2 is a `<button>` with accessible name = its title; the sub-line is `aria-describedby`.
+Slot 4 the same. Tab order is the visual order. No live region change: opening a sheet is his own
+tap. Primary fill `--bg` on `--amber` 9.3 : 1; ghost `--bone` on `--bg` 14.8 : 1.
+
+### 9.9.8 Strings — every new one, in one table
+
+| String | Where | Owner | Status |
+|---|---|---|---|
+| `Move to another day` | Row control | UX | **NEW** |
+| `Move {ex} to another day` | Row control `aria-label` | UX | **NEW** |
+| `Move {ex}` | Sheet heading | UX | **NEW** |
+| `Now on {day}. Lands last on the day you pick.` | Sheet body | UX | **NEW** |
+| `{n} exercises` / `1 exercise` | Sheet row, right | UX | **NEW** (via `plural`) |
+| `Not now` | Sheet, last | — | existing |
+| `{ex} moved to {day}.` | Toast + `#bs-live`, with `Undo` | UX | **NEW** |
+| `{ex} is back on {day}.` | Toast + `#bs-live` after undo | UX | **NEW** |
+| `Undo: move {ex} back to {day}` | Persistent undo button, `.pebottom` | UX | **NEW** |
+| `Could not move that exercise.` | Sheet refusal | — | existing |
+| `Delete this day` | Empty day, below `+ Add exercise` | UX | **NEW** |
+| `Delete {day}?` / `It holds no exercises. Nothing is lost.` / `Delete day` | Confirmation | UX | **NEW** |
+| `{day} deleted.` | Toast | UX | **NEW** |
+| `Could not delete that day. Nothing changed.` | Sheet refusal | UX | **NEW** |
+| `Got it` | Warn-once dismiss | UX | **NEW** — renders only once W1 fills the slot |
+| Warn-once kicker and body | `.pebottom` advice block | `strength-coach` | **[W1 slot]** — empty |
+| Refuse sentence, if any | Sheet body | `strength-coach` | **[W1 slot]** — empty |
+| Type line on a moved row | Row `.perange` | `strength-coach` | **[W1 slot]** — unchanged until ruled |
+| Plans-screen ABSENT line for a re-split plan | Plans list slot 5 | `strength-coach` | **[W1 slot]** |
+| `Duplicate PHAT and rearrange it` | Plans list slot 2 | UX | **NEW** — the string W6 greps the live `index.html` for |
+| `Same exercises, same history. Move them between days, rename the days.` | Slot 2 sub-line | UX | **NEW** |
+| `Build from empty` | Plans list slot 4 | UX | **changed** from `+ Build from empty` |
+| `Name the days, add the lifts, set the ranges` | Slot 4 sub-line | — | existing |
+
+Every `{ex}` and `{day}` passes through `esc()` (W4 B3). No string above makes a claim about
+training; the ones that would are the empty slots.
+
+### 9.9.9 Control inventory — rows added to §0.4.1
+
+| # | Screen | Control | Min hit area | Notes |
+|---|---|---|---|---|
+| 48 | editor | Exercise `Move to another day` | ≥ 132 × 44 | Own line under line 1; absent with one day |
+| 49 | editor | Move sheet day row | full × 48 | One per other day |
+| 50 | editor | Move sheet `Not now` | full × 52 | Lowest, pinned |
+| 51 | editor | Empty day `Delete this day` | full × 48 | Present only at zero exercises |
+| 52 | editor | Warn-once `Got it` | ≥ 88 × 44 | Only once W1 fills the slot |
+| 53 | plans | `Duplicate PHAT and rearrange it` | full × 56 | Primary until a stored plan exists, then ghost |
+| 35 | plans | `Build from empty` | full × 48 | **Amended**: demoted below stored plans, dashed |
+
+### 9.9.10 What I could not settle
+
+1. **The three coach verdicts** (mixed roles, speed beside source, duplicate lift) and the `Type`
+   line after a move. Slots reserved in §9.9.3 and §9.9.6; nothing written. `strength-coach`, W1.
+2. **Whether a moved `cut` accessory keeps its place in the destination's reintroduction order.**
+   Not a screen question, but the sheet's `{n} exercises` count and the day row's `{n} ex` count
+   include cut accessories; if the coach's answer to W1 question 6 changes what a day "holds", W4
+   should say so on the count. Default: count every exercise on the day.
+3. **The single undo slot.** Ruled above as one slot, latest action. If QA finds a realistic path
+   where a delete's undo is lost to a following move and that matters, the fix is a two-deep undo,
+   which is a `toastUndo` change and not a screen change.
+4. **A destination day named the same as another.** `addDay` permits it; the sheet would show two
+   `Pull` rows distinguished only by count. Not fixed here — day names are his — but W4 should
+   append the day's position (`Pull · 3rd`) only if two names collide. Left as a note, not a rule.
+5. **200 % measurement of line 1.** It already wraps at 200 % today; that every wrapped control still
+   measures ≥ 44 is W4 B1's to prove by `getBoundingClientRect`, not mine to assert from CSS.
+
+### 9.9.11 Out of scope, deliberately
+
+`+ New day` inside the sheet (§9.9.4). Moving an exercise between plans. Deleting a non-empty day.
+Deleting a plan. A first-open hint in the editor telling him how to re-split — the control's label
+is the hint, and a permanent instruction is a line he learns to ignore. Alternating A/B weekly
+plans. A `wd` weekday map for added days. Any change to the Session, Train, Trend or Weight screens.
 
 ---
 
