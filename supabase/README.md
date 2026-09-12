@@ -113,6 +113,254 @@ If it succeeds, stop and do not deploy.
 Re-run Check A after any future change to this schema. Adding a table and forgetting
 `enable row level security` is the realistic way this goes wrong, and it goes wrong silently.
 
+### 2.1 Two accounts, then the lock — WO-008 W3 runbook (written 2026-09-12, not yet run)
+
+**Read this first. Until WO-008 W4 ships, never sign into a second account on a phone that already
+holds a log.** B-88 is live: the app pushes *this phone's* log to *whoever is signed in*, automatically,
+about 2 seconds after a sign-in and after every saved session or weight. There is no ownership check.
+Sign in as Diana on Chady's phone and Chady's sessions are copied into Diana's backup; her next
+Restore brings them into her log, her Trend and her advice. Nothing is destroyed, but it is
+contamination, and this runbook **cannot prevent it** — only the W4 code can. Until then the rule is
+one phone, one account, and no experiments.
+
+The order below cannot lock anyone out: both accounts exist before sign-ups close.
+
+#### Step 1 — each of you creates your own account, from your own phone, on the live app
+
+Do this on **two phones**. Diana on hers, Chady on his. Credentials are typed by the person whose
+account it is and are never sent to any agent, chat, or file.
+
+Diana's phone:
+
+1. Open `https://gym-app-psi-eight.vercel.app` in the phone browser and install it (Add to Home
+   Screen), then open the installed app. Backup does not run from a `file://` copy.
+2. First run shows `Start with an empty log`. Tap it. (There is no `Sign in` on first run until W5.)
+3. Home → `Settings` (the button at the top of Home) → the **Backup** section.
+4. It must read `Keeps a copy of your log off this phone. Logging works the same signed in or out.`
+   with `Email`, `Password`, `Sign in`, `Create account`. If it reads `Backup needs a connection` —
+   get signal and reopen Settings. If it reads `Backup could not load` — close the app fully and open
+   it again.
+5. Type **her own** email and a password of at least 6 characters (the client refuses shorter with
+   `Password needs at least 6 characters.`). Use a password manager; there is no in-app reset.
+6. Tap `Create account`. **Not** `Sign in` — sign-in with an unknown email says
+   `Wrong email or password.` and creates nothing.
+
+Chady's phone: the same six steps with **his** email and password. One check first: if Settings →
+Backup already reads `Signed in as test+e3@example.com`, tap `Sign out` (it says
+`Signed out. Your log is still on this device.` and pushes nothing), then create the account. Do
+**not** create it while signed in as anything else.
+
+What each of you must see, in this order, on your own phone:
+
+- Immediately: `Signed in.` announced, and the section repaints to
+  `Signed in as <your email>. Backs up after every saved session and weight.` followed by
+  `Never backed up.` and the buttons `Back up now`, `Restore from backup`, `Sign out`.
+- Within a few seconds the automatic first push runs (`Backing up.` may flash) and the line becomes
+  the **Backed up** block: on a phone with nothing logged, `0 sessions and 0 weights, just now.`; on
+  Chady's phone, whatever his log holds. That push is correct — it is your log going to your account.
+- If it stays on `Never backed up.` the push did not run (no signal at that moment). Leave it; it
+  runs on the next `online` event or the next saved session. Do not tap `Back up now` to force it
+  unless you are certain this phone holds only your own log.
+- `That email already has an account. Sign in instead.` means the email is taken — either you
+  already created it, or the address is wrong. `New accounts are switched off.` means step 2 was
+  done too early: re-enable sign-ups (step 2, toggle back on), then retry.
+
+Both phones must show `Signed in as <own email>` before anything in step 2 happens. Tell the agent
+the two emails only — nothing else.
+
+#### Step 2 — lock sign-ups, then delete the throwaway account (dashboard, Chady only)
+
+**Why this order.** Sign-ups are the only way to make an account, so closing them before both
+accounts exist locks out whoever was late, and reopening needs the dashboard again. Closing them the
+moment the second account exists is what shuts the window in which a stranger can create an account
+in this project (§4). The deletion is housekeeping and comes last because it is destructive: it
+cascades through every row the test account owns, and if either phone were still signed in as
+`test+e3@example.com` its pushes would have landed there — deleting first would delete the server
+copy of anything pushed under it. Step 1's sign-out check is what makes the delete safe.
+
+Disable sign-ups:
+
+1. Open `https://supabase.com/dashboard/project/nkebsoqjtkcdiswrmely/auth/providers`
+   (left nav: **Authentication**; the page is titled **Sign In / Up** on the current dashboard,
+   **Providers** on older ones).
+2. Find the toggle labelled exactly **Allow new users to sign up**. On the current dashboard it sits
+   in the **User Signups** card at the top of that page, project-wide; on older layouts it is inside
+   the expanded **Email** provider panel. Switch it **off**. Click **Save** if the page shows one.
+3. Do **not** touch **Enable Email provider** (or any toggle that says "enable" next to Email) —
+   turning that off disables sign-**in** too, for both of you. Do not enable anonymous sign-ins.
+   Leave **Confirm email** off (the client relies on autoconfirm, §4).
+4. Confirm the lock without touching either phone, from any shell with `curl`:
+
+   ```bash
+   curl -s -X POST "https://nkebsoqjtkcdiswrmely.supabase.co/auth/v1/signup" \
+     -H "apikey: sb_publishable_nt0jLWZQoPSCQQrw0jkiDg_OZs4iKOZ" \
+     -H "Content-Type: application/json" \
+     -d '{"email":"probe@example.com","password":"probe-probe-probe"}'
+   ```
+
+   Pass: `{"code":422,"error_code":"signup_disabled","msg":"Signups not allowed for this instance"}`.
+   A response containing `"id"` and `"email":"probe@example.com"` means the toggle did not take
+   **and that account now exists** — go back to 2, then delete `probe@example.com` in the Users list
+   the same way as the test account below.
+
+   From the app, the same fact reads `New accounts are switched off.` under `Create account`.
+   Checking it there means signing out and back in on a phone; that is safe only for the account that
+   owns that phone's log, so do it on Chady's phone, with Chady's credentials, or not at all.
+
+Delete `test+e3@example.com`:
+
+5. Open `https://supabase.com/dashboard/project/nkebsoqjtkcdiswrmely/auth/users`
+   (**Authentication → Users**). Search `test+e3@example.com`.
+6. Before deleting, click the row and **copy its UID** (the `id` uuid) — the record in §2.1.5 needs
+   it, and it is the only way to prove afterwards that the id is gone.
+7. Open the row's **…** menu (right end of the row) → **Delete user** → confirm. `on delete cascade`
+   removes its 3 sessions, 1 bodyweight row, its `user_state` row and its 1 `conflicts` row.
+8. Verify in **SQL Editor → New query** (this runs as `postgres`, which bypasses RLS on purpose —
+   it is the one place in this runbook where seeing every row is correct):
+
+   ```sql
+   select id, email, created_at from auth.users order by created_at;
+   -- exactly 2 rows: your two emails, nothing else
+   select user_id, count(*) from public.sessions group by user_id;
+   -- at most 2 user_ids, both from the list above
+   select count(*) from public.sessions where user_id = '<the uuid copied in 6>';
+   -- 0
+   ```
+
+#### Step 3 — re-verify RLS with the two real accounts
+
+The 2026-09-11 checks (§2 A–D, and the publishable key returning zero rows) proved that *nobody*
+sees anything. Two real users prove the stronger claim: **each sees only their own rows, and cannot
+write a row under the other's id.** Done from a shell, over the REST API, with each account's JWT.
+
+**Getting a JWT without giving anyone a password.** The token endpoint needs the password, so
+**the account's owner runs this command, in their own shell**, and the password is typed into a
+prompt — never into the command line, a file, or a chat. Windows ships `curl.exe`; Git Bash has
+`curl` too.
+
+```bash
+URL=https://nkebsoqjtkcdiswrmely.supabase.co
+KEY=sb_publishable_nt0jLWZQoPSCQQrw0jkiDg_OZs4iKOZ
+read -s -p "password: " PW; echo
+curl -s -X POST "$URL/auth/v1/token?grant_type=password" \
+  -H "apikey: $KEY" -H "Content-Type: application/json" \
+  -d "{\"email\":\"YOUR_EMAIL_HERE\",\"password\":\"$PW\"}"
+unset PW
+```
+
+The response carries `"access_token":"eyJ…"` and `"user":{"id":"<uuid>",…}`. The token is a
+bearer credential to that account's data and **expires in one hour** (project default). Handle it
+like a password: never paste it into chat, a commit, or this file. To let an agent run the checks
+below, put the four values in `.env.local` at the repo root (gitignored by `.env.*` — check that
+`git check-ignore .env.local` prints the path) and delete the file afterwards:
+
+```
+JWT_A=<Chady's access_token>
+UID_A=<Chady's user id>
+JWT_B=<Diana's access_token>
+UID_B=<Diana's user id>
+```
+
+Diana's token comes from Diana running the same command with her email. If she has no shell, her
+side cannot be run without her password leaving her hands; record the check as one-directional in
+§2.1.5 and say so rather than working around it.
+
+**The checks.** Run `set -a; . ./.env.local; set +a` first so the variables are set, and set `URL`
+and `KEY` as above. Every `curl` prints raw JSON; read it, do not grep it.
+
+*3a. Positive control — the token is alive and sees its own row.* Without this, an empty `[]`
+below proves nothing (a dead token also returns nothing useful).
+
+```bash
+curl -s "$URL/rest/v1/user_state?select=user_id" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $JWT_A"
+```
+
+Pass: exactly `[{"user_id":"<UID_A>"}]` — the state row the sign-up push wrote. An error body
+(`JWT expired`, `PGRST301`, `invalid JWT`) means get a fresh token; do not continue on it.
+
+*3b. A reads 0 of B's rows, on all five tables.* The filter names B's id explicitly, so a pass is
+RLS refusing the rows, not the absence of a filter.
+
+```bash
+for T in sessions bodyweight plans user_state conflicts; do
+  printf '%s: ' "$T"
+  curl -s "$URL/rest/v1/$T?select=user_id&user_id=eq.$UID_B" \
+    -H "apikey: $KEY" -H "Authorization: Bearer $JWT_A"; echo
+done
+```
+
+Pass: five lines, each ending in `[]`. It must be an empty array, not an error — an error tells the
+caller something about the table; RLS returning nothing tells it nothing.
+
+*3c. A cannot insert under B's id.* The **only** write in this runbook, and it is built to fail. The
+doc is valid on purpose (the `before insert` validator runs first; a malformed doc fails with
+`23514`, which would look like a pass and is not one). The year-2000 date makes the row unmistakable
+if it ever lands. **Never run this with your own UID** — it would succeed and put a fake weight in
+your own log.
+
+```bash
+curl -s -w '\nHTTP %{http_code}\n' -X POST "$URL/rest/v1/bodyweight" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $JWT_A" \
+  -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+  -d "{\"user_id\":\"$UID_B\",\"local_date\":\"2000-01-01\",\"doc\":{\"date\":\"2000-01-01\",\"kg\":80}}"
+```
+
+Pass: `HTTP 403` with a body whose `"code"` is `"42501"` and whose message reads
+`new row violates row-level security policy for table "bodyweight"`.
+`HTTP 201` means RLS is broken: stop, do nothing else on either phone, and treat it as the §2
+"stop and do not deploy" case — the row must then be removed from `bodyweight` in the SQL editor and
+`rls.sql` re-applied and re-checked before anyone taps `Restore`. `HTTP 400` / `23514` means the probe
+was malformed and the check has not been run.
+
+*3d. The same three, the other way round:* swap `JWT_A` with `JWT_B` and `UID_A` with `UID_B`, run
+3a–3c again.
+
+*3e. The public key still sees zero.* No `Authorization` header at all.
+
+```bash
+for T in sessions bodyweight plans user_state conflicts; do
+  printf '%s: ' "$T"
+  curl -s "$URL/rest/v1/$T?select=user_id" -H "apikey: $KEY"; echo
+done
+```
+
+Pass: five `[]`. This is the §2 Check C result, re-observed now that real rows exist.
+
+Then `rm .env.local`. Tokens outlive the file by up to an hour; nothing else holds them.
+
+#### Step 4 — if one of you signs into the other's account by mistake, before W4 lands
+
+1. Tap `Sign out` **immediately**. Do not tap `Back up now`. Do not tap `Restore from backup` — on
+   either phone — until the agent says the server is clean.
+2. Then tell the agent: which phone, which account was signed in, whether Settings got as far as a
+   **Backed up** block and what it said (`N sessions and M weights`).
+3. Be clear about what sign-out does and does not undo. The automatic push fires about 2 seconds
+   after `Signed in.`; by the time you read `Signed in as …` on a phone with signal, it has usually
+   already run. **Signing out stops the next push; it does not recall the first one.** What went up
+   is on the server under the wrong account, and it is removed from the dashboard (SQL editor, by
+   matching the pushed `client_id`s and restoring the previous `user_state` from `conflicts`) — a
+   job for the agent, not for either phone. Nothing on the phone changed: the local log, draft and
+   weights are byte-identical after a push. If the phone had no signal, nothing went anywhere.
+4. Signing back into the **correct** account on that phone is safe: its own log going to its own
+   account is the intended push.
+
+#### 2.1.5 Record — fill in when run
+
+| Item | Date | Method | Observed | Pass |
+|---|---|---|---|---|
+| Diana's account created from her phone | | app, Settings → Backup → Create account | `Signed in as …` / first push | |
+| Chady's account created from his phone | | app, same | `Signed in as …` / first push | |
+| Sign-ups disabled | | dashboard toggle + curl `/auth/v1/signup` | expect `signup_disabled` | |
+| `test+e3@example.com` deleted; former uid | | dashboard + SQL count under former uid | expect `0`, `auth.users` = 2 rows | |
+| 3a control, A | | curl `user_state` | expect 1 row = UID_A | |
+| 3b A reads B, 5 tables | | curl with `user_id=eq.UID_B` | expect 5 × `[]` | |
+| 3c A inserts as B | | curl POST `bodyweight` | expect `403` / `42501` | |
+| 3a–3c, B against A | | as above, swapped | | |
+| 3e publishable key, 5 tables | | curl, no bearer | expect 5 × `[]` | |
+
+No password, token or `service_role` key belongs in this table. Ids (uuids) and emails are fine.
+
 ---
 
 ## 3. Keys — where each one may live
