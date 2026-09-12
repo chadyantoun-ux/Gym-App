@@ -2438,3 +2438,88 @@ match.` (house voice, names the thing). Both are frontend's and both are better 
 his own password to prove the control (Diana's phone is the one it exists for, and one lock mid-call is enough);
 treating `Password changed.` persisting across a Settings round trip as a defect (it is true until the next attempt,
 a sign-out or a user change).
+
+## 2026-09-12 — WO-009 Lane A (W6): the photographs pass for release at `11fe0ab`; 718 / 718 / 0; two document errors for the PM; one rule consequence named, not changed
+
+Verified `wo-009-photos @ 11fe0ab` — W3 `14ece0f` (48 JPEGs, manifest, `sw.js` v5, verifier, `offline-check.mjs`),
+W4 `13f782e` (`fig` on 32 slots, `PHAT.figFor`, `map.json`, S38), W5 `11fe0ab` (`figBody`, the SVG code deleted).
+Suite **718 / 718 / 0**, three tripwires; S39 adds 12. The browser run is `tests.html` "Already proven" item 35; the
+phone item is manual item 9; the `index.html` pieces that are observed rather than asserted are under "Not testable".
+
+**Pass for release.** Every W1–W5 criterion was taken one by one; the results, with the evidence:
+
+- **The map.** `figFor` over all 42 slots equals the fig derived from §17.2's own columns (named id, fallback, eye-check
+  cell) — a second transcription from a different column than S38's, and the two agree. 32 ship, 8 `fail`, 2 `none`.
+  `d1e` ships the row's fallback `Dips_-_Chest_Version`, never the failed `Dips_-_Triceps_Version`; `d5c` ships its named
+  id, the failed fallback nowhere. Every `fail`/`none` row carries no `fig` key at all; fourteen ids that failed, reverted or
+  were never candidates appear nowhere on the plan. Mutation-checked: remapping `d2a`, shipping `d1e`'s failed id and
+  dropping `30–35°` from `d5b`'s cue turn 13 tests red across S38 and S39.
+- **map.json ↔ manifest.json ↔ the plan.** 32 slots → 24 ids → 48 files; every mapped id has both frames, no manifest
+  id is unmapped; on disk every byte count, sha256 and JPEG SOF size equals the manifest, none wider than 320, total
+  740,232 bytes (≤ 1.5 MB); `sw.js` PHOTOS equals the manifest's 48 paths; `LICENSE.md` and `SOURCES.md` carry the pinned
+  SHA. Exactly one pair is not 3:2 (`Hack_Squat`, 320 × 320) and S39 pins that count at one, so a second odd pair goes red
+  and names `index.html`'s `FIG_DIM` table.
+- **Cold offline.** Worker active, `phat-shell-v5` holds **57** entries (2 core + 7 optional + 48 photos — the work
+  order's "11 + N minus tests.html" over-counts by one because `sw.js` is not an entry in its own cache), **zero 404s**
+  across the 70 install requests. Radio off, cold reload: all 48 files decode from the cache, and with the reintro counters
+  raised so the seven cut-tier slots are on screen, **all 32 mapped slots** render two `<img>` at `naturalWidth > 0`
+  (320 × 213; the hack squat 320 × 320) with `alt=""`, `loading=lazy`, `decoding=async`, attributes equal to the file,
+  178 × 118.5 each on one row at 400 px, no border / opacity / filter / radius, the cue below; the **10 cue-only slots**
+  render exactly `p.figcue`. The server saw exactly 48 photo requests over the whole run: nothing re-fetched after install.
+- **No reflow above an input.** The set input's document top is identical after the tap and after the decode on all 42
+  slots (blocked, misrouted and garbage frames included). It moves *at* the tap by the disclosure's height (160.6 px for
+  a pair, 220.1 for the square pair, 30.1 for a cue alone) — UX §11.4/§11.10's "the card moves once, at the tap", the
+  same as the SVG era. The work order's phrasing "identical before the tap" cannot hold for a disclosure that sits above
+  the card and is read as the §11.10 rule.
+- **Data.** A store with a saved plan copy and `profile` already asked boots with **zero writes**, byte-identical again on
+  a second boot. Three sets typed on Squat, disclosure opened, photos decoded: **no `phat:*` key changed**. Offline reload
+  → the offer sheet → Resume → all six values back; the draft differed in `savedAt` only. `SCHEMA_VERSION` 5; a v4 log
+  store gets exactly the one schema-5 note `main` gave it and no note mentions a photograph.
+- **The missing-image states.** One frame aborted → the node removed, the survivor at 178, cue and input y unchanged to
+  the pixel (auto-fill kept the track), no glyph. Both aborted → the cue alone; the row collapses after the tap
+  (§11.10's accepted state). A photo served as 200 `text/html` → `usable()` refuses it (cache 56), the app removes the
+  node offline and online, and after the origin is fixed the **next worker lifetime's refresh fills the gap** (57). Bytes
+  that are not a JPEG served as `image/jpeg` → cached (`usable()` checks the content-type, not the bytes — as `sw.js`
+  states), and the `<img>` fails to decode and is removed: no glyph, no message.
+- **44 px, 200 %, greyscale.** `.showfig` 400 × 44 on all 42 at 100 % and 44 tall at 200 %; at 200 % every pair stacks
+  start above end at 368 × 244.9 with no horizontal overflow and the cue at ≤ 2 lines (longest `d3d`, 58 chars — UX
+  §11.11 #3's three-line worry does not occur). Greyscale: the pairs still read; the dark-gym hack-squat pair stays
+  legible on `--bg`.
+- **Attack.** `validatePlan` refuses twenty path-shaped `fig` values on a copy naming `fig`/`type` on the slot; every
+  shipped id is a bare `[A-Za-z0-9_-]` segment on a frozen document, so `figBody`'s `"assets/ex/" + fig` cannot leave the
+  directory. Booted with `fig: "../x"` in `phat:v1:plans`: the copy is marked broken, the app runs PHAT, every `src` on
+  screen matches `^assets/ex/[A-Za-z0-9_-]+-[01]\.jpg$`, no traversal path reached the server. A renamed shipped slot
+  shows nothing; renamed back, both photographs return; a copy's `fig` is inert either way. A user-added exercise with
+  neither photo nor cue renders no disclosure.
+- **Deploy.** `verify-deploy.sh` against a stand-in serving the tree with Vercel content types: PASS 59/59; one JPEG
+  missing at the origin → exit 1 naming it; one missing from a `git archive` extract passed as TREE → exit 2 naming it,
+  nothing fetched. `offline-check.mjs` PASS with 7b green. **Not run against a Vercel preview** — none exists (the project
+  is not git-linked); that criterion is W7's against production, and this pass does not claim it.
+
+**Two document errors for the PM, in files not on W6's list:** (1) addendum §17.8 says "Distinct ids to ship: 23 …
+46 files" and "the 22 passing named ids"; the count is **24 / 48** — 23 passing named ids plus the `d1e` fallback
+(`Seated_Dumbbell_Press` is in the fail list, not the pass list, so nothing is subtracted). `map.json`'s own comment and
+S38/S39 carry the right number. (2) `wo-004-screens.md` §11.5 and §11.3 still say "§13" for the map's source (it is §17),
+and §11.7's "Two slots deliberately carry no cue — `d2e` and `d3d`" is stale: both carry a cue and a photograph.
+
+**One accepted deviation from the W4 text:** `figFor` returns `null` for a cue-only slot, not `""`. The reason is in
+`logic.js` at the function (`=== null` reads as "cue-only" and cannot be confused with a blank string) and `hasFig` tests
+`!== null`. S38 and S39 pin `null`.
+
+**One rule consequence named, not changed.** `validatePlan` types `fig` (W4) and `restorePayload` refuses whole a plan it
+cannot open (R4), so a hand-edited backup whose copy carries `fig: "../x"` is refused with *plan "Phone plan" (row 0):
+cannot open - exercise d2a has a malformed fig* and nothing is written — a display-only field the app never reads off a
+copy can block a restore until the backup is fixed by hand. Pinned as-is in S39 and put to the PM in the harness's
+contract questions with QA's recommendation: keep it (one rule, no exception list). No backup in existence carries a
+`fig`; not a defect today.
+
+**Decision: S39 re-derives the map from §17.2's rows rather than copying S38's table.** Two transcriptions from one column
+share one reading error; two from two columns do not. Same reason `assets/ex/manifest.json` is pinned as a literal here
+(sizes, count, SHA) rather than trusted from `sw.js`'s count: a regenerated photo set must be re-pinned by hand, and the
+pin is what makes the `sw.js` VERSION bump — which that file's own header requires for a same-path re-shoot — a thing
+someone has to look at rather than remember.
+
+**Rules out:** a `file://` test that reads `map.json` or `manifest.json` from disk (a skip on the origin the page is
+meant to run from is a skip carried forward — the S38 ruling stands); a fixture that writes a `phat:*` key (the tripwire
+held through S39); retiring manual item 9 on this run's evidence — UX §11.11 #1 and #5 (sharpness on a 3× screen, the
+white ground under gym light) are the two questions only his phone answers, and the item says so.

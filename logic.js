@@ -903,6 +903,28 @@
     return l === "" ? null : l;
   }
 
+  /* figFor(exId) -> the upstream free-exercise-db id whose two frames the
+     MOVEMENT & CUE disclosure shows for this slot, or null.
+
+     WO-009 W4. Reads the SHIPPED plan and nothing else, on purpose:
+       - a user-added exercise has no shipped slot, so no photograph;
+       - a copy carries the shipped ids, so a slot on a copy resolves through
+         the same row - a stored copy that predates `fig` needs no repair;
+       - a `fig` someone hand-writes onto a stored copy is inert. The map is
+         the coach's table (addendum §17.2), not plan data he edits.
+     A renamed shipped slot still answers here. That gate is the view's
+     shippedName() (B-64: rename "Bent-over row" to "Leg press" and the photo
+     goes) and it is deliberately not duplicated in this layer, which has no
+     plan store to read the current name from.
+     null, not "", so `figFor(id) === null` reads as the slot being cue-only
+     and a test can tell "no row" from "a row that is blank". */
+  var FIG_RE = /^[A-Za-z0-9_\-]+$/;
+  function figFor(exId) {
+    var e = exById(PHAT_PLAN, exId);
+    if (!e || typeof e.fig !== "string" || !FIG_RE.test(e.fig)) return null;
+    return e.fig;
+  }
+
   /* Every exercise id in a lift group, in plan order. This is the ONLY sanctioned
      way to widen a per-exercise read into a per-lift one: the Trend tab calls the
      existing id-keyed engines once per id and merges. No engine takes a liftId. */
@@ -1254,6 +1276,7 @@
     }
     var seen = {};
     if (typeof plan.planId === "string" && plan.planId.trim() !== "") seen[plan.planId.trim()] = true;
+    var isShipped = typeof plan.planId === "string" && plan.planId.trim() === PHAT_PLAN_ID;
     plan.days.forEach(function (d, di) {
       if (!isObj(d)) { bad("day", String(di), null, "type"); return; }
       var did = str(d.id).trim();
@@ -1281,6 +1304,23 @@
         if (str(e.lift).trim() === "") bad("ex", id || where, "lift", "missing");
         if (e.cut !== undefined && e.cut !== 1) bad("ex", id || where, "cut", "type");
         if (e.cue !== undefined && typeof e.cue !== "string") bad("ex", id || where, "cue", "type");
+        /* WO-009 W4. `fig` is optional; present, it is an upstream photo id
+           and nothing else - a non-empty string of [A-Za-z0-9_-]. Anything
+           else (a number, "", a path, a URL) is `type`. Format only: whether
+           the id EXISTS is W3's fetch failing loudly, not this. */
+        if (e.fig !== undefined && !(typeof e.fig === "string" && FIG_RE.test(e.fig))) {
+          bad("ex", id || where, "fig", "type");
+        }
+        /* UX §11.5 (WO-009 W2): a slot that shows a photograph must carry its
+           cue - the cue is the accessible carrier and the photo is decorative,
+           so a photo with no cue is an instruction nobody can read. Asserted
+           on the SHIPPED document only (planId "phat", which is never stored):
+           on a copy `fig` is inert - figFor reads the shipped plan - and a
+           restore must not be refused over a key that changes nothing. */
+        if (isShipped && typeof e.fig === "string" && FIG_RE.test(e.fig) &&
+            !(typeof e.cue === "string" && e.cue.trim() !== "")) {
+          bad("ex", id || where, "cue", "missing");
+        }
       });
     });
     /* The plan-scoped rule tables (W3). TYPES ONLY. A reference to an id the
@@ -2039,6 +2079,22 @@
      nor a tempo. That string also carries an en dash (U+2013) and a degree
      sign (U+00B0), both intentional. All 42 pass esc() unchanged.
 
+     PHOTOGRAPHS - `fig`, WO-009 W4, TRANSCRIBED FROM ADDENDUM §17.2 AND ONLY
+     ROWS AT `pass`. `fig` is the free-exercise-db id whose 0.jpg / 1.jpg the
+     MOVEMENT & CUE disclosure shows (figFor). 32 slots carry one; 10 carry
+     none and render the cue alone - 8 failed the eye check of 2026-09-12
+     (d1b d1f d3f d2d d3e d3g d4e d4h, every one a wrong-position fail) and 2
+     have no source (d1c d3b, rack chin). d1e ships the §17.2 FALLBACK
+     `Dips_-_Chest_Version` because the named id failed. The ten shared-cue
+     pairs share an id where the source row passed (d1a/d3a, d1d/d5a,
+     d1h/d5i, d2a/d4a, d2b/d4b, d2c/d4d, d2e/d4f, d2g/d4i) and share the
+     absence where it failed (d1f/d3f) or never had one (d1c/d3b). Rule F1p
+     (§17.1): a missing photograph is a smaller loss than a wrong one, so a
+     `fail` row gets NO `fig` - not a "close enough" one. 24 distinct ids.
+     No engine reads `fig`; no store carries it; it is on this constant only,
+     which is why adding it moved no schema version and wrote nothing at
+     boot. A slot with `fig` must carry a `cue` (UX §11.5; validatePlan).
+
      LIFT GROUPS. Two slots share a lift if and only if they name the same
      movement, plus each speed slot sharing its source lift's group (which is
      what SPEED_SRC already asserts). Where the naming is ambiguous the slots
@@ -2086,29 +2142,39 @@
     days: [
       { id: "d1", name: "Upper power", wd: "Mon", ex: [
         { id: "d1a", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_row",
-          cue: "Keep the torso at the same angle for every rep." },
+          cue: "Keep the torso at the same angle for every rep.", fig: "Bent_Over_Barbell_Row" },
+        /* §17.2 d1b: `Weighted_Pull_Ups` FAILED the eye check (frame 0 is not
+           a hang; chin stays below the bar). Cue only. */
         { id: "d1b", n: "Weighted pull-up", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_pullup",
           cue: "Reach a full dead hang at the bottom of every rep." },
+        /* §17.2 d1c: no upstream source shows heels on a rack. Cue only (B-105). */
         { id: "d1c", n: "Rack chin", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_rackchin", cut: 1,
           cue: "Rest the heels on the rack without pushing through them." },
         { id: "d1d", n: "Flat DB press", s: 3, lo: 3, hi: 5, k: "power", implement: "db", lift: "l_dbbench",
-          cue: "Keep each wrist stacked under the dumbbell." },
+          cue: "Keep each wrist stacked under the dumbbell.", fig: "Dumbbell_Bench_Press" },
+        /* §17.2 d1e: the named `Dips_-_Triceps_Version` failed (feet cropped,
+           bystander); the row's own fallback passed and ships. */
         { id: "d1e", n: "Weighted dip", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_dip",
-          cue: "Keep the shoulders down, away from the ears." },
+          cue: "Keep the shoulders down, away from the ears.", fig: "Dips_-_Chest_Version" },
+        /* §17.2 d1f: `Seated_Dumbbell_Press` FAILED (no back pad - the brace
+           the row requires is absent). Cue only; d3f shares the absence. */
         { id: "d1f", n: "Seated DB shoulder press", s: 3, lo: 6, hi: 10, k: "power", implement: "db", lift: "l_dbshoulder",
           cue: "Ribs down, do not arch the lower back." },
         { id: "d1g", n: "Cambered bar curl", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_barcurl",
-          cue: "Do not rock the torso to start the rep." },
+          cue: "Do not rock the torso to start the rep.", fig: "EZ-Bar_Curl" },
         { id: "d1h", n: "Skull crusher", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_skull",
-          cue: "Take the bar to the forehead on every rep." }
+          cue: "Take the bar to the forehead on every rep.", fig: "EZ-Bar_Skullcrusher" }
       ] },
       { id: "d2", name: "Lower power", wd: "Tue", ex: [
         { id: "d2a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_squat",
-          cue: "Drive the hips and shoulders up together." },
+          cue: "Drive the hips and shoulders up together.", fig: "Barbell_Squat" },
         { id: "d2b", n: "Hack squat", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_hack",
-          cue: "Set the feet high enough that the heels stay down." },
+          cue: "Set the feet high enough that the heels stay down.", fig: "Hack_Squat" },
         { id: "d2c", n: "Leg extension", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_legext", cut: 1,
-          cue: "Keep the hips down in the seat, do not swing the pad up." },
+          cue: "Keep the hips down in the seat, do not swing the pad up.", fig: "Leg_Extensions" },
+        /* §17.2 d2d: `Stiff-Legged_Barbell_Deadlift` FAILED (bar at the
+           kneecap, a half-range SLDL). Pair test 17.5 with d4e: both fail on
+           bar height, both cue only. */
         { id: "d2d", n: "Stiff-leg deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l_sldl",
           cue: "Keep the lower back flat for the whole rep." },
         /* Rule A1 (addendum §8.2), resolved. The brief's slot reads "Glute-ham
@@ -2135,19 +2201,20 @@
              `implement` to "bodyweight", which flips Rule Z2's load word back to
              `bodyweight` and switches Rule I2's increment line off. The cue is one
              string; the slot is not. */
-          cue: "Line the knees up with the machine's pivot." },
+          cue: "Line the knees up with the machine's pivot.", fig: "Lying_Leg_Curls" },
         { id: "d2f", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfstand",
-          cue: "Keep the knees straight on every rep." },
+          cue: "Keep the knees straight on every rep.", fig: "Standing_Calf_Raises" },
         { id: "d2g", n: "Seated calf raise", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfseat",
-          cue: "Do not bounce out of the bottom position." }
+          cue: "Do not bounce out of the bottom position.", fig: "Seated_Calf_Raise" }
       ] },
       { id: "d3", name: "Back & shoulders", wd: "Thu", ex: [
         { id: "d3a", n: "Row — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_row",
-          cue: "Keep the torso at the same angle for every rep." },
+          cue: "Keep the torso at the same angle for every rep.", fig: "Bent_Over_Barbell_Row" },
+        /* §17.2 d3b: cue only, as d1c. */
         { id: "d3b", n: "Rack chin", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bodyweight", lift: "l_rackchin",
           cue: "Rest the heels on the rack without pushing through them." },
         { id: "d3c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l_cablerow",
-          cue: "Keep the torso still, do not swing back with the weight." },
+          cue: "Keep the torso still, do not swing back with the weight.", fig: "Seated_Cable_Rows" },
         /* B-65 (WO-005 §4.3), 2026-09-11. REVERSIBLE DEFAULT, chosen in Chady's
            absence - this is the design's choice standing in for an answer, not
            an answer. The slot carried a slash-name for two exercises, which is
@@ -2168,62 +2235,78 @@
              REVERT (§10.5): if the slot becomes a shrug the cue is exactly
                "Keep the arms straight, no rolling the shoulders."
              and nothing else on the slot moves with it. */
-          cue: "Keep the shoulders square, do not twist to finish the rep." },
+          cue: "Keep the shoulders square, do not twist to finish the rep.",
+          /* §17.2 / 17.4: the B-65 revert to shrug would take `Dumbbell_Shrug`,
+             which also passed its eye check - a lookup, with the two strings above. */
+          fig: "One-Arm_Dumbbell_Row" },
+        /* §17.2 d3e: `Close-Grip_Front_Lat_Pulldown` FAILED (wide bar, shot
+           from behind). Cue only. */
         { id: "d3e", n: "Close-grip pulldown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pulldown",
           cue: "Set the lean once and hold it for every rep." },
+        /* §17.2 d3f: shares d1f's row - FAILED. Cue only. */
         { id: "d3f", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_dbpress",
           cue: "Ribs down, do not arch the lower back." },
+        /* §17.2 d3g: `Upright_Barbell_Row` FAILED under F1p.3(b) - the photo
+           is the narrow-grip injury variant the cue exists to prevent. Cue only. */
         { id: "d3g", n: "Upright row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_uprightrow", cut: 1,
           cue: "Take a grip wider than shoulder width." },
         { id: "d3h", n: "Lateral raise", s: 3, lo: 12, hi: 20, k: "hyp", implement: "db", lift: "l_lateral",
-          cue: "Raise the weight without help from the hips." }
+          cue: "Raise the weight without help from the hips.", fig: "Side_Lateral_Raise" }
       ] },
       { id: "d4", name: "Lower hypertrophy", wd: "Fri", ex: [
         { id: "d4a", n: "Squat — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_squat",
-          cue: "Drive the hips and shoulders up together." },
+          cue: "Drive the hips and shoulders up together.", fig: "Barbell_Squat" },
         { id: "d4b", n: "Hack squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine", lift: "l_hack",
-          cue: "Set the feet high enough that the heels stay down." },
+          cue: "Set the feet high enough that the heels stay down.", fig: "Hack_Squat" },
         { id: "d4c", n: "Leg press", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legpress", cut: 1,
-          cue: "Do not let the lower back round off the pad." },
+          cue: "Do not let the lower back round off the pad.", fig: "Leg_Press" },
         { id: "d4d", n: "Leg extension", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legext",
-          cue: "Keep the hips down in the seat, do not swing the pad up." },
+          cue: "Keep the hips down in the seat, do not swing the pad up.", fig: "Leg_Extensions" },
+        /* §17.2 d4e: `Romanian_Deadlift` FAILED (bar at the kneecap, head-on
+           view hides hips and back). Pair test 17.5 with d2d: both cue only. */
         { id: "d4e", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_rdl",
           cue: "Do not add knee bend to reach lower." },
         { id: "d4f", n: "Lying leg curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legcurl",
-          cue: "Line the knees up with the machine's pivot." },
+          cue: "Line the knees up with the machine's pivot.", fig: "Lying_Leg_Curls" },
         { id: "d4g", n: "Seated leg curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legcurlseat", cut: 1,
-          cue: "Set the lap pad tight enough that the hips cannot lift." },
+          cue: "Set the lap pad tight enough that the hips cannot lift.", fig: "Seated_Leg_Curl" },
+        /* §17.2 d4h: `Donkey_Calf_Raises` FAILED (no block under the forefoot,
+           so no bottom position). Cue only; the 17.3 release is moot. */
         { id: "d4h", n: "Donkey calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l_calfdonkey",
           cue: "Keep the hips bent at the same angle for every rep." },
         { id: "d4i", n: "Seated calf raise", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_calfseat",
-          cue: "Do not bounce out of the bottom position." }
+          cue: "Do not bounce out of the bottom position.", fig: "Seated_Calf_Raise" }
       ] },
       { id: "d5", name: "Chest & arms", wd: "Sat", ex: [
         { id: "d5a", n: "Flat DB press — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "db", lift: "l_dbbench",
-          cue: "Keep each wrist stacked under the dumbbell." },
+          cue: "Keep each wrist stacked under the dumbbell.", fig: "Dumbbell_Bench_Press" },
+        /* §17.3: the bench angle in the photo is a pinned F1.3 dependency on
+           this cue's `30–35°` whatever the photo reads as. */
         { id: "d5b", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_inclinedb",
-          cue: "Set the bench to 30–35°, no steeper." },
+          cue: "Set the bench to 30–35°, no steeper.", fig: "Incline_Dumbbell_Press" },
         { id: "d5c", n: "Machine chest press", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_machinepress",
-          cue: "Set the seat so the handles line up with mid-chest." },
+          cue: "Set the seat so the handles line up with mid-chest.", fig: "Machine_Bench_Press" },
         { id: "d5d", n: "Incline cable fly", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_fly", cut: 1,
-          cue: "Hold the same slight elbow bend throughout." },
+          cue: "Hold the same slight elbow bend throughout.", fig: "Incline_Cable_Flye" },
         { id: "d5e", n: "Cambered bar preacher curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_preacher",
-          cue: "Keep the upper arms flat on the pad." },
+          cue: "Keep the upper arms flat on the pad.", fig: "Preacher_Curl" },
         { id: "d5f", n: "DB concentration curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_concurl",
-          cue: "Brace the elbow against the inner thigh." },
+          cue: "Brace the elbow against the inner thigh.", fig: "Concentration_Curls" },
         { id: "d5g", n: "Spider curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "bb", lift: "l_spider", cut: 1,
-          cue: "Keep the upper arms vertical throughout." },
+          cue: "Keep the upper arms vertical throughout.", fig: "Spider_Curl" },
         { id: "d5h", n: "Close-grip bench", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_cgbench",
-          cue: "Take a shoulder-width grip, no narrower." },
+          cue: "Take a shoulder-width grip, no narrower.", fig: "Close-Grip_Barbell_Bench_Press" },
         { id: "d5i", n: "Skull crusher", s: 3, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_skull",
-          cue: "Take the bar to the forehead on every rep." },
+          cue: "Take the bar to the forehead on every rep.", fig: "EZ-Bar_Skullcrusher" },
         { id: "d5j", n: "Rope pressdown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pressdown", cut: 1,
           /* The ONLY one of the design prototype's 40 cues kept verbatim
              (§10.2, marked K). One subject, un-drawable - the figure has no
              rope - and it fixes the real error, incomplete extension. Worth
              recording as the sole survivor of 40: it is the one place the
-             prototype's copy was already right. */
-          cue: "Spread the rope at the bottom." }
+             prototype's copy was already right.
+             §17.8: the side view cannot show the rope spreading, so this cue
+             is a pinned F1.3 dependency of the photograph (17.3 register). */
+          cue: "Spread the rope at the bottom.", fig: "Triceps_Pushdown_-_Rope_Attachment" }
       ] }
     ]
   });
@@ -8186,6 +8269,8 @@
     dayIdOfEx: dayIdOfEx,
     dayById: dayById,
     liftOf: liftOf,
+    /* WO-009 W4. The photo map, read by shipped id from PHAT_PLAN only. */
+    figFor: figFor,
     exIdsForLift: exIdsForLift,
     liftName: liftName,
     planLifts: planLifts,

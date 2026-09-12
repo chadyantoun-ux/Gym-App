@@ -227,24 +227,25 @@
      against the unicode-range in assets/archivo-inline.css first. */
   .showfig .chv{display:inline-block; width:1em; text-align:center; line-height:1}
   .showfig[aria-expanded="true"] .chv{transform:rotate(90deg)}
-  /* -- THE FIGURE SITS BESIDE THE CUE, AND THE FRAME FOLLOWS THE SUBJECT ---
-     Was: one 200x150 landscape viewBox for every pattern, rendered
-     width:100% as a full-width banner. A standing human is about 1:3, so a
-     figure that filled a 150-tall frame could only ever be ~50 of 200 wide -
-     measured, the average pattern used 26% of the width and 63% of the
-     height, and 'curl' was a 6% hairline floating in emptiness. The frame
-     was the wrong shape for the subject, and no amount of redrawing fixes
-     that. Now every pattern carries its OWN viewBox, fitted to its own
-     content: upright patterns get an upright frame, prone ones a wide frame,
-     and the drawing fills 84-90% of both axes in all fifteen.
-     Sized off WIDTH, never height: with a fixed height a wide pattern would
-     be letterboxed inside a box it does not fit, which is the same defect in
-     a new place. In em units so it grows with 200% text (11.8 #6). --fw and --ar
-     come from the viewBox, computed in diagram(). */
+  /* -- WO-009: TWO PHOTOGRAPHS, START LEFT, END RIGHT, CUE BELOW (spec 11.4)
+     A grid, not flex, and auto-fill, not auto-fit - that word is load-
+     bearing. Each track is max(8em, 50% - 6px): at 368 of content and 14 px
+     text that is 178, so two frames share a row; at 200% text 8em is 224,
+     only one fits, and the pair stacks start ABOVE end because DOM order is
+     start, end, cue and the grid never reorders. When one image removes
+     itself (onerror, figBody) auto-fill KEEPS the empty track, so the
+     survivor stays 178 wide and the row keeps its height; auto-fit would
+     collapse the track and stretch the survivor to 368 x 245, moving the set
+     card 126 px under his thumb. The empty track is --bg on --bg: nothing
+     is drawn, so it is not the placeholder box 4.13 forbids.
+     The photo gets NO border, opacity, filter, scrim or plate. The complaint
+     was clarity; every one of those buys a calmer card by making the image
+     less legible. The --s3 gap of --bg is the only treatment. */
   .fig{display:none; padding:0 var(--s4) var(--s3); font-size:.875rem}
-  .fig.on{display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap}
-  svg.mv{display:block; flex:none; width:min(var(--fw),100%); aspect-ratio:var(--ar); height:auto}
-  .figcue{flex:1 1 13em; color:var(--dim); font-size:.78125rem; line-height:1.45; margin:0}
+  .fig.on{display:grid; gap:var(--s3);
+    grid-template-columns:repeat(auto-fill, minmax(max(8em, calc(50% - 6px)), 1fr))}
+  .fig img{display:block; width:100%; max-width:100%; height:auto}
+  .figcue{grid-column:1 / -1; color:var(--dim); font-size:.78125rem; line-height:1.45; margin:0}
   .figcue b{color:var(--bone); font-weight:800}
   /* -- W7: ADVICE vs REFUSAL (spec 2.1) -------------------------------------
      2a has ONE accent, so the difference cannot be a second colour. It is
@@ -1419,238 +1420,20 @@ function lastDay(id){for(let i=S.sessions.length-1;i>=0;i--)if(S.sessions[i].day
    how B-52 happens again; there is now exactly one way to ask. */
 
 
-/* ============================================================ movement diagrams */
-/* B-64 CLOSED. A slot keeps its pattern only while the GROUND REFERENCE
-   matches - 11.2(1) makes that the one thing that renders a pattern legible.
-   Four slots lost their figure rather than keep a wrong one, per 11.8: "a
-   missing figure is a smaller loss than a wrong one". All four keep their
-   cue, and 4.13 then renders the cue alone with no empty box.
-     d3c  seated cable row  was 'hpull', a hinged torso holding a barbell.
-          REMAPPED to 'srow', a new pattern: seat, foot plate, upright torso.
-     d4c  leg press         was 'squat', a standing figure with a bar on its
-          back. NO FIGURE. A leg press has no fixed ground reference to draw:
-          the platform itself is what moves, so the apparatus cannot be
-          scenery. Drawn and rejected on the contact sheet - it did not read.
-     d3d  DB row          NO FIGURE, still. The slot held two movements in
-          one name and no figure could be right for both; B-65 has since
-          defaulted it to the DB row, but that default is REVERSIBLE and
-          awaiting Chady - drawing for it now is artwork that a one-word
-          answer throws away. Revisit when the name is confirmed.
-     d5d  incline cable fly NO FIGURE. Drawn plan-view and rejected: it read
-          as a lateral raise, which is exactly the confusion 11.8(5) forbids.
-     d5j  rope pressdown    NO FIGURE. 'tri' is drawn as a bench skull
-          crusher, which is right for its other two slots (d1h, d5i) and a
-          wrong ground reference for a standing cable pressdown.
-
-   RULE F1 (coach addendum §12, 2026-09-11) - TWO MORE DROPPED, and it
-   REVERSES §10.7, which had kept both. Same test as B-64, applied harder:
-     d5c  machine chest press  DROPS 'hpush'. 'hpush' is a SUPINE bench
-          figure; a machine chest press is upright, so the arrow is vertical
-          in the frame and horizontal in life. The tell is the cue: it names
-          a seat and handles that appear nowhere in the drawing.
-     d4g  seated leg curl      DROPS 'legcurl'. The arrow points the wrong
-          way - the prone figure travels the heel UP, seated it travels down
-          and back - and the cue names a lap pad the drawing lacks. d4f, the
-          LYING curl, keeps it: the hip angle is why the two slots exist.
-   36 of 42 slots now carry a figure. The six cue-only slots are d3d, d4c,
-   d4g, d5c, d5d and d5j, and every one renders its cue alone through the
-   same figBody() path - no box, no border, no placeholder.
-
-   Same-class risks deliberately KEPT, because only the apparatus changes and
-   not the body's relationship to the load: d2b/d4b hack squat on 'squat',
-   d5b incline press on 'hpush', d2g/d4i seated and d4h donkey calf raises
-   on 'calf' - the block under the ball of the foot is the ground reference
-   and it is the same one. TWO OF THESE ARE LOAD-BEARING ON THEIR CUE and
-   survive only because of it: d4h ships only while its cue says "hips bent",
-   d5b only while its cue says the 30-35 degree bench angle. A copy edit that
-   drops either phrase makes the figure wrong - pinned in tests.html. */
-const PAT={d1a:"hpull",d1b:"vpull",d1c:"vpull",d1d:"hpush",d1e:"dip",d1f:"vpush",d1g:"curl",d1h:"tri",
- d2a:"squat",d2b:"squat",d2c:"legext",d2d:"hinge",d2e:"legcurl",d2f:"calf",d2g:"calf",
- d3a:"hpull",d3b:"vpull",d3c:"srow",d3e:"vpull",d3f:"vpush",d3g:"uprow",d3h:"lat",
- d4a:"squat",d4b:"squat",d4d:"legext",d4e:"hinge",d4f:"legcurl",d4h:"calf",d4i:"calf",
- d5a:"hpush",d5b:"hpush",d5e:"curl",d5f:"curl",d5g:"curl",d5h:"hpush",d5i:"tri"};
-
-/* RULE Q1: THE CUE IS NOT THE FIGURE'S, IT IS THE EXERCISE'S. The 15
-   per-pattern cue strings the prototype shipped here have been DELETED, not
-   left in place: they were never reviewed and several fail Q1 outright - a
-   tempo prescription and an assessment (`the lowering half is where the
-   growth is`), a bare assessment (`Half reps do nothing.`), a digit that is
-   neither a setup angle nor exempt. An unreviewed copy source sitting next to
-   the figures is exactly how it gets picked up again by the next thing that
-   needs a cue. The 42 signed-off cues are authored plan data and live on the
-   exercise: PHAT_PLAN's `cue`, read by cueFor() below.
-   PAT stays. It maps a slot to a FIGURE, which is a different job - and B-64
-   says three of those mappings are wrong, so do not lean on it for anything
-   beyond the figure it already draws. */
-/* THE FIFTEEN FIGURES. Spec 11.5 names, per pattern, the ground reference,
-   what START (ghost) shows, what FINISH (solid) shows and what the arrow runs
-   along; these are authored against that table and nothing else.
-
-   FRAME. Each pattern carries its own 'vb' viewBox, fitted to its own drawing
-   with a 6-unit margin, and 'r', the head radius in that frame. Occupancy is
-   therefore a property of the data, not of luck: 84-90% of the height and
-   49-90% of the width in every pattern (11.4 wants >= 80% of height).
-
-   TWO AUTHORING RULES, both learned by rendering the sheet and looking at it:
-   1. A SEGMENT THAT IS IDENTICAL IN BOTH POSES IS DRAWN ONCE, SOLID. Drawing
-      the unmoving half of the body twice is what turned squat, hinge and the
-      rows into scribble, and it actively hides 11.2(2) - which joints move.
-      So a pose object here may legitimately be missing 'h', 'sp' or 'lg':
-      that part did not move and is in the solid pose only.
-   2. Where the WHOLE body travels (squat, hinge, vpull, dip, calf) the ghost
-      is reduced to the parts that carry the start position - trunk, head,
-      implement - and never a second complete figure on top of the first.
-
-   FIELDS. h head centre . sp spine . ar, ar2 arms . lg, lg2 legs . bar
-   [x,y,halfLength] a barbell . db dumbbells . g ground, "floor" spans the
-   frame, "rect" a pad or block, "bar" a rail . ar {f,t,c?} the one arrow,
-   along the path of the WORKING END, offset clear of the limbs; c makes it a
-   quadratic, which is how a rotation reads.
-
-   NO TEXT INSIDE THE FRAME. The old figures printed "start" and "finish" in
-   the corner, which 11.2 forbids outright - the cue is the only place words
-   appear, and 11.3's convention (ghost = start, solid = finish) is learned
-   once and holds across all fifteen. */
-const POSES={
- squat:{vb:[56.3,112],r:6.2,
-  g:[["floor",106]],
-  a:{h:[26.6,12.2],sp:[[26.6,19.4],[26.6,52.4]],bar:[26.6,25.6,20.6]},
-  b:{h:[32.8,52.4],sp:[[28.7,58.6],[16.3,87.4]],lg:[[16.3,87.4],[39,81.3],[26.6,106],[34.9,106]],bar:[28.7,58.6,20.6]},
-  ar:{f:[50.3,28.7],t:[49.3,59.6]}},
-
- hinge:{vb:[58.4,112],r:6.2,
-  g:[["floor",106]],
-  a:{h:[27.6,12.2],sp:[[27.6,19.4],[27.6,56.5]],ar:[[27.6,25.6],[27.6,44.1],[27.6,62.7]],bar:[27.6,62.7,18.6]},
-  b:{h:[44.1,65.8],sp:[[36.9,67.9],[6,74]],ar:[[33.8,68.9],[33.8,82.3],[32.8,95.7]],lg:[[6,74],[28.7,81.3],[29.7,106],[38,106]],bar:[32.8,95.7,18.6]},
-  ar:{f:[50.3,65.8],t:[52.4,93.6]}},
-
- hpull:{vb:[102.7,112],r:11.1,
-  g:[["floor",106]],
-  a:{ar:[[59.7,26.4],[61.6,57.9],[61.6,87.5]],bar:[61.6,87.5,35.2]},
-  b:{h:[80.1,17.1],sp:[[65.3,24.5],[7.9,50.4]],ar:[[59.7,26.4],[78.2,50.4],[50.4,37.5]],lg:[[7.9,50.4],[48.6,65.3],[44.9,106],[59.7,106]],bar:[50.4,37.5,35.2]},
-  ar:{f:[17.1,91.2],t:[6,46.7]}},
-
- vpull:{vb:[65.9,112],r:7.9,
-  g:[["bar",9.9,8.6,59.9,8.6]],
-  a:{sp:[[37.6,56],[37.6,106]],ar:[[37.6,56],[37.6,32.3],[37.6,9.9]]},
-  b:{h:[46.8,13.9],sp:[[34.9,20.5],[32.3,63.9]],ar:[[33.6,24.4],[13.9,29.7],[37.6,9.9]],lg:[[32.3,63.9],[50.7,82.3],[33.6,100.7],[44.2,106]]},
-  ar:{f:[6,106],t:[6,69.2]}},
-
- hpush:{vb:[118.7,112],r:8,
-  g:[["floor",106],["rect",6,52.7,88,5.3],["bar",14,58,14,106],["bar",86,58,86,106]],
-  a:{ar:[[35.3,48.7],[38,27.3],[40.7,6]],bar:[40.7,6,20]},
-  b:{h:[16.7,43.3],sp:[[30,48.7],[75.3,51.3]],ar:[[35.3,48.7],[24.7,31.3],[43.3,43.3]],lg:[[75.3,51.3],[99.3,68.7],[102,106],[112.7,106]],bar:[43.3,43.3,20]},
-  ar:{f:[64.7,7.3],t:[67.3,39.3]}},
-
- dip:{vb:[63.1,112],r:6.4,
-  g:[["bar",6,42.2,24.1,42.2],["bar",39,42.2,57.1,42.2]],
-  a:{sp:[[29.4,6],[25.1,44.3]],ar:[[29.4,9.2],[31.5,26.2],[32.6,42.2]]},
-  b:{h:[33.7,24.1],sp:[[28.3,32.6],[26.2,68.8]],ar:[[28.3,35.8],[47.5,37.9],[32.6,42.2]],lg:[[26.2,68.8],[14.5,86.9],[20.9,101.7],[14.5,106]]},
-  ar:{f:[6,59.2],t:[6,82.6]}},
-
- vpush:{vb:[62,112],r:6.5,
-  g:[["floor",106],["rect",12.5,75.6,39.1,4.3],["rect",6,34.3,5.4,43.5],["bar",19,79.9,19,106],["bar",47.3,79.9,47.3,106]],
-  a:{ar:[[21.2,41.9],[14.7,58.2],[29.9,47.3]],bar:[29.9,47.3,16.3]},
-  b:{h:[25.6,29.9],sp:[[21.2,38.6],[19,75.6]],ar:[[21.2,41.9],[22.3,24.5],[23.4,6]],lg:[[19,75.6],[45.1,79.9],[47.3,106],[56,106]],bar:[23.4,6,16.3]},
-  ar:{f:[51.7,47.3],t:[45.1,8.2]}},
-
- lat:{vb:[85.2,112],r:6.2,
-  g:[["floor",106]],
-  a:{ar:[[46.2,23.5],[36.9,42.1],[33.8,60.6]],ar2:[[46.2,23.5],[55.5,42.1],[58.6,60.6]],db:[[33.8,60.6],[58.6,60.6]]},
-  b:{h:[46.2,12.2],sp:[[46.2,20.4],[46.2,58.6]],ar:[[46.2,23.5],[27.6,20.4],[13.2,26.6]],ar2:[[46.2,23.5],[64.8,20.4],[79.2,26.6]],lg:[[46.2,58.6],[39,81.3],[36.9,106],[29.7,106]],lg2:[[46.2,58.6],[53.4,81.3],[55.5,106],[62.7,106]],db:[[13.2,26.6],[79.2,26.6]]},
-  ar:{f:[25.6,66.8],t:[6,31.8],c:[8.1,58.6]}},
-
- uprow:{vb:[55.3,112],r:6.2,
-  g:[["floor",106]],
-  a:{ar:[[24.6,23.5],[17.3,41.1],[16.3,58.6]],ar2:[[24.6,23.5],[31.8,41.1],[32.8,58.6]],bar:[24.6,58.6,16.5]},
-  b:{h:[24.6,12.2],sp:[[24.6,20.4],[24.6,58.6]],ar:[[24.6,23.5],[6,29.7],[18.4,38]],ar2:[[24.6,23.5],[43.1,29.7],[30.7,38]],lg:[[24.6,58.6],[17.3,81.3],[15.3,106],[8.1,106]],lg2:[[24.6,58.6],[31.8,81.3],[33.8,106],[41.1,106]],bar:[24.6,38,16.5]},
-  ar:{f:[49.3,58.6],t:[49.3,35.9]}},
-
- curl:{vb:[57.2,112],r:6.2,
-  g:[["floor",106]],
-  a:{ar:[[22.5,24.6],[21.5,42.1],[22.5,58.6]],bar:[22.5,58.6,16.5]},
-  b:{h:[22.5,12.2],sp:[[22.5,20.4],[22.5,58.6]],ar:[[22.5,24.6],[21.5,43.1],[31.8,28.7]],lg:[[22.5,58.6],[23.5,82.3],[22.5,106],[30.7,106]],bar:[31.8,28.7,16.5]},
-  ar:{f:[41.1,60.6],t:[49.3,32.8],c:[55.5,49.3]}},
-
- tri:{vb:[119.7,112],r:7.7,
-  g:[["floor",106],["rect",11.1,54.7,84.6,5.1],["bar",18.8,59.8,18.8,106],["bar",88.1,59.8,88.1,106]],
-  a:{ar:[[39.3,50.9],[41.9,30.4],[22.7,22.7]],bar:[22.7,22.7,16.7]},
-  b:{h:[21.4,45.7],sp:[[34.2,50.9],[77.8,53.4]],ar:[[39.3,50.9],[41.9,30.4],[45.7,9.8]],lg:[[77.8,53.4],[100.9,70.1],[103.4,106],[113.7,106]],bar:[45.7,9.8,16.7]},
-  ar:{f:[13.7,20.1],t:[41.9,6],c:[15,6]}},
-
- legext:{vb:[101.5,112],r:7.9,
-  g:[["rect",11.3,69.2,52.6,5.3],["rect",6,21.8,5.3,50]],
-  a:{lg:[[21.8,66.5],[56,70.5],[56,102.1],[66.5,102.1]]},
-  b:{h:[29.7,13.9],sp:[[24.4,24.4],[21.8,66.5]],ar:[[24.4,28.4],[19.2,48.1],[16.5,66.5]],lg:[[21.8,66.5],[56,70.5],[87.6,66.5],[87.6,56]]},
-  ar:{f:[63.9,106],t:[95.5,69.2],c:[95.5,106]}},
-
- legcurl:{vb:[262.7,112],r:18.2,
-  g:[["rect",6,87.8,151.5,12.1]],
-  a:{lg:[[121.2,81.8],[175.7,84.8],[242.4,84.8],[242.4,106]]},
-  b:{h:[24.2,66.6],sp:[[48.4,75.7],[121.2,81.8]],ar:[[60.5,75.7],[36.3,99.9],[12.1,90.8]],lg:[[121.2,81.8],[175.7,84.8],[190.8,18.1],[215.1,9]]},
-  ar:{f:[254.5,72.7],t:[212.1,6],c:[266.6,12.1]}},
-
- calf:{vb:[39.9,112],r:4.9,
-  g:[["rect",10.9,97,23,8.2]],
-  a:{lg:[[20.8,65],[20.8,82.2],[22.4,99.4]],lg2:[[14.2,106],[22.4,99.4],[32.2,97]]},
-  b:{h:[20.8,10.9],sp:[[20.8,15.8],[20.8,47.8]],ar:[[20.8,19.1],[10.9,30.6],[10.1,45.3]],lg:[[20.8,47.8],[20.8,65],[22.4,81.4]],lg2:[[12.6,87.1],[22.4,81.4],[32.2,97]]},
-  ar:{f:[7.6,105.2],t:[6,85.5]}},
-
- srow:{vb:[115.1,112],r:9.4,
-  g:[["rect",6,84.1,59.4,6.3],["rect",99.8,56,9.4,50],["bar",109.1,68.5,74.8,68.5]],
-  a:{ar:[[21.6,32.6],[52.9,43.5],[84.1,56]]},
-  b:{h:[24.8,15.4],sp:[[21.6,27.9],[18.5,84.1]],ar:[[21.6,32.6],[40.4,57.6],[59.1,48.2]],lg:[[18.5,84.1],[62.3,90.4],[99.8,99.8],[102.9,87.3]]},
-  ar:{f:[87.3,68.5],t:[59.1,62.3]}}
-};
-
-/* Stroke weights are in frame units, and every frame is 112 units tall
-   rendered at ~84 CSS px, so 4.4 units is ~3.3 px and 3 units ~2.3 px - over
-   11.4's 2.5 px floor for the solid pose. Ghost and solid differ by VALUE and
-   by WEIGHT, never by hue, so the pair survives greyscale (11.4, 11.8 #1). */
-function limb(p,col,sw,r){
-  let g="";
-  if(p.h) g+=`<circle cx="${p.h[0]}" cy="${p.h[1]}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}"/>`;
-  for(const k of ["sp","ar","ar2","lg","lg2"]) if(p[k])
-    g+=`<polyline points="${p[k].map(a=>a.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  if(p.bar) g+=`<line x1="${p.bar[0]-p.bar[2]}" y1="${p.bar[1]}" x2="${p.bar[0]+p.bar[2]}" y2="${p.bar[1]}" stroke="${col}" stroke-width="${sw+1.4}" stroke-linecap="round"/>`;
-  if(p.db) for(const d of p.db)
-    g+=`<line x1="${d[0]-3.5}" y1="${d[1]}" x2="${d[0]+3.5}" y2="${d[1]}" stroke="${col}" stroke-width="${sw+3.6}" stroke-linecap="round"/>`;
-  return g;
-}
-
-/* B-15: `ah_${pattern}` repeated the moment two diagrams of the same pattern
-   were open at once — two elements with one id, and an arrowhead that points
-   at whichever the browser resolved first. The counter makes every marker id
-   unique per rendered instance, which is what SVG requires. */
-let figSeq=0;
-function diagram(id){
-  const pat=PAT[id], P=POSES[pat];
-  if(!P) return "";
-  const mk="ah_"+pat+"_"+(++figSeq), W=P.vb[0], H=P.vb[1];
-  /* The ground reference is scenery and may sit at the non-text floor (11.4).
-     One rule or one simple form per pattern - the floor line, the bench slab,
-     the block. Bench legs down to a floor were tried and removed: they cost
-     half the frame's height and told the reader nothing. */
-  const G=P.g.map(g=> g[0]==="floor"
-      ? `<line x1="0" y1="${g[1]}" x2="${W}" y2="${g[1]}" stroke="var(--rule)" stroke-width="3.2"/>`
-    : g[0]==="rect"
-      ? `<rect x="${g[1]}" y="${g[2]}" width="${g[3]}" height="${g[4]}" fill="var(--rule)"/>`
-      : `<line x1="${g[1]}" y1="${g[2]}" x2="${g[3]}" y2="${g[4]}" stroke="var(--rule)" stroke-width="4.2" stroke-linecap="round"/>`).join("");
-  const A=P.ar, d=A.c
-    ? `M${A.f[0]},${A.f[1]} Q${A.c[0]},${A.c[1]} ${A.t[0]},${A.t[1]}`
-    : `M${A.f[0]},${A.f[1]} L${A.t[0]},${A.t[1]}`;
-  /* aria-hidden: the cue sentence beside it is the accessible description,
-     and a stick figure announced as a pile of polylines is noise. The cue is
-     appended by figBody(), from the plan - never from this table. */
-  return `<svg class="mv" viewBox="0 0 ${W} ${H}" aria-hidden="true"
-    style="--fw:${Math.min(6*W/H,13).toFixed(2)}em;--ar:${(W/H).toFixed(3)}"
-    xmlns="http://www.w3.org/2000/svg">
-    <defs><marker id="${mk}" markerWidth="4.2" markerHeight="4.2" refX="3.2" refY="2.1" orient="auto">
-      <path d="M0,0 L4.2,2.1 L0,4.2 z" fill="var(--amber)"/></marker></defs>
-    ${G}${limb(P.a,"var(--t45)",3,P.r)}${limb(P.b,"var(--bone)",4.4,P.r)}
-    <path d="${d}" fill="none" stroke="var(--amber)" stroke-width="3.6" stroke-linecap="round"
-      marker-end="url(#${mk})"/></svg>`;
-}
+/* ============================================================ movement photographs */
+/* WO-009. THE STICK FIGURES ARE GONE - POSES, PAT, limb(), diagram() and
+   figSeq, 232 lines, deleted here and not kept behind a flag. Retired, not
+   iterated: this was the THIRD "unclear" verdict on the drawings (B-60/B-64,
+   WO-005's own-viewBox rebuild, WO-009), and the constraint that made them
+   unclear - a whole movement in <= 12 strokes at 64 px - cannot show a
+   machine's seat, pad and handles, which is exactly where every F1 drop
+   (d3c, d4c, d4g, d5c, d5d, d5j) happened. A photograph of the right
+   apparatus carries the ground reference, the moving joints and the
+   implement for free; the order of the two frames carries direction.
+   The map now lives on the plan document as `fig` (logic.js, PHAT.figFor,
+   from the coach's table in addendum §17.2) - "no slot id survives in code
+   outside the plan document", as PAT here used to. Files: assets/ex/<fig>-0.jpg
+   is always the START and -1.jpg the END; sw.js v5 precaches both. */
 /* Rule Q1's cue, from the PLAN DOCUMENT - 42 per-exercise strings signed off
    by strength-coach, not the 15 per-pattern ones the prototype carried. No
    rule reads a cue: it is a function of the exercise and of nothing else -
@@ -1664,27 +1447,52 @@ function cueFor(id){
     return (x&&typeof x.cue==="string"&&x.cue.trim()!=="")?x.cue.trim():"";
   }catch(err){ return ""; }
 }
-/* WO-006. PAT is keyed by the SHIPPED slot id and a copy keeps those ids, so
-   a renamed slot would keep its figure whatever it was renamed to. B-64's
-   rule is that a wrong figure is worse than none: the figure (and the cue,
-   which describes the same movement) ship only while the slot still carries
-   the shipped name. Rename "Bent-over row" to "Leg press" and both go; rename
-   it back and both return. A user-created exercise has no shipped name, no
-   figure, and only the cue he typed. */
+/* WO-006. The photo map (PHAT.figFor) is keyed by the SHIPPED slot id and a
+   copy keeps those ids, so a renamed slot would keep its photograph whatever
+   it was renamed to. B-64's rule is that a wrong figure is worse than none:
+   the photographs (and the cue, which describes the same movement) ship only
+   while the slot still carries the shipped name. Rename "Bent-over row" to
+   "Leg press" and both go; rename it back and both return. A user-created
+   exercise has no shipped name, no photograph, and only the cue he typed. */
 function shippedName(id){
   const x=PHAT.exById(PHAT.PHAT_PLAN,id);
   if(!x) return true;                       /* not a shipped slot: nothing to lie about */
   const cur=PHAT.resolveEx(allPlans(),id);
   return !!(cur&&String(cur.n).trim()===String(x.n).trim());
 }
-const hasFig=id=>!!(PAT[id]&&POSES[PAT[id]]&&shippedName(id));
-/* Spec 4.13. Figure and cue -> both. Cue but no figure -> the cue alone, with
-   no empty box. Neither -> the disclosure control is not rendered at all (see
-   vSession). No placeholder, no FIG 3 box, no "supply the illustrations"
-   note: an empty frame in the gym is worse than no frame. */
+/* WO-009: a mapped slot ships its pair only while it still carries the
+   shipped name - a renamed slot loses its photograph exactly as it lost its
+   figure (shippedName, above). */
+const hasFig=id=>PHAT.figFor(id)!==null&&shippedName(id);
+/* Pixel size of every file in assets/ex/, so each <img> reserves its box
+   BEFORE the bytes land: the set card moves once, at the disclosure tap, and
+   never when the image decodes or fails to. Hardcoded, not fetched from
+   assets/ex/manifest.json at runtime (a request that has to finish before
+   the layout is right is exactly what the offline rule forbids). The
+   manifest's `w`/`h` per file is the source: every pair is 320 x 213
+   except Hack_Squat, whose upstream frames are square. If make-photos.mjs
+   ever emits a third shape, it goes in this table. */
+const FIG_DIM={Hack_Squat:[320,320]};
+const figDim=f=>FIG_DIM[f]||[320,213];
+/* Spec 4.13 / 11.10. Photographs and cue -> both. Cue but no photograph ->
+   the cue alone, with no empty box. Neither -> the disclosure control is not
+   rendered at all (see vSession). No placeholder, no FIG 3 box, no message:
+   an empty frame in the gym is worse than no frame.
+   Per image (11.6, 11.9): alt="" - decorative, the heading and the cue are
+   the accessible content; loading="lazy" - the request waits for the
+   disclosure to open; width/height - the reserved box; onerror removes the
+   NODE, so a photo the cache never received draws nothing - no broken glyph,
+   no alt box - and auto-fill (CSS) keeps the survivor at its own width. A
+   missing photograph is not an event and gets no copy. */
 function figBody(id){
-  const c=cueFor(id);
-  return (hasFig(id)?diagram(id):"")+(c?`<p class="figcue"><b>Cue.</b> ${esc(c)}</p>`:"");
+  const c=cueFor(id), f=hasFig(id)?PHAT.figFor(id):null;
+  let h="";
+  if(f){
+    const [w,ht]=figDim(f), src=esc("assets/ex/"+f);
+    for(const k of [0,1])
+      h+=`<img src="${src}-${k}.jpg" alt="" width="${w}" height="${ht}" loading="lazy" decoding="async" onerror="this.remove()">`;
+  }
+  return h+(c?`<p class="figcue"><b>Cue.</b> ${esc(c)}</p>`:"");
 }
 
 /* ================== verdicts: the rules live in logic.js as PHAT.verdict */
