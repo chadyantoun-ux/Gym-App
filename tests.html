@@ -55,7 +55,11 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 605 / 605 / 0, no skips.</b> S30&rsquo;s three C-14 tests went green when the backend closed the demo
+<b>Today: 631 / 630 / 1, no skips. The one red is B-73 in S33</b> &mdash; the fix&rsquo;s proof, written first (a
+restore after a corrupt-plan-store boot replaces a plan he built since with no <code>recover:plans</code> copy; the
+observation is above the test). It is not a carried-forward failure and the tripwire below does not exempt it: it goes
+green when backend keys the keep on content, or when <code>index.html</code> marks a store readable after writing it.
+S30&rsquo;s three C-14 tests went green when the backend closed the demo
 boundary (the S30 paragraph at the end of this note is the history). <b>S31</b> is WO-006 W1, the Plan Editor: the
 headline data criterion D1 (rename every exercise, reorder every day, change two set counts &mdash; <code>lastFor</code>,
 <code>stallReport</code>, <code>speedLoad</code>, <code>e1rmByDate</code>, <code>liftDays</code> byte-identical, no id moves),
@@ -160,15 +164,15 @@ match); a restore with no <code>user_state</code> row that <code>migrateStore</c
 divergences from &ldquo;line for line&rdquo; pinned as OBSERVED (a padded numeric string, a negative number&rsquo;s
 sentence, <code>dateBasis</code>); and <code>agoText</code> across a local midnight, a year boundary, a leap day and
 both DST days, plus a 4,000-instant sweep that must never print <code>0 days ago</code>.
-<b>Three tests are red on purpose and are the E-3 report&rsquo;s one defect: WO-004 C-14, the demo boundary.</b>
-<code>backupPayload</code> pushes a session marked <code>demo:true</code> as real history, a store marked
-<code>demo:true</code> backs up whole, and <code>restorePayload</code> writes a demo row back into
+<b>Three of S30&rsquo;s tests were red when E-3 shipped and are green since <code>d7b9f12</code>: WO-004 C-14, the
+demo boundary.</b> <code>backupPayload</code> used to push a session marked <code>demo:true</code> as real history, a
+store marked <code>demo:true</code> backed up whole, and <code>restorePayload</code> wrote a demo row back into
 <code>phat:v1:log</code> &mdash; measured in the browser on 2026-09-11: signing in with <code>demoStore(42)</code> on
 disk POSTed 30 <code>demo:true</code> documents to <code>/rest/v1/sessions</code> under a green <i>BACKED UP</i>.
-The ruling QA is applying (refuse and name on push, refuse whole on restore) is written above the three tests and in
-<code>docs/decisions.md</code>; they go green when backend implements it, and they are not carried-forward failures
-&mdash; they are the fix&rsquo;s proof, written first. Pre/post: against <code>main</code>&rsquo;s <code>logic.js</code>
-(<code>f9d0551</code>) 35 of S30&rsquo;s 37 go red; the two that pass in both regimes are the two named GUARDs.<br>
+The three tests were written first, red, with the ruling (refuse and name on push, refuse whole on restore) above them
+and in <code>docs/decisions.md</code>; backend implemented it and they went green without a character of the tests
+changing. Pre/post: against <code>main</code>&rsquo;s <code>logic.js</code> (<code>f9d0551</code>) 35 of S30&rsquo;s 37
+go red; the two that pass in both regimes are the two named GUARDs.<br>
 <b>S32</b> is WO-006 W2, restore and the plan store (R1&ndash;R5), plus strength-coach&rsquo;s W3 rulings. The restore
 path&rsquo;s decisions are now pure &mdash; <code>restoreLocalEmpty</code>, <code>restoreRefusal</code>,
 <code>restoreSteps</code>, <code>planProblemText</code> &mdash; and <code>index.html</code> executes what
@@ -180,7 +184,15 @@ working copy refuses the restore naming the plan (R2); <code>restorePayload</cod
 refuses WHOLE on a plan that fails <code>validatePlan</code>, in words and never a reason token (R4), and
 <code>backupPayload</code> refuses-and-names the same plan on the way up so it never reaches a server every restore
 would then refuse; the four ABSENT strings as the coach&rsquo;s 2026-09-11 literals; and <code>speedLoad().text</code>
-carrying the advice line alone on the absent branch.</p>
+carrying the advice line alone on the absent branch.<br>
+<b>S33</b> is WO-006 W4, the QA pass, and holds what the browser attacks of 2026-09-11 (&ldquo;Already proven&rdquo;
+item 29) found that the pure half can pin. <b>B-73, red:</b> <code>restoreSteps</code> keys the plans keep on the
+BOOT status of the store, so a plan saved after a boot that found <code>phat:v1:plans</code> unparseable is replaced
+by a restore with no recover copy (observed end to end; the log never had this gate, and a GUARD beside it says so).
+Also pinned: the refusal and problem sentences carry a plan name raw and every renderer was observed escaping it
+(B7); a 0-day plan stores, activates and validates and an emptied day still validates (both observed on screen);
+and <code>planIdOf</code> / <code>buildSession</code> are honest about a draft whose plan is gone, which is the
+pure half of a call-site observation listed under &ldquo;not testable&rdquo;.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -11764,6 +11776,107 @@ T("coach W3 - on the absent branch speedLoad puts the ADVICE line in `text`, nev
   a.match(thin.text, /^Log a heavy triple on Bent-over row/);
 });
 
+/* ============================================================ S33 - WO-006 W4, the QA pass
+   What the browser attacks on 2026-09-11 ("Already proven" item 29) found
+   that the pure half can pin. One is RED and is the fix's proof, written
+   first: B-73. The rest pin properties the attacks leaned on so a tidy-up
+   cannot remove them without failing a named test. Every fixture here is an
+   object; nothing writes phat:v1:* on this origin. */
+group("S33 WO-006 W4 QA / B-73 / restore after a corrupt boot / escaping is the view's");
+
+/* B-73. OBSERVED in the browser (attack: "boot with an unparseable
+   phat:v1:plans, then restore"): boot kept the unreadable bytes aside at
+   recover:plans:<boot ts> and did NOT block writes (preserveUnreadable only
+   blocks when the copy itself fails - the WO-001 log policy). DUPLICATE then
+   wrote a fresh, valid phat:v1:plans holding "PHAT - my version". Restore
+   next: S.stores.plans still read "error" from boot, so restoreSteps made NO
+   plans keep and phat:v1:plans - now a valid store with a plan the user made
+   AFTER boot - was replaced by the server's with no recover copy. Write
+   order off the spy: recover:log -> recover:bw -> log -> bw -> plans -> prefs.
+   The boot copy holds "{not json", not the plan he built.
+   THE RULE THIS PINS: a keep is owed whenever the store about to be replaced
+   holds a plan document, whatever the boot status was. The boot status says
+   what was readable at boot; it says nothing about what was written since.
+   R1's "unreadable: no keep" test above stays true for the EMPTY default
+   (nothing in it to keep); this one is the case where there is. Backend's
+   call whether the fix is here (key the keep on content) or in index.html
+   (S.stores[k] = "ok" after any successful save(k)) - both make this green,
+   and only one of them makes the guarantee a file:// assertion. */
+T("B-73 - restoreSteps keeps recover:plans for a store WRITTEN AFTER a corrupt boot: stores.plans:\"error\" but the local store holds a plan", function(a){
+  var ts = 1700000000002;
+  var local = W2LOCAL({ stores: { log: "ok", bw: "ok", plans: "error" } });   /* plans: W2PLANS() - one stored copy, active */
+  a.eq(local.plans.plans.length, 1, "fixture: the store about to be replaced holds a plan");
+  var st = P.restoreSteps(W2RP(), local, W2KEYS, ts);
+  a.eq(st.ok, true, st.message);
+  a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log", "phat:v1:bw", "phat:v1:plans"], "phat:v1:plans IS about to be replaced");
+  a.deep(st.keeps.map(function(k){ return k.key; }),
+    ["phat:v1:recover:log:" + ts, "phat:v1:recover:bw:" + ts, "phat:v1:recover:plans:" + ts],
+    "a plan he built after boot must be kept before the server's store replaces it");
+  a.eq(JSON.stringify(st.keeps[2].value.value), JSON.stringify(local.plans), "and the keep is the store verbatim");
+});
+
+T("B-73 (the same rule, the other trigger) - stores.plans:\"error\" with an EMPTY default store and PHAT active: no keep is fine, there is nothing to keep", function(a){
+  var local = W2LOCAL({ stores: { log: "ok", bw: "ok", plans: "error" }, plans: { schemaVersion: P.SCHEMA_VERSION, plans: [], activePlanId: "phat" } });
+  var st = P.restoreSteps(W2RP(), local, W2KEYS, 7);
+  a.eq(st.ok, true);
+  a.eq(st.keeps.length, 2, "log and bw only: the empty default is not the bytes on disk, and boot already kept those aside");
+});
+
+T("GUARD - the log and bodyweight keeps do NOT depend on the boot status: a session logged after a corrupt boot is always kept before a restore replaces it", function(a){
+  /* This is why B-73 is P1 and not P0: the log never had the gate. */
+  var local = W2LOCAL({ stores: { log: "error", bw: "error", plans: "ok" } });
+  var st = P.restoreSteps(W2RP(), local, W2KEYS, 8);
+  a.eq(st.ok, true);
+  a.deep(st.keeps.map(function(k){ return k.key; }), ["phat:v1:recover:log:8", "phat:v1:recover:bw:8", "phat:v1:recover:plans:8"]);
+  a.eq(JSON.stringify(st.keeps[0].value.value), JSON.stringify(local.log), "the log keep is the in-memory log verbatim, whatever boot read");
+  /* and a blocked key (the copy-aside itself failed at boot) still refuses whole */
+  a.eq(P.restoreSteps(W2RP(), W2LOCAL({ blocked: { "phat:v1:plans": true } }), W2KEYS, 8).ok, false);
+});
+
+T("B7 - the pure refusal and problem sentences carry the plan name RAW; escaping is the view's job, and the view was observed doing it", function(a){
+  /* Observed 2026-09-11: a working copy named `My PHAT <b>edited</b>` rendered as text in the
+     restore refusal, the Plans row, the discard headline and the delete headline (innerHTML held
+     &lt;b&gt;, never <b>). So the engine must hand the name back unencoded - double-escaping
+     would print &amp;lt; on screen - and every renderer must esc() it. */
+  var why = P.restoreRefusal({ draft: false, edits: { p_1: { plan: { planId: "p_1", name: "My PHAT <b>edited</b> & co" } } } });
+  a.eq(why, "Save or discard your changes to My PHAT <b>edited</b> & co first.");
+  a.eq(why.indexOf("&lt;"), -1, "not pre-escaped");
+  var rows = ROWS(P.backupPayload(E3STORE().log, E3STORE().bw, undefined));
+  var bad = W2BROKEN(); bad.name = "<i>x</i>";
+  rows.plans = [{ plan_id: "p_mini", doc: JSONB(bad) }];
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, false);
+  a.match(rp.problems[0], /^plan "<i>x<\/i>" \(row 0\)/, "the problem sentence carries the raw name too");
+});
+
+T("W14 - the store operations the browser attacks leaned on: a 0-day plan stores, activates and validates; a day emptied by deletes still validates", function(a){
+  /* Observed: build from empty -> SAVE PLAN -> Use this plan -> Train shows no day rows and no
+     error; Trend reads `This plan has no exercises yet.` And deleting every exercise of a day
+     left the day with `No exercises yet.` and SAVE PLAN accepted it. */
+  var np = P.newPlan("New plan", "2026-09-11").plan;
+  var up = P.planStoreUpsert(undefined, np);
+  a.ok(up.ok); a.eq(P.validatePlan(up.store.plans[0]).ok, true);
+  var act = P.planStoreSetActive(up.store, np.planId);
+  a.ok(act.ok); a.eq(act.store.activePlanId, np.planId);
+  var c = MYPHAT(), ids = c.days[1].ex.map(function(e){ return e.id; }), p = c, i, r;
+  for (i = 0; i < ids.length; i++) { r = P.removeExercise(p, ids[i]); a.ok(r.ok, "remove " + ids[i]); p = r.plan; }
+  a.eq(p.days[1].ex.length, 0);
+  a.eq(P.validatePlan(p).ok, true, "an empty day is a valid day");
+  a.eq(P.planStoreUpsert(up.store, p).ok, true);
+  a.eq(P.planKeyLiftIds(p).indexOf("d2a"), -1, "d2a and d2d left the key lifts with the day");
+  a.eq(P.planKeyLiftIds(p).indexOf("d2d"), -1);
+});
+
+T("D9 (pure half) - planIdOf on a draft naming a plan the store no longer holds returns THAT id, not the active plan's", function(a){
+  /* The view was observed stamping the ACTIVE plan's id on the session built from such a draft
+     (see the untestable list: `sp().planId` in finish()). The pure reader is honest; the caller
+     is where the reinterpretation happens. */
+  a.eq(P.planIdOf({ dayId: "d1", planId: "p_gone", entries: {} }), "p_gone");
+  a.eq(P.planIdOf({ dayId: "d1", planId: "phat", entries: {} }), "phat");
+  var s = P.buildSession({ date: "2026-09-11", entries: { d1a: { sets: [{ w: "80", r: "6" }], note: "" } } }, "d1", "2026-09-11", 1, "p_gone", P.PHAT_PLAN);
+  a.eq(s.planId, "p_gone", "buildSession stamps whatever planId the caller hands it - so the caller can be honest");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -12546,7 +12659,33 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "write sequence in <code>restoreApply</code> as a pure plan the caller executes, so the seam order is an " +
     "assertion and not a Playwright run. <b>Honoured by WO-006 W2:</b> <code>PHAT.restoreLocalEmpty</code> and " +
     "<code>PHAT.restoreSteps</code> (plus <code>restoreRefusal</code>), asserted in S32; what is left to a browser " +
-    "is only that <code>restoreApply</code> executes the returned lists in order, which item 28 observed.</p>";
+    "is only that <code>restoreApply</code> executes the returned lists in order, which item 28 observed.</p>" +
+    "<p><b>WO-006 W4 &mdash; four things the Plan Editor attacks found in <code>index.html</code> that this page " +
+    "cannot reach, each a standing extraction request (B-20).</b><br>" +
+    "<b>(1) <code>sessionOpen()</code> reads memory, not disk.</b> D10 refuses <code>SAVE PLAN</code> and " +
+    "<code>USE THIS PLAN</code> on <code>S.draft || S.offer || S.draftRead.status === \"error\"</code>. A second " +
+    "document of the app that booted before the draft was written has none of those set, and was observed saving " +
+    "the plan with <code>d1a</code> deleted while document A's draft held <code>100 &times; 5</code> on " +
+    "<code>d1a</code> (item 29, Attack A route 2). The draft survived &mdash; D8's orphan card is exactly for this " +
+    "&mdash; but D10 is a memory check guarding a disk fact. One <code>readRaw(DRAFT)</code> before the commit " +
+    "closes it; the decision would then be <code>PHAT.classifyDraftPayload</code>'s and testable here. P2.<br>" +
+    "<b>(2) <code>finish()</code> stamps <code>sp().planId</code>, and <code>sp()</code> falls back to the ACTIVE " +
+    "plan.</b> A draft whose own <code>planId</code> names a plan the store no longer holds hydrates against the " +
+    "active plan (right: something has to render it) and is then SAVED under the active plan's id with the active " +
+    "plan's <code>rx</code> on every entry (observed: a <code>p_gone</code> draft saved as " +
+    "<code>planId:\"p_htsq66bm1\"</code>). Provenance rewritten, no set lost. The pure half is honest &mdash; S33 " +
+    "<em>D9 (pure half)</em> &mdash; so the fix is one line at the call site: stamp <code>PHAT.planIdOf(stored)</code> " +
+    "and pass no plan for <code>rx</code> when the plan is gone. P2, and it needs <code>strength-coach</code> on " +
+    "whether an unknown epoch should carry an <code>rx</code> at all.<br>" +
+    "<b>(3) <code>kindWarn(k, lo, hi)</code> &mdash; Rule K2's two sentences and two thresholds &mdash; are three " +
+    "lines in <code>index.html</code>.</b> Coach-ruled copy that this page cannot pin. Observed correct on screen " +
+    "(item 29): speed above 5 warns, hypertrophy at or below 5 warns, power never; typing into Name or Cue keeps " +
+    "the warning armed and the second tap adds; changing <code>k</code>, <code>lo</code> or <code>hi</code> " +
+    "disarms; a missing implement outranks the warning. Move it to <code>PHAT.kindWarn</code> and S33 pins it.<br>" +
+    "<b>(4) <code>S.stores[k]</code> is set once at boot and never after a successful <code>save(k)</code>.</b> " +
+    "This is the <code>index.html</code> half of B-73: a store that booted unreadable, was copied aside and was " +
+    "then WRITTEN is still reported to <code>restoreSteps</code> as <code>\"error\"</code>. Either half of the fix " +
+    "makes B-73 green; only the <code>logic.js</code> half makes the guarantee an assertion here.</p>";
 
   /* ---------------------------------------------------------------------
      The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a
@@ -12582,7 +12721,14 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "(draft written with no lifecycle event at all, offer, Resume byte for byte). What is not, and cannot be, " +
     "is whether iOS or Android actually keeps <code>localStorage</code> across a process kill - Safari's " +
     "intelligent-tracking eviction, \"clear data on exit\" settings and low-storage reclaim are OS policy, not " +
-    "browser API. This is the P0 promise of the whole app, so it is worth thirty seconds once.</span></li>" +
+    "browser API. This is the P0 promise of the whole app, so it is worth thirty seconds once. " +
+    "<b>Measured 2026-09-11 on desktop Chromium (item 29):</b> a SIGKILL of the browser process <b>within about " +
+    "5 s</b> of the last <code>localStorage</code> write lost that write and every unflushed one before it &mdash; " +
+    "at 0.5 s and 3 s nothing survived, at 8 s everything did; a graceful close always kept it. That is Chromium's " +
+    "commit delay, not the app's, and the app has no way to flush it. So when you kill it, kill it <i>fast</i> " +
+    "after the last set, once, and see what the phone's browser does. Same test for the Plan Editor: rename a " +
+    "day, kill within a second, reopen &mdash; the row should read UNSAVED CHANGES with the rename; if it does " +
+    "not, that is the browser's window, and it is the reason nothing important is written only once.</span></li>" +
 
     "<li><b>Type with the real keyboard, and watch the bottom bar.</b> On the session screen, tap into a " +
     "weight field so the keyboard comes up. Type <code>7</code> <code>.</code> <code>5</code> <code>.</code> - " +
@@ -12687,7 +12833,14 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<code>Storage.prototype.setItem</code> spied from an init script. Service workers were blocked in the context, " +
     "which makes the app's own <code>reg.scope</code> log line throw once at boot &mdash; a rig artefact, filtered, " +
     "not reachable in a real browser. Not checked in, same reason as the rest. <b>Re-run it whenever " +
-    "<code>restoreApply</code>, <code>restoreSteps</code> or <code>save()</code> changes.</b></p><ol>" +
+    "<code>restoreApply</code>, <code>restoreSteps</code> or <code>save()</code> changes.</b></p>" +
+    "<p><b>Item 29 is WO-006 W4, the QA pass on the Plan Editor, from a run on 2026-09-11</b> against " +
+    "<code>w14-w15-plans</code> @ <code>9e0834a</code>: nine scripts, each scenario on a fresh context, the editor " +
+    "driven through its own buttons and fields (never through <code>PHAT</code> calls), the live project used only " +
+    "for the push half of D6 with a throwaway account. It found one P1 (B-73, red in S33), two P2 call-site " +
+    "observations and one P2 inconsistency (D7), all named under &ldquo;not testable&rdquo; and in the W4 report. " +
+    "<b>Re-run it whenever the editor's commit path, <code>hydrateDraft</code>, <code>restoreApply</code> or " +
+    "<code>sessionOpen()</code> changes.</b></p><ol>" +
 
     "<li><b>Draft survives a lock.</b> <span class=\"skipmsg\">Proven: a <code>visibilitychange</code> to " +
     "hidden wrote <code>{w:\"100\",r:\"5\"}</code> to <code>phat:v1:draft</code> with no blur and without " +
@@ -12955,6 +13108,136 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<b>(G) The <code>recover:plans</code> write throws:</b> writes stop at the third key, <i>! Could not keep a " +
     "copy of this device's plans. Nothing changed.</i>, log still 5 sessions, plans byte-identical &mdash; nothing " +
     "replaced. Zero page errors in every scenario once the rig's SW artefact is filtered.</span></li>" +
+
+    "<li><b>WO-006 W4 &mdash; the Plan Editor through its own controls: D1 headline byte-identity, the three " +
+    "attacks, the restore attack, D4&ndash;D9, B1&ndash;B8, K2, and the live push.</b> <span class=\"skipmsg\">" +
+    "Observed 2026-09-11 on branch <code>w14-w15-plans</code> @ <code>9e0834a</code>. Rig: a Node static server " +
+    "on <code>http://127.0.0.1:88xx</code> serving the working tree, Playwright headless Chromium at 400 &times; 800, " +
+    "<code>Storage.prototype.setItem</code> spied from an init script with a per-key throw switch, fixtures built " +
+    "in-page by the real <code>logic.js</code> (<code>demoStore(42)</code>'s 30 sessions plus 3 logged under a PHAT " +
+    "copy through <code>buildSession</code>), service workers blocked (the <code>reg.scope</code> throw at boot is " +
+    "that, filtered). <code>./sync.js</code> stubbed for the restore attack (fixture rows through the JSONB " +
+    "reorder), REAL for the push checks against the live project and a throwaway account. Not checked in. " +
+    "<b>D1.</b> With 33 sessions on disk: every one of the copy's 42 exercises renamed through its own field, " +
+    "every day renamed, the plan renamed, every day moved (stored order became d5,d4,d3,d2,d1), " +
+    "<code>d1a</code> 3&rarr;4 sets, <code>d2a</code> 3&rarr;2, <code>d1b</code> hi 10&rarr;11, SAVE PLAN. " +
+    "Writes during the save: <code>phat:v1:plans</code> then <code>phat:v1:planedit</code> &mdash; ONE " +
+    "<code>save(PLANS)</code>. Not one id, lift, wd, keyLifts, speedSource or reintroOrder changed; " +
+    "<code>phat:v1:log</code> byte-identical; the name-free snapshot of <code>lastFor</code>, " +
+    "<code>stallReport</code>, <code>speedLoad</code>, <code>e1rmByDate</code> and <code>liftDays</code> for every " +
+    "id (18,528 bytes) byte-identical before and after; the working copy cleared; Train read the renamed days. " +
+    "<b>Attack A, route 1 (D10).</b> Two sets typed on <code>d1a</code>, backgrounded (draft on disk with " +
+    "<code>planId</code> = the copy), then in the editor: delete <code>d1a</code> (sheet: <i>7 logged sessions keep " +
+    "their sets. This removes it from the plan only. Bent-over row is one of the lifts the six-week check reads. " +
+    "Removing it leaves 3.</i>), one set more on <code>d1b</code>, SAVE PLAN &rarr; <i>! Finish or discard the " +
+    "session in progress first.</i>, zero writes, stored plan and draft byte-identical, working copy intact on " +
+    "disk. <code>USE THIS PLAN</code> on PHAT: same refusal, active id unchanged. After a reload with only the offer " +
+    "showing: refused again. Discard the session, SAVE PLAN: saved without <code>d1a</code>, log byte-identical, " +
+    "Train offers nothing. <b>Attack A, route 2 (D8).</b> The orphan needs the STORED plan to lose the exercise " +
+    "while the draft holds a set, and D10 blocks every in-document route, so a second document of the app (booted " +
+    "before the draft existed, so its <code>sessionOpen()</code> was false) deleted <code>d1a</code> and saved " +
+    "&mdash; the two-document hole listed under &ldquo;not testable&rdquo; (1). Document A reloaded: offer " +
+    "<i>Upper power &middot; 1 set logged</i>, Resume &rarr; eight cards, <code>d1a</code> LAST (<i>8 of 8</i>, " +
+    "<i>Bent-over row 3 &times; 3&ndash;5 &middot; Not in the plan any more. It still saves with this session.</i>) with " +
+    "<code>100</code>/<code>5</code> in its inputs and the note; Summary <i>SETS 1 &middot; VOLUME 500 &middot; 1 " +
+    "exercise</i> listing it under the same flag; SAVE SESSION &rarr; 33&rarr;34 sessions, " +
+    "<code>entries.d1a.sets = [{w:100,r:5}]</code>, draft cleared. Zero entries dropped. " +
+    "<b>D9.</b> A pre-WO-006 draft (no <code>planId</code>) with a renamed copy active resumed under PHAT's " +
+    "names (<i>Upper power / Bent-over row</i>, not <i>Copy day one / Copy row</i>) and saved " +
+    "<code>planId:\"phat\"</code>. A draft naming <code>p_gone</code> resumed under the active copy and saved " +
+    "under the active copy's id &mdash; &ldquo;not testable&rdquo; (2). " +
+    "<b>Attack B (D2).</b> Delete <code>d1a</code> &rarr; toast <i>Bent-over row deleted. UNDO</i> plus the " +
+    "persistent <i>Undo: put Bent-over row back</i> control; working copy lost <code>d1a</code>, keyLifts " +
+    "<code>[d1d,d2a,d2d]</code>, speedSource lost <code>d3a</code>. UNDO &rarr; working copy byte-identical to " +
+    "the stored plan, <code>d1a</code> back at index 0, row still UNSAVED CHANGES. Delete again + SAVE: log " +
+    "byte-identical, 41 exercises stored, Trend 33 sessions with both <i>Upper power</i> rows, " +
+    "<code>sessionsWithEx(d1a)</code> still 7 and <code>lastFor(d1a)</code> still found; Trend's week-6 card " +
+    "<i>Reading 3 of 4 key lifts. Bent-over row is not in this plan.</i>; the Plans screen grew <i>What My PHAT " +
+    "does not declare &middot; No source lift set for this speed work &hellip;</i> once. <b>Undo after a " +
+    "reload:</b> toast gone, no undo control, the working copy still lacks the exercise, the stored plan still " +
+    "has it &mdash; the way back is DISCARD CHANGES (<i>Discard your changes to My PHAT? The saved plan does not " +
+    "change.</i>), which restored it. <b>Re-add <i>Bent-over row</i></b> through the form: ADD refused in order " +
+    "<i>Sets must be 1 to 20</i> / <i>Choose a type</i> / <i>Choose an implement</i>; added as " +
+    "<code>x_bp0fr5cq1</code> with a fresh <code>lift</code>; one session logged on it: " +
+    "<code>e1rmByDate</code> old id 6 dates, new id 1, <code>lastFor</code> 60&times;3 vs 100&times;5 &mdash; two " +
+    "histories, never merged. <b>Trend showed three key-lift rows (DB press, Squat, SLDL) and no line for either " +
+    "row:</b> the old id left the plan's key lifts and the new one is not among them; a plan naming key lifts " +
+    "shows only those. The two lines exist in the data and would both show on a plan that names no key lifts. " +
+    "<b>Attack C (D3).</b> Five edits (plan name, day name, exercise name, one set more, day moved): reload; " +
+    "SIGKILL of the browser process 10 s after the last write and relaunch on the same profile; " +
+    "<code>&lsaquo; PLANS</code> and back &mdash; all three: row ACTIVE &middot; UNSAVED CHANGES, editor reopens with " +
+    "all five, stored plan byte-identical to its last save. <b>A throw from <code>setItem</code> on " +
+    "<code>phat:v1:plans</code> during SAVE PLAN:</b> exactly one write attempted (it threw), stored plan the OLD " +
+    "document, working copy intact, in-memory store reverted (Train still read the stored day name), refusal " +
+    "<i>! Could not save. Your entries are still on screen &mdash; try again.</i> (the session sentence, a copy " +
+    "nit); retry saved the NEW document. Never a third state. A throw on <code>phat:v1:planedit</code>: live " +
+    "region <i>Could not save the edit in progress. It is still on screen.</i>, the edit stayed on screen and the " +
+    "next edit wrote it. SAVE PLAN with the working-copy clear throwing: <i>Plan saved.</i>, store updated, but " +
+    "the stale working copy stayed on disk and the row read UNSAVED CHANGES after a reload &mdash; no loss, a " +
+    "phantom badge. <b>Restore attack.</b> (R2) working copy named <code>My PHAT &lt;b&gt;edited&lt;/b&gt;</code>: " +
+    "<i>! Save or discard your changes to My PHAT &lt;b&gt;edited&lt;/b&gt; first.</i> as text (innerHTML held " +
+    "<code>&amp;lt;b&amp;gt;</code>), 0 pulls, 0 writes; the same name escaped in the Plans row, the discard " +
+    "headline, a delete headline (<code>Row &lt;i&gt;x&lt;/i&gt; &amp; y</code>). (R1) after discarding: sheet " +
+    "<i>&hellip; Your 1 plan here is replaced by 1 plan from the backup &hellip;</i>; order " +
+    "<code>recover:log</code> &rarr; <code>recover:bw</code> &rarr; <code>recover:plans</code> &rarr; " +
+    "<code>log</code> &rarr; <code>bw</code> &rarr; <code>plans</code> &rarr; <code>prefs</code>; the plans keep " +
+    "<code>{key,savedAt,reason:\"restore\",value}</code> with <code>value</code> byte-identical to the store as it " +
+    "sat on disk; afterwards <i>Server plan</i> active. (R3) no plans in the backup: <i>&hellip; Your 1 plan here " +
+    "stays &hellip;</i>, no plans key written or kept, store byte-identical. (R4) a broken plan row: " +
+    "<i>! Backup refused, nothing changed: plan \"Broken one\" (row 0): cannot open - exercise d1a has no type " +
+    "or implement (and 1 more).</i>, no sheet, 0 writes, every key byte-identical, no reason token. " +
+    "<code>recover:plans</code> throwing: <i>! Could not keep a copy of this device's plans. Nothing " +
+    "changed.</i>, the three stores untouched (the two earlier recover copies remain, harmless). " +
+    "<b>Boot with <code>phat:v1:plans</code> = <code>{not json</code>:</b> notice <i>Your saved plans could not " +
+    "be read. A copy has been kept aside and new entries will save normally.</i>, <code>recover:plans:&lt;boot " +
+    "ts&gt;</code> holding the raw bytes, PHAT active, writes NOT blocked (the WO-001 log policy, not the W1 " +
+    "scope line's <code>blockWrites</code>); DUPLICATE wrote a fresh store; restore then replaced that store with " +
+    "<b>no</b> <code>recover:plans</code> (order <code>recover:log</code> &rarr; <code>recover:bw</code> &rarr; " +
+    "<code>log</code> &rarr; <code>bw</code> &rarr; <code>plans</code> &rarr; <code>prefs</code>) &mdash; the boot " +
+    "copy intact, the plan built after boot gone. <b>That is B-73, red in S33.</b> " +
+    "<b>D4.</b> Logged on PHAT, USE THIS PLAN on the copy (<i>My PHAT is the active plan.</i>, log untouched), " +
+    "logged on the copy (its row card's ghost read PHAT's 100&times;5 &mdash; same id, same history, as the " +
+    "duplicate sheet says), switched back: the log gained exactly the two sessions, every earlier byte identical; " +
+    "Trend listed <i>Copy upper 11 Sep</i> and <i>Upper power 11 Sep</i>, 35 sessions. <b>D5.</b> A session " +
+    "under <code>p_deleted</code> on <code>d1</code> listed as <i>Upper power 9 Sep</i>; one on a day nobody " +
+    "holds as <i>Day no longer in any plan 10 Sep</i>; a draft entry <code>x_nowhere</code> rendered as card " +
+    "<i>9 of 9 &middot; Exercise no longer in any plan &middot; Not in the plan any more</i>, on the Summary the " +
+    "same, saved with <code>{w:40,r:8}</code>. No raw id anywhere. <b>D6 (live).</b> Signed in as a throwaway " +
+    "account with the REAL <code>sync.js</code>: SAVE PLAN &rarr; local <code>phat:v1:plans</code> write at 33 ms, " +
+    "toast at 98 ms, <b>0</b> requests before the toast; the four upserts at ~3.3 s, the <code>/rest/v1/plans</code> " +
+    "body carrying the edited name; <code>pull()</code> read it back from the server. Offline " +
+    "(<code>setOffline</code> + the <code>offline</code> event): SAVE PLAN &rarr; <i>Plan saved.</i>, stored, " +
+    "<b>0</b> requests, red <i>! Backup failed: No connection. Your log is unchanged on this device.</i>; back " +
+    "online the next push carried the offline name and the server row matched. <b>D11.</b> No request body in " +
+    "either run contained <code>planedit</code> or an <code>edits</code> key. <b>D7.</b> A store with " +
+    "<code>demo:true</code>: SAVE PLAN &rarr; <i>! Sample data is loaded. Leave it before saving a plan.</i>, " +
+    "store byte-identical; <b>but USE THIS PLAN and DUPLICATE both wrote the store</b> (demo flag carried) &mdash; " +
+    "one writer refuses, two do not; the PM's call whether that matters before W13b exists. " +
+    "<b>B1.</b> 99 controls in the editor with a day open, the range panel open, an undo pending and the add form " +
+    "open; 8 on the list; the confirmation sheet; the PHAT read-only screen &mdash; <b>none under 44 px on " +
+    "either axis at 100 % or at 200 % text</b>, no horizontal overflow; SAVE PLAN x 16 w 368 h 56 (64 at " +
+    "200 %) at the bottom, DISCARD CHANGES after it, the only top-corner control <code>&lsaquo; Plans</code>. " +
+    "<b>B4.</b> On a plan built from empty with a speed slot and no tables: the five absent sentences each " +
+    "appeared exactly once, on the Plans list only; zero on Train, the hypertrophy card, Summary, Weight, the " +
+    "editor. The speed CARD carried <i>Use 65&ndash;70% of a weight you could triple.</i> once &mdash; the " +
+    "coach's W3 ruling that the advice line prints under the bar (decisions.md 2026-09-11), not the explanation. " +
+    "<b>B5.</b> No <code>${&hellip;reason&hellip;}</code> in any template; <code>validateCopy</code> and " +
+    "<code>planProblemText</code> speak in words. <b>B6.</b> The honest note, the read-only sentence, the " +
+    "duplicate sheet body, <i>Editing the plan never rewrites logged history.</i>, the delete strings with and " +
+    "without history (<i>Nothing has been logged against it.</i>), <i>+ Build from empty &middot; Name the days, " +
+    "add the lifts, set the ranges</i> all verbatim. <b>B8.</b> <code>scripts/offline-check.mjs</code> PASS " +
+    "(SW active, 9 files cached, offline cold reload, a set logged and kept across a second reload, page errors " +
+    "NONE); <code>file://</code> boot at 400 px with zero console errors or warnings; opening Plans on an empty " +
+    "device wrote nothing (PHAT active, store absent). <b>K2.</b> See &ldquo;not testable&rdquo; (3): every " +
+    "branch behaved as ruled. <b>Extremes.</b> A 0-day plan saved and made active: Train shows no day rows and " +
+    "no error, Diet reads a training day, Trend <i>This plan has no exercises yet.</i>; a broken active plan: " +
+    "Train runs PHAT, the list says so, the row wears CANNOT OPEN and is not a control, the store untouched at " +
+    "boot; a 200-character name and 20 days save and render without overflow; an empty name is refused with " +
+    "<i>A name cannot be empty. Kept &hellip;</i>; the range steppers refuse past each other with " +
+    "<i>Reps from must not be above reps to.</i> <b>Aside, not WO-006's:</b> a control's <code>aria-label</code> " +
+    "keeps the OLD exercise name after a rename until the next repaint (commitName updates only the text " +
+    "nodes); and with the demo anchor a day ahead of the clock, Train printed <i>-1 days ago</i> for a " +
+    "future-dated session. Both P3, filed in the W4 report.</span></li>" +
     "</ol>";
 })();
 </script>

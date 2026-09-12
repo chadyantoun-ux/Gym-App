@@ -1709,3 +1709,40 @@ under the bar), never the explanation (which belongs on Plans via `absentLines`)
 prints `text` for speed work unconditionally. The literals are pinned in S32 as the coach's change, not
 a test bent to code. `docs/coach-audit-addendum.md` §8.4 still carries the old strings and is the
 coach's to amend.
+
+## 2026-09-11 — WO-006 W4: the QA pass on the Plan Editor, one red shipped on purpose
+
+**The suite reads 631 / 630 / 1 and the red is B-73, written before the fix.** A device that boots with an
+unparseable `phat:v1:plans` keeps the raw bytes aside and keeps writing (the WO-001 log policy, applied to
+plans by `preserveUnreadable`); a plan built and saved after that boot is then replaced by a restore with
+**no** `recover:plans` copy, because `restoreSteps` keys the plans keep on the store's BOOT status
+(`stores.plans === "ok"`) and `S.stores` is never updated after a successful `save()`. Observed end to
+end in the browser (tests.html "Already proven" item 29). The log never had this gate — its keep is
+unconditional — which is why this is P1 and not P0. The same precedent as C-14: the test is the proof,
+it is not named as a carried-forward failure, and it goes green when backend either keys the keep on
+content (`local.plans` holds a plan or a non-PHAT active id) or `index.html` marks a store readable once
+it has written it. QA recommends the `logic.js` half: it is the one this page can assert.
+
+**D8 as written was not reachable through the editor, and that is correct.** The work order said "remove
+X from the plan (via the working copy is enough — or switch the active plan)". Neither produces an orphan:
+the working copy is not the plan a session reads, and D10 refuses the save and the switch while a draft
+exists. The orphan needs the STORED plan to lose the exercise while the draft holds a set, which only a
+second document of the app (or a hand edit) can do — `sessionOpen()` is a memory check guarding a disk
+fact, listed as a P2 extraction request. QA produced the orphan that way; D8 passed on it (the card renders
+last, flagged, saves with the session, the Summary counts it). The criterion stands; the recipe in §4 W4 was
+wrong about the working copy.
+
+**Two things the PM decides, not QA.** (1) D7: `SAVE PLAN` refuses a `demo:true` plan store; `USE THIS
+PLAN` and `DUPLICATE` write it (flag carried). One writer refuses, two do not. (2) A draft whose own
+`planId` names a plan the store no longer holds is saved under the ACTIVE plan's id with the active plan's
+`rx` — provenance rewritten, no set lost; the pure half (`planIdOf`, `buildSession`) is honest and pinned
+in S33, the call site is `finish()`'s `sp().planId`. Needs `strength-coach` on whether an unknown epoch
+should carry an `rx`.
+
+**A browser fact recorded for the phone checklist:** desktop Chromium commits `localStorage` to disk
+about 5 s after a write; a SIGKILL of the browser process inside that window lost the write and every
+unflushed one before it (0.5 s and 3 s: gone; 8 s: kept; graceful close: kept). Not the app's, not
+fixable by the app, and exactly what manual item 2 exists to measure on a phone.
+
+**Housekeeping:** the tests.html intro no longer says three tests are red for C-14; they went green in
+`d7b9f12` and the paragraph now says so.
