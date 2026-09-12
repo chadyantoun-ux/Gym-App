@@ -1,7 +1,7 @@
 # WO-007 · Re-split: move exercises between days, keep the history
 
 Author: `project-manager` · Date: 2026-09-12 · Base: `main @ 270e7e0` · Branch: `wo-007-resplit`
-Status: **specified** — no code written. Blocked on W1 (coach) before any `logic.js` change.
+Status: **closed 2026-09-12** — merged to `main` @ `d7d5ac0`, deployed and byte-verified. See §10.
 
 ---
 
@@ -412,3 +412,49 @@ B-86/B-87 to whatever the coach ruled, and records the four answers above.
    `sw.js` bump from its own header, deploy per `docs/deploy.md`, run `scripts/verify-deploy.sh`,
    confirm the live `index.html` carries W2's primary-action string. Report the verify output."*
 7. `project-manager` → close per §8.
+
+---
+
+## 10. Closure record (2026-09-12)
+
+**Closed on `main` @ `d7d5ac0`.** Deployed; all eleven files byte-verified on the production origin;
+`Duplicate PHAT and rearrange it` and `Move to another day` confirmed live. `sw.js` stays `v4`: the
+release-engineer applied the header rule (file list unchanged, nothing to discard) rather than the WO-006
+`v4` precedent, and said so in the merge body. Suite **653 / 653 / 0**, `offline-check.mjs` PASS.
+
+### What happened against the dispatch list
+
+| # | Item | Owner | Commit | Outcome |
+|---|---|---|---|---|
+| 1 | W1 | `strength-coach` | (text, no files) | Nine tagged answers. **Rule PV1**: provenance survives placement only while the power days are intact. **Rule RI1**: a day's counter means the accessories it actually reintroduced; a moved `cut` slot arrives last and not back. Three warn-once strings, priority Q3 > Q1 > Q4, never a refusal. Reading (A) signed off; reading (B) recommended against, with a direct position for Chady. Q2: `k` stays the slot's; the Type line says the rule and rest travel with the exercise (`KIND_LINE`). Q8: one placement line, Plans screen only, ABSENT shape (`PLACEMENT_LINES`). The nine answers were returned as text to the main session and are recorded in `docs/decisions.md` (2026-09-12, "WO-007 closed") to the extent they reached code or the PM |
+| 2 | W2 | `ux-designer` | `5675a42` | §9.9 of `docs/specs/wo-004-screens.md`. Sheet over drag (B-19 kills drag state mid-gesture; no native mobile drag without a library). Text trigger on its own line — the row already used 348 of 368 px. Undo ruled needed. Plans list order: PHAT → `Duplicate PHAT and rearrange it` → stored → `Build from empty` (dashed) → ABSENT lines → honest note |
+| 3 | W3 | `backend-engineer` | `9ea729f` | `moveExerciseToDay` with `from` accepted back as the undo argument, `removeDay` (empty and non-last only), `phatProvenanceReport` `{phat, prescription, placement}`, `reconcileReintro`, `moveWarning`. D1–D6 pinned in S34. 648 / 648 / 0, nineteen mutants killed. No schema bump, no migration, no stored value rewritten |
+| 4 | W4 | `frontend-engineer` | `1b638bc` | The control, the sheet with counts and warn-once in K2's shape, toast with Undo carrying `from`, empty-day delete (absent, not disabled, also absent on the last day), list reorder, kind tags on a mixed day, `KIND_LINE` in the range detail, RI1 reconciliation at SAVE PLAN with the log meta written only when a counter moved, still one `save(PLANS)`. **Found and fixed B-94**: editor taps on the day-name / exercise-name fields fell through to the Train handler and silently started a session on the active plan. D7–D11, B1–B5 verified at 400 px and 200 % |
+| 5 | W5 | `qa-engineer` | `19ba764` | **Pass.** 653 / 653 / 0. Attack A: the full 42-slot PPL through the UI, engines byte-identical, generic C7b copy printed, replayed in S35 in the browser's order. Attack B: move under a draft including two-tab, refused from disk. Attack C: empty-day guard via DOM, dispatched click and direct call. Attack D: RI1 examples 1 and 2 on screen. One P2 (B-95): plain out-and-back on a counted day in one SAVE names the wrong accessory as back — reconcile is by cardinality, the counter is an index; fix by identity, coach to confirm. Also: `logic.js` is CRLF on disk and six mutants silently no-op'd until the runner normalised endings (B-96); a third suite tripwire now proves no fixture writes a `phat:*` key |
+| 6 | W6 | `release-engineer` | `d7d5ac0` | Merge, deploy by the main session, byte verification of eleven files on the production origin, two live strings confirmed. No `sw.js` bump — the header rule, applied |
+
+### §7's four "needs from Chady", as they resolved
+
+1. **(A) or (B)?** No answer; **both built**, as the default said. The coach ruled: (A) signed off, (B)
+   recommended against. The app is honest about (B) — three warn-once sentences at the move and the
+   `[Certain]` withdrawn from the six-week check — rather than refusing it. His to build; the app will not
+   flatter it.
+2. **Before or after the first logged session?** **Shipped before, at his instruction.** The PM's
+   recommendation (after, under PHAT as-is, because ids are preserved) is on the record in §6 and in
+   `docs/decisions.md`, and was not withdrawn. Logged sessions: still zero.
+3. **Keep or remove `Build from empty`?** No answer; **kept, demoted** (dashed, below the primary). One
+   commit to remove if he says so.
+4. **"Alternate them"?** No answer; **read as arrangement**. Alternating A/B weekly plans is plan
+   scheduling, not built and not filed; becomes an item on the other reading.
+
+### Backlog
+
+Closed: B-83, B-84, B-85, B-86 (Rule PV1), B-87 (Rule RI1, with B-95 as its residue). Filed: B-94 (done in
+passing, `1b638bc`), B-95 (P2, `strength-coach` → `backend`), B-96 (P3, `qa` + `release`). The decisions
+entry of 2026-09-12 ("WO-007 closed") carries the (A)/(B) ruling with the coach's strings, the PV1
+correction to the PM's own recommendation, and the `sw.js` rule as applied.
+
+### Hand-back
+
+Log Upper Power under PHAT as it stands. Every id follows the exercise wherever it is moved later; nothing
+logged today is lost by any rearrangement. Do not open the editor before the first session is logged.

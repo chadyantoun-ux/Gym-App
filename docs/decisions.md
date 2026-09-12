@@ -1993,3 +1993,98 @@ changed. Five tests were added (S35) and one meta-test.
 
 **Rules out:** closing the RI1 edge by editing the observed pin; a fixture that writes any `phat:*` key on the
 harness origin; citing backend's mutant count without re-running it.
+
+## 2026-09-12 — WO-007 closed: both readings built, the coach ruled (B) honest not forbidden; shipped before the first session at Chady's instruction; `sw.js` stayed `v4` by its own header
+
+**Closed on `main` @ `d7d5ac0`**, deployed, eleven files byte-verified on the production origin, `Duplicate PHAT
+and rearrange it` and `Move to another day` confirmed live, suite 653 / 653 / 0. Closes B-83, B-84, B-85, B-86,
+B-87; files B-94 (done in passing), B-95 (P2, coach first), B-96 (P3). Chain: W1 coach → W2 ux `5675a42` (§9.9)
+∥ W3 backend `9ea729f` → W4 frontend `1b638bc` → W5 QA `19ba764` (pass) → W6 release `d7d5ac0`.
+
+**Reading (A) and reading (B) — the ruling, and the coach's position for Chady.** Both were built because the
+primitive is one function; the coach ruled on them separately as the order asked. **Reading (A)** — the two
+power days intact, the three hypertrophy days regrouped into Push / Pull / Legs — is **signed off**: the
+prescription, the rest rows and the six-week diagnosis all still describe the programme the brief assessed, and
+Rule PV1 keeps provenance for exactly that shape. **Reading (B)** — a full PPL with power and hypertrophy
+slots sharing a day — the coach **recommended against**, with a direct position for Chady rather than for the
+code: it is a different programme wearing PHAT's slots, the brief's certainty about the split does not
+transfer to it, and it is the tool-instead-of-training pattern the brief warns about. The app's behaviour
+under (B) follows from that position and is stated in the coach's own strings, which shipped verbatim:
+
+- Q1, on a day that would mix power with hypertrophy for the first time: *"… would hold power and
+  hypertrophy work together. Each exercise keeps its own rule and rest. Put the power sets first. The six-week
+  check will treat this plan as yours, not PHAT."*
+- Q3, on speed work landing beside its source lift: *"… would sit on the same day as …, the lift it takes
+  65–70% from. PHAT puts speed work 2–3 days after the heavy lift. On the same day it is extra sets, not speed
+  work. Keep them apart, or delete the speed work."*
+- Q4, on a second slot of the same movement: *"… already holds … at …. This puts the same movement there
+  twice. Keep one unless you mean both."*
+
+Priority when they coincide: **Q3 > Q1 > Q4, one message per move.** All three are warnings, never refusals —
+the move is his to make. **Ruled: reading (B) is built and shipped honest.** The app does not forbid a PPL out
+of PHAT's slots; it says once, at the moment of the move, what the coach would say, and it withdraws the
+brief's `[Certain]` from the six-week check (Rule PV1) so the diagnosis is never spoken about a split the brief
+never saw. The coach's nine answers were returned to the main session as text (W1 touched no files); their
+rulings live in `logic.js` as Rule PV1 (`phatProvenance`), Rule RI1 (`moveExerciseToDay`, `reconcileReintro`)
+and `moveWarning`, in `index.html` as `MOVE_WARN`, `PLACEMENT_LINES` and `KIND_LINE`, and in this entry.
+Chady did not choose between (A) and (B) (WO-007 §7 item 1); the default — build the primitive, coach rules
+on both — shipped. Which he builds is his; the app is honest about either.
+
+**Rule PV1, narrower than the PM's recommendation, and the PM's was wrong.** I recommended provenance drop on
+*any* cross-day move or day deletion. The coach ruled that reading (A) keeps it: provenance survives placement
+**only while the power days are intact** — the four key lifts on their shipped days, no day mixing `power` with
+`hyp` or `speed`, five or more days holding exercises. The narrower test is right because a regrouped
+hypertrophy block changes nothing the brief was certain about; my test would have withheld a true sentence to
+avoid a false one. `phatProvenanceReport` keeps the prescription test (C7b) and the placement test (PV1)
+apart so the Plans screen's placement line renders only when the prescription stands and the placement does
+not — never on a 5×5 edit, where there is no placement to speak about. Fail closed both ways.
+
+**Rule RI1.** A day's reintro counter means the accessories it **actually reintroduced**. A moved `cut` slot
+leaves the origin's declared order and arrives on the destination **last and not back**, re-earned through
+the normal offer; the destination's counter is reconciled at SAVE PLAN against what was previously
+reintroduced and is still on the day. Undo via `from` is the identity, including the origin's declared list;
+a plain move back is not an undo and lands last — he moved it twice. The one case the four RI1 examples do not cover,
+a plain out-and-back on a counted day in one SAVE (reconcile is by cardinality, the counter is an index), QA
+observed and pinned as OBSERVED; it is **B-95**, the coach confirms the identity rule before backend touches
+`reconcileReintro`, and the S35 pin inverts when it is ruled. B-87's rule is not reopened to fix it.
+
+**Shipped before the first logged session, at Chady's instruction.** WO-007 §6 and the 2026-09-12 entry above
+recommended shipping after the first session, logged under PHAT as-is, on the grounds that ids are preserved
+so nothing logged now is lost by a re-split later. He had the recommendation and the order proceeded; the
+recommendation stays on the record and was not withdrawn. The data argument is now proven rather than
+asserted: D1 held with all 42 slots moved (engines byte-identical by id, log untouched), in the pure suite and
+through the UI. The count of logged sessions is still zero.
+
+**`Build from empty` kept, demoted** (§7 item 3, no answer, default). **"Alternate them" read as arrangement**
+(§7 item 4, no answer, default); alternating A/B weekly plans is plan scheduling, not built, not filed — it
+becomes an item if he says the other reading.
+
+**W2's three calls, recorded.** A bottom sheet over drag — B-19's `innerHTML` re-render kills drag state
+mid-gesture and there is no native mobile drag without a library. A text trigger (`Move to another day`) on its
+own line under the arrows, because the row already used 348 of 368 px and a fourth glyph could not stay ≥ 44
+px. Undo ruled **needed, not noise**: moving back by hand is two more taps and, under RI1, lands the exercise
+last rather than where it was — so the toast's Undo carries `from` and is the only route that restores the
+bytes.
+
+**`sw.js` stays `v4` — the header rule applied as written.** The 2026-09-12 (WO-006 close) ruling was that
+`VERSION` moves when the file list or a caching rule changes, decided by the release-engineer from `sw.js`'s
+own header, and that the `v3` → `v4` bump was not precedent. This release's file list is unchanged at eleven and
+nothing needs discarding, so the release-engineer did not bump and said so in the merge body. First release
+under the rule; the rule held. Verification was of the deployed bytes on the production origin, not a build
+status, per `docs/deploy.md`.
+
+**B-94, filed done.** A stray tap inside the editor (day-name field, exercise-name field, `No exercises yet.`)
+fell through to the Train handler's `[data-day]` and started a session on the active plan. Live on `main` since
+WO-006; found by `frontend-engineer` building W4, fixed in the same commit, confirmed both ways by QA. Filed
+done because the backlog records what is true on `main`. Not data loss — a new draft, offered back, discardable —
+but a write from a screen that should never write to the draft.
+
+**B-96, the CRLF hazard, is in the tree, not only in the rig.** Six mutants silently failed to land because
+`logic.js` is CRLF on disk and the injection strings were LF. QA's rig now asserts every injection matched
+exactly once; the tree still checks `logic.js` out CRLF under `autocrlf=true` with only `*.sh` pinned. Filed
+for release + qa; recommendation is `*.js text eol=lf` in `.gitattributes` with a check that deployed bytes do
+not change, and the "matched exactly once" assertion written down as a standing rule of the mutant rig.
+
+**Rules out:** treating a warn-once as a refusal; re-widening PV1 to the PM's original "any move drops it";
+closing B-95 by editing the observed pin; bumping `sw.js` for a release whose file list did not change; reading
+this close as reversing the recommendation to log before rebuilding.
