@@ -2335,3 +2335,44 @@ can do it: credentials are his and Diana's, and the lock before both accounts ex
 the diet layer for a second account; loosening the evidence rule so a fresh store can be stamped on its own
 first session; bumping `sw.js` for a release whose file list did not change; treating this close as reversing
 the standing recommendation — seven tools, zero sessions, log one.
+
+### 2026-09-12 — WO-009: the stick figures are retired; photographs replace them, under the same Rule F1
+Chady, on the third look at the figures: *"the movement and cue visuals sucks … it's not clear at all."*
+Offered photographs from `free-exercise-db` or image-model generation; he chose photographs. B-60/B-64
+rebuilt the drawings, WO-005 rebuilt the frame, and the verdict did not move — the constraint that made
+them unclear (≤ 12 strokes at 64 px) cannot show a seat, a pad or a pair of handles, and every F1 drop
+(`d4c`, `d4g`, `d5c`, `d5d`, `d5j`) was a slot where that was the whole picture. **Retired, not iterated:**
+`POSES`, `PAT`, `diagram()`, `limb()`, `figSeq` and `svg.mv` are deleted in W5, with the reason at the site.
+**Five decisions, so nobody re-litigates them:**
+1. **The map lives on the plan document.** `fig: "<upstream id>"` per shipped slot in `PHAT_PLAN`, read
+   by `PHAT.figFor(id)` from the shipped plan only, gated by `shippedName()` as `hasFig` is today. `PAT` in
+   `index.html` broke the 2026-09-10 ruling ("no slot id survives in code outside the plan document") and
+   was unreachable from `tests.html` on `file://`; this honours the ruling and lets QA pin the whole table.
+   `validatePlan` tolerates unknown keys and `copyPlan` carries them, so **no migration and no
+   `SCHEMA_VERSION` move.** A stored copy without `fig` is not consulted for it.
+2. **Rule F1 decides every slot, against the photograph as an image.** The coach reviews the pair, not
+   the name; a slot he cannot see a pair for is `none`; a wrong variation is a wrong figure. The map
+   ships as addendum §13 and W4 transcribes from there, never from the work order (the B-55 lesson).
+3. **Licence: The Unlicense**, verified from `LICENSE.md` and the GitHub API at the pinned SHA
+   `a859101d633a01c4a1a920d6a8ce41dabba0705f`. Committed verbatim as `assets/ex/LICENSE.md` with a
+   `SOURCES.md` per file. Downloads pin the SHA, never `main`.
+4. **Photos are OPTIONAL in `sw.js` and hard failures in the verifier.** A missing photo must never fail
+   the worker install — the cue survives alone — but a 404 must never ship, so `verify-deploy.sh` checks
+   each one for 200 + `image/jpeg` + byte length. `sw.js` → `v5` (file list changed — the header rule).
+   `usable()` gains `.jpg` (B-103). The photo list is **generated** from `assets/ex/manifest.json` and
+   the verifier refuses to run when the manifest, the `sw.js` array and the files on disk disagree in
+   count (B-104) — a seventy-path list is not checked by eye, so it is checked by script.
+5. **`wo-004-screens.md` §11.6's "inline SVG only, no `<img>`, no raster" is struck.** It was the UX
+   rule for the SVG approach, not a CLAUDE.md §3 constraint. What §3 actually requires survives intact:
+   no build step (the resize script is a developer tool like `make-icons.mjs`, run once, nothing at
+   runtime needs it), offline-first (every byte precached, no runtime fetch), no hex outside `:root`.
+   `ux-designer` rewrites §11 for photographs in W2, including whether a photograph stays decorative
+   (`alt=""`, cue as the accessible carrier — the PM's recommendation, to be ruled not assumed).
+**Riding on the same order, separate branch:** `Change password` for a signed-in user (B-102), because
+Diana's password was generated for her and `supabase/README.md` §2.1 says there is no in-app reset.
+`USER_UPDATED` is not a user change and must not wipe `S.sync.last` or schedule a push.
+**Standing diagnosis, raised and answered:** fourth tooling ask since the deploy, zero logged sessions.
+He was told; he chose. Built properly.
+**Rules out:** a fourth stick-figure rebuild; a slot mapped to "the nearest photo"; a hand-typed photo
+list in any of the three deploy enumerations; fetching a photo from any origin at runtime; any
+`SCHEMA_VERSION` move for a display field.
