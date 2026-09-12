@@ -1860,3 +1860,49 @@ next save, recoverable because the keep now exists — is **B-76**, open, first 
 **On process, one more line.** W4's first pass was a fail, and the fail was correct: a P1 written red as the
 fix's proof, two P2s, then a second pass that found a pre-existing P1 while verifying the fixes. That is what
 "QA always last" buys. The item did not close on the first green.
+
+## 2026-09-12 — WO-007: a re-split is a MOVE, never a delete-and-re-add; build-from-empty is demoted, not removed
+
+Chady, the morning after WO-006 shipped: *"I don't want to build from empty, I might want to use the
+same exercises from phat but alternate them? maybe I want to do push / pull / legs."* The editor cannot
+do it: `moveExercise` reorders within a day, `moveDay` reorders days, and nothing crosses a day boundary.
+The only route today is `removeExercise` + `addExercise`, and `addExercise` mints a fresh id — B-46 by
+the one door WO-006 left open. **Filed B-83 (P1).**
+
+**Ruled, PM:**
+- **A cross-day move preserves the id, the `lift`, and every other field byte-for-byte.** `speedSource`
+  (exId → exId) and `keyLifts` (exIds) are day-agnostic and are not touched by a move. History follows
+  the exercise because history is keyed by the id and nothing else. Move-then-undo is the identity on the
+  document bytes.
+- **A day can be deleted only when it is empty** (B-84). No path removes a slot by removing its day.
+- **`Build from empty` is demoted, not deleted** (B-85). His words are a preference about his route in,
+  not a request to remove a shipped, tested capability; removing it is his to say (WO-007 §7 item 3).
+  The list's primary action becomes *Duplicate PHAT and rearrange*.
+- **`Duplicate` preserving ids (2026-09-10) is what makes this cheap.** Not reopened; depended on.
+
+**Two advice hazards the move creates, both the coach's to rule before backend builds them:**
+- **B-86.** `phatProvenance` tests `derivedFrom` + four key lifts present + `s/lo/hi` unchanged, and
+  never looks at which day a lift is on. A push/pull/legs built by moving slots keeps all of that true,
+  so ST1 would print the brief's `[Certain]` — *the split isn't the problem* — about a split the brief
+  never assessed. That is the claim C7b exists to withhold. PM recommendation: provenance drops on any
+  cross-day move or day deletion. **W1 question 5; W3 item 3 does not ship before the answer.**
+- **B-87.** `state.reintro[dayId]` is a count per day read against a per-day reconciled order. A moved
+  `cut` accessory changes what a day's count means. Does "back" follow the exercise, the day, or reset?
+  **W1 question 6.** Default if unruled: a moved accessory goes last in its new day's order.
+
+**The standing diagnosis, applied.** Yesterday's hand-back line was "log Upper Power today; do not
+open the editor before the first session is logged." The editor was opened first. This is the second
+rebuild of the plan editor for a log with zero sessions. **PM recommendation on the record: ship
+WO-007 after the first logged session, and log that session under PHAT as-is** — not as discipline
+but as data: every operation in this order preserves ids, so a session logged under PHAT today follows
+Bent-over row onto a Pull day next week with nothing lost. The reverse is not true: nine coaching
+questions have to resolve before a rearranged plan can be advised on honestly. His call (WO-007 §7
+item 2); if he will not train until the split is PPL, it ships first and the honest note stays.
+
+**Reading of "push / pull / legs" left open deliberately.** (A) regroup the three hypertrophy days and
+keep the two power days, or (B) a full PPL where power and hypertrophy slots share a day and a speed
+slot can sit beside its source lift. The primitive is the same; the coaching differs, so W1 rules on
+both and Chady picks (§7 item 1).
+
+**Rules out:** any re-split that re-mints an id; deleting a non-empty day; removing `Build from empty`
+on the PM's say-so; shipping `moveExerciseToDay` with `phatProvenance` unchanged.
