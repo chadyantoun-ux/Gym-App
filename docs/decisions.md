@@ -2208,3 +2208,53 @@ re-observe with the real module — the rig is described in item 32 and takes on
 **Rules out:** filing the false C3 as a rig artefact (the REST log shows zero reads on a working network); calling
 the stamp hazard closed because the live first run avoids it (the shape is one log write away, S37 says so); deleting
 the observed-pin on the bodyweight evidence to make the hazard disappear from the suite.
+
+## 2026-09-12 — WO-008 W7, second pass: the false C3 is closed at `c102240` as observed with the real module; W7 passes for release; one account to delete and sign-ups still on
+
+Verified `c102240` — one function and one gate over `2e98f15`: `authTap` holds a module-level `authBusy` for the span
+of one attempt and refuses a re-entrant call; `paintBackup` does not route first-run screen B anywhere while it is set,
+so `authTap`'s success path is the only route to C. Suite **689 / 689 / 0**, three tripwires, `scripts/offline-check.mjs`
+PASS. The evidence is `tests.html` "Already proven" item 33; the "Not testable" entry that carried the defect now
+carries its closure, and says why it stays a rig and not a `file://` test.
+
+**Pass for release.** Frontend's seven-step path, re-run against the live project through the real `sync.js` and the
+real CDN module, on fresh contexts, with every `/auth/v1` and `/rest/v1` request logged and the screen classified by a
+`MutationObserver` inside the page on every mutation (frontend's harness lesson applied: B is keyed on `#ob-back` /
+`#bk-email`, C on `#ob-h.obh`, never on `#ob-h` / `#ob-start`, which both screens carry):
+
+1. Fresh → Sign in → correct: **five of five** `A > B > B[Signing in.] > C-pull > C2`, first C-state C2, no C3 for
+   even one frame, four `GET 200` reads, one token request, zero writes. Eleven first-run sign-ins across the whole
+   run: C2 × 10, C1 × 1, C3 × 0. Tap to answer 1.8 s. Item 32 had four of four C3 with zero reads.
+2. Wrong password: `B[! Wrong email or password.]`, `role=alert`, announced once, email kept, buttons live, zero
+   keys, `POST token 400` and nothing else; the right password in the same B → C2 first.
+3. Enter twice in the password field: **one** `/auth/v1/token`. Three synchronous keydowns in one task: one. Enter
+   plus a Sign in tap plus a Create account tap in one task: one, and it is the sign-in. No busy refusal painted.
+4. Network cut after the tap (socket abort, and the context offline in the same instant): `B[! No connection.]`,
+   never stuck on `Signing in.`, and the next tap with the radio back → C2 — `authBusy` is cleared by the failure.
+   Control: reads cut after a good token → a **true** C3 that says `No connection.`, and Try again → C2.
+5. Persisted session on a first-run device: reload → A, seven seconds, zero `/rest/v1` writes, zero `phat:*` writes;
+   Sign in on A → straight to C2 with no token request; START WITH AN EMPTY LOG → `onboarded`, no log key, no push.
+
+Also observed, beyond the ask: the Settings sign-in path is unchanged (two Enters → one request, the sign-in push is
+one `user_state` write, no C-screen in the timeline); C1 on the first landing with the real count once the account
+held a session, then Restore byte-identical; D3 / D4 / D7 on the shared device with A's stamped stores (R-a, R-b, R-c
+verbatim, once each, nothing sent, byte-identical from a cold page, sign-out removes `phat:auth` only); D2 (nothing of
+A's under test+d on the server); D5 on the item-32 seed (one stamping write, the strip, the `+0.27 kg` band, Diet 1,108
+chars, second boot zero writes); D1 from outside with the one account (own row as positive control, A's uid → `[]`
+× 5, anon → `[]` × 5, insert under A → `403 42501`).
+
+**Observed, not ruled:**
+- **Sign-ups are still enabled** (`/auth/v1/settings` → `disable_signup:false`). W3's lock has not been run. The
+  throwaway `test+d@example.com`, uid `aee69577-d260-4338-8bd8-9dacac75e21c`, holds one test session and one state
+  row and is to be deleted from the dashboard; the client cannot delete users and this session has no dashboard.
+- **A rig artefact worth writing down so nobody files it:** the server returns the session document from `jsonb`,
+  which sorts keys; a string compare against the local JSON fails on order alone. The restore round trip through
+  `restorePayload` is byte-identical, which is the claim that matters (item 33 (7)).
+- **D1's two-account, both-directions form was not re-run** — the second account is gone and the SQL has not
+  changed since `2e98f15`. Item 32 (A) stands as the evidence for that shape.
+- The Home fold regression and the archive-trigger `DELETE` finding from the first pass are unchanged by this diff
+  and stay where they were filed.
+
+**Rules out:** extracting `authBusy` to `logic.js` to make it a `file://` test — it is two lines of routing around a
+module call, and the extraction would test itself, not the race between `onAuthStateChange` and the route; the rig is
+the test, re-run when `authTap`, `paintBackup`, `obPull` or `sync.js` change.

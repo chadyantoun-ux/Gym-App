@@ -245,7 +245,10 @@ decision from the counts, no recover copy on an empty device, D2 (nothing of A&r
 to A&rsquo;s exercise), and D5 on the very seed the browser booted on both commits. <b>Two things the pure half cannot reach are
 real findings, not gaps</b>: the false C3 on every first-run sign-in (a race between <code>sync.js</code>&rsquo;s
 <code>onAuthStateChange</code> and <code>paintBackup</code>&rsquo;s route to screen C &mdash; <em>Could not read the backup. A backup is
-already running.</em> with zero REST reads, four times out of four) and the R-a latch; both are under &ldquo;Not testable&rdquo;.</p>
+already running.</em> with zero REST reads, four times out of four) and the R-a latch; both are under &ldquo;Not testable&rdquo;.
+<b>The false C3 is closed at <code>c102240</code></b> and the second pass (item 33) observed it closed against the live project:
+eleven first-run sign-ins on eleven fresh phones, every first landing C1 or C2 with four REST reads, a screen timeline recorded
+from inside the page showing no C3 for even one frame; a true C3 (reads cut after a good token) still names <em>No connection.</em></p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -14151,7 +14154,16 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "running.</em> with <b>zero</b> REST reads, on a working network, four sign-ins out of four against the live project; " +
     "<em>Try again</em> recovers every time. Frontend&rsquo;s stubbed module could not show it because the stub clears busy before it " +
     "emits. Nothing is written and nothing is lost; it is the first sentence a second phone ever sees. Not reachable from " +
-    "<code>file://</code> (an ES module with a CDN import); the observation is item 32 (B). <b>(2) The R-a latch</b> " +
+    "<code>file://</code> (an ES module with a CDN import); the observation is item 32 (B). <b>CLOSED at <code>c102240</code></b>: " +
+    "<code>authTap</code> holds a module-level <code>authBusy</code> for the span of one attempt and <code>paintBackup</code> does " +
+    "not route screen B anywhere while it is set; the success path of <code>authTap</code> is the one route to C, and a second " +
+    "tap or Enter while an attempt is in flight returns before the module is called. Observed closed against the live project on " +
+    "2026-09-12 (item 33): eleven first-run sign-ins, first landing C2 &times; 10 and C1 &times; 1, four <code>200</code> reads " +
+    "each, no C3 in a per-mutation screen timeline; the true C3 still renders when the reads are cut. Still not a " +
+    "<code>file://</code> test &mdash; <code>authBusy</code> is two lines of routing in <code>index.html</code> around a module " +
+    "call, and extracting a boolean gate to <code>logic.js</code> would test the extraction, not the race. The rig is the test; " +
+    "re-run it when <code>authTap</code>, <code>paintBackup</code>, <code>obPull</code> or <code>sync.js</code> change. " +
+    "<b>(2) The R-a latch</b> " +
     "(<code>S.sync.refused</code>) is <code>index.html</code> state: observed once per sign-in, silent on the next save, reset by " +
     "sign-out and by the owner signing in &mdash; item 32 (D). <b>(3) The seven identity states</b> H1&ndash;H7 and the three " +
     "session / Summary lines are view strings; every one was read off the screen (item 32) and the refusal sentences underneath " +
@@ -14964,6 +14976,70 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "is why this run could not wipe its own rows. And the auth endpoint rate-limited a burst of sign-ins (a <code>429</code> without " +
     "CORS headers reads as <i>No connection.</i> in the app &mdash; honest, if terse). " +
     "<b>scripts/offline-check.mjs: PASS. file:// suite 689 / 689 / 0.</b></span></li>" +
+    "<li><b>WO-008 W7, second pass &mdash; the false C3 closed at <code>c102240</code>, observed against the live project with the " +
+    "real module: eleven first-run sign-ins, every first landing C1 or C2; the re-entrant tap refused; the network cut after the " +
+    "tap; the open-time push still gated; D2&ndash;D5 and D7 re-run on the one diff.</b> <span class=\"msg\">Run 2026-09-12 against " +
+    "<code>c102240</code> (one function and one gate over <code>2e98f15</code>: <code>authBusy</code> in <code>authTap</code>, and " +
+    "<code>paintBackup</code> not routing screen B while it is set). Rig as item 32 plus <b>the lesson from frontend&rsquo;s rig, " +
+    "applied</b>: screens B and C both carry <code>#ob-h</code> and <code>#ob-start</code>, so a landing check keyed on those " +
+    "reads &ldquo;C2&rdquo; while still on B. Here the screen is classified by a <code>MutationObserver</code> on <code>#view</code> " +
+    "<em>inside the page</em>, on every mutation, with B keyed on its own markers (<code>#ob-back</code> / <code>#bk-email</code>) " +
+    "and C on the heading class only C carries (<code>#ob-h.obh</code>), then C1 / C2 / C3 / C-pull by <code>#ob-restore</code> / " +
+    "<code>#ob-start</code> / <code>#ob-retry</code>; every transition is on the record with a timestamp, so a state that lived for " +
+    "one frame cannot be missed. Every <code>/auth/v1</code> and <code>/rest/v1</code> request is logged with its response status. " +
+    "One throwaway account, created through the app&rsquo;s own <i>Create account</i> on screen B: <code>test+d@example.com</code>, " +
+    "uid <code>aee69577-d260-4338-8bd8-9dacac75e21c</code>, password never written down; sign-ups were still enabled " +
+    "(<code>/auth/v1/settings</code> <code>disable_signup:false</code>). " +
+    "<b>(0) Sign-up on B</b> &rarr; timeline <code>A &gt; B &gt; B[Signing in.] &gt; C-pull &gt; C2</code>, <code>POST signup 200</code> " +
+    "then four <code>GET 200</code> (sessions, bodyweight, plans, user_state), zero writes, disk <code>[\"phat:auth\"]</code>; " +
+    "<i>Sign out</i> from C2 &rarr; A, zero keys. " +
+    "<b>(1) Five fresh phones, Sign in</b> &rarr; five of five <code>A &gt; B &gt; B[Signing in.] &gt; C-pull &gt; C2</code>, first " +
+    "C-state C2 every time, no C3 in any timeline, four reads all 200, one token request, zero writes, zero page errors. Timed, " +
+    "run 1: <code>+0 A, +940 B, +1088 Signing in., +1533 C-pull, +2870 C2</code> &mdash; 1.8 s from the tap to the answer; " +
+    "<i>Signed in.</i> announced once. Item 32 (B) had this at four of four C3 with zero reads. " +
+    "<b>(2) Wrong password</b> &rarr; <code>B[! Wrong email or password.]</code>, <code>#bk-status</code> <code>role=alert</code>, " +
+    "announced assertive once, email preserved, buttons enabled again, <code>POST token 400</code> and nothing else, <b>zero</b> " +
+    "localStorage keys; the right password typed into the same B &rarr; C2 on the first landing (the failure path clears the " +
+    "gate). <b>(3) Re-entrance</b>: two <code>Enter</code>s in the password field &rarr; <b>one</b> <code>/auth/v1/token</code>; " +
+    "three <code>keydown</code> Enters dispatched in one task (no scheduling gap) &rarr; one; Enter plus a <i>Sign in</i> tap " +
+    "plus a <i>Create account</i> tap in one task &rarr; one request and it is the sign-in, never the sign-up; C2 first in all " +
+    "three, <i>Wait for the current backup to finish.</i> never painted, <i>Signed in.</i> once. " +
+    "<b>(4) Network cut after the tap</b>: (a) the token request aborted at the socket and (b) the context taken offline in the " +
+    "same instant as the tap &rarr; both <code>B[! No connection.]</code>, never stuck on <i>Signing in.</i>, buttons live, email " +
+    "kept, zero keys, and the next tap with the radio back &rarr; C2 first (<code>authBusy</code> cleared by the failure); " +
+    "(c) the token lands and the reads are cut &rarr; <b>a true C3</b>, <code>C3[! Could not read the backup. No connection.]</code> " +
+    "&mdash; the sentence is the network&rsquo;s, not <i>A backup is already running.</i> &mdash; and <i>Try again</i> with the " +
+    "reads back &rarr; C2, still only <code>phat:auth</code> on disk. " +
+    "<b>(5) The open-time push gate</b>: on C2 (signed in, not onboarded) reload &rarr; screen A, seven seconds, <b>zero</b> " +
+    "<code>/rest/v1</code> writes, zero <code>phat:*</code> writes, no <code>phat:v1:*</code> key; <i>Sign in</i> on A with the " +
+    "persisted session &rarr; straight to C2 with no token request and four reads; START WITH AN EMPTY LOG &rarr; " +
+    "<code>prefs.onboarded=true</code>, no log key, no push in 4 s, Home H4 <i>On this device only. Backs up to " +
+    "test+d@example.com after the next save.</i> " +
+    "<b>(6) Settings unchanged</b> (the gate is scoped to <code>onboard-signin</code>): onboarded empty device, two Enters in " +
+    "Settings &rarr; one token request, <i>Signed in as test+d@example.com. Backs up after every saved session and weight.</i>, " +
+    "the sign-in push exactly one write (<code>POST user_state 201</code>), <i>Backed up 0 sessions and 0 weights, just now.</i>, " +
+    "no C-screen in the timeline. <b>(7) C1 on the first landing</b>: one session (<code>100 &times; 5</code>) logged and pushed " +
+    "from an onboarded phone; a fresh phone &rarr; <code>A &gt; B &gt; B[Signing in.] &gt; C-pull &gt; C1[1 session and 0 weights " +
+    "are backed up under this account.]</code>, no empty-log button, four reads, zero writes; RESTORE &rarr; the session " +
+    "byte-identical to what the first phone saved, prefs <code>onboarded</code> with the stamp naming test+d and <code>n:1</code> " +
+    "in one write, nothing pushed back, Home, no recover key. (A rig artefact, not a defect: comparing the server&rsquo;s " +
+    "<code>jsonb</code> document to the local JSON by string fails on key order alone &mdash; Postgres sorts jsonb keys; the restore " +
+    "round trip through <code>restorePayload</code> is byte-identical, which is the claim that matters.) " +
+    "<b>(D) The rest of W7 at this commit.</b> D3 / D4 / D7 on the shared device with A&rsquo;s stamped stores from item 32 " +
+    "(A&rsquo;s account since deleted; the ownership check is stamp against signed-in id and does not need A to exist): test+d signs " +
+    "in from Settings &rarr; H3 line, R-a verbatim in <code>.refuse</code> <code>role=alert</code> (<i>&hellip; Nothing was backed " +
+    "up to test+d@example.com &hellip;</i>), announced once assertive, zero REST after the token; BACK UP NOW &rarr; R-b once, " +
+    "nothing sent; Restore &rarr; R-c once, 0 reads, no sheet, no recover key; every store byte-identical from a cold second page " +
+    "after each; D2: A&rsquo;s session id and weight nowhere under test+d on the server; sign-out &rarr; <code>phat:auth</code> " +
+    "removed, log / bw / prefs byte-identical, <code>POST logout 204</code> only. D5 on the item-32 seed (six sessions, fourteen " +
+    "weights, a string stamp, no profile key): one log write at boot stamping <code>{diet:phat-brief}</code>, sessions[] " +
+    "byte-identical, bw and prefs untouched, H6, the strip <i>3,200 &middot; 170 g &middot; 300 g &middot; 145 g</i>, the Weight " +
+    "band <i>+0.27 kg per week. On target. Change nothing.</i>, the Diet tab 1,108 chars as before, second boot zero writes. D1 " +
+    "from outside with the one account: its own <code>user_state</code> row as the positive control, every table filtered to " +
+    "A&rsquo;s old uid &rarr; <code>200 []</code>, the publishable key alone &rarr; five <code>[]</code>, an insert under " +
+    "A&rsquo;s uid &rarr; <code>403 42501</code>. (D1&rsquo;s two-account, both-directions form is item 32; the SQL has not changed " +
+    "since.) <b>scripts/offline-check.mjs: PASS. file:// suite 689 / 689 / 0, three tripwires.</b> The account is test data " +
+    "holding one session and one state row and is to be deleted from the dashboard by uid.</span></li>" +
     "</ol>";
 })();
 </script>
