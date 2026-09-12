@@ -1813,3 +1813,50 @@ D10 two-tab and D7 — are closed and verified. The open P2 (`p_gone` draft stam
 (stale `aria-label` after a rename, *-1 days ago* on a future-dated demo anchor, the refusal-overwrite
 above) ship as backlog rows. B-74 is not WO-006's and does not block closing W4, but it is a data-loss
 path and should be the next backend item before any further plan-editor work.
+
+## 2026-09-12 — WO-006 closed: D10 ships as stated and now reads disk; plan deletion stays out; the `sw.js` bump
+
+**Closed on `main` @ `bad454b`**, deployed and byte-verified (eleven files, live `sw.js` `v4`, offline cold
+load green), suite 634 / 634 / 0. Closes B-70, B-71, B-73 and B-74; files B-75–B-82. The two process errors
+in WO-006 §0 (B-69) are **recorded and ruled, not resolved** by this close — the rule stands and the agent-file
+edit is still Chady's to make or authorise.
+
+**D10 — outcome: ships as stated, and stronger than stated.** `SAVE PLAN`, `USE THIS PLAN` and Restore are
+refused while a session is unfinished, with `Finish or discard the session in progress first.`; the working
+copy stays editable. Chady did not override it (WO-006 §7 item 1), so the default shipped. Two things moved
+under QA: (1) the check reads the draft from **disk** (`sessionOnDisk()`: memory OR one `readRaw(DRAFT)`),
+because `sessionOpen()` was a memory check guarding a disk fact and a second document could save a plan under
+typed sets (`3bd35ac`, observed two-tab); (2) restore additionally refuses on an **unreadable** or wrong-shape
+draft, **fail-closed** — an unknown draft is treated as a session, never as "none" (0 pulls, 0 writes, every
+key byte-identical, item 30). **Rules out:** any writer to `phat:v1:plans` or the log that decides from `S`
+alone whether a session is in progress; and any refusal that treats a failed read as an absence. The
+alternative (a session snapshotting its plan at start) stays available if he ever wants to edit mid-workout;
+nothing shipped forecloses it, and B-75 is the one place the current rule leaves a session's provenance
+soft.
+
+**Plan deletion stays out.** Not in W14's scope, not in UX §9.1, not asked for by Chady (§7 item 2, no
+answer = the default). The "later deleted" criterion is met by name resolution across every stored plan and
+`Exercise no longer in any plan` otherwise. If he asks, it is its own item with a typed confirmation and a
+`recover:plans` keep — the same shape as restore — and not a control on the list.
+
+**The `sw.js` `VERSION` bump (`v3` → `v4`), and the release-engineer's disagreement, on the record.** W5
+instructed the bump because the shell changed shape. `release-engineer` did it and disagreed in the commit
+body (`5e2f45d`): the precache file list is unchanged, the worker's per-launch refresh would have carried the
+new `index.html`/`logic.js` pair regardless, so the bump was **not required**; it is **harmless** because
+install fills `v4` in full before activate deletes `v3` (the atomic-refresh rule of 2026-09-10). Ruling: done
+because instructed, harmless, and **not precedent** — the rule for when `VERSION` moves is the one in
+`sw.js`'s own header (the file list or a caching rule changes), not "a release happened". A future release
+whose file list is unchanged does not bump on the PM's say-so; the release-engineer decides from the header.
+
+**B-74, filed as done though it predates this order.** Restore keeps, the REPLACE sheet's count and Export
+read memory; a second document's saves were replaced with no keep under a sheet that had counted them out.
+Live since E-3, found by QA's second pass, closed in `7c8daf5` before the release that found it shipped —
+`storesOnDisk()` reads each store once before the sheet and again before the keeps, a failed read refuses by
+name, and Export names any store it took from memory. Filed done rather than open-then-closed because the
+backlog records what is true on `main`, not the order of discovery; the decisions entry of 2026-09-12 (QA
+second pass) carries the discovery. The write-side twin — a stale document overwriting a restored log on its
+next save, recoverable because the keep now exists — is **B-76**, open, first backend item on the store layer.
+
+**On process, one more line.** W4's first pass was a fail, and the fail was correct: a P1 written red as the
+fix's proof, two P2s, then a second pass that found a pre-existing P1 while verifying the fixes. That is what
+"QA always last" buys. The item did not close on the first green.

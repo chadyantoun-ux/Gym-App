@@ -1,8 +1,12 @@
 # WO-006 · The Plan Editor (W14 + W15), as it ships now
 
 Author: `project-manager` · Date: 2026-09-11 · Base: `main @ 9b84d98` · Branch: `w14-w15-plans`
-Status: **in progress — a build is already in flight.** This work order binds the criteria it is
-measured against; it does not restart it.
+Status: **closed 2026-09-12** — merged to `main` @ `bad454b`, deployed and byte-verified, `sw.js` `v4`,
+suite 634 / 634 / 0. Closure record in §10. The two process errors in §0 are **recorded and ruled, not
+resolved** by this close — the rule stands and B-69 stays open on the agent-file edit.
+
+Original status line: *in progress — a build is already in flight. This work order binds the criteria it is
+measured against; it does not restart it.*
 
 ---
 
@@ -30,6 +34,10 @@ it is how a build starts with no binding criteria, which is the state this docum
 > Mechanically: before writing any cut line, grep `docs/decisions.md` for the item and cite the entry.
 
 Both errors are filed as **B-69** so they are not lost when this file stops being read.
+
+**At close (2026-09-12):** recorded and ruled, not resolved. Closing the work order does not close the
+errors; the rule above stands for every later plan. The remaining action is the agent-file edit in §7
+item 3, which is Chady's, and is carried as an open ask on B-69.
 
 ---
 
@@ -294,12 +302,14 @@ on `index.html` at that point. If W3 amends copy, that is one string edit routed
 - **Confirm or override D10** (plan save and plan switch refused while a session is unfinished).
   Default ships as stated; the alternative — a session snapshotting its plan at start — is more
   work and is the right answer only if he expects to edit mid-workout, which the honest note argues
-  against.
+  against. **Outcome:** no override; shipped as stated, reading the draft from disk and fail-closed on
+  an unreadable draft (`decisions.md` 2026-09-12). Still his to override later.
 - **Confirm plan deletion stays out.** If he wants it, it is a new item with its own typed
-  confirmation, after this ships.
+  confirmation, after this ships. **Outcome:** out; not asked for. Recorded in `decisions.md`.
 - `.claude/agents/project-manager.md` is configuration; the process rule in §0 is recorded in
   `docs/decisions.md` and quoted here. **Adding it to the agent file is his edit to make** (or the
   main session's, with his say-so) — a subagent does not amend its own definition on its own say-so.
+  **Outcome:** he has not said yes. Left as an open ask on the B-69 backlog row, not as an edit.
 
 ## 8. What closes it
 
@@ -308,7 +318,7 @@ attacks written up, `N / N / 0`, and `offline-check.mjs` green; W5's verify outp
 W14/W15 to `done` in `docs/backlog.md`, closes E-5 and B-57, and records the D10 outcome in
 `docs/decisions.md`.
 
-## 9. Dispatch list (for the main session)
+## 9. Dispatch list (for the main session) — executed as written, see §10
 
 **Dispatch exactly this, in this order, and nothing else.**
 
@@ -336,3 +346,47 @@ W14/W15 to `done` in `docs/backlog.md`, closes E-5 and B-57, and records the D10
    the deployment URL and the verify output."*
 6. `project-manager` → close: update `docs/backlog.md` (W14/W15 → done, E-5 and B-57 closed, B-70/71
    closed, B-72 stays open), record D10's outcome in `docs/decisions.md`.
+
+---
+
+## 10. Closure record (2026-09-12)
+
+**Result:** `main` @ `bad454b`, deployed to production, all eleven files byte-verified against the merge
+commit, live `sw.js` `VERSION` `v4`, Plans tab renders the list and the honest note, offline cold load
+green. Suite **634 / 634 / 0**, `scripts/offline-check.mjs` PASS. Working tree clean at close.
+
+**What ran, in dispatch order — exactly §9's list:**
+
+| Step | Agent | Commit | Outcome |
+|---|---|---|---|
+| 1 · W1 | `frontend-engineer` | `91a597c` | Plans list, editor, `hydrateDraft` from entries against the draft's own `planId` (B-70), D10 refusals, working copy never in `BACKED_UP`. Suite 605 |
+| 2 · W2 | `backend-engineer` | `8cba070` | `recover:plans` before the write or nothing; restore refused on a working copy; restored and pushed plans validated and refused-and-named (B-71). Suite 625 |
+| 2 · W3 | `strength-coach` | — (no files) | Rule K2: form consequence copy + warn-once. The four ABSENT strings rewritten — three instructed edits the editor cannot make |
+| 3 | `frontend-engineer` | `9e0834a` | K2 applied |
+| 4 · W4 | `qa-engineer` | `95829dd` | **Not a pass.** B-73 P1 (plan saved after a corrupt-store boot got no recover copy on restore), two P2s (two-tab D10 bypass; USE/DUPLICATE wrote a demo store while SAVE refused), P3s |
+| 4 · fix | `backend-engineer` | `3bd35ac` | All three closed; D10 reads the draft from disk; D7 on all three writers |
+| 4 · W4 second pass | `qa-engineer` | `44e8f91` | Fixture contradiction corrected as a fixture fix, three pins added, 634 / 634 / 0, **W4 pass**. Found **B-74 P1** (restore and export read memory, not disk; two tabs → a saved session and plan on no key; live since E-3) |
+| 4 · fix | `backend-engineer` | `7c8daf5` | B-74 closed, and the same class in Export. Suite unchanged |
+| 5 · W5 | `release-engineer` | `5e2f45d` + merge `bad454b` | `sw.js` v3 → v4 (done under instruction, disagreement recorded — `decisions.md` 2026-09-12); upload by the main session; verified |
+| 6 | `project-manager` | this commit | Backlog, decisions, this record |
+
+**Criteria:** D1–D11, B1–B8, R1–R5 all pass at `44e8f91` per QA's report; the D8 recipe in §4 W4 was
+wrong about the working copy (it cannot produce the orphan — D10 forbids it — and that is correct), the
+criterion stood and passed on an orphan produced from a second document. Attacks A, B, C and the restore
+attack written up in `decisions.md` (2026-09-11 W4 and 2026-09-12 second pass).
+
+**Backlog at close:** W14, W15 done; B-57, B-70, B-71, B-73 done; **B-74 done** (P1, pre-existing since
+E-3, closed before this release); E-5 done. **Open:** B-72 (unchanged); **B-75** P2 (a `p_gone` draft saves
+stamped with the active plan's id and `rx` — provenance rewritten, no set lost — awaiting `strength-coach`
+on whether an unknown epoch carries an `rx` at all); **B-76** P2 (a document's stale memory overwrites a
+restored log on its next save; a keep now exists either way); **B-77–B-82** P3 (failed-save copy on a plan
+save; phantom `UNSAVED CHANGES` if the clear throws after a good save; stale `aria-label` after rename;
+`#bk-status` refusal overwritten by the open-push stamp; tab B refuses on D10 with no session to finish
+until reload; `-1 days ago` on a future-dated demo anchor). **B-69** stays open on the agent-file ask.
+
+**Not done by this close, on purpose:** the §0 errors are ruled, not resolved; the agent-file rule is
+Chady's edit; plan deletion is out; B-05 (edit a saved session) is the next work order per WO-004 and is
+now more urgent, not less — nine engines and an editor read a history he cannot correct.
+
+**The line for the hand-back, unchanged from §6:** log Upper Power today. The plan is editable; do not
+open the editor before the first session is logged.
