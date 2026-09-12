@@ -2035,6 +2035,22 @@
     return !isNaN(t.getTime()) && localDate(t) === ds;
   }
 
+  /* THE DEMO BOUNDARY (WO-004 C-14, ruled 2026-09-11 in docs/decisions.md).
+     A document marked demo:true is fabricated history. The server has no
+     demo column and stores a document verbatim, so a demo session that is
+     pushed is indistinguishable from his own lifting on the one copy that
+     outlives a lost phone, and a restore would write it straight into
+     phat:v1:log - the mixed real+demo array no engine may be handed. So:
+     on push, a session (or weight, or plan) marked demo:true is REFUSED AND
+     NAMED like any other document the server must not hold, and a STORE
+     marked demo:true backs up nothing at all (out.blocked = "demo", so the
+     caller sends no request - not even the state row); on restore, one row
+     carrying demo:true refuses the whole payload. This is deliberately NOT
+     a validateSessionDoc rule: the document is well-formed, it is just not
+     his, and the SQL validator it mirrors has no such check. */
+  function isDemo(v) { return isObj(v) && v.demo === true; }
+  var DEMO_MSG = "marked demo:true; demo data is never backed up as history";
+
   /* validateSessionDoc(doc) → { ok, problems:[string] }
      Mirrors schema.sql phat_validate_session_doc: id present (number or
      non-empty string), dayId a non-empty string, date YYYY-MM-DD and a real
@@ -2116,7 +2132,8 @@
        → { sessions:[doc], bodyweight:[doc], plans:[doc],
            logMeta:{}, planMeta:{},
            counts:{ sessions, bodyweight, plans, refused },
-           problems:[{ kind, key, msg }], notes:[string] }
+           problems:[{ kind, key, msg }], notes:[string],
+           blocked: null | "demo" }
 
      Takes the three stores AS STORED (the objects logPayload / bwPayload /
      the plan store hold), and returns the rows sync.js upserts. It never
@@ -2139,15 +2156,26 @@
        row (migrateStore's own rule) go up; the other is a named problem.
      - `notes` names anything in the stores this shape cannot carry: today
        that is a bodyweight-store key other than schemaVersion and entries,
-       because bodyweight meta has no column. Nothing is dropped silently. */
+       because bodyweight meta has no column. Nothing is dropped silently.
+     - A session marked demo:true is refused and named (C-14, see isDemo). A
+       STORE marked demo:true returns empty rows, empty meta and
+       blocked:"demo" with one problem of kind "store": the caller must send
+       NOTHING, because an upsert of empty logMeta would blank the real
+       user_state row on the server. */
   function backupPayload(log, bw, plans) {
     var out = {
       sessions: [], bodyweight: [], plans: [],
       logMeta: {}, planMeta: {},
       counts: { sessions: 0, bodyweight: 0, plans: 0, refused: 0 },
-      problems: [], notes: []
+      problems: [], notes: [], blocked: null
     };
     try {
+      if (isDemo(log) || isDemo(bw) || isDemo(plans)) {
+        out.blocked = "demo";
+        out.problems.push({ kind: "store", key: "demo",
+          msg: "this device holds demo data (store " + DEMO_MSG + "); nothing sent" });
+        return out;
+      }
       if (isObj(log)) {
         Object.keys(log).forEach(function (k) { if (k !== "sessions") out.logMeta[k] = log[k]; });
         if (log.sessions !== undefined && !Array.isArray(log.sessions)) {
@@ -2155,6 +2183,10 @@
         } else if (Array.isArray(log.sessions)) {
           var seen = {};
           log.sessions.forEach(function (s) {
+            if (isDemo(s)) {
+              out.problems.push({ kind: "session", key: docLabel(s), msg: "session " + DEMO_MSG });
+              return;
+            }
             var v = validateSessionDoc(s);
             if (!v.ok) {
               out.problems.push({ kind: "session", key: docLabel(s), msg: v.problems[0] });
@@ -2184,6 +2216,10 @@
         } else if (Array.isArray(bw.entries)) {
           var byDate = {}, order = [];
           bw.entries.forEach(function (e) {
+            if (isDemo(e)) {
+              out.problems.push({ kind: "bodyweight", key: str(e.date), msg: "bodyweight row " + DEMO_MSG });
+              return;
+            }
             var v = validateBwDoc(e);
             if (!v.ok) {
               out.problems.push({ kind: "bodyweight", key: isObj(e) ? str(e.date) : "(not a row)", msg: v.problems[0] });
@@ -2211,6 +2247,7 @@
             var pid = isObj(pl) && typeof pl.planId === "string" ? pl.planId.trim() : "";
             if (!pid) { out.problems.push({ kind: "plan", key: "(no planId)", msg: "plan.planId is required and must be a non-empty string" }); return; }
             if (pl.days !== undefined && !Array.isArray(pl.days)) { out.problems.push({ kind: "plan", key: pid, msg: "plan.days must be an array" }); return; }
+            if (isDemo(pl)) { out.problems.push({ kind: "plan", key: pid, msg: "plan " + DEMO_MSG }); return; }
             if (seenP[pid]) { out.problems.push({ kind: "plan", key: pid, msg: "two plans share planId " + pid + "; only the first is backed up" }); return; }
             seenP[pid] = true;
             out.plans.push(pl);
@@ -2311,7 +2348,9 @@
      REFUSED WHOLE on any problem (ok:false, log/bw/plans null): one document
      that fails validateSessionDoc means the payload is not written to disk,
      and `problems` names every failing document and why. A restore that
-     writes 29 good sessions and drops the 30th is B-02 in new clothes.
+     writes 29 good sessions and drops the 30th is B-02 in new clothes. One
+     row (session, weight, plan) or a state row carrying demo:true refuses
+     whole too (C-14): a restore must never build the mixed array.
 
      THE ONE FACT IT ASSERTS: when the backup carries no user_state row, or a
      log_meta without a numeric schemaVersion, the rebuilt log is stamped
@@ -2333,6 +2372,7 @@
         var doc = isObj(r) ? r.doc : undefined;
         var v = validateSessionDoc(doc);
         if (!v.ok) v.problems.forEach(function (m) { out.problems.push("session " + docLabel(doc) + " (row " + i + "): " + m); });
+        else if (isDemo(doc)) out.problems.push("session " + docLabel(doc) + " (row " + i + "): session " + DEMO_MSG + "; not restored");
         else sess.push(canonSession(doc));
       });
       if (rows.bodyweight !== undefined && !Array.isArray(rows.bodyweight)) out.problems.push("bodyweight is not an array");
@@ -2340,6 +2380,7 @@
         var doc = isObj(r) ? r.doc : undefined;
         var v = validateBwDoc(doc);
         if (!v.ok) v.problems.forEach(function (m) { out.problems.push("bodyweight row " + i + ": " + m); });
+        else if (isDemo(doc)) out.problems.push("bodyweight row " + i + ": bodyweight row " + DEMO_MSG + "; not restored");
         else bws.push(canonBw(doc));
       });
       if (rows.plans !== undefined && !Array.isArray(rows.plans)) out.problems.push("plans is not an array");
@@ -2349,11 +2390,14 @@
           out.problems.push("plan row " + i + ": plan.planId is required and must be a non-empty string");
         else if (doc.days !== undefined && !Array.isArray(doc.days))
           out.problems.push("plan row " + i + ": plan.days must be an array");
+        else if (isDemo(doc)) out.problems.push("plan row " + i + ": plan " + DEMO_MSG + "; not restored");
         else pls.push(doc);
       });
       if (us && us.log_meta !== undefined && us.log_meta !== null && !isObj(us.log_meta)) out.problems.push("user_state.log_meta is not an object");
       if (us && us.plan_meta !== undefined && us.plan_meta !== null && !isObj(us.plan_meta)) out.problems.push("user_state.plan_meta is not an object");
       if (us && isObj(us.log_meta) && us.log_meta.sessions !== undefined) out.problems.push("user_state.log_meta carries a sessions key");
+      if (us && isDemo(us.log_meta)) out.problems.push("user_state.log_meta is " + DEMO_MSG + "; not restored");
+      if (us && isDemo(us.plan_meta)) out.problems.push("user_state.plan_meta is " + DEMO_MSG + "; not restored");
       if (out.problems.length) return out;
 
       var log = {};

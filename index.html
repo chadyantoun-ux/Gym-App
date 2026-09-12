@@ -4487,6 +4487,15 @@ async function runBackup(manual,reason){
   try{
     const plans=await load(PLANS);
     const p=PHAT.backupPayload(logPayload(),bwPayload(),plans);
+    /* C-14: a store marked demo:true sends NOTHING - not even the state row,
+       which would blank the real user_state on the server. Named, never
+       silent; the last-good stamp is left alone. */
+    if(p.blocked){
+      S.sync.last={ok:false,phase:"push",at:0,reason:"blocked",message:p.problems[0]?p.problems[0].msg+".":"Blocked.",
+        counts:p.counts,problems:p.problems,notes:p.notes,manual:!!manual};
+      if(manual) announce("Backup refused: "+S.sync.last.message+" Your log is unchanged on this device.");
+      paintBackup(); return;
+    }
     const sig=PHAT.backupSig(p);
     const b=S.prefs.backup;
     /* Nothing changed since the last backup that landed: send nothing. A
