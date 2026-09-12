@@ -1627,3 +1627,189 @@ the seam order is an assertion on this page rather than a Playwright run.
 (the `demo-w*` ids were upserted by several runs; the unique key kept one row each and the archive
 trigger kept the rest, as designed). That is evidence of the C-14 red, not data. Delete the account
 as already planned.
+
+## 2026-09-11 — MY ERROR: WO-005 cut the Plan Editor against a decision Chady had already made
+
+WO-004 §"Needs from Chady" item 4 asked *build the Plan Editor now, or defer it?* and carried my
+recommendation to defer. He answered **build it now** — recorded above under "Chady's four calls on
+WO-004", item 3. WO-005 §5 then wrote *"Restating WO-004's ruling for tonight, unchanged: M3 is cut
+outright."* That sentence restated my **recommendation** and called it the **ruling**. The ruling was
+his, it was the opposite, and the cut re-litigated it while he was asleep. The main session accepted
+it because the file said "unchanged". My plan, my error. A second error followed: when he caught it,
+`frontend-engineer` was dispatched on W14+W15 **directly**, bypassing the PM (CLAUDE.md §1), so a
+build started with no binding criteria. WO-006 now binds it.
+
+**Rule, for the PM's process:** a "Needs from Chady" question he has answered is **closed**. A later
+plan may not reopen it without (1) quoting his answer and (2) stating a new fact that did not exist
+when he gave it. "The PM recommended otherwise" is not a new fact — it was on the table when he
+decided. Mechanically: before writing any cut line, grep this file for the item and cite the entry.
+**Rules out:** a schedule document overriding a recorded ruling by restating the losing argument;
+and correcting a PM error by skipping the PM.
+
+## 2026-09-11 — WO-006: what the editor is allowed to do while a session is unfinished
+
+`SAVE PLAN` and switching the active plan are **refused** while `phat:v1:draft` holds a session, with
+`Finish or discard the session in progress first.` Editing the working copy stays open. Reason: the
+session screen reads its prescription from the plan, so letting the plan move under a half-logged
+workout is the mid-set reinterpretation QA is told to attack; E-3's restore already refuses on the
+identical condition, so this is one rule applied to a second writer. The alternative — a session
+snapshotting its plan at start — is more work and is only right if he expects to edit mid-workout,
+which the design's own honest note argues against. **Open for Chady to override** (WO-006 §7).
+
+**Also decided in the same order:** deleting a plan is out of scope (in neither W14's scope nor UX
+§9.1; the "later deleted" criterion is met by name resolution across every stored plan, else
+`Exercise no longer in any plan`, never a raw id); the draft gains an optional `planId` whose absence
+means PHAT, mirroring sessions; the plan working copy lives under its own key that is **never** in
+`BACKED_UP`; and a restore writes `recover:plans:<ts>` before it touches `phat:v1:plans`, or does
+nothing. `SCHEMA_VERSION` does not move.
+
+## 2026-09-11 — WO-006 W2: the plan store gets the log's restore guarantee, and how a bad plan is refused
+
+**Restore treats `phat:v1:plans` exactly as it treats the log (B-71).** `restoreApply` no longer decides
+anything: `PHAT.restoreSteps` returns the recover copies and the store writes as two ordered lists and
+`index.html` executes them through `save()` in that order — every `recover:*` copy before any replace,
+`recover:plans:<ts>` before `phat:v1:plans` — so the seam order is a `file://` assertion (S32) and not
+only a browser measurement. A plans copy is kept exactly when the backup carries a plan store (so the
+key will be written) and the local one was read `ok`; nothing is kept for an absent store, and an
+unreadable one was already kept aside at boot. A backup with no plan store writes no plans key (R3).
+`localEmpty()` is now `PHAT.restoreLocalEmpty` and counts a stored plan or a non-PHAT active id as
+non-empty: a device with zero sessions and one built plan gets the typed path. Both close the B-20
+extraction E-3's QA asked for. **Rules out:** any restore write to `phat:v1:plans` that is not preceded
+by a successful `recover:plans` write when there was something to keep.
+
+**Restore is refused while a plan working copy exists (R2)**, before any pull, with `Save or discard
+your changes to <plan> first.` — the same shape as the draft refusal, decided by `PHAT.restoreRefusal`.
+The session refusal outranks it.
+
+**A plan the app cannot open refuses the restore WHOLE (R4), and is refused-and-named on push.** R4's
+text ("a plan that fails renders `Cannot open` and is never repaired or dropped") was read with the PM's
+dispatch brief ("refused whole and names why; never write a plan the app cannot open"): `restorePayload`
+runs `normalisePlanStore` (boot's additive repair — a missing `lift` or id is minted, nothing rewritten)
+and then `validatePlan` per plan, and one failure returns nothing to write, naming the plan and the
+field in words (`plan "Mine" (row 0): cannot open - exercise x_1 has no type or implement`) — never a
+`reason` token (B5). "Never dropped" means the one bad plan is never filtered out so the rest can land
+(B-02 in new clothes); "never repaired" means normalisation is the only change and validation failures
+are not patched over. A row with `planId:"phat"` refuses too — PHAT is code and a stored twin would
+shadow it. **The push side is symmetrical:** `backupPayload` now refuses and names a plan that fails
+`validatePlan`, like a `7.5.0` session, so a hand-edited store cannot put on the server a plan that every
+later restore would refuse. The alternative — write the bad plan and show `Cannot open` — was rejected
+because it replaces a store the app can open with one it cannot, on the strength of a typed REPLACE
+that promised sessions.
+
+**Coach-signed copy change (strength-coach W3, 2026-09-11).** The four ABSENT strings in `logic.js`
+are replaced with the coach's exact literals; three of the old second lines told him to set a source
+lift, mark accessories cut, or name key lifts — none of which the editor can do — and D1 opened with
+ST1's nine words while always rendering beside it. `SP1_ABSENT` = `No source lift set for this speed
+work, so there is no number to give.` / `Use 65–70% of a weight you could triple.`; `V1_ABSENT` =
+`This plan has no reduced-volume tier. Every exercise runs from week 1.`; `ST1_ABSENT` = `This plan
+names no key lifts, so the six-week check cannot run.`; `D1_ABSENT` = `Without key lifts the app cannot
+recommend a deload from your numbers. It will still flag nine straight weeks without a lighter one.`
+**Also ruled:** on the absent branch `speedLoad().text` is the ADVICE line alone (the ceiling belongs
+under the bar), never the explanation (which belongs on Plans via `absentLines`), and the session card
+prints `text` for speed work unconditionally. The literals are pinned in S32 as the coach's change, not
+a test bent to code. `docs/coach-audit-addendum.md` §8.4 still carries the old strings and is the
+coach's to amend.
+
+## 2026-09-11 — WO-006 W4: the QA pass on the Plan Editor, one red shipped on purpose
+
+**The suite reads 631 / 630 / 1 and the red is B-73, written before the fix.** A device that boots with an
+unparseable `phat:v1:plans` keeps the raw bytes aside and keeps writing (the WO-001 log policy, applied to
+plans by `preserveUnreadable`); a plan built and saved after that boot is then replaced by a restore with
+**no** `recover:plans` copy, because `restoreSteps` keys the plans keep on the store's BOOT status
+(`stores.plans === "ok"`) and `S.stores` is never updated after a successful `save()`. Observed end to
+end in the browser (tests.html "Already proven" item 29). The log never had this gate — its keep is
+unconditional — which is why this is P1 and not P0. The same precedent as C-14: the test is the proof,
+it is not named as a carried-forward failure, and it goes green when backend either keys the keep on
+content (`local.plans` holds a plan or a non-PHAT active id) or `index.html` marks a store readable once
+it has written it. QA recommends the `logic.js` half: it is the one this page can assert.
+
+**D8 as written was not reachable through the editor, and that is correct.** The work order said "remove
+X from the plan (via the working copy is enough — or switch the active plan)". Neither produces an orphan:
+the working copy is not the plan a session reads, and D10 refuses the save and the switch while a draft
+exists. The orphan needs the STORED plan to lose the exercise while the draft holds a set, which only a
+second document of the app (or a hand edit) can do — `sessionOpen()` is a memory check guarding a disk
+fact, listed as a P2 extraction request. QA produced the orphan that way; D8 passed on it (the card renders
+last, flagged, saves with the session, the Summary counts it). The criterion stands; the recipe in §4 W4 was
+wrong about the working copy.
+
+**Two things the PM decides, not QA.** (1) D7: `SAVE PLAN` refuses a `demo:true` plan store; `USE THIS
+PLAN` and `DUPLICATE` write it (flag carried). One writer refuses, two do not. (2) A draft whose own
+`planId` names a plan the store no longer holds is saved under the ACTIVE plan's id with the active plan's
+`rx` — provenance rewritten, no set lost; the pure half (`planIdOf`, `buildSession`) is honest and pinned
+in S33, the call site is `finish()`'s `sp().planId`. Needs `strength-coach` on whether an unknown epoch
+should carry an `rx`.
+
+**A browser fact recorded for the phone checklist:** desktop Chromium commits `localStorage` to disk
+about 5 s after a write; a SIGKILL of the browser process inside that window lost the write and every
+unflushed one before it (0.5 s and 3 s: gone; 8 s: kept; graceful close: kept). Not the app's, not
+fixable by the app, and exactly what manual item 2 exists to measure on a phone.
+
+**Housekeeping:** the tests.html intro no longer says three tests are red for C-14; they went green in
+`d7b9f12` and the paragraph now says so.
+
+## 2026-09-12 — WO-006 W4 second pass: the S32 fixture was wrong, not the code; 634 / 634 / 0
+
+**The one red after `3bd35ac` was QA's own fixture, and it was corrected, not the code bent to.** S32 R1
+*"no plans keep when the device has nothing to keep: an ABSENT plan store, or an UNREADABLE one"* (then
+`tests.html:11546` and `:11549`, now `:11560`) built its `absent` and `unread` inputs with
+`W2LOCAL({stores:{plans:"absent"|"error"}})`, whose default `plans` is `W2PLANS()` — **one stored plan,
+active** — while the assertion message said the store was *"the empty default and not the bytes on
+disk"*. It was not the empty default. Under the pre-fix rule (keep when the boot read was `ok`) the
+content was never looked at and the test passed by accident. Under the content rule B-73 required
+(`tests.html:11827`, written red on the first pass), the same `local` object owes a keep — the S33 test
+asks for one and the S32 test forbade one. No rule satisfies both, and the S32 message was the one that
+did not describe its own input. **Change made:** both `W2LOCAL` calls now pass
+`plans: { schemaVersion: PHAT.SCHEMA_VERSION, plans: [], activePlanId: "phat" }` explicitly, so the test
+asserts what its message always claimed; the expectation did not move. A final assertion was added to the
+same test saying, in one line, that the fixture's OLD shape (a plan in memory under those statuses) is
+B-73's case and is kept — so the two tests read as one rule. Rejected alternative: leaving the fixture
+and weakening S33 — that would have re-opened the data-loss path to keep a test green.
+
+**Three pins on what the fix made true (S33, `tests.html:11851`, `:11877`, `:11908`).** (1) The plans
+keep is keyed on content alone: every boot status (`ok`, `absent`, `error`, and no `stores` object at
+all) × every content shape (empty default, one plan, no plan but a non-PHAT active id, and non-object
+garbage) — the answer never reads `stores`; a `[null]` plans array is kept because length is the test,
+not validity (the keep is a copy, not a document the app must open). (2) **The disputed edge, pinned with
+its premise stated:** `stores.plans:"ok"` with the empty default produces **no** keep; before `3bd35ac`
+it produced a `recover:plans:<ts>` holding `{schemaVersion, plans:[], activePlanId:"phat"}`. Right
+because the keep exists so a restore can be undone by hand and an empty default carries nothing a hand
+could put back; it rests on `local.plans` being what is on disk, which is true in one document and
+false across two (below). `"PHAT"` in capitals is a different id and is kept — the rule does not guess.
+(3) The whole seam order for a plan built after a corrupt boot, matching the browser's `setItem` order.
+
+**Browser evidence, "Already proven" item 30, all on `3bd35ac`.** B-73's exact steps: corrupt
+`phat:v1:plans` boot → DUPLICATE → Restore gives `recover:log → recover:bw → recover:plans → log → bw →
+plans → prefs`, the keep byte-identical to the pre-restore store holding *PHAT — my version*. The
+`index.html` half was read **directly** off a paused call frame (DevTools protocol breakpoints at
+`index.html:1102` and `:1106` inside `save()`): `S.stores.plans` is `"error"` before the flip and `"ok"`
+after, on the DUPLICATE's write. Restore is now refused on an **unreadable** draft and on a wrong-shape
+draft, fail-closed, 0 pulls, 0 writes, every key byte-identical — on `95829dd` (the same seed, run from a
+`git archive`) `restoreStart` read `!!(S.draft||S.offer)`, both null in that state, and opened the typed REPLACE
+sheet after one pull — observed, not inferred. Two-tab D10: tab B booted, tab A
+typed a set, tab B's SAVE PLAN, USE THIS PLAN and Restore all refuse with the session sentence and write
+nothing; after tab A discards, tab B's SAVE PLAN goes through. D7: USE, DUPLICATE and SAVE each refuse a
+`demo:true` store with the one `DEMO_STORE` sentence, 0 writes. `scripts/offline-check.mjs`: PASS.
+
+**A finding, not a regression — proposed B-74, P1, for the PM to file.** `restoreApply` hands
+`restoreSteps` the three stores from **memory** (`logPayload()`, `bwPayload()`, `plansPayload()`), the
+sheet counts `S.sessions.length`, and `exportAll()` exports memory. In one document memory equals disk.
+Across two (the installed app plus a browser tab is two): tab B booted on the empty default with 5
+sessions; tab A DUPLICATEd PHAT and saved a session (disk: 6 sessions, one plan); tab B's Restore said
+*"This replaces 5 sessions"*, kept `recover:log` with **5**, wrote no `recover:plans`, and afterwards tab
+A's session id and plan were on **no key on disk**. Pre-existing since E-3 — the log keep was always
+memory — so not `3bd35ac`'s to answer for, but it is the same shape as the D10 hole that commit closed for
+the draft, and the fix is the same shape: one `readRaw` per store before `restoreSteps`, the counts and
+the export off those bytes; the decision is then pure and pins in `tests.html`. P1 and not P0 because it
+sits behind a typed REPLACE in a second document; P1 and not P2 because the sheet's count was wrong, so
+the typed word was given on false information, and a saved set is unrecoverable afterwards.
+
+**One P3 aside:** tap Restore within 2 s of opening Settings and the refusal in `#bk-status` is replaced
+by the open-push's *"Backed up … just now"* line when that push lands (`backupSoon("open")` and the refusal
+share `S.sync.last`). Cosmetic, nothing written by the restore.
+
+**W4 verdict.** The P1 (B-73) is closed and verified on both halves. The two P2s from the first pass —
+D10 two-tab and D7 — are closed and verified. The open P2 (`p_gone` draft stamped with the active plan's
+`rx`, awaiting `strength-coach`) rewrites provenance and loses no set; it ships as a backlog row. The P3s
+(stale `aria-label` after a rename, *-1 days ago* on a future-dated demo anchor, the refusal-overwrite
+above) ship as backlog rows. B-74 is not WO-006's and does not block closing W4, but it is a data-loss
+path and should be the next backend item before any further plan-editor work.
