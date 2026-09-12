@@ -31,12 +31,12 @@ That is the black screen this project keeps rediscovering. **Every deploy upload
 
 ---
 
-## 2. The file list — it is TEN
+## 2. The file list — it is ELEVEN
 
-**Ten files. Not six.** `docs/work-orders/WO-005-overnight.md` still says six; it is stale and the
-PM owns correcting it. This table and `scripts/verify-deploy.sh` are the authority.
+**Eleven files. Not ten, not six.** E-3 added `sync.js` on 2026-09-11. `docs/work-orders/WO-005-overnight.md`
+still says six and is stale. This table and `scripts/verify-deploy.sh` are the authority.
 
-Six core files plus four icons. Upload them in this order; the order does not matter to Vercel, but
+Seven core files plus four icons. Upload them in this order; the order does not matter to Vercel, but
 keeping one order means a half-finished upload is obvious in the terminal.
 
 **The four icons are not optional, and "it's only an icon" is the wrong instinct.**
@@ -58,10 +58,11 @@ keeping one order means a half-finished upload is obvious in the terminal.
 | 4 | `assets/archivo-inline.css` | `text/css` | The typeface. Missing = fallback stack, and every 44 px measurement was taken against Archivo |
 | 5 | `manifest.webmanifest` | `application/json` | No manifest, no install prompt, no PWA |
 | 6 | `sw.js` | `application/javascript` | Offline. Missing = the gym has no app |
-| 7 | `assets/icon-192.png` | `image/png` | Named by the manifest |
-| 8 | `assets/icon-512.png` | `image/png` | Named by the manifest |
-| 9 | `assets/icon-maskable-512.png` | `image/png` | Named by the manifest |
-| 10 | `assets/apple-touch-icon-180.png` | `image/png` | Named by `sw.js`'s precache list; iOS home screen |
+| 7 | `sync.js` | `application/javascript` | E-3, the backup client: an ES module `index.html` injects after boot. Missing = Settings says `Backup could not load` and nothing else changes; but `sw.js` precaches it, and a 404 is a file that is never cached |
+| 8 | `assets/icon-192.png` | `image/png` | Named by the manifest |
+| 9 | `assets/icon-512.png` | `image/png` | Named by the manifest |
+| 10 | `assets/icon-maskable-512.png` | `image/png` | Named by the manifest |
+| 11 | `assets/apple-touch-icon-180.png` | `image/png` | Named by `sw.js`'s precache list; iOS home screen |
 
 Nothing else. No `docs/`, no `scripts/`, no `.snapshots/`, no `CLAUDE.md`. There is **no
 `vercel.json`** and there must not be one with a build command in it — static files, no framework,
@@ -89,15 +90,15 @@ read -rs VERCEL_TOKEN && export VERCEL_TOKEN      # -s: not echoed, not in scrol
 
 ```sh
 grep -rInE 'eyJ[A-Za-z0-9_-]{10,}|service_role|VERCEL_TOKEN|sk_live|SUPABASE_.*KEY' \
-  index.html logic.js tests.html sw.js manifest.webmanifest assets/archivo-inline.css \
+  index.html logic.js tests.html sw.js sync.js manifest.webmanifest assets/archivo-inline.css \
   && echo "STOP: something credential-shaped is in a file about to be deployed"
 ```
 
-Today the correct result is no matches. The Supabase **anon** key may appear in client code later —
-it is designed to be public — but only once RLS is on every table. The **`service_role`** key never
+Today the correct result is no matches: the Supabase **publishable** key in `sync.js`
+(`sb_publishable_…`) is designed to be public, is behind RLS on every table (verified 2026-09-11),
+and is not `eyJ`-shaped, so the grep passes over it by design. The **`service_role`** key never
 appears anywhere except Vercel's environment variables. There are no Vercel env vars set on this
-project today and none are needed: the browser talks to Supabase directly, and there is no Supabase
-yet.
+project today and none are needed: the browser talks to Supabase directly.
 
 ---
 
@@ -138,7 +139,7 @@ BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD)
 echo "$SHA on $BRANCH"          # record this; it goes in the deploy meta and the report
 
 TREE=$(mktemp -d)
-FILES="index.html logic.js tests.html assets/archivo-inline.css manifest.webmanifest sw.js \
+FILES="index.html logic.js tests.html assets/archivo-inline.css manifest.webmanifest sw.js sync.js \
 assets/icon-192.png assets/icon-512.png assets/icon-maskable-512.png assets/apple-touch-icon-180.png"
 
 for f in $FILES; do
@@ -227,14 +228,14 @@ done
 
 # The loop uses `break`, which leaves a SHORT entries file and keeps going. Do
 # not rely on reading the lines above. Make it refuse:
-[ "$OK" -eq 10 ] || echo "STOP: only $OK of 10 uploaded. Do NOT run 4.4. Fix and re-run the whole loop."
+[ "$OK" -eq 11 ] || echo "STOP: only $OK of 11 uploaded. Do NOT run 4.4. Fix and re-run the whole loop."
 ```
 
-**`$OK` must be 10 and every line must say HTTP 200 or 201 before continuing.** If any line
+**`$OK` must be 11 and every line must say HTTP 200 or 201 before continuing.** If any line
 failed, fix it and re-run the whole loop. A partial upload here is harmless — nothing is live until
 §4.4 — but a partial `entries` file is the black screen.
 
-Dry-run 2026-09-11: the loop, with the curl stubbed out, produced all ten entries with correct
+Dry-run 2026-09-11: the loop, with the curl stubbed out, produced all ten entries (eleven since E-3 added sync.js) with correct
 sizes and digests, and the resulting JSON parsed clean. The `sha1sum | cut -d' ' -f1` idiom is safe
 despite git-bash printing `sha *file` in binary mode. **The upload call itself is still unproven.**
 
@@ -326,7 +327,7 @@ Only use the bare form when the working tree genuinely is what went out:
 sh scripts/verify-deploy.sh
 ```
 
-It fetches all ten files and fails unless each returns **200**, a content-type containing the
+It fetches all eleven files and fails unless each returns **200**, a content-type containing the
 expected token, a byte length equal to the local file, and bytes identical to the local file. It
 then cross-checks that every icon named in `manifest.webmanifest` is one it verified. It exits
 non-zero and names every failure. It uses no token and no API — it is a stranger with `curl`,
@@ -466,8 +467,8 @@ URL. `scripts/verify-deploy.sh` still applies — point it at the preview URL be
 - [ ] Scope settled: `$TEAM` empty or `?teamId=...`, proven by a 200 on the project read (§4.2)
 - [ ] Previous production `dpl_` id recorded (§4.2)
 - [ ] **Preview deployed and verified first** (§4.0)
-- [ ] 10 uploads, all HTTP 200/201, `$OK` = 10
-- [ ] `grep -o '"file"' body.json | wc -l` printed **10** (NOT `grep -c`, which always prints 1)
+- [ ] 11 uploads, all HTTP 200/201, `$OK` = 11
+- [ ] `grep -o '"file"' body.json | wc -l` printed **11** (NOT `grep -c`, which always prints 1)
 - [ ] `meta.commit` in the body is a real SHA, not an empty string
 - [ ] Deployment `readyState: READY`
 - [ ] `TREE=... COMMIT=... sh scripts/verify-deploy.sh <preview-url>` exits **0**
@@ -493,7 +494,7 @@ trusting any step above.
 | §4.1 CRLF hazard | Measured: `git archive` inflates `tests.html` 527,241 → 535,996 bytes |
 | §4.1 SHA pinning | `HEAD` observed moving twice in ten minutes under concurrent agents |
 | §4.3 digest loop | Ran with the upload stubbed; 10/10 entries, correct sizes and SHA-1s |
-| §4.4 body construction | Output parses as valid JSON, `files.length === 10`, no `target` key |
+| §4.4 body construction | Output parses as valid JSON, `files.length === 10` at the time (11 since E-3), no `target` key |
 | §4.4 file-count guard | `grep -c` returns 1, not 10 — defect found and corrected |
 | §4.4 `meta` | Returned empty strings from the extract — defect found and corrected |
 | §5 `verify-deploy.sh` | Exit **0**, `PASS 10/10`, against a stand-in origin serving the extract |

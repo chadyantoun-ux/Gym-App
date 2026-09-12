@@ -55,7 +55,8 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: no failures and no skips.</b> The one deliberate red is cleared.
+<b>Today: 593 / 590 / 3, no skips.</b> The three reds are S30&rsquo;s C-14 tests, written before the fix
+(see the S30 paragraph at the end of this note); the suite reads N / N / 0 the commit backend closes them.
 <code>strength-coach</code> ruled on 2026-09-10 (addendum &sect;9.13.3) that the trainingWeeks-0 line
 must read <code>3 sessions logged. Week 1 starts when three land in one week.</code>; the regression
 test was written <em>before</em> the fix and went green on <code>5cd014a</code> with one string in
@@ -136,7 +137,32 @@ the shipped plan&rsquo;s rest days and every other expectation is derived, with 
 transcribed from <code>docs/coach-audit-addendum.md</code> &sect;8.6 and compared, so code and document
 cannot drift. <b>Two P2 defects are pinned as OBSERVED, not accepted</b> &mdash; <code>reason:"manual"</code>
 on a call where nothing was switched, and <code>2026-02-30</code> earning a confident claim about a day that
-has never existed. Both are in the contract list, both are backend&rsquo;s, and both invert when fixed.</p>
+has never existed. Both are in the contract list, both are backend&rsquo;s, and both invert when fixed.<br>
+<b>S30</b> is E-3, the backup client&rsquo;s pure half &mdash; <code>backupPayload</code>, <code>restorePayload</code>,
+<code>validateSessionDoc</code>, <code>validateBwDoc</code>, <code>backupSig</code>, <code>agoText</code>. The hazard it
+exists for is that <b>JSONB does not keep key order</b>: a set that went up <code>{w:100,r:5}</code> comes back
+<code>{r:5,w:100}</code>, and every serialised-JSON assertion in this file would read a restored session as a corrupted
+one. So the round trip is asserted on <code>JSON.stringify</code> through a simulated Postgres reorder (key length,
+then bytes, at every depth), and the simulator is itself a GUARD test that must change the bytes before anything
+leans on it. Pinned: 30 sessions byte-identical after the trip with unknown keys (<code>dateBasis</code>, a future key,
+an <code>rpe</code> on a set) landing after the known ones in the server&rsquo;s order; <code>backupSig</code> identical
+across the builder&rsquo;s order, the restored order and raw JSONB order and different for <code>100&times;4</code>
+versus <code>100&times;5</code>; first-session-wins and last-bodyweight-wins with the bodyweight half proven by running
+<code>migrateStore</code> on the same rows (and a GUARD stating that <code>migrateStore</code> has no session dedupe to
+match); a restore with no <code>user_state</code> row that <code>migrateStore</code> then leaves untouched &mdash; no
+<code>dateBasis:"utc"</code> on any restored row; the SQL validator&rsquo;s refusals and legal edges, with three
+divergences from &ldquo;line for line&rdquo; pinned as OBSERVED (a padded numeric string, a negative number&rsquo;s
+sentence, <code>dateBasis</code>); and <code>agoText</code> across a local midnight, a year boundary, a leap day and
+both DST days, plus a 4,000-instant sweep that must never print <code>0 days ago</code>.
+<b>Three tests are red on purpose and are the E-3 report&rsquo;s one defect: WO-004 C-14, the demo boundary.</b>
+<code>backupPayload</code> pushes a session marked <code>demo:true</code> as real history, a store marked
+<code>demo:true</code> backs up whole, and <code>restorePayload</code> writes a demo row back into
+<code>phat:v1:log</code> &mdash; measured in the browser on 2026-09-11: signing in with <code>demoStore(42)</code> on
+disk POSTed 30 <code>demo:true</code> documents to <code>/rest/v1/sessions</code> under a green <i>BACKED UP</i>.
+The ruling QA is applying (refuse and name on push, refuse whole on restore) is written above the three tests and in
+<code>docs/decisions.md</code>; they go green when backend implements it, and they are not carried-forward failures
+&mdash; they are the fix&rsquo;s proof, written first. Pre/post: against <code>main</code>&rsquo;s <code>logic.js</code>
+(<code>f9d0551</code>) 35 of S30&rsquo;s 37 go red; the two that pass in both regimes are the two named GUARDs.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -10421,6 +10447,752 @@ T("DT1 / trainingDays and restDays are the plan's, in Mon..Sun order, and disjoi
   a.eq(P.WD_ORDER[0], "Mon", "and the week starts on Monday");
 });
 
+/* ============================================================ S30 - E-3, the backup client's pure half
+   backupPayload / restorePayload / validateSessionDoc / validateBwDoc /
+   backupSig / agoText, from file:// with the network off. Nothing here
+   touches sync.js (an ES module; cannot load on a file:// opaque origin, by
+   design) or the Settings screen - those are the browser run recorded under
+   "Already proven" items 21-27 and the residue in the checklist.
+
+   THE HAZARD THIS SECTION EXISTS FOR: JSONB does not keep key order. A set
+   that went up {w:100,r:5} comes back {r:5,w:100} - same values, different
+   bytes - and every test in this file that asserts on serialised JSON would
+   read a restored session as a corrupted one. So the round trip is asserted
+   on JSON.stringify, through a SIMULATED JSONB reorder (Postgres's rule: key
+   length first, then bytes, at every depth), and the simulator is itself
+   asserted to change the bytes before it is trusted to prove anything.
+
+   PRE/POST CHECK, run 2026-09-11 against main's logic.js (f9d0551, which has
+   none of the six exports): every test below that calls one goes red with
+   "PHAT.<fn> is missing". The ones that would pass in BOTH regimes are named
+   GUARD and are here so the simulator and the fixture cannot lie to the
+   tests that lean on them.
+
+   WHAT WRITES NOTHING: this section never touches phat:v1:log, bw or draft
+   (S29's rule - the harness is deployed on the app's origin). One test
+   installs the S0 storage spy around all six functions and asserts zero
+   reads, zero writes. */
+group("S30 E-3 backup / restore / C-14 / B-04");
+
+/* Postgres jsonb key order: shorter keys first, then bytewise. Applied at
+   every depth; arrays keep their order (jsonb preserves array order). */
+function JSONB(v){
+  var o, ks, i;
+  if (Array.isArray(v)) return v.map(JSONB);
+  if (v && typeof v === "object") {
+    ks = Object.keys(v).sort(function(a, b){
+      if (a.length !== b.length) return a.length - b.length;
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+    o = {};
+    for (i = 0; i < ks.length; i++) o[ks[i]] = JSONB(v[ks[i]]);
+    return o;
+  }
+  return v;
+}
+/* The wire shape sync.js pull() hands restorePayload: rows of {doc}, with
+   user_state as {log_meta, plan_meta} or null. Docs go through JSONB() so
+   the fixture cannot accidentally hand back the bytes that went out. */
+function ROWS(bp, opts){
+  var o = opts || {};
+  return {
+    sessions:   bp.sessions.map(function(d){ return { client_id: String(d.id), local_date: d.date, doc: JSONB(d) }; }),
+    bodyweight: bp.bodyweight.map(function(d){ return { local_date: d.date, doc: JSONB(d) }; }),
+    plans:      (bp.plans || []).map(function(d){ return { plan_id: d.planId, doc: JSONB(d) }; }),
+    user_state: o.noUserState ? null : { log_meta: JSONB(bp.logMeta), plan_meta: JSONB(bp.planMeta || {}) }
+  };
+}
+/* A REAL-shaped store: demoStore(42)'s 30 sessions and 36 bodyweight rows
+   with every demo mark removed, so it is exactly what six weeks of his own
+   logging would leave on disk - buildSession-built, numbers not strings,
+   planId and rx present. Cloned, so a test cannot bleed into the next. */
+function E3STORE(){
+  var d = P.demoStore(42), log = clone(d.log), bw = clone(d.bw), i;
+  delete log.demo; delete bw.demo;
+  for (i = 0; i < log.sessions.length; i++) delete log.sessions[i].demo;
+  return { log: log, bw: bw };
+}
+/* A session in the shape the SAVE PATH writes today, hand-built so the test
+   reads without opening demoStore. Numbers, planId, rx. */
+function E3SESS(id, date, dayId, w, r){
+  return { id: id, date: date, dayId: dayId || "d1", planId: "phat",
+           entries: { d1a: { sets: [{ w: w === undefined ? 100 : w, r: r === undefined ? 5 : r }], note: "",
+                             rx: { s: 3, lo: 3, hi: 5, k: "power" } } } };
+}
+function E3LOG(sessions, extra){
+  var log = { schemaVersion: P.SCHEMA_VERSION, sessions: sessions, includeCut: false,
+              reintro: 0, lastReintroDate: null, calChangedAt: null, deload: null }, k;
+  if (extra) for (k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) log[k] = extra[k];
+  return log;
+}
+function E3BW(entries){ return { schemaVersion: P.SCHEMA_VERSION, entries: entries }; }
+function E3PROBLEMS(bp){ return bp.problems.map(function(p){ return p.kind + ":" + p.key + ":" + p.msg; }).join(" | "); }
+
+/* ------------------------------------------------------ 0. surface */
+
+T("E-3 - window.PHAT exposes the six backup exports", function(a){
+  var need = ["backupPayload","restorePayload","validateSessionDoc","validateBwDoc","backupSig","agoText"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none", "missing PHAT functions from E-3");
+});
+
+T("E-3 - the six backup functions read no storage and no global state", function(a){
+  needFns(a, "backupPayload", "restorePayload", "validateSessionDoc", "validateBwDoc", "backupSig", "agoText");
+  var ls;
+  try { ls = window.localStorage; } catch (e) { ls = null; }
+  a.ok(!!ls, "localStorage unavailable, so the spy cannot be installed - re-run in a normal window");
+  var before = DTSNAP();
+  var calls = 0, realSet = ls.setItem, realGet = ls.getItem, realDel = ls.removeItem;
+  ls.setItem = function(){ calls++; return realSet.apply(ls, arguments); };
+  ls.getItem = function(){ calls++; return realGet.apply(ls, arguments); };
+  ls.removeItem = function(){ calls++; return realDel.apply(ls, arguments); };
+  var stashed = window.storage, storageHits = 0, stashedS = window.S;
+  window.storage = { get: function(){ storageHits++; }, set: function(){ storageHits++; } };
+  try {
+    delete window.S;
+    var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined);
+    P.backupSig(bp);
+    P.restorePayload(ROWS(bp));
+    P.validateSessionDoc(st.log.sessions[0]); P.validateBwDoc(st.bw.entries[0]);
+    P.agoText(Date.now() - 5000, Date.now());
+  } finally {
+    ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel;
+    if (stashed === undefined) { try { delete window.storage; } catch (e) { window.storage = undefined; } }
+    else window.storage = stashed;
+    if (stashedS !== undefined) window.S = stashedS;
+  }
+  a.eq(calls, 0, "a backup function read or wrote localStorage");
+  a.eq(storageHits, 0, "a backup function reached the window.storage bridge");
+  a.deep(DTSNAP(), before, "one of the three stores changed");
+});
+
+/* ------------------------------------------------------ 1. the JSONB round trip */
+
+T("GUARD - the JSONB simulator changes the bytes of a saved session (or the round-trip tests prove nothing)", function(a){
+  var s = E3SESS(1700000000000, "2026-09-09", "d1");
+  var j = JSON.stringify(s), r = JSON.stringify(JSONB(s));
+  a.ne(r, j, "the simulated reorder must produce different bytes from the builder's order");
+  a.eq(JSON.stringify(JSONB(s.entries.d1a.sets[0])), '{"r":5,"w":100}', "a set comes back {r, w}: same length, bytewise");
+  a.eq(Object.keys(JSONB(s)).join(","), "id,date,dayId,planId,entries", "top level happens to keep the builder's order by luck of key lengths");
+  a.eq(Object.keys(JSONB(s.entries.d1a)).join(","), "rx,note,sets", "an entry comes back {rx, note, sets}");
+  a.eq(Object.keys(JSONB(s.entries.d1a.rx)).join(","), "k,s,hi,lo", "rx comes back {k, s, hi, lo}");
+  a.ok(deepEq(JSONB(s), s), "and the VALUES are untouched - only the order moved");
+});
+
+T("E-3 / pin 1 - 30 sessions out through backupPayload, back through a JSONB reorder: every document byte-identical", function(a){
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined), i, rp;
+  a.eq(bp.counts.sessions, 30, "the fixture is 30 sessions");
+  a.eq(bp.counts.bodyweight, 36);
+  a.eq(E3PROBLEMS(bp), "", "a real store has no problems");
+  rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  a.eq(rp.counts.sessions, 30); a.eq(rp.counts.bodyweight, 36);
+  var rows = ROWS(bp);
+  for (i = 0; i < 30; i++) {
+    a.ne(JSON.stringify(rows.sessions[i].doc), JSON.stringify(st.log.sessions[i]), "the row that came back was in a different key order (guard)");
+    a.eq(JSON.stringify(rp.log.sessions[i]), JSON.stringify(st.log.sessions[i]), "session " + i + " is not byte-identical after the round trip");
+  }
+  a.eq(JSON.stringify(rp.log.sessions), JSON.stringify(st.log.sessions), "the whole sessions array, bytes");
+  a.eq(JSON.stringify(rp.bw.entries), JSON.stringify(st.bw.entries), "the whole bodyweight array, bytes");
+});
+
+T("E-3 / pin 1 - unknown keys land AFTER the known ones, unchanged: dateBasis, demo, a future key, at every depth", function(a){
+  var s = { id: 1700000000000, date: "2026-09-09", dayId: "d1", planId: "phat",
+            entries: { d1a: { sets: [{ w: 100, r: 5, rpe: 8 }, { w: 0, r: 10 }], note: "belt", rx: { s: 3, lo: 3, hi: 5, k: "power" }, tempo: "3010" } },
+            dateBasis: "utc", futureKey: { nested: [1, 2, { b: 1, a: 2 }] } };
+  var bp = P.backupPayload(E3LOG([s]), E3BW([{ date: "2026-09-09", kg: 85.5, dateBasis: "utc", src: "scale" }]), undefined);
+  a.eq(E3PROBLEMS(bp), "", "unknown keys are not a reason to refuse");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  var r = rp.log.sessions[0];
+  a.eq(Object.keys(r).join(","), "id,date,dayId,planId,entries,dateBasis,futureKey", "session: known order, then unknown in the server's order");
+  a.eq(Object.keys(r.entries.d1a).join(","), "sets,note,rx,tempo", "entry: sets, note, rx, then the unknown");
+  a.eq(Object.keys(r.entries.d1a.sets[0]).join(","), "w,r,rpe", "set: w, r, then the unknown");
+  a.eq(Object.keys(r.entries.d1a.rx).join(","), "s,lo,hi,k", "rx: the builder's order");
+  a.eq(JSON.stringify(r.futureKey), '{"nested":[1,2,{"a":2,"b":1}]}', "an unknown key's VALUE is untouched - the server's key order inside it is kept, not the builder's, because the builder has no opinion");
+  a.eq(r.dateBasis, "utc", "the WO-001 marker survives, so migrateStore will not re-mark this row");
+  a.eq(JSON.stringify(rp.bw.entries[0]), '{"date":"2026-09-09","kg":85.5,"src":"scale","dateBasis":"utc"}', "bodyweight: date, kg, then the unknowns in the SERVER's order (src is shorter than dateBasis)");
+});
+
+T("E-3 / pin 1 - values are never touched by the re-order: 0 stays 0, a legacy string stays a string, planId absent stays absent", function(a){
+  var legacy = { id: 1736500000000, date: "2026-01-10", dayId: "d1",
+                 entries: { d1a: { sets: [{ w: "100", r: "5" }, { w: 0, r: 10 }, { w: "0", r: "9" }], note: "" } } };
+  var bp = P.backupPayload(E3LOG([legacy]), E3BW([]), undefined);
+  a.eq(E3PROBLEMS(bp), "");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  a.eq(JSON.stringify(rp.log.sessions[0]), JSON.stringify(legacy), "a schema-1-shaped session, with string sets and no planId, is byte-identical after the trip");
+  a.eq(rp.log.sessions[0].entries.d1a.sets[1].w, 0, "0 kg is 0 (B-21), not dropped, not null");
+  a.eq(typeof rp.log.sessions[0].entries.d1a.sets[0].w, "string", "a string stays a string; nothing is coerced on the way back");
+  a.ok(!Object.prototype.hasOwnProperty.call(rp.log.sessions[0], "planId"), "an absent planId is not invented as undefined");
+});
+
+T("E-3 / pin 1 - a document with no known key at all comes back unchanged (orderKeys on a stranger)", function(a){
+  /* restorePayload only reaches canonSession on a VALID doc, so this is
+     asserted through the plan row, which has no canonical order and must
+     come back as the server sent it. */
+  var plan = { planId: "p1", name: "x", days: [], zeta: 1, alpha: 2 };
+  var rp = P.restorePayload({ sessions: [], bodyweight: [], plans: [{ plan_id: "p1", doc: JSONB(plan) }], user_state: null });
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  a.eq(Object.keys(rp.plans.plans[0]).join(","), "days,name,zeta,alpha,planId", "the server's order (length, then bytes), untouched");
+  a.ok(deepEq(rp.plans.plans[0], plan));
+});
+
+T("E-3 / pin 1 - restorePayload sorts sessions by date and keeps logged order within a date; never drops one", function(a){
+  var ss = [E3SESS(3, "2026-09-11"), E3SESS(1, "2026-09-09"), E3SESS(4, "2026-09-11", "d2"), E3SESS(2, "2026-09-10")];
+  var bp = P.backupPayload(E3LOG(ss), E3BW([]), undefined);
+  var rows = ROWS(bp); rows.sessions.reverse();
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, true);
+  a.eq(rp.log.sessions.map(function(s){ return s.id; }).join(","), "1,2,4,3",
+    "by date; the two on the 11th keep the order the ROWS arrived in (sync.js orders by local_date, client_id - so 4 before 3 here, as sent)");
+  a.eq(rp.log.sessions.length, 4);
+});
+
+/* ------------------------------------------------------ 2. backupSig */
+
+T("E-3 / pin 2 - backupSig is identical across logPayload order, restored order and raw JSONB order", function(a){
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined);
+  var sig = P.backupSig(bp);
+  a.match(sig, /^[0-9a-z]+-[0-9a-z]+$/, "a short string");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(P.backupSig(P.backupPayload(rp.log, rp.bw, rp.plans === null ? undefined : rp.plans)), sig, "restored store signs the same, or every restore is followed by a pointless push");
+  /* raw JSONB order, as if a caller signed the pulled docs directly */
+  var jb = { sessions: bp.sessions.map(JSONB), bodyweight: bp.bodyweight.map(JSONB), plans: [], logMeta: JSONB(bp.logMeta), planMeta: {}, counts: bp.counts, problems: [], notes: [] };
+  a.eq(P.backupSig(jb), sig, "JSONB order signs the same");
+  /* and the index.html order: logMeta with includeCut appended last */
+  var lm = {}, ks = Object.keys(bp.logMeta).filter(function(k){ return k !== "includeCut"; }), i;
+  for (i = 0; i < ks.length; i++) lm[ks[i]] = bp.logMeta[ks[i]];
+  lm.includeCut = bp.logMeta.includeCut;
+  a.eq(P.backupSig({ sessions: bp.sessions, bodyweight: bp.bodyweight, plans: [], logMeta: lm, planMeta: {} }), sig, "logPayload()'s key order signs the same");
+});
+
+T("E-3 / pin 2 - backupSig CHANGES when a value changes: 100x5 vs 100x4, a weight, a note, a bodyweight, a state key, a session added or removed", function(a){
+  var base = function(){ return { log: E3LOG([E3SESS(1, "2026-09-09", "d1", 100, 5), E3SESS(2, "2026-09-10", "d2", 120, 3)]), bw: E3BW([{ date: "2026-09-09", kg: 85.5 }]) }; };
+  var sig = function(st){ return P.backupSig(P.backupPayload(st.log, st.bw, undefined)); };
+  var s0 = sig(base()), st, seen = {};
+  seen[s0] = "base";
+  function differs(label, mut){ st = base(); mut(st); var s = sig(st); a.ne(s, s0, label + " must move the signature"); a.ok(!seen[s], label + " collides with " + seen[s]); seen[s] = label; }
+  differs("100x4 for 100x5", function(st){ st.log.sessions[0].entries.d1a.sets[0].r = 4; });
+  differs("102.5 for 100", function(st){ st.log.sessions[0].entries.d1a.sets[0].w = 102.5; });
+  differs("a note", function(st){ st.log.sessions[0].entries.d1a.note = "belt"; });
+  differs("a second set", function(st){ st.log.sessions[0].entries.d1a.sets.push({ w: 100, r: 5 }); });
+  differs("a bodyweight 85.6 for 85.5", function(st){ st.bw.entries[0].kg = 85.6; });
+  differs("a bodyweight row added", function(st){ st.bw.entries.push({ date: "2026-09-10", kg: 85.7 }); });
+  differs("deload state", function(st){ st.log.deload = { since: "2026-09-07" }; });
+  differs("reintro counter", function(st){ st.log.reintro = 1; });
+  differs("a session removed", function(st){ st.log.sessions.pop(); });
+  differs("a session added", function(st){ st.log.sessions.push(E3SESS(3, "2026-09-11")); });
+  differs("a set's date moved", function(st){ st.log.sessions[0].date = "2026-09-08"; });
+  differs("string \"100\" for number 100 (different bytes on disk, so a different document)", function(st){ st.log.sessions[0].entries.d1a.sets[0].w = "100"; });
+});
+
+T("E-3 / pin 2 - backupSig: session ORDER is data (two sessions swapped sign differently); garbage never throws", function(a){
+  var st = { log: E3LOG([E3SESS(1, "2026-09-09"), E3SESS(2, "2026-09-09", "d2")]), bw: E3BW([]) };
+  var s1 = P.backupSig(P.backupPayload(st.log, st.bw, undefined));
+  st.log.sessions.reverse();
+  var s2 = P.backupSig(P.backupPayload(st.log, st.bw, undefined));
+  a.ne(s1, s2, "same-day sessions swapped is a different log; sortSessions is stable on index, so the position is real");
+  a.eq(typeof A.noThrow(function(){ return P.backupSig(null); }), "string");
+  a.eq(typeof A.noThrow(function(){ return P.backupSig(undefined); }), "string");
+  a.eq(typeof A.noThrow(function(){ return P.backupSig({}); }), "string");
+  a.eq(P.backupSig(null), P.backupSig("x"), "every non-object signs as the same nothing");
+  a.ne(P.backupSig({}), P.backupSig(null));
+});
+
+/* ------------------------------------------------------ 3. legacy shapes, duplicates, verbatim references */
+
+T("E-3 / pin 3 - a legacy string-set session and a 0 kg set go up VERBATIM: same reference, input not mutated", function(a){
+  var log = E3LOG([{ id: 1736500000000, date: "2026-01-10", dayId: "d1",
+                     entries: { d1a: { sets: [{ w: "100", r: "5" }, { w: 0, r: 10 }], note: "" } } }]);
+  var before = JSON.stringify(log), bw = E3BW([{ date: "2026-01-10", kg: "85.5" }]), bwBefore = JSON.stringify(bw);
+  var bp = P.backupPayload(log, bw, undefined);
+  a.eq(E3PROBLEMS(bp), "");
+  a.eq(bp.sessions[0], log.sessions[0], "the SAME object, not a copy - nothing to drift");
+  a.eq(bp.bodyweight[0], bw.entries[0]);
+  a.eq(JSON.stringify(log), before, "backupPayload mutated the log");
+  a.eq(JSON.stringify(bw), bwBefore, "backupPayload mutated the bodyweight store");
+  a.eq(bp.sessions[0].entries.d1a.sets[1].w, 0, "0 kg present (B-21)");
+  a.eq(bp.counts.refused, 0);
+});
+
+T("E-3 / pin 3 - two sessions sharing an id: the FIRST goes up, the second is NAMED, and counts say so", function(a){
+  var s1 = E3SESS(1700000000000, "2026-09-09", "d1", 100, 5), s2 = E3SESS(1700000000000, "2026-09-10", "d2", 120, 3);
+  var bp = P.backupPayload(E3LOG([s1, s2]), E3BW([]), undefined);
+  a.eq(bp.sessions.length, 1); a.eq(bp.sessions[0], s1, "first in stored order wins");
+  a.eq(bp.counts.sessions, 1); a.eq(bp.counts.refused, 1, "the loser is counted as refused, not dropped quietly");
+  a.eq(bp.problems.length, 1);
+  a.eq(bp.problems[0].kind, "session");
+  a.eq(bp.problems[0].key, "10 Sep (d2)", "named by date and day");
+  a.match(bp.problems[0].msg, /shares id 1700000000000 with 9 Sep \(d1\); only the first is backed up/);
+  /* Number and string ids that print the same collide on the server's
+     client_id text column, so they must collide here too. */
+  var bp2 = P.backupPayload(E3LOG([E3SESS("1700000000000", "2026-09-09"), E3SESS(1700000000000, "2026-09-10")]), E3BW([]), undefined);
+  a.eq(bp2.sessions.length, 1, "\"1700000000000\" and 1700000000000 are one client_id");
+});
+
+T("GUARD - migrateStore has NO session-id dedupe rule to match (the README's \"matching migrateStore\" holds for bodyweight only)", function(a){
+  /* Run it, do not read it. Two sessions sharing an id go through a v1
+     migration and BOTH come out. backupPayload's first-wins rule is its own,
+     which is fine - a push names the loser - but it is not migrateStore's. */
+  var log = { sessions: [E3SESS(7, "2026-09-09"), E3SESS(7, "2026-09-10", "d2")] };
+  var m = P.migrateStore(log, { entries: [] });
+  a.eq(m.log.sessions.length, 2, "migrateStore kept both; it never dedupes sessions");
+});
+
+T("E-3 / pin 3 - two bodyweight rows on one date: the LAST goes up, and it is the same row migrateStore keeps - both RUN, not read", function(a){
+  var entries = [{ date: "2026-09-09", kg: 85.0 }, { date: "2026-09-10", kg: 85.2 }, { date: "2026-09-09", kg: 85.6 }, { date: "2026-09-11", kg: 85.4 }];
+  var bp = P.backupPayload(E3LOG([]), E3BW(clone(entries)), undefined);
+  a.eq(bp.bodyweight.length, 3);
+  a.eq(bp.counts.refused, 1);
+  a.eq(bp.problems[0].kind, "bodyweight"); a.eq(bp.problems[0].key, "2026-09-09");
+  a.match(bp.problems[0].msg, /two rows share 2026-09-09; only the last is backed up/);
+  var upKg = {}; bp.bodyweight.forEach(function(e){ upKg[e.date] = e.kg; });
+  /* migrateStore only dedupes a store it is migrating, so hand it a v1 store */
+  var m = P.migrateStore({ sessions: [] }, { entries: clone(entries) });
+  var migKg = {}; m.bw.entries.forEach(function(e){ migKg[e.date] = e.kg; });
+  a.deep(upKg, migKg, "the value per date that goes up is the value per date migrateStore keeps");
+  a.eq(upKg["2026-09-09"], 85.6, "last in array order");
+  a.eq(m.bw.entries.length, 3);
+  /* Position differs - backupPayload keeps the first slot, migrateStore the
+     last - and it does not matter: the server keys on date and restorePayload
+     sorts by date, so both land in the same place. Pinned so a future reader
+     does not "fix" one to match the other and change which VALUE wins. */
+  a.eq(bp.bodyweight.map(function(e){ return e.date; }).join(","), "2026-09-09,2026-09-10,2026-09-11");
+  a.eq(m.bw.entries.map(function(e){ return e.date; }).join(","), "2026-09-10,2026-09-09,2026-09-11");
+});
+
+T("E-3 / pin 3 - a session the server would refuse is LEFT OUT and NAMED; the 29 good ones still go up", function(a){
+  var st = E3STORE(), bad = clone(st.log.sessions[3]);
+  bad.id = "bad-1"; bad.entries[Object.keys(bad.entries)[0]].sets[0].w = "7.5.0";
+  st.log.sessions.splice(4, 0, bad);
+  var bp = P.backupPayload(st.log, st.bw, undefined);
+  a.eq(bp.counts.sessions, 30, "the 30 good ones");
+  a.eq(bp.counts.refused, 1);
+  a.eq(bp.problems.length, 1);
+  a.eq(bp.problems[0].kind, "session");
+  a.match(bp.problems[0].key, /^\d{1,2} \w{3} \(d\d\)$/, "named by date and day, the way the status line prints it");
+  a.match(bp.problems[0].msg, /has an unreadable weight: "7\.5\.0"/);
+  a.eq(bp.sessions.indexOf(bad), -1, "and it is not in the rows");
+});
+
+T("E-3 / pin 3 - logMeta is the log minus sessions, every other key kept; a bodyweight meta key is NOTED, not dropped quietly", function(a){
+  var log = E3LOG([E3SESS(1, "2026-09-09")], { utcDatedBefore: "2026-09-09", somethingNew: { a: 1 } });
+  var bw = E3BW([{ date: "2026-09-09", kg: 85 }]); bw.oddKey = 1;
+  var bp = P.backupPayload(log, bw, undefined);
+  a.ok(!Object.prototype.hasOwnProperty.call(bp.logMeta, "sessions"), "user_state forbids a sessions key");
+  a.eq(bp.logMeta.schemaVersion, P.SCHEMA_VERSION);
+  a.eq(bp.logMeta.includeCut, false);
+  a.eq(bp.logMeta.utcDatedBefore, "2026-09-09");
+  a.deep(bp.logMeta.somethingNew, { a: 1 }, "a key this build does not know is carried");
+  a.eq(bp.notes.join(" | "), "bodyweight store key not backed up: oddKey", "bodyweight meta has no column; it is said, not swallowed");
+  a.eq(bp.counts.refused, 0, "a note is not a refusal");
+});
+
+T("E-3 / pin 3 - backupPayload never throws and never invents rows: absent, null, garbage and non-array stores", function(a){
+  var bp = A.noThrow(function(){ return P.backupPayload(undefined, undefined, undefined); });
+  a.deep(bp.counts, { sessions: 0, bodyweight: 0, plans: 0, refused: 0 });
+  a.eq(bp.problems.length, 0, "an absent store is not a problem");
+  bp = A.noThrow(function(){ return P.backupPayload(null, null, null); });
+  a.eq(bp.problems.length, 0);
+  bp = A.noThrow(function(){ return P.backupPayload("x", 5, []); });
+  a.eq(bp.problems.map(function(p){ return p.kind; }).join(","), "log,bw,plans", "each garbage store is named");
+  bp = A.noThrow(function(){ return P.backupPayload({ sessions: {} }, { entries: "no" }, { plans: 1 }); });
+  a.eq(bp.problems.map(function(p){ return p.key; }).join(","), "sessions,entries,plans");
+  a.eq(bp.sessions.length + bp.bodyweight.length + bp.plans.length, 0);
+});
+
+/* ------------------------------------------------------ 4. no user_state row */
+
+T("E-3 / pin 4 - restore with NO user_state row: the log is stamped SCHEMA_VERSION and migrateStore then marks NOTHING as UTC-dated", function(a){
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined);
+  var rp = P.restorePayload(ROWS(bp, { noUserState: true }));
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  a.eq(rp.log.schemaVersion, P.SCHEMA_VERSION, "a v1-looking store is how every restored row gets dateBasis:\"utc\"");
+  a.eq(rp.log.includeCut, false);
+  a.match(rp.notes.join(" | "), /no user_state row; log stamped schema \d+/);
+  var m = P.migrateStore(rp.log, rp.bw);
+  a.eq(m.changed, false, "nothing to migrate on a store that says its version: " + JSON.stringify(m.notes));
+  a.eq(m.logChanged, false); a.eq(m.bwChanged, false);
+  a.eq(rp.log.sessions.filter(function(s){ return s.dateBasis !== undefined; }).length, 0, "no restored session carries dateBasis");
+  a.eq(m.log.sessions.filter(function(s){ return s.dateBasis !== undefined; }).length, 0, "and migrateStore added none");
+  a.ok(!Object.prototype.hasOwnProperty.call(m.log, "utcDatedBefore"), "no utcDatedBefore stamp");
+  a.eq(JSON.stringify(m.log.sessions), JSON.stringify(st.log.sessions), "sessions byte-identical through restore AND migrate");
+  a.eq(rp.bw.schemaVersion, P.SCHEMA_VERSION, "the bodyweight store is stamped too");
+});
+
+T("E-3 / pin 4 - a user_state row whose log_meta lacks schemaVersion is stamped and noted; one that has it is kept as-is", function(a){
+  var bp = P.backupPayload(E3LOG([E3SESS(1, "2026-09-09")]), E3BW([]), undefined);
+  var rows = ROWS(bp); delete rows.user_state.log_meta.schemaVersion;
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, true); a.eq(rp.log.schemaVersion, P.SCHEMA_VERSION);
+  a.match(rp.notes.join(" | "), /log_meta had no schemaVersion; stamped/);
+  a.eq(P.migrateStore(rp.log, rp.bw).changed, false);
+  rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.notes.length, 0, "nothing to say when the state row is whole");
+  a.eq(rp.log.reintro, 0); a.eq(rp.log.deload, null); a.eq(rp.log.calChangedAt, null);
+});
+
+T("E-3 / pin 4 - a session that really WAS UTC-dated keeps its marker through the trip, and migrateStore does not touch its neighbours", function(a){
+  var utc = { id: 1736500000000, date: "2026-01-10", dayId: "d1", entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" } }, dateBasis: "utc" };
+  var log = E3LOG([utc, E3SESS(2, "2026-09-09")], { utcDatedBefore: "2026-01-20" });
+  var bp = P.backupPayload(log, E3BW([{ date: "2026-01-10", kg: "85", dateBasis: "utc" }, { date: "2026-09-09", kg: 86 }]), undefined);
+  a.eq(E3PROBLEMS(bp), "");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true, rp.problems.join(" | "));
+  a.eq(rp.log.sessions[0].dateBasis, "utc"); a.eq(rp.log.sessions[1].dateBasis, undefined);
+  a.eq(rp.log.utcDatedBefore, "2026-01-20");
+  a.eq(rp.bw.entries[0].dateBasis, "utc"); a.eq(rp.bw.entries[1].dateBasis, undefined);
+  var m = P.migrateStore(rp.log, rp.bw);
+  a.eq(m.changed, false);
+  a.eq(JSON.stringify(m.log.sessions), JSON.stringify(log.sessions));
+});
+
+/* ------------------------------------------------------ 5. the validators, the SQL's cases */
+
+T("E-3 / pin 5 - validateSessionDoc refuses what the SQL refuses: 7.5.0, w outside 0..500, r outside 1..100, fractional r, missing id/dayId, non-object entries", function(a){
+  function bad(mut, re, label){
+    var s = E3SESS(1700000000000, "2026-09-09"); mut(s);
+    var v = P.validateSessionDoc(s);
+    a.eq(v.ok, false, label + " must be refused");
+    a.match(v.problems.join(" | "), re, label);
+  }
+  bad(function(s){ s.entries.d1a.sets[0].w = "7.5.0"; }, /entry d1a has an unreadable weight: "7\.5\.0"/, "7.5.0");
+  bad(function(s){ s.entries.d1a.sets[0].w = ".."; }, /unreadable weight: "\.\."/, "..");
+  bad(function(s){ s.entries.d1a.sets[0].w = "1e3"; }, /unreadable weight: "1e3"/, "1e3");
+  bad(function(s){ s.entries.d1a.sets[0].w = "-3"; }, /unreadable weight: "-3"/, "-3 as a string");
+  bad(function(s){ s.entries.d1a.sets[0].w = "100 kg"; }, /unreadable weight: "100 kg"/, "100 kg");
+  bad(function(s){ s.entries.d1a.sets[0].w = -0.5; }, /unreadable weight: "-0\.5"/, "-0.5 as a NUMBER is refused - see the OBSERVED test for the sentence");
+  bad(function(s){ s.entries.d1a.sets[0].w = -1; }, /unreadable weight: "-1"/, "-1 as a number");
+  bad(function(s){ s.entries.d1a.sets[0].w = 500.5; }, /weight out of range \(0\.\.500\): 500\.5/, "500.5");
+  bad(function(s){ s.entries.d1a.sets[0].w = 1000; }, /weight out of range/, "1000 as a number");
+  bad(function(s){ s.entries.d1a.sets[0].w = true; }, /weight that is neither a number nor a numeric string/, "boolean w");
+  bad(function(s){ s.entries.d1a.sets[0].w = null; }, /has a set missing w or r/, "null w");
+  bad(function(s){ delete s.entries.d1a.sets[0].r; }, /has a set missing w or r/, "absent r");
+  bad(function(s){ s.entries.d1a.sets[0].r = 0; }, /reps out of range \(1\.\.100\): 0/, "r 0");
+  bad(function(s){ s.entries.d1a.sets[0].r = 101; }, /reps out of range \(1\.\.100\): 101/, "r 101");
+  bad(function(s){ s.entries.d1a.sets[0].r = 5.5; }, /reps must be a whole number: 5\.5/, "r 5.5 number");
+  bad(function(s){ s.entries.d1a.sets[0].r = "5.5"; }, /has unreadable reps: "5\.5"/, "r 5.5 string");
+  bad(function(s){ s.entries.d1a.sets[0].r = "5."; }, /unreadable reps: "5\."/, "r 5.");
+  bad(function(s){ s.entries.d1a.sets[0].r = {}; }, /reps that are neither a number nor a numeric string/, "object r");
+  bad(function(s){ delete s.id; }, /session\.id is required/, "no id");
+  bad(function(s){ s.id = ""; }, /session\.id is required/, "empty id");
+  bad(function(s){ s.id = null; }, /session\.id is required/, "null id");
+  bad(function(s){ s.id = { a: 1 }; }, /session\.id is required/, "object id");
+  bad(function(s){ delete s.dayId; }, /session\.dayId is required/, "no dayId");
+  bad(function(s){ s.dayId = "  "; }, /session\.dayId is required/, "blank dayId");
+  bad(function(s){ s.dayId = 1; }, /session\.dayId is required/, "numeric dayId (B-38)");
+  bad(function(s){ delete s.date; }, /session\.date must be YYYY-MM-DD, got: \(absent\)/, "no date");
+  bad(function(s){ s.date = "2026-9-9"; }, /session\.date must be YYYY-MM-DD, got: 2026-9-9/, "unpadded date");
+  bad(function(s){ s.date = "2026-02-30"; }, /session\.date is not a real calendar date: 2026-02-30/, "Feb 30");
+  bad(function(s){ s.date = "2026-13-01"; }, /not a real calendar date/, "month 13");
+  bad(function(s){ s.date = "2026-09-09T00:00:00Z"; }, /must be YYYY-MM-DD/, "a timestamp is not a date (B-03)");
+  bad(function(s){ s.planId = ""; }, /session\.planId, when present, must be a non-empty string/, "empty planId");
+  bad(function(s){ s.planId = 3; }, /session\.planId, when present/, "numeric planId");
+  bad(function(s){ s.entries = []; }, /session\.entries must be an object keyed by exercise id/, "array entries");
+  bad(function(s){ s.entries = null; }, /session\.entries must be an object/, "null entries");
+  bad(function(s){ s.entries.d1a = [{ w: 100, r: 5 }]; }, /entry d1a must be an object/, "entry as a bare array");
+  bad(function(s){ s.entries.d1a = "x"; }, /entry d1a must be an object/, "entry as a string");
+  bad(function(s){ s.entries.d1a.sets = {}; }, /entry d1a\.sets must be an array/, "sets as an object");
+  bad(function(s){ s.entries.d1a.sets = null; }, /entry d1a\.sets must be an array/, "sets null");
+  bad(function(s){ s.entries.d1a.sets[0] = 5; }, /entry d1a has a set that is not an object/, "a set that is a number");
+  bad(function(s){ s.entries.d1a.sets[0] = null; }, /entry d1a has a set that is not an object/, "a set that is null");
+  a.eq(P.validateSessionDoc(null).ok, false); a.eq(P.validateSessionDoc("x").ok, false);
+  a.eq(P.validateSessionDoc([]).ok, false); a.eq(P.validateSessionDoc(undefined).ok, false);
+  a.match(P.validateSessionDoc(null).problems[0], /session doc must be a JSON object/);
+});
+
+T("E-3 / pin 5 - validateSessionDoc accepts the legal edges: w 0, w 500, r 1, r 100, numeric strings, \"5.\", \".5\", r 5.0, id 0, no entries, notes-only entry, empty sets", function(a){
+  function good(mut, label){
+    var s = E3SESS(1700000000000, "2026-09-09"); mut(s);
+    var v = P.validateSessionDoc(s);
+    a.eq(v.ok, true, label + " must be accepted: " + v.problems.join(" | "));
+    a.eq(v.problems.length, 0);
+  }
+  good(function(s){ s.entries.d1a.sets[0].w = 0; }, "w 0 (B-21)");
+  good(function(s){ s.entries.d1a.sets[0].w = "0"; }, "w \"0\"");
+  good(function(s){ s.entries.d1a.sets[0].w = 500; }, "w 500");
+  good(function(s){ s.entries.d1a.sets[0].w = "500"; }, "w \"500\"");
+  good(function(s){ s.entries.d1a.sets[0].w = "5."; }, "w \"5.\" (NUM_W)");
+  good(function(s){ s.entries.d1a.sets[0].w = ".5"; }, "w \".5\" (NUM_W)");
+  good(function(s){ s.entries.d1a.sets[0].w = "00100"; }, "w \"00100\" (kept verbatim by the sanitiser, legal here)");
+  good(function(s){ s.entries.d1a.sets[0].w = 102.5; }, "w 102.5");
+  good(function(s){ s.entries.d1a.sets[0].r = 1; }, "r 1");
+  good(function(s){ s.entries.d1a.sets[0].r = 100; }, "r 100");
+  good(function(s){ s.entries.d1a.sets[0].r = "100"; }, "r \"100\"");
+  good(function(s){ s.entries.d1a.sets[0].r = "05"; }, "r \"05\"");
+  good(function(s){ s.entries.d1a.sets[0].r = 5.0; }, "r 5.0 (a whole number)");
+  good(function(s){ s.id = 0; }, "id 0 (a number; the server keys on its text \"0\")");
+  good(function(s){ s.id = "demo-w1-d1"; }, "a string id");
+  good(function(s){ delete s.planId; }, "no planId (means the shipped plan)");
+  good(function(s){ delete s.entries; }, "no entries key");
+  good(function(s){ s.entries = {}; }, "empty entries");
+  good(function(s){ s.entries.d1a = { sets: [], note: "felt flat" }; }, "notes-only entry (B-33)");
+  good(function(s){ s.entries.d1a = { note: "x" }; }, "entry with no sets key");
+  good(function(s){ delete s.entries.d1a.rx; }, "no rx");
+  good(function(s){ s.entries.d1a.rx = "garbage"; }, "rx is not validated by either side");
+  good(function(s){ s.dateBasis = "utc"; }, "dateBasis utc");
+  good(function(s){ s.dateBasis = "local"; }, "dateBasis local");
+  good(function(s){ s.demo = true; }, "demo:true is not a VALIDATION failure - the C-14 boundary is backupPayload's, see below");
+  good(function(s){ s.date = "2028-02-29"; }, "a real leap day");
+});
+
+T("E-3 / pin 5 - validateSessionDoc collects EVERY problem, not the first", function(a){
+  var s = { entries: { d1a: { sets: [{ w: "7.5.0", r: 0 }, { w: 600, r: "x" }] }, d1b: 5 } };
+  var v = P.validateSessionDoc(s);
+  a.eq(v.ok, false);
+  a.ok(v.problems.length >= 7, "id, dayId, date, w 7.5.0, r 0, w 600, r x, d1b: got " + v.problems.length + ": " + v.problems.join(" | "));
+  a.match(v.problems.join("\n"), /session\.id is required/);
+  a.match(v.problems.join("\n"), /session\.dayId is required/);
+  a.match(v.problems.join("\n"), /session\.date must be/);
+  a.match(v.problems.join("\n"), /unreadable weight: "7\.5\.0"/);
+  a.match(v.problems.join("\n"), /reps out of range \(1\.\.100\): 0/);
+  a.match(v.problems.join("\n"), /weight out of range \(0\.\.500\): 600/);
+  a.match(v.problems.join("\n"), /unreadable reps: "x"/);
+  a.match(v.problems.join("\n"), /entry d1b must be an object/);
+});
+
+T("E-3 / pin 5 - validateBwDoc: the server's 20..400, not the field's 30..300; numeric strings; a bad date; kg missing, null, NaN, negative", function(a){
+  function bw(date, kg){ var d = { date: date, kg: kg }; if (kg === undefined) delete d.kg; return P.validateBwDoc(d); }
+  a.eq(bw("2026-09-09", 85.5).ok, true);
+  a.eq(bw("2026-09-09", "85.5").ok, true, "a numeric string");
+  a.eq(bw("2026-09-09", 20).ok, true, "20 is the floor");
+  a.eq(bw("2026-09-09", 400).ok, true, "400 is the ceiling");
+  a.eq(bw("2026-09-09", 25).ok, true, "25 kg: the FIELD refuses it (30..300), the server accepts it - storage must never refuse a number the device wrote");
+  a.eq(bw("2026-09-09", 350).ok, true, "350 kg: same");
+  a.eq(bw("2026-09-09", 19.9).ok, false); a.match(bw("2026-09-09", 19.9).problems[0], /bodyweight\.kg out of range \(20\.\.400\): 19\.9/);
+  a.eq(bw("2026-09-09", 400.1).ok, false); a.match(bw("2026-09-09", 400.1).problems[0], /out of range \(20\.\.400\): 400\.1/);
+  a.eq(bw("2026-09-09", -85).ok, false);
+  a.eq(bw("2026-09-09", 0).ok, false, "0 kg is a legal SET weight, not a legal bodyweight");
+  a.eq(bw("2026-09-09").ok, false); a.match(bw("2026-09-09").problems[0], /bodyweight\.kg must be a number or a numeric string/);
+  a.eq(bw("2026-09-09", null).ok, false);
+  a.eq(bw("2026-09-09", NaN).ok, false, "NaN cannot be in JSON and must not pass");
+  a.eq(bw("2026-09-09", Infinity).ok, false);
+  a.eq(bw("2026-09-09", "85,5").ok, false, "a comma decimal");
+  a.eq(bw("2026-09-09", "85.5.0").ok, false);
+  a.eq(bw("2026-09-09", "1e2").ok, false);
+  a.eq(bw("2026-09-09", true).ok, false);
+  a.eq(bw("2026-02-30", 85).ok, false); a.match(bw("2026-02-30", 85).problems[0], /bodyweight\.date is not a real calendar date: 2026-02-30/);
+  a.eq(bw("09/09/2026", 85).ok, false); a.match(bw("09/09/2026", 85).problems[0], /bodyweight\.date must be YYYY-MM-DD, got: 09\/09\/2026/);
+  a.eq(bw(undefined, 85).ok, false); a.match(bw(undefined, 85).problems[0], /got: \(absent\)/);
+  a.eq(P.validateBwDoc(null).ok, false); a.eq(P.validateBwDoc([]).ok, false); a.eq(P.validateBwDoc("85").ok, false);
+  a.eq(P.validateBwDoc({ date: "2026-09-09", kg: 85, dateBasis: "utc" }).ok, true);
+  a.eq(P.validateBwDoc({ date: "x", kg: -1 }).problems.length, 2, "both problems collected");
+});
+
+T("E-3 / pin 5 OBSERVED - where the JS mirror is NOT line-for-line with the SQL: a padded numeric string, and dateBasis", function(a){
+  /* Read against supabase/schema.sql phat_validate_session_doc on 2026-09-11.
+     Two divergences, pinned as OBSERVED so a change in either direction is a
+     deliberate edit and not a drift:
+     (1) parseWeight/parseReps TRIM before testing NUM_W/NUM_R; the SQL regex
+         is anchored on the raw string. " 100" passes here and is refused by
+         the server with 23514 - and a 23514 on one row fails the whole
+         50-row chunk in sync.js, so the client would report "Could not back
+         up sessions" for a document its own validator cleared. Unreachable
+         from the save path (the sanitiser strips spaces and buildSession
+         coerces to numbers), reachable from a hand-edited import.
+     (2) The JS refuses dateBasis outside {"local","utc"}; the SQL never
+         reads dateBasis. Stricter on the client is the safe direction - the
+         row is named, not lost - but it is not a mirror. */
+  var s = E3SESS(1, "2026-09-09"); s.entries.d1a.sets[0].w = " 100";
+  a.eq(P.validateSessionDoc(s).ok, true, "OBSERVED: \" 100\" passes the JS (trimmed) - the SQL regex ^...$ would refuse it");
+  s = E3SESS(1, "2026-09-09"); s.entries.d1a.sets[0].r = "5 ";
+  a.eq(P.validateSessionDoc(s).ok, true, "OBSERVED: \"5 \" passes the JS (trimmed) - the SQL would refuse it");
+  a.eq(P.validateBwDoc({ date: "2026-09-09", kg: " 85" }).ok, false, "the bodyweight validator does NOT trim - it matches the SQL; the two JS validators disagree with each other");
+  /* (3) A NEGATIVE NUMBER. parseWeight stringifies and tests NUM_W first, so
+         -0.5 is "unreadable"; the SQL reads a jsonb number straight to numeric
+         and says "out of range (0..500): -0.5". Same refusal, different
+         sentence - the one case where the two name a different reason. */
+  s = E3SESS(1, "2026-09-09"); s.entries.d1a.sets[0].w = -0.5;
+  a.match(P.validateSessionDoc(s).problems[0], /has an unreadable weight: "-0\.5"/, "OBSERVED: JS says unreadable; the SQL would say out of range");
+  s = E3SESS(1, "2026-09-09"); s.dateBasis = "LOCAL";
+  a.eq(P.validateSessionDoc(s).ok, false, "OBSERVED: the JS refuses dateBasis \"LOCAL\"; the SQL has no such check");
+  a.match(P.validateSessionDoc(s).problems[0], /session\.dateBasis must be "local" or "utc", got: LOCAL/);
+});
+
+/* ------------------------------------------------------ 6. agoText */
+
+T("E-3 / pin 6 - agoText across a local midnight: 23:50 to 00:10 is \"20 min ago\"; 22:00 to 01:00 is \"yesterday\", never \"0 days ago\"", function(a){
+  var L = function(y, m, d, h, mi){ return new Date(y, m - 1, d, h, mi, 0, 0).getTime(); };
+  a.eq(P.agoText(L(2026, 9, 10, 23, 50), L(2026, 9, 11, 0, 10)), "20 min ago", "elapsed minutes win under an hour, whatever the calendar says");
+  a.eq(P.agoText(L(2026, 9, 10, 23, 30), L(2026, 9, 11, 0, 30)), "yesterday", "exactly an hour, across midnight: the calendar gap");
+  a.eq(P.agoText(L(2026, 9, 10, 22, 0), L(2026, 9, 11, 1, 0)), "yesterday");
+  a.eq(P.agoText(L(2026, 9, 10, 0, 5), L(2026, 9, 11, 23, 55)), "yesterday", "47 h 50 min, one calendar day");
+  a.eq(P.agoText(L(2026, 9, 9, 23, 59), L(2026, 9, 11, 0, 1)), "2 days ago", "24 h 2 min, two calendar days");
+  a.eq(P.agoText(L(2026, 9, 11, 9, 0), L(2026, 9, 11, 12, 0)), "3 h ago", "same day: hours");
+  a.eq(P.agoText(L(2026, 9, 11, 0, 30), L(2026, 9, 11, 23, 30)), "23 h ago");
+  a.eq(P.agoText(L(2026, 9, 1, 12, 0), L(2026, 9, 11, 12, 0)), "10 days ago");
+  a.eq(P.agoText(L(2025, 12, 31, 23, 0), L(2026, 1, 1, 2, 0)), "yesterday", "across a year boundary");
+  a.eq(P.agoText(L(2026, 2, 28, 23, 0), L(2026, 3, 1, 2, 0)), "yesterday", "across a month boundary");
+  a.eq(P.agoText(L(2028, 2, 29, 12, 0), L(2028, 3, 1, 12, 0)), "yesterday", "from a leap day");
+  /* the DST transition days in the host zone; in a zone without DST these are plain days and must still read the same */
+  a.eq(P.agoText(L(2026, 3, 7, 12, 0), L(2026, 3, 8, 13, 0)), "yesterday", "US spring-forward day");
+  a.eq(P.agoText(L(2026, 10, 31, 12, 0), L(2026, 11, 1, 11, 0)), "yesterday", "US fall-back day, 23 elapsed hours in a DST zone");
+  a.eq(P.agoText(L(2026, 3, 28, 12, 0), L(2026, 3, 29, 13, 0)), "yesterday", "EU spring-forward day");
+  a.eq(P.agoText(L(2026, 10, 24, 12, 0), L(2026, 10, 25, 11, 0)), "yesterday", "EU fall-back day");
+});
+
+T("E-3 / pin 6 - agoText boundaries: 59 s is \"just now\", 60 s is \"1 min ago\", 59 min 59 s is \"59 min ago\", 60 min same day is \"1 h ago\"", function(a){
+  var now = new Date(2026, 8, 11, 12, 0, 0, 0).getTime();
+  a.eq(P.agoText(now, now), "just now");
+  a.eq(P.agoText(now - 59999, now), "just now");
+  a.eq(P.agoText(now - 60000, now), "1 min ago");
+  a.eq(P.agoText(now - 119999, now), "1 min ago");
+  a.eq(P.agoText(now - 120000, now), "2 min ago");
+  a.eq(P.agoText(now - 3599999, now), "59 min ago");
+  a.eq(P.agoText(now - 3600000, now), "1 h ago");
+  a.eq(P.agoText(now - 7199999, now), "1 h ago");
+  a.eq(P.agoText(now - 7200000, now), "2 h ago");
+  a.eq(P.agoText(now - 11 * 3600000, now), "11 h ago", "01:00 to 12:00, same day");
+  a.eq(P.agoText(now - 12 * 3600000, now), "12 h ago", "00:00 to 12:00, same day");
+  a.eq(P.agoText(now - 12 * 3600000 - 1, now), "yesterday", "one millisecond before midnight");
+});
+
+T("E-3 / pin 6 - agoText never prints \"0 days ago\" or \"1 days ago\" across a sweep of 4,000 instants spanning two midnights", function(a){
+  var now = new Date(2026, 8, 11, 0, 10, 0, 0).getTime(), i, s, bad = [];
+  for (i = 0; i < 4000; i++) {
+    s = P.agoText(now - i * 60000, now);          /* every minute back over ~2.8 days */
+    if (/^0 days|^1 days|^0 h|^0 min|NaN|undefined/.test(s) || s === "") bad.push(i + "m: " + s);
+  }
+  a.eq(bad.length, 0, bad.slice(0, 5).join(" | "));
+  a.eq(P.agoText(now - 4000 * 60000, now), "3 days ago");
+});
+
+T("E-3 / pin 6 OBSERVED - agoText on unusable and future input: \"\" for garbage; a stamp from the future reads \"just now\"", function(a){
+  var now = Date.now();
+  a.eq(P.agoText(NaN, now), ""); a.eq(P.agoText("x", now), ""); a.eq(P.agoText(null, now), "");
+  a.eq(P.agoText(undefined, now), ""); a.eq(P.agoText(Infinity, now), ""); a.eq(P.agoText({}, now), "");
+  a.eq(P.agoText(now - 5000), "just now", "nowMs omitted falls back to the clock");
+  a.eq(P.agoText(now - 5000, "x"), "just now", "an unusable nowMs falls back to the clock");
+  /* OBSERVED, not ruled: a device clock corrected backwards makes the last
+     backup stamp later than now. It reads "just now" rather than a negative
+     number. Reasonable; pinned so a change is deliberate. */
+  a.eq(P.agoText(now + 3600000, now), "just now");
+  a.eq(P.agoText(now + 3 * 86400000, now), "just now");
+});
+
+/* ------------------------------------------------------ 7. the demo boundary (WO-004 C-14) */
+
+/* THE RULING QA IS APPLYING, and why. WO-004 C-14 says a sample session
+   carries demo:true and the real log is never written while demo mode is on;
+   logic.js says "no engine may ever be handed a mixed real+demo array".
+   The server has no demo column and stores the document verbatim, so a demo
+   session that is pushed becomes indistinguishable from history on the only
+   copy that survives a lost phone - and a Restore writes it straight into
+   phat:v1:log, which is the mixed array C-14 forbids. So: a session marked
+   demo:true is REFUSED AND NAMED on push, like every other document the
+   server must not hold; a store marked demo:true backs up nothing; and a
+   restore that would write a demo session refuses whole. Tagging on the
+   server would need a column and a migration for a document that should
+   never have arrived. */
+T("E-3 / C-14 - a session marked demo:true is REFUSED and NAMED by backupPayload, never in the rows", function(a){
+  var d = P.demoStore(42), log = clone(d.log); delete log.demo;
+  a.eq(log.sessions.filter(function(s){ return s.demo === true; }).length, 30, "fixture: every demoStore session carries demo:true");
+  var bp = P.backupPayload(log, E3BW([]), undefined);
+  a.eq(bp.sessions.length, 0, "30 demo sessions went into the rows as real history");
+  a.eq(bp.counts.refused, 30, "each one is a named refusal");
+  a.eq(bp.problems.filter(function(p){ return p.kind === "session" && /demo/i.test(p.msg); }).length, 30, "and the reason says demo");
+  /* one demo session among real ones: only it is left out */
+  var mixed = E3LOG([E3SESS(1, "2026-09-09"), clone(d.log.sessions[0]), E3SESS(2, "2026-09-10")]);
+  bp = P.backupPayload(mixed, E3BW([]), undefined);
+  a.eq(bp.sessions.length, 2, "the two real ones go up");
+  a.eq(bp.counts.refused, 1);
+  a.eq(bp.sessions.filter(function(s){ return s.demo === true; }).length, 0, "no demo session in the rows");
+});
+
+T("E-3 / C-14 - a STORE marked demo:true backs up nothing, and says so", function(a){
+  var d = P.demoStore(42);
+  var bp = P.backupPayload(d.log, d.bw, undefined);
+  a.eq(bp.sessions.length + bp.bodyweight.length, 0, "a demo store's " + bp.sessions.length + " sessions and " + bp.bodyweight.length + " weights went up");
+  a.ok(bp.problems.length > 0 || bp.notes.length > 0, "silence is not an option");
+  a.match(bp.problems.concat(bp.notes.map(function(n){ return { msg: n }; })).map(function(p){ return p.msg; }).join(" | "), /demo/i, "the word demo appears in what the status line will print");
+  a.ok(!("demo" in bp.logMeta) || bp.logMeta.demo !== true, "the store's own demo flag must not reach user_state either");
+});
+
+T("E-3 / C-14 - restorePayload refuses WHOLE on a row carrying demo:true - a restore must never build the mixed array", function(a){
+  var d = P.demoStore(42), real = P.backupPayload(E3LOG([E3SESS(1, "2026-09-09")]), E3BW([]), undefined);
+  var rows = ROWS(real);
+  rows.sessions.push({ client_id: "demo-w1-d1", local_date: d.log.sessions[0].date, doc: JSONB(d.log.sessions[0]) });
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, false, "a demo row came through a restore as history");
+  a.eq(rp.log, null, "refused whole: nothing to write");
+  a.match(rp.problems.join(" | "), /demo/i, "and it is named");
+});
+
+/* ------------------------------------------------------ 8. restorePayload refuses whole */
+
+T("E-3 - restorePayload refuses WHOLE on one bad document among 30, names it by row and reason, and returns nothing to write", function(a){
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined), rows = ROWS(bp);
+  rows.sessions[17].doc.entries[Object.keys(rows.sessions[17].doc.entries)[0]].sets[0].w = "7.5.0";
+  var rp = P.restorePayload(rows);
+  a.eq(rp.ok, false);
+  a.eq(rp.log, null); a.eq(rp.bw, null); a.eq(rp.plans, null);
+  a.eq(rp.counts.sessions, 0, "counts say nothing landed");
+  a.eq(rp.problems.length, 1);
+  a.match(rp.problems[0], /^session \d{1,2} \w{3} \(d\d\) \(row 17\): entry \w+ has an unreadable weight: "7\.5\.0"$/);
+  /* a bodyweight row is enough on its own */
+  rows = ROWS(bp); rows.bodyweight[2].doc.kg = 5;
+  rp = P.restorePayload(rows);
+  a.eq(rp.ok, false); a.match(rp.problems[0], /^bodyweight row 2: bodyweight\.kg out of range/);
+  a.eq(rp.log, null, "one bad weight refuses the sessions too - a partial restore is B-02 in new clothes");
+});
+
+T("E-3 - restorePayload refuses a state row that is malformed, and never throws on garbage rows", function(a){
+  var bp = P.backupPayload(E3LOG([E3SESS(1, "2026-09-09")]), E3BW([]), undefined), rows, rp;
+  rows = ROWS(bp); rows.user_state.log_meta.sessions = [];
+  rp = P.restorePayload(rows); a.eq(rp.ok, false); a.match(rp.problems[0], /user_state\.log_meta carries a sessions key/);
+  rows = ROWS(bp); rows.user_state.log_meta = "x";
+  rp = P.restorePayload(rows); a.eq(rp.ok, false); a.match(rp.problems[0], /user_state\.log_meta is not an object/);
+  rows = ROWS(bp); rows.user_state.plan_meta = 5;
+  rp = P.restorePayload(rows); a.eq(rp.ok, false); a.match(rp.problems[0], /user_state\.plan_meta is not an object/);
+  rows = ROWS(bp); rows.sessions = {};
+  rp = P.restorePayload(rows); a.eq(rp.ok, false); a.match(rp.problems[0], /sessions is not an array/);
+  rows = ROWS(bp); rows.sessions.push({ doc: null });
+  rp = P.restorePayload(rows); a.eq(rp.ok, false); a.match(rp.problems[0], /session \(not a session\) \(row 1\): session doc must be a JSON object/);
+  rows = ROWS(bp); rows.sessions.push(null);
+  rp = P.restorePayload(rows); a.eq(rp.ok, false);
+  rows = ROWS(bp); rows.plans = [{ plan_id: "x", doc: { planId: "" } }];
+  rp = P.restorePayload(rows); a.eq(rp.ok, false); a.match(rp.problems[0], /plan row 0: plan\.planId is required/);
+  a.eq(A.noThrow(function(){ return P.restorePayload(null); }).ok, false);
+  a.eq(A.noThrow(function(){ return P.restorePayload("x"); }).ok, false);
+  a.eq(A.noThrow(function(){ return P.restorePayload([]); }).ok, false);
+  rp = A.noThrow(function(){ return P.restorePayload({}); });
+  a.eq(rp.ok, true, "an empty object is an empty backup: ok, zero rows");
+  a.deep(rp.counts, { sessions: 0, bodyweight: 0, plans: 0 });
+  a.eq(rp.plans, null, "no plan store when the backup has no plan");
+});
+
+T("E-3 - the plan store round-trips, and is null when the backup holds no plan", function(a){
+  var plans = { schemaVersion: P.SCHEMA_VERSION, activePlanId: "phat", plans: [{ planId: "mine", name: "Mine", days: [] }] };
+  var bp = P.backupPayload(E3LOG([]), E3BW([]), plans);
+  a.eq(bp.counts.plans, 1);
+  a.deep(bp.planMeta, { schemaVersion: P.SCHEMA_VERSION, activePlanId: "phat" });
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true);
+  a.ok(deepEq(rp.plans, plans), "values identical: " + JSON.stringify(rp.plans));
+  a.eq(P.backupSig(P.backupPayload(rp.log, rp.bw, rp.plans)), P.backupSig(bp), "and it signs the same");
+  a.eq(P.restorePayload(ROWS(P.backupPayload(E3LOG([]), E3BW([]), undefined))).plans, null);
+  /* two plans sharing an id: first wins, the other is named */
+  plans.plans.push({ planId: "mine", name: "Again", days: [] });
+  bp = P.backupPayload(E3LOG([]), E3BW([]), plans);
+  a.eq(bp.plans.length, 1); a.eq(bp.plans[0].name, "Mine"); a.match(bp.problems[0].msg, /two plans share planId mine/);
+});
+
+T("E-3 OBSERVED - the store-level META key order is the server's after a restore, not the builder's; values identical, signature identical", function(a){
+  /* Not a defect in this suite's reading: no engine reads meta key order,
+     backupSig is order-independent (asserted above), and the next save()
+     rewrites the store through logPayload(). It IS the one place the
+     README's "export before, export after, byte-identical" claim is loose:
+     exportAll() spreads S.logMeta in stored order, so the two exports differ
+     in the order of reintro / deload / calChangedAt while every session and
+     every weight inside them is byte-identical. Filed as a contract note. */
+  var st = E3STORE(), bp = P.backupPayload(st.log, st.bw, undefined), rp = P.restorePayload(ROWS(bp));
+  a.ok(deepEq(rp.log, st.log), "every value of the log store survives");
+  a.ok(deepEq(rp.bw, st.bw), "every value of the bodyweight store survives");
+  a.ne(Object.keys(rp.log).join(","), Object.keys(st.log).join(","), "OBSERVED: meta key order differs (" + Object.keys(rp.log).join(",") + ")");
+  a.eq(Object.keys(rp.log)[Object.keys(rp.log).length - 1], "sessions", "sessions is appended last");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -10875,6 +11647,50 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
   "because the next person to measure it will think they found something. The one real cost is a " +
   "storage write on an unchanged draft, which is one more chance to hit a full disk (B-39).");
 
+/* ---- E-3, 2026-09-11 ---- */
+contract("<b>E-3 / C-14 &mdash; the demo boundary is not enforced by the backup client (the three reds in S30).</b> " +
+  "<code>backupPayload</code> validates a session marked <code>demo:true</code> as a real one and pushes it; the " +
+  "store's own <code>demo:true</code> rides into <code>user_state.log_meta</code>; <code>restorePayload</code> " +
+  "writes a demo row back into <code>phat:v1:log</code>. Measured on 2026-09-11 over <code>http://localhost</code>: " +
+  "with <code>demoStore(42)</code> on disk, signing in POSTed 30 documents carrying <code>\"demo\":true</code> to " +
+  "<code>/rest/v1/sessions</code> under a green <i>BACKED UP 30 sessions and 36 weights</i>, and a Restore then wrote " +
+  "33 sessions (30 demo, 3 real) to the real log key with the store marked <code>demo:true</code>. Nothing is LOST " +
+  "&mdash; every value survives, the recover copy holds the original &mdash; but the only copy that survives a lost " +
+  "phone now holds fabricated history that drives the verdict, the stall report and the deload trigger the moment it " +
+  "is restored, which is the exact hazard C-14 named. Today there is no demo control in the UI (W13b unbuilt), so the " +
+  "path is reachable only by a fixture or a hand edit; the day W13b ships it is one tap. <b>QA's ruling, applied in " +
+  "S30 and recorded in <code>docs/decisions.md</code>:</b> refuse and name on push (a session with " +
+  "<code>demo:true</code>, or a store with it, is a named problem like <code>7.5.0</code>, never a row); refuse WHOLE " +
+  "on restore. Backend's to close; the three tests are the proof.");
+contract("<b>E-3 &mdash; the JS validators are not line-for-line mirrors of the SQL, in three places; pinned as " +
+  "OBSERVED in S30.</b> (1) <code>parseWeight</code>/<code>parseReps</code> trim, the SQL regex is anchored on the raw " +
+  "string: <code>\" 100\"</code> clears the client and is refused by the server with 23514 &mdash; and one 23514 fails " +
+  "the whole 50-row chunk, so the status would read <i>Could not back up sessions</i> for a document the client's own " +
+  "validator cleared. Unreachable from the save path (sanitiser + numeric coercion), reachable from a hand-edited " +
+  "import. (2) A negative NUMBER is refused as <i>unreadable weight</i> here and <i>out of range</i> there &mdash; same " +
+  "refusal, different sentence. (3) The JS refuses <code>dateBasis</code> outside {local, utc}; the SQL never reads " +
+  "it. Stricter on the client is the safe direction. None of the three loses a number; all three are a drift between " +
+  "two things that claim to be the same. Backend's call which side moves.");
+contract("<b>E-3 &mdash; the store-level META key order after a restore is the server's, not the builder's</b> " +
+  "(<code>deload, reintro, calChangedAt, schemaVersion, lastReintroDate, sessions</code>). Every session and every " +
+  "weight is byte-identical, every meta VALUE is identical, <code>backupSig</code> is order-independent so no " +
+  "re-push fires (measured: 0 POSTs in the 4.5 s after a restore), and the next <code>save()</code> rewrites the store " +
+  "through <code>logPayload()</code>. Where it shows: <code>exportAll()</code> spreads <code>S.logMeta</code> in stored " +
+  "order, so README &sect;7's \"export before, export after, byte-identical\" is true of every document inside the " +
+  "export and not of the export's own top-level key order. <b>QA's assessment: not a defect.</b> Recorded so the " +
+  "next person to diff two exports does not read it as corruption.");
+contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and a failed export does not stop one.</b> " +
+  "Two observations from the seam tests, neither a data loss. (1) Killed between the <code>phat:v1:log</code> write and " +
+  "the <code>phat:v1:bw</code> write, the device comes back with the backup's sessions and its own weights, both " +
+  "originals under <code>phat:v1:recover:*</code>, and no notice that a restore stopped half way &mdash; the Weight tab " +
+  "and the Trend tab now describe two different histories. (2) <code>restoreApply</code> calls <code>exportAll()</code> " +
+  "and does not read <code>S.exp.ok</code>: on the WebView where <code>a.click()</code> silently does nothing (B-16) the " +
+  "export announces its failure and the replace proceeds. The recover copy is the real guarantee and it IS blocking, " +
+  "so this is the export being decorative on the platform it was added for, not a hole. Also cosmetic: the failed-save " +
+  "message reads <i>Could not write the restored log. Nothing changed. Could not save. Your entries are still on " +
+  "screen &mdash; try again.</i> &mdash; the second sentence is <code>save()</code>'s generic <code>S.err</code> and " +
+  "there are no entries on screen in Settings.");
+
 /* ============================================================ render */
 (function render(){
   var i, r, pass = 0, fail = 0, skip = 0, ms = Date.now() - T0, rows = "";
@@ -11143,7 +11959,21 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
     "eyeball check, not an assertion, and it is a fail until <code>PHAT.exportPayload(state)</code> is " +
     "extracted (B-20).</b> What is left for a phone is &sect;8.6&rsquo;s own condition on showing " +
     "<code>[Guessing]</code> numbers at all &mdash; <b>the estimate caveat renders on the same screen as " +
-    "the macro grid, without scrolling, at 400 px</b> &mdash; and it is item 5 of the checklist below.</p>";
+    "the macro grid, without scrolling, at 400 px</b> &mdash; and it is item 5 of the checklist below.</p>" +
+    "<p><b>E-3 &mdash; the pure half is fully reachable from here (S30); the wire half is not, by design, and it " +
+    "was driven for real instead.</b> <code>sync.js</code> is an ES module that imports " +
+    "<code>@supabase/supabase-js</code> from a CDN; a module cannot load on a <code>file://</code> opaque origin, " +
+    "and this page must keep opening from one (decisions.md, <em>file:// stays the honest test path</em>). So " +
+    "nothing here can call <code>push</code>, <code>pull</code>, <code>signIn</code>, or the Settings screen's " +
+    "<code>restoreStart</code> / <code>restoreApply</code>. What S30 proves is the contract on both sides of the " +
+    "wire &mdash; what goes up, what comes back, that the two are the same bytes &mdash; and what it cannot prove " +
+    "is the order of events inside <code>index.html</code>: that the local write returns before any fetch, that the " +
+    "recover copy lands before the replace, that a failed push never paints green. <b>Those were measured on " +
+    "2026-09-11 with Playwright against <code>http://localhost:8766</code> and the live project, items 21&ndash;27 " +
+    "under \"Already proven\".</b> Two things in <code>index.html</code> would move into this page if extracted " +
+    "(B-20, standing request): <code>localEmpty()</code> (\"empty is judged on what the boot read found\") and the " +
+    "write sequence in <code>restoreApply</code> as a pure plan the caller executes, so the seam order is an " +
+    "assertion and not a Playwright run.</p>";
 
   /* ---------------------------------------------------------------------
      The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a
@@ -11156,7 +11986,7 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
      light. Those residues, merged, are the four items here.
      --------------------------------------------------------------------- */
   document.getElementById("manual").innerHTML =
-    "<p><b>Six items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Seven items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -11226,7 +12056,23 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
     "field and tap Save - it should speak <i>Not saved. 1 set needs a fix.</i> and land you on that row. " +
     "<br><span class=\"skipmsg\">Why a phone: the live regions and their text are asserted present and " +
     "correct; whether the assistive technology actually announces them is behaviour of the AT on the device, " +
-    "which no browser API reports.</span></li></ol>" +
+    "which no browser API reports.</span></li>" +
+
+    "<li><b>Back up from the installed app, once, then Restore with the keyboard up (E-3).</b> Open the " +
+    "installed icon (not Safari or Chrome), Settings, sign in. It must say <i>Signed in as</i> your email and, " +
+    "within a few seconds, <i>BACKED UP N sessions and M weights, just now</i>. Turn the radio off, save a set on " +
+    "any day: the toast must read <i>Session saved.</i> exactly as fast as it did before you signed in, and Settings " +
+    "must show a <b>red</b> <i>Backup failed: No connection.</i> line, never a green one. Radio back on: the green " +
+    "line comes back on its own. Then tap <i>Restore from backup</i>: with the keyboard open, the <i>Type REPLACE</i> " +
+    "field must stay visible above it, the keyboard must offer capitals without you shifting, and the export must " +
+    "land somewhere you can find (Files on iOS, Downloads on Android) <b>before</b> the log changes.<br>" +
+    "<span class=\"skipmsg\">Why a phone: every step is proven headless against the live project (items 21&ndash;27 " +
+    "below): the write order, the typed gate, the offline refusal, sign-out, and 0 rows for the public key. What no " +
+    "desktop can answer is the installed PWA loading the CDN module on a real mobile network after boot, the " +
+    "software keyboard against the typed field (<code>autocapitalize=\"characters\"</code> is a hint the OS may " +
+    "ignore), and whether the blob download actually lands on this WebView (B-16) &mdash; the restore proceeds " +
+    "either way, and the on-device recover copy is what actually protects you, so the export is a bonus and not " +
+    "the safety net.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -11250,7 +12096,15 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
     "400 &times; 820 viewport - no server needed this time, because nothing in these four reads across " +
     "a document boundary. Also not checked in, for the same reason. <b>Re-run items 18 and 19 whenever " +
     "a token, a padding, a font-size or the draft shape changes</b>; they are the two that measure " +
-    "rather than assert.</p><ol>" +
+    "rather than assert.</p>" +
+    "<p><b>Items 21&ndash;27 are E-3, the backup client, from a third run on 2026-09-11</b> &mdash; the wire " +
+    "half that <code>file://</code> cannot reach. Rig: a Node static server on <code>http://localhost:8766</code> " +
+    "serving the working tree, Playwright headless Chromium at 400 &times; 800, the live Supabase project and the " +
+    "throwaway account <code>test+e3@example.com</code>; item 22 on a persistent profile so a killed browser " +
+    "leaves its <code>localStorage</code> behind. Not checked in, same reason. <b>Re-run items 21, 22 and 24 " +
+    "whenever <code>save()</code>, <code>restoreApply</code>, <code>runBackup</code> or <code>sync.js</code> " +
+    "changes.</b> The one defect these runs found is C-14 (the three reds in S30 and the first E-3 contract " +
+    "question); every other claim in the E-3 report held.</p><ol>" +
 
     "<li><b>Draft survives a lock.</b> <span class=\"skipmsg\">Proven: a <code>visibilitychange</code> to " +
     "hidden wrote <code>{w:\"100\",r:\"5\"}</code> to <code>phat:v1:draft</code> with no blur and without " +
@@ -11409,6 +12263,79 @@ contract("<b>The draft is rewritten on <code>pagehide</code> even when nothing c
     "has no <i>twinge</i>. Raised as a contract question for <code>strength-coach</code>; it is a word " +
     "list, not a wiring fault, and the wiring was confirmed separately (<i>sharp pain</i> in the same " +
     "field does suppress).</span></li>" +
+
+    /* ---- 2026-09-11: E-3, the backup client, driven against the live project ---- */
+    "<li><b>E-3 &mdash; the P0 restore path: typed gate, export first, recover copy before the replace.</b> " +
+    "<span class=\"skipmsg\">Observed 2026-09-11. Rig: Node static server on <code>http://localhost:8766</code> " +
+    "serving the working tree, Playwright headless Chromium at 400 &times; 800, the live Supabase project, the " +
+    "throwaway account. <code>PHAT.demoStore(42)</code> written to <code>phat:v1:log</code> (30 sessions, 36 " +
+    "weights), signed in, tapped <i>Restore from backup</i>. Sheet: <i>Replace this device's log? This replaces " +
+    "30 sessions and 36 weights on this device with 33 and 36 from the backup. What is on this device is exported " +
+    "first, and a copy is kept here.</i> with a labelled <code>#dr-typed</code> (<code>autocapitalize=" +
+    "\"characters\"</code>). Danger with the field <b>empty</b>: <i>Type REPLACE to continue.</i>, sheet open, " +
+    "<code>phat:v1:log</code> byte-identical. <b><code>replace</code></b> lowercase: same refusal, same bytes. " +
+    "<b><code>REPLACE&nbsp;</code></b> with a trailing space: accepted (trimmed). Then, with " +
+    "<code>Storage.prototype.setItem</code> and <code>HTMLAnchorElement.prototype.click</code> spied from " +
+    "inside the page: anchor click <code>phat-log-2026-09-11.json</code> @5742 ms &rarr; " +
+    "<code>phat:v1:recover:log:&lt;ts&gt;</code> @5747 &rarr; <code>phat:v1:recover:bw:&lt;ts&gt;</code> @5748 " +
+    "&rarr; <code>phat:v1:log</code> @5748 &rarr; <code>phat:v1:bw</code> @5749 &rarr; <code>phat:v1:prefs</code> " +
+    "@5754; Playwright's <code>download</code> event fired with the same filename. The recover copy's " +
+    "<code>value.sessions</code> is byte-identical to the original store's (the whole object differs only in meta " +
+    "key order, via <code>logPayload()</code>). Zero console output, zero page errors.</span></li>" +
+
+    "<li><b>E-3 &mdash; killed at the seam, three ways; nothing lost.</b> <span class=\"skipmsg\">Same rig on a " +
+    "persistent profile so <code>localStorage</code> outlives the browser process. A <code>setItem</code> hook " +
+    "froze the renderer (<code>for(;;){}</code>) at the chosen write and the browser was killed from outside. " +
+    "<b>Frozen before <code>phat:v1:log</code></b> (both recover copies written): relaunch shows 30 sessions and 36 " +
+    "weights byte-identical to the originals, both recover copies holding the originals, <code>prefs.backup</code> " +
+    "untouched. <b>Frozen before <code>phat:v1:bw</code></b> (log already replaced): relaunch shows the backup's 33 " +
+    "sessions and the device's own 36 weights, both originals under <code>recover:*</code> &mdash; half-applied, " +
+    "nothing lost, and silent about it (contract question). <b>The <code>phat:v1:log</code> write THROWS</b> " +
+    "(simulated quota): <i>! Could not write the restored log. Nothing changed.</i>, log and bodyweight " +
+    "byte-identical, recover copies present, no further write attempted.</span></li>" +
+
+    "<li><b>E-3 &mdash; a draft on disk refuses the restore.</b> <span class=\"skipmsg\">Same rig. " +
+    "<code>phat:v1:draft</code> written, reload (the offer sheet appeared), Settings, <i>Restore from backup</i>: " +
+    "<i>! Finish or discard the unfinished session first.</i> in the refusal shape; no pull, log byte-identical, " +
+    "draft still on disk.</span></li>" +
+
+    "<li><b>E-3 &mdash; the push never blocks the save, and a failed push never looks like success.</b> " +
+    "<span class=\"skipmsg\">Same rig, signed in, then every request to <code>supabase.co</code> aborted at the " +
+    "network layer with <code>navigator.onLine</code> still true. Saved a session: <code>phat:v1:log</code> written " +
+    "at T, toast <i>Session saved.</i> read at T+524 ms, first <code>POST /rest/v1/sessions</code> at " +
+    "<b>T+2009 ms</b> &mdash; the debounce, after the write returned and after the toast. Draft cleared, one " +
+    "session on disk. Settings: <i>! Backup failed: No connection. Your log is unchanged on this device. Last " +
+    "backup just now.</i> in <code>.refuse[role=alert]</code>, no <i>BACKED UP</i> enclosure, " +
+    "<code>prefs.backup</code> unchanged. Then <code>navigator.onLine</code> false: <i>BACK UP NOW</i> gave the " +
+    "same refusal with <b>zero</b> requests attempted; a save while offline toasted <i>Session saved.</i> with zero " +
+    "requests; back online, the <code>online</code> event pushed on its own: <i>BACKED UP 2 sessions and 0 " +
+    "weights, just now.</i></span></li>" +
+
+    "<li><b>E-3 &mdash; a <code>7.5.0</code> row on disk is left out and named; the good one still lands.</b> " +
+    "<span class=\"skipmsg\">Same rig. Log of two sessions, one holding <code>{w:\"7.5.0\",r:5}</code>. Sign-in " +
+    "push: <i>! Backed up 1 of 2 sessions. 1 item could not be backed up: 9 Sep (d3) - entry d3a has an unreadable " +
+    "weight: \"7.5.0\"</i> in the refusal shape, no green; the server holds <code>1789000000001</code> and not " +
+    "<code>1789000000002</code>; <code>prefs.backup</code> = <code>{n:1, m:0, x:1}</code>.</span></li>" +
+
+    "<li><b>E-3 &mdash; restore onto an empty log, and no re-push after.</b> <span class=\"skipmsg\">Same rig, " +
+    "<code>phat:v1:log</code> and <code>bw</code> removed. Sheet: <i>Restore from backup? 36 sessions and 36 weights " +
+    "land on this device. It holds nothing now.</i>, no typed field, no export (nothing to export). After: 36 and " +
+    "36 on disk, <i>RESTORED</i>, and <b>0</b> POSTs in the following 4.5 s &mdash; the signature stamped by the " +
+    "restore matched, so the <code>save()</code>-scheduled push was a no-op. Sign-out in the same session " +
+    "removed exactly <code>phat:auth</code>; nothing added, nothing changed; log and bodyweight " +
+    "byte-identical.</span></li>" +
+
+    "<li><b>E-3 &mdash; <code>file://</code> offline, and the public key.</b> <span class=\"skipmsg\">" +
+    "<code>index.html</code> from <code>file://</code> in an offline context: three requests " +
+    "(<code>index.html</code>, <code>assets/archivo-inline.css</code>, <code>logic.js</code>), no " +
+    "<code>sync.js</code> tag injected, <b>0</b> console messages, <b>0</b> page errors; Settings reads <i>Backup " +
+    "does not run from a file. Open the installed app. Your log is on this device and saves as normal.</i> with " +
+    "0 buttons and 0 inputs inside <code>#bk</code>. <code>tests.html</code> in the same context: 593 / 590 / 3 in " +
+    "130 ms, the 3 being S30's C-14 tests, 0 console, 0 errors. With only the publishable key: " +
+    "<code>GET /rest/v1/sessions|bodyweight|user_state|plans|conflicts|v_session_counts?select=*</code> &rarr; " +
+    "<code>200 []</code> on all six while the throwaway account held 33+ sessions; an anonymous " +
+    "<code>POST /rest/v1/sessions</code> &rarr; <code>401 42501 permission denied for table " +
+    "sessions</code>.</span></li>" +
     "</ol>";
 })();
 </script>

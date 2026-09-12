@@ -1494,3 +1494,136 @@ dependency here, never the app's: this is a checked-in tool, not a build step,
 and the app still opens by double-clicking the file.
 
 Run it before any deploy, after the suite, not instead of it.
+
+## 2026-09-11 — E-3: backup and restore shipped; two-way sync did not
+
+**Decided:** the client is push-only backup with an explicit Restore, exactly as `supabase/README.md`
+§6.1 recommended. The server never writes to the device except on a Restore tap. The draft
+(`phat:v1:draft`) and the preferences (`phat:v1:prefs`) do not back up. Auth is email + password
+from the Settings screen; magic links are rejected because a link opened from an email lands in the
+browser, not the installed PWA. `@supabase/supabase-js` is loaded from the CDN as an ES module,
+pinned to `2.116.0`, never `@2`.
+
+**The one place the design moved during the build.** The work order said "a separate
+`<script type="module">`". It is a module, but `index.html` **injects the tag after the first
+render** rather than declaring it in the markup, and only on `http(s)` with `navigator.onLine` not
+`false`. Reason: a static module tag starts its CDN fetch at parse time, and with the radio off that
+is a failed-resource error in the console on every gym launch — on the exact path where an error
+has to mean something. Injected after boot and gated on the radio, the offline case fetches nothing
+and logs nothing (measured: zero console output on `file://` and on an offline `http://` cold
+reload). The tag's `error` event covers the module and every import inside it, so a CDN that does
+not answer is a clean `Backup could not load` state. A failed load is **not retried within the
+page**: the browser's module map remembers a failed fetch for the life of the document, so a retry
+with the same URL fails instantly without touching the network. The copy says to reopen the app,
+which is the truth.
+
+**Key order is not identity, and it had to be said in code twice.** JSONB sorts object keys, so a
+session that went up `{id, date, dayId, planId, entries}` with sets `{w, r}` comes back with sets
+`{r, w}` — same values, different bytes, and `buildSession` promises a stable key order that tests
+assert on. Two consequences: `restorePayload` re-orders every restored document to the builder's key
+order for the keys this build writes (unknown keys keep the server's order, after them), which is
+what makes the round trip byte-identical (measured); and `backupSig` serialises with sorted keys at
+every depth, because the first run signed a restored log differently from the same log rebuilt by
+`logPayload()` and pushed it again for nothing. Harmless — an identical document never reaches the
+`conflicts` archive — but a no-op that costs four requests is a bug.
+
+**What a push refuses, and how.** `backupPayload` validates every document against a line-for-line
+mirror of `phat_validate_session_doc`. A document the server would refuse is **left out and named**
+(`9 Sep (d3) - entry d3a has an unreadable weight: "7.5.0"`) and the status renders in the refusal
+shape: `Backed up 1 of 2 sessions. 1 item could not be backed up:` followed by the reason. Not
+refused whole — one legacy row must not block six weeks of good ones — and not dropped quietly. The
+server was also exercised directly: `7.5.0` → `23514` naming the entry; a batch holding one 0 kg set
+(legal, B-21) and one 0-rep set (illegal) → `23514` and the 0 kg row did **not** land alone; a row
+supplied with a lying `local_date` / `day_id` / `client_id` came back with all three derived from the
+document.
+
+**Restore onto a non-empty log is the only control in the app that shrinks `phat:v1:log`**, and it
+sits behind the word `REPLACE` typed (WO-004 C-14), an export fired first, and a verbatim copy
+written to `phat:v1:recover:log:<ts>` / `phat:v1:recover:bw:<ts>` through `save()` — if that copy
+cannot be written, nothing is replaced. "Empty" is judged on what the boot read found, not on the
+arrays: a store that failed to read is unknown, and unknown takes the typed path. Refused outright
+while an unfinished session is on disk. Every write goes through the adapter, so the
+`window.storage` / `localStorage` split holds.
+
+**`rls.sql` lost its tail.** The Management API runs a submission as one transaction, so the
+self-test's `rollback` at the foot of `rls.sql` rolled back the policies above it while reporting
+success. The proof now lives in `supabase/rls-selftest.sql`, run as its own submission, and the
+lesson is written at the point in `rls.sql` where the block used to be.
+
+**Not changed:** `SCHEMA_VERSION` (still 5), no local migration, `tests.html` untouched and still
+`556 / 556 / 0` from `file://` with the network off. The `service_role` key appears nowhere; the
+publishable key is in `sync.js` and that is where it is supposed to be. `sw.js` goes to `v3`
+because the shell file list gained `sync.js` (OPTIONAL, never CORE — an upgrade, not a dependency);
+the CDN URL is deliberately not precached.
+
+**A throwaway account exists** (`test+e3@example.com`) with three test sessions under it. Delete it
+in the dashboard once Chady's account exists; the cascade removes its rows.
+
+## 2026-09-11 — E-3 QA: the pure half pinned, the wire half driven, one red (C-14)
+
+**The suite is 593 / 590 / 3 and the three reds are deliberate, written before the fix.** S30 in
+`tests.html` covers `backupPayload`, `restorePayload`, `validateSessionDoc`, `validateBwDoc`,
+`backupSig` and `agoText` from `file://` with the network off: 37 tests, 35 of which go red against
+`main`'s `logic.js` (`f9d0551`, which has none of the exports) and two of which pass in both regimes
+and are named GUARD for that reason — the JSONB simulator proving it changes the bytes, and
+`migrateStore` proving it has no session-id dedupe rule to "match". Both meta-tripwires stand; no
+test name carries a carried-forward label, and the three reds are the proof of a fix, not a known one.
+
+**The ruling QA applied on the demo boundary (WO-004 C-14), which is the red.** `backupPayload`
+validates a session marked `demo:true` as real and pushes it; the store's `demo:true` rides into
+`user_state.log_meta`; `restorePayload` writes a demo row back into `phat:v1:log`. Measured, not
+inferred: with `PHAT.demoStore(42)` on the real log key, signing in POSTed 30 `"demo":true`
+documents to `/rest/v1/sessions` under a green *BACKED UP 30 sessions and 36 weights*, and the
+Restore that followed wrote 33 sessions (30 demo, 3 real) to `phat:v1:log` with the store itself
+marked `demo:true`. Nothing was lost — every value survives and the recover copy holds the original —
+but the copy that outlives a lost phone now holds fabricated history that drives the verdict, the
+stall report and the deload trigger the moment it comes back, which is the hazard C-14 named. The
+server has no `demo` column and stores the document verbatim, so tagging is a schema change for a
+document that should never arrive. **Ruled: a session with `demo:true`, or a store with it, is
+refused and named on push like any other document the server must not hold; a restore that would
+write one refuses whole.** Reachable today only by a fixture or a hand edit (W13b is unbuilt); one
+tap the day it ships. Backend's to close; the three tests in S30 go green when it is.
+
+**Three tests were adjusted after first contact with the code, and here is why each is honest.**
+(1) and (2): QA's expected key order for unknown keys was insertion order; the spec says "the
+server's order", and Postgres orders by length then bytes, so `src` lands before `dateBasis` and
+`days` before `name`. The expectation was wrong, the code was right, and the simulator that caught
+it is what the test exists to prove. (3): a negative *number* is refused by the JS as *unreadable
+weight* and by the SQL as *out of range* — same refusal, different sentence. Pinned as OBSERVED in
+the divergence test rather than asserted against the SQL's sentence, because the refusal is what
+protects the number and the sentence is a drift to be ruled on. That divergence joins two others
+recorded the same way: `parseWeight`/`parseReps` trim where the SQL regex is anchored on the raw
+string (`" 100"` clears the client and would fail the whole 50-row chunk at the server), and the JS
+refuses `dateBasis` outside {local, utc} where the SQL never reads it. None loses a number. All three
+are a gap between two things that claim to be line-for-line.
+
+**What the browser run proved, once each, against the live project** (`tests.html` "Already
+proven" items 21–27, and the rig is in the scratchpad, not the repo): the typed gate refuses empty
+and lowercase and accepts a trailing space; export click → `recover:log` → `recover:bw` →
+`phat:v1:log` → `phat:v1:bw` → `prefs`, in that order, with the recover copy's sessions byte-identical
+to the original; the browser killed at the seam before `phat:v1:log`, before `phat:v1:bw`, and with
+the log write throwing — nothing lost in any of the three; a draft on disk refuses the restore
+without a pull; with the Supabase origin blocked at the network layer, `phat:v1:log` was written 2,009
+ms before the first `POST` and the toast read 1.5 s before it; offline `BACK UP NOW` refuses in the
+`.refuse[role=alert]` shape with zero requests and `prefs.backup` untouched; a `7.5.0` row is left
+out and named while the good row lands; a restore onto an empty log asks once with no typed field
+and is followed by zero POSTs (the signature matched); sign-out removes exactly `phat:auth`;
+`file://` offline injects no module, logs nothing, errors nothing, and shows the no-file sentence
+with no controls; the publishable key reads `[]` from all five tables and the view while the
+throwaway account held 33+ sessions, and an anonymous insert fails `42501`.
+
+**Recorded as contract questions, not defects:** the store-level meta key order after a restore is
+the server's (values identical, signature identical, no re-push — but two exports will not diff
+clean at the top level); a restore killed between the log write and the bodyweight write comes back
+half-applied and silent about it; `restoreApply` does not read `S.exp.ok`, so on a WebView where
+`a.click()` does nothing (B-16) the export is decorative and the on-device recover copy is the
+actual guarantee; and the failed-save copy appends `save()`'s generic *Your entries are still on
+screen* to a screen with no entries on it.
+
+**Standing extraction request (B-20):** `localEmpty()` and the write plan inside `restoreApply`, so
+the seam order is an assertion on this page rather than a Playwright run.
+
+**The throwaway account now holds 36 sessions, 30 of them `demo:true`**, and 6 `conflicts` rows
+(the `demo-w*` ids were upserted by several runs; the unique key kept one row each and the archive
+trigger kept the rest, as designed). That is evidence of the C-14 red, not data. Delete the account
+as already planned.
