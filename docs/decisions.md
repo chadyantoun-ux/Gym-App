@@ -1627,3 +1627,38 @@ the seam order is an assertion on this page rather than a Playwright run.
 (the `demo-w*` ids were upserted by several runs; the unique key kept one row each and the archive
 trigger kept the rest, as designed). That is evidence of the C-14 red, not data. Delete the account
 as already planned.
+
+## 2026-09-11 — MY ERROR: WO-005 cut the Plan Editor against a decision Chady had already made
+
+WO-004 §"Needs from Chady" item 4 asked *build the Plan Editor now, or defer it?* and carried my
+recommendation to defer. He answered **build it now** — recorded above under "Chady's four calls on
+WO-004", item 3. WO-005 §5 then wrote *"Restating WO-004's ruling for tonight, unchanged: M3 is cut
+outright."* That sentence restated my **recommendation** and called it the **ruling**. The ruling was
+his, it was the opposite, and the cut re-litigated it while he was asleep. The main session accepted
+it because the file said "unchanged". My plan, my error. A second error followed: when he caught it,
+`frontend-engineer` was dispatched on W14+W15 **directly**, bypassing the PM (CLAUDE.md §1), so a
+build started with no binding criteria. WO-006 now binds it.
+
+**Rule, for the PM's process:** a "Needs from Chady" question he has answered is **closed**. A later
+plan may not reopen it without (1) quoting his answer and (2) stating a new fact that did not exist
+when he gave it. "The PM recommended otherwise" is not a new fact — it was on the table when he
+decided. Mechanically: before writing any cut line, grep this file for the item and cite the entry.
+**Rules out:** a schedule document overriding a recorded ruling by restating the losing argument;
+and correcting a PM error by skipping the PM.
+
+## 2026-09-11 — WO-006: what the editor is allowed to do while a session is unfinished
+
+`SAVE PLAN` and switching the active plan are **refused** while `phat:v1:draft` holds a session, with
+`Finish or discard the session in progress first.` Editing the working copy stays open. Reason: the
+session screen reads its prescription from the plan, so letting the plan move under a half-logged
+workout is the mid-set reinterpretation QA is told to attack; E-3's restore already refuses on the
+identical condition, so this is one rule applied to a second writer. The alternative — a session
+snapshotting its plan at start — is more work and is only right if he expects to edit mid-workout,
+which the design's own honest note argues against. **Open for Chady to override** (WO-006 §7).
+
+**Also decided in the same order:** deleting a plan is out of scope (in neither W14's scope nor UX
+§9.1; the "later deleted" criterion is met by name resolution across every stored plan, else
+`Exercise no longer in any plan`, never a raw id); the draft gains an optional `planId` whose absence
+means PHAT, mirroring sessions; the plan working copy lives under its own key that is **never** in
+`BACKED_UP`; and a restore writes `recover:plans:<ts>` before it touches `phat:v1:plans`, or does
+nothing. `SCHEMA_VERSION` does not move.
