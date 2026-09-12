@@ -4416,3 +4416,481 @@ to delete the claim about what the app will render rather than to qualify it. `C
 the bodyweight table.** Every string ruled on above renders only after ten dated weigh-ins across two
 specific weeks. The cheapest way to make this section matter is to stand on the scale tomorrow
 morning.
+
+---
+
+# 16. WO-008 W1 — what in the advice layer belongs to a person — 2026-09-12
+
+**Added 2026-09-12.** Answers `docs/work-orders/WO-008-two-users.md` §4 W1, the six questions,
+exactly. §15 is left free for the WO-007 W1 ruling, which is in flight in parallel. This section
+changes **nothing** for a store stamped as Chady's: every rule below is a gate in front of an engine,
+never a change inside one, and Rule W1, §8.6 and W1h read identically behind the gate.
+
+Rule ids introduced here: **PR1** (the person gate — which engines a store with no profile may run)
+and **C7c** (the diet clause of ST1's diagnosis needs a profile, not only provenance). One rule-change
+candidate is named and **not** ruled: the fixed 2.5 kg step on light loads (16.4), which is not a
+two-user question and gets its own order.
+
+**The uncomfortable answer first.** The PM's §7 q2 — *"if Diana is on PHAT and bulking, W1 q3 becomes
+narrower"* — is wrong, and I am overturning it before it shapes B-93. The calorie ladder's numbers are
+not *goal*-specific, they are *person*-specific: +0.2–0.3 kg/week was stated for an 85 kg male, the
+200 kcal lever against a ~2,700 maintenance, the 3,200 / 2,500 targets against his height and weight.
+"On PHAT and bulking" tells the app which *shape* of protocol she would need; it does not give the app
+a single number to put in it. Whatever Chady answers to §7 q2, a store that is not stamped
+`phat-brief` gets the same thing from the diet and calorie layer: nothing, and a sentence saying so.
+
+## 16.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | Classify every engine | Table in 16.1. **Person-specific: W1's bands and both instructions, `BW_SUBLINE`, `DIET_TARGETS`, `DIET_WEEKLY`, `dietTargets` whole, and the diet clause of ST1's PHAT-provenance diagnosis.** Everything else is history-relative or programme-specific and runs for anyone with a plan and a log. |
+| 2 | Weight and Diet with no profile | Weight: the 7-day average and the `Change vs last week` rate **render** (measurements); the band, sub-line, hold machinery and both controls do not. One ABSENT line in the calorie-decision slot. Diet: the **whole tab** is ABSENT — kicker, one sub-kicker, two lines, no grid, no tick, no caveats. Home macro strip: nothing. Literals in 16.2. |
+| 3 | Silence, flipped signs, or a user-set sign? | **Silence. Yes, confirmed.** A flipped bulk ladder is not a cut protocol; a "generic" maintain ladder is a protocol nobody authored; a user-set sign gives the app a direction and still no numbers. `[Certain]`. |
+| 4 | The fixed 2.5 kg step on a lighter lifter | **Yes, it opens a rule change — in its own order, not this one.** It is a *load*-specific defect, already live on Chady's light slots, and a second account makes it visible rather than new. The 0.1 kg bodyweight step and the 30–300 kg guard hold for anyone. |
+| 5 | PHAT to an unassessed adult | **As a log with history-relative progression: yes, `[Likely]`.** As a prescription the app vouches for: **no** — and the two places it currently vouches (the Diet tab, C7b's diagnosis) go ABSENT. One first-run line, 16.5, true for anyone holding a fresh phone, Chady included. |
+| 6 | The minimum profile (B-93) | Six fields for the calorie decision, two more for the Diet tab, one for provenance. **No height, sex or age, and no formula: the app does not compute maintenance.** 16.6. |
+| — | A hazard W4 must not walk into | A store that exists on Diana's phone before W4 ships is indistinguishable from Chady's by schema age. 16.8. |
+
+---
+
+## 16.1 Question 1 — the classification
+
+Definitions, so the table is checkable:
+
+- **history-relative** — reads the user's own log and the exercise's own prescription (`s/lo/hi/k/
+  implement`), and nothing about who the user is. Safe for anyone with their own log.
+- **programme-specific** — reads the plan document's structure (`cut`, `speedSource`, `keyLifts`,
+  `reducedWeeks`, `wd`, the rest table by role). Safe for anyone on that plan. The C7a ABSENT states
+  already cover a plan that declares nothing.
+- **person-specific** — reads a number that was set for Chady's body or Chady's goal, or makes a claim
+  that was earned by assessing him. Must not render for an unstamped store.
+
+| Item | Class | Tag | Why, in one line |
+|---|---|---|---|
+| **P1** power progression | history-relative | `[Certain]` | Reads `min(w)` of the user's own first `ex.s` sets against `lo/hi`. The 2.5 kg step is a plate-grid convention, not a person's number — see 16.4 for where it is wrong anyway. |
+| **H1** hypertrophy verdict | history-relative | `[Certain]` | Compares the user's own entry against the user's own previous entry on the same id. |
+| **G1** too-light step | history-relative | `[Certain]` | 2.5 % of the user's own load per rep over the range, capped at 20 % of that load. Scales with the lifter by construction. The 2.5 floor is the grid (16.4). |
+| **I2** increment line | programme-specific | `[Certain]` | Reads `ex.k`, `ex.hi`, `ex.implement`. Says nothing about the person. Its content — add reps first when the jump is not available — is the *correct* advice for a lighter lifter, which is why 16.4 leans on it. |
+| **Z1–Z3** zero-load family | history-relative | `[Certain]` | Definitions of a completed set and of copy at 0 kg. Pure data semantics. |
+| **X1** extra sets | history-relative | `[Certain]` | Excludes sets beyond `ex.s` from P1 and both sides of H1. |
+| **R1** rest | programme-specific | `[Certain]` on the class; the 120 s row for power 6–10 is my `[Opinion]`, already recorded §8.7 | Rest by `k` and `hi` is the brief's table for the roles; it is stated as a property of the work, not of the lifter. `[Convention]` that it holds for any adult on the plan. |
+| **SP1** speed load | history-relative (the number) + programme-specific (the mapping) | `[Certain]` | 65–70 % of the user's **own** heaviest 3–5 on the mapped lift within 28/56 days. `speedSource` comes from the plan. Nothing about the person. |
+| **V1** and the reintro ramp | programme-specific | `[Certain]` on where it reads; `[Likely]` that a 4-week reduced block is a safe default for any adult starting a 5-day programme | The block length is `reducedWeeks` on the plan (§9.3). The brief chose 4 for a lifter "training but not with intensity"; for a novice the reduction is *more* appropriate, for an advanced lifter it costs four slow weeks and nothing else. Safe direction. The "only if recovery holds" gate reads the pain window — history-relative. |
+| **ST1 measurement** | history-relative | `[Certain]` | Epley e1RM on the user's own sets, two 21-day blocks, 1.025. Arithmetic. Gated on `keyLifts` (programme). C7b already says the measurement travels. |
+| **ST1 diagnosis (C7b), PHAT-provenance copy** | **person-specific** | `[Certain]` | *"The split isn't the problem and neither is the diet. Either the sets aren't close enough to failure, or you aren't eating enough."* — two claims. The split half was earned by assessing his programme (C7b handles that). **The diet half was earned by assessing his diet and his goal.** For a person whose diet the app does not have, "neither is the diet" is unsupported and "you aren't eating enough" presumes a bulk. **Rule C7c**, 16.7: the PHAT-provenance copy additionally requires `profile.diet === "phat-brief"`. The generic C7b copy — *"how hard the sets are, how much you are eating, or the plan"* — is direction-neutral and is what an unstamped store gets even on PHAT itself. |
+| **ST1 diagnosis, generic copy** | programme-specific | `[Certain]` | Names three candidate causes without ranking them and without a direction on food. Safe for anyone. |
+| **D1 T1** performance drop | history-relative | `[Certain]` | Two consecutive failures on the user's own key lifts. |
+| **D1 T2** broad stall | history-relative | `[Certain]` | Reads the ST1 *measurement*, never the diagnosis. |
+| **D1 T3** nine-week backstop | history-relative | `[Likely]` — the 9 is `[Convention]`, chosen to be hard to trip (§8.7) | Dates only. "A lighter week after two months unbroken" is defensible to any lifter; §8.4 already ruled it runs on a foreign plan. The PHAT-flavoured deload *content* (power days / hypertrophy days / cut accessories out) is programme-specific. |
+| **DL1 / E1 / E2** deload verdict and evidence | history-relative | `[Certain]` | A deload week is the user's own lighter week measured against the user's own numbers. |
+| **S1** pain | history-relative | `[Certain]` | Reads the user's own note. Suppresses increases and points at a physio or a doctor. **This is the one engine that must run identically for everyone** — it is the app's refusal to assess, and refusing is never person-specific. `S1_LINES` contains nothing about him. |
+| **W1 `calorieAdvice` — the measurement gates** (`empty`, `need-history`, `thin-window-b`, `thin-window-a`) | history-relative | `[Certain]` on the arithmetic; the minima are `[Convention]`, see `bwWindows` | Count dated entries and days. True for anyone. |
+| **W1 `calorieAdvice` — the six bands and both instructions** | **person-specific** | `[Certain]` | `> +0.50 cut`, `+0.20–0.30 on target`, `< +0.10 flat → add`, and *"Add 200 kcal to your training days"* are `handoff-brief.md` §3's calibration protocol for a bulking 85 kg male with a training-day/rest-day calorie split. The band edges are absolute kg for one body; the lever is one size for one maintenance; the instruction assumes carb cycling. Not one of the three transfers. |
+| **W1h** hold note, cooldown, `setCalChanged` | person-specific by inheritance | `[Certain]` | Reachable only from a band. If there is no band there is no hold, no note, no control. Nothing to gate separately; nothing renders. |
+| **`bwWindows`** — the two 7-day windows, `BW_MIN = 5`, `BW_HISTORY = 14` | history-relative arithmetic; the minima are `[Convention]` and hold as a **floor** for anyone | `[Certain]` on the arithmetic; `[Likely]` on the floor | The comment justifies the noise model by "a 180 cm male", but that is the *least* noisy case the app will see: day-to-day water noise is a larger fraction of a smaller body, and a menstrual cycle adds a periodic water term that can exceed a 0.2–0.3 kg/week signal over a two-week comparison. So 5-of-7 and 14 days cannot be *lower* for anyone else, and for some people two windows will not be enough to band a rate. The measurement still renders — it is a true statement of what the scale said — and with the bands ABSENT nothing acts on it. Left open for B-93 whether a profile may widen the comparison; not in this order. |
+| **`BW_SUBLINE`** — `Target: +0.2 to +0.3 kg per week. Averages over 14 days.` | **person-specific** | `[Certain]` | It is the target. It is his. It is already `""` in every not-enough-data state, and it stays `""` in ABSENT. |
+| **`DIET_TARGETS`** | **person-specific** | `[Certain]` | 3,200 / 170 / 300 / 145 and 2,500 / 175 / 60 / 175 — estimated from his height, weight and training load (`handoff-brief.md:62`). |
+| **`DIET_WEEKLY`** | **person-specific** | `[Certain]` | 2,700 maintenance is his `[Guessing]`-tagged estimate; 3,000 and 300 are arithmetic over it. |
+| **`dietTargets`** — the eight figures and all nineteen sentences | **person-specific, whole** | `[Certain]` on the figures, the calibration lines, the medical line and the weekly line; `[Opinion]` that the universal fragments are not worth salvaging | The calibration block says *"estimates from **your** height, weight and training load"* — false for anyone else. The medical caveat exists because of *175 g of fat*, his number. "Surplus is being wasted" presumes a bulk. *"Protein every day"* and *"creatine 5 g"* are universal-ish, but a Diet tab that shows two slogans and no gram figure is decoration, and 5 g of a supplement to an unassessed adult is a recommendation I will not have the app make on its own. The weekday/label logic inside `dietTargets` is programme-specific and survives untouched behind the gate. |
+| **`cycleLine`** | programme-specific + history-relative | `[Certain]` | Weeks counted from the user's own log; the volume-phase clause from the plan's `cut` tier and `reducedWeeks`. C7a already covers a plan with neither. Nothing about the person. |
+| Home macro strip | person-specific by inheritance | `[Certain]` | Reads `dietTargets`. Renders nothing when that is ABSENT — not the ABSENT line either (C7a: once, on the Diet tab). |
+| Onboarding copy *"Two power days, three hypertrophy days"* | programme-specific | `[Certain]` | Describes the plan. Survives. |
+
+**What the table decides.** Two engines and one clause are gated: `calorieAdvice` (bands and
+instructions), `dietTargets` (whole), and the diet clause of ST1's PHAT-provenance diagnosis.
+**Everything else runs for a second account exactly as it runs for Chady**, because everything else
+is a function of her own sets, her own dates and the plan she is on. That is the whole of PR1.
+
+---
+
+## 16.2 Question 2 — the Weight and Diet screens with no profile
+
+### The Weight tab
+
+**The average and the rate render. The band does not.** `[Likely]` on the split; `[Certain]` on
+everything either side of it.
+
+The `7-day average (6 of 7 days)` row and the `Change vs last week +0.31 kg` row are what the scale
+said, averaged over dates, with the sample size on the label. They are true for anyone, they carry no
+adjective, no colour (already ruled: the rate is uncoloured always) and no target. The sub-line
+`Target: +0.2 to +0.3 kg per week` is what turns the rate into a claim, and it is the sub-line that
+goes. The question the WO asks — *is the number itself a claim?* — no: a signed two-decimal difference
+of two means is a measurement, and the app already prints it to Chady in a row that says nothing
+about whether it is good. The residual risk, stated: a person reading `+0.31 kg` with no band will
+form their own opinion of it. That is the same risk as owning a scale, and it is not one the app can
+remove by hiding arithmetic.
+
+What does **not** render for an unstamped store: the `Calorie decision` kicker with a band sentence,
+`BW_SUBLINE`, the hold note, `I changed my calories today`, `I did not change anything`. None of them
+have a state to hang off — the engine returns ABSENT before any of them are reachable.
+
+What **does** render unchanged, because it is universal: the entry stepper, `Same time, same
+conditions, every morning. The daily number is noise. The weekly average is the signal.` (empty
+state), `Logged as today's entry. Weigh daily — the trend is what the app reads.`, the last-7 list.
+
+```
+Rule: PR1 — the person gate, Weight tab
+Applies to:    PHAT.calorieAdvice. Weight tab only. No exercise role.
+Inputs:        the log store's meta `profile`, passed to the engine by the caller.
+               `bwWindows` takes NO profile and is NOT gated: it is the measurement.
+Logic:         profile is exactly {diet:"phat-brief"}   -> run Rule W1 unchanged, every state,
+                                                            every string, W1h included.
+               anything else (absent, undefined, null,
+               a caller that passed nothing, any other
+               value)                                   -> ABSENT. Checked FIRST, before the
+                                                            rows/history/window gates (C7a: absence
+                                                            is a property of the store and is
+                                                            detectable on day zero with no entries).
+               ABSENT shape: state "absent", absent true, absentLines/absentLine as below,
+                             rate null, text "", subline "", tone "none", daysAgo null,
+                             holdUntil null, holdNote "". No field carries a kg/week figure,
+                             a band, or a hold.
+               FAIL CLOSED: a caller that does not say whose store this is gets silence, not
+               Chady's diet. Every existing three-argument call in index.html and tests.html
+               must therefore pass the profile or be re-pinned as ABSENT — that is W4's and
+               QA's cost and it is the right cost.
+Output copy:   absentLines, two elements, rendered ONCE, in the calorie-decision slot, in the
+               sub-line's token and size, no kicker, no enclosure:
+                 No diet protocol on this account.
+                 The app reports your weight and says nothing about what to eat.
+Not enough data: not applicable — ABSENT wins over every data state, including `empty`. The
+               universal empty-state sentence still renders when there are no entries, because
+               it is the entry instruction and not part of the calorie decision.
+Rationale:     the rate is a fact about the scale; the band is a claim about a goal. The app has
+               the first for anyone and the second for one person. Fail-closed on the argument
+               because the B-90 failure is precisely an engine handing out one man's diet to
+               whoever calls it.
+```
+
+**Why those two sentences.** Line 1 is the fact, and `on this account` names the scope without
+naming a person — it is equally true on Diana's phone and on a new phone where Chady chose `Start with
+an empty log` instead of `Sign in` (his stamp lives on his account, not on the device — see 16.8).
+Line 2 is the consequence and is true at every data state: with no entries the app "reports" `No
+entries`. There is no third line, because the only honest instruction — *set a protocol* — is not
+something the app can honour until B-93 exists, and C7a forbids a line that sends him somewhere that
+does not exist.
+
+### The Diet tab
+
+**The whole tab is ABSENT.** `[Certain]`. Not the grid with blanks, not the copy blocks without the
+numbers, not the protein tick without a target. `Targets only` is the tab's own honest description of
+itself; with no targets there is nothing on it.
+
+```
+Rule: PR1 — the person gate, Diet tab
+Applies to:    PHAT.dietTargets. Diet tab and the Home macro strip. No exercise role.
+Inputs:        the same `profile` as above, same test, same fail-closed contract.
+Logic:         profile is exactly {diet:"phat-brief"}   -> run Rule DT1 unchanged: eight figures,
+                                                            nineteen sentences, the three label
+                                                            cases, `weekly` on a 5/2 week.
+               anything else                            -> ABSENT. Checked first.
+               ABSENT shape: absent true, absentLines/absentLine as below; dayType, label,
+                             kcal, protein, carb, fat, text, timing, weekly, calibration,
+                             nonNegotiables, medical all null or "" — no figure, no sentence.
+                             date / weekday / todayType / trainingDays / restDays may still be
+                             returned (they are the plan's, not the person's) but nothing
+                             on the tab renders from them.
+Output copy:   kicker  `Diet`   sub-kicker  `No targets`   (replaces `Targets only`)
+               absentLines, two elements, rendered ONCE on the Diet tab:
+                 No diet targets on this account.
+                 The app cannot work them out from a training log, and it will not guess.
+               Home macro strip: renders NOTHING. Not the row, not the line. Once means once.
+               The protein tick: not rendered, and its prefs key is never written on this store.
+Not enough data: not applicable. No amount of logging produces a target.
+Rationale:     every sentence on this tab is either his number or a caveat that exists because of
+               his number. A fragment shown without the number it qualifies is a slogan, and the
+               app does not do slogans. `will not guess` is the promise the whole rule is: no
+               formula, no default, no "typical" figure.
+```
+
+**Deliberately not salvaged, and why.** `Protein every day, rest days included.` is true for anyone
+on a resistance programme, and I still cut it: with no gram figure it instructs nothing, and it drags
+`The one non-negotiable` and the tick with it, and the tick is a control that stores a value on a
+store with no protocol for it to belong to. `Creatine monohydrate 5 g daily.` is `[Certain]` as
+evidence for the goal and still does not render — a dose is a recommendation to a person, and this
+person has not been assessed. Both come back the moment a profile exists; neither is lost.
+
+---
+
+## 16.3 Question 3 — silence, confirmed
+
+**Yes. Silence, and nothing else.** `[Certain]` on the ruling, and the reasoning is the same as
+§8.6's correction of the calibration block: **the app does not run a decision procedure it was not
+given.**
+
+Three alternatives, each rejected on its own ground:
+
+1. **A flipped-sign ladder for a cutter.** A cut protocol is not a bulk protocol read in a mirror.
+   On a bulk the *act* states are `flat`, `losing` (eat more) and `cut` (eat less); on a cut the act
+   states sit at different edges and point the other way, the rate target is a different band with a
+   different width, and the safety asymmetry inverts: a wrong `Cut 200 kcal` on a bulk costs gain
+   rate, a wrong `Cut 200 kcal more` on a cut pushes an already-losing person further under, which is
+   the direction I will not let an app automate for someone it has never assessed. Nobody has
+   authored a cut ladder for anyone in this project. There is nothing to flip.
+2. **A "generic" maintain ladder** (`±0.2 → change nothing`, else ±200). It looks harmless and it is
+   still a protocol — a lever size, a band width and a cadence chosen by whoever types it in, for a
+   body whose maintenance the app does not know. B-06 was a confident number from thin data; this
+   would be a confident instruction from no data.
+3. **A sign the user sets.** Gives the app a direction and still no numbers: not her rate band, not
+   her lever, not which days it applies to. A direction with borrowed numbers is the flipped ladder
+   again with the user holding the pen.
+
+The two failures the WO names are both real and silence is wrong in neither direction: a rising weight
+on a non-bulker gets no `On target. Change nothing.`, and a losing cutter gets no `You are not
+bulking. Add 200 kcal.` She gets the rate, uncoloured, and the sentence in 16.2.
+
+**And the overturn, restated so it lands in B-93.** WO-008 §7 q2's *"if both are yes, W1 q3 becomes
+narrower"* — no. If Chady says Diana is on PHAT and bulking, the app learns the *shape* of the
+protocol she would need (a bulk ladder with a training-day lever) and still has none of its numbers.
++0.2–0.3 kg/week on an 85 kg man is roughly 0.25–0.35 % of body mass a week; the same absolute band
+on a 60 kg woman is 0.33–0.5 %, the top of what any convention calls lean gain, and 200 kcal against
+her maintenance is a larger lever than it is against his. `[Likely]` the bands would need her body
+mass to set them; `[Certain]` the eight targets and the maintenance estimate would not transfer at
+all. So his answer narrows what B-93 must collect. It does not unlock a single string in W4.
+
+---
+
+## 16.4 Question 4 — the 2.5 kg step, the 0.1 kg step, the 30–300 kg guard
+
+**Does the 2.5 kg grid hold as the minimum for a lighter lifter? Yes — it is a plate-pair, not a
+person.** `[Certain]`. The smallest common pair is 2 × 1.25 kg; that is the grid, and it is why every
+kg the app prints is rounded to it (Decision 4). A lighter lifter does not get a finer grid, she gets
+the same plates.
+
+**Does P1's fixed 2.5 kg step hold as an instruction? No — and it does not hold for Chady either.**
+`[Certain]`, and this is the part that decides the answer to "which order": **the defect is
+load-specific, not person-specific.** P1 case 4 prints `Go to {load + 2.5} kg` off `incOf` (fixed
+2.5), and G1's step is floored at 2.5. On a 100 kg row that is 2.5 %; on a 40 kg row 6 %; on a 15 kg
+DB press 17 %; on a 10 kg lateral raise, which is a `hyp` slot and goes through G1's floor, 25 %.
+Three of those four are Chady's own slots on `main` today. A second account with lower loads on the
+big lifts makes the same defect visible on more slots; it does not create it. The WO's arithmetic
+(17 % on a 15 kg DB press) is right and the conclusion is that P1.4 and G1's floor are wrong on light
+loads for everyone.
+
+**Yes, this opens a rule change, and it is not this order's.** The shape, so the PM can file it and so
+nobody builds a different one by instinct:
+
+- **Candidate rule P1.4b / G1b — the jump as a fraction of the load.** When the increment the rule
+  would print exceeds a threshold fraction of the working load (`[Opinion]` 10 %, so loads under
+  25 kg at a 2.5 kg step), the primary instruction becomes I2's double-progression form rather than
+  the jump: *`Top of range on all 3 sets at 15 kg. Stay there until all 3 sets reach 7 reps, then go
+  to 17.5 kg.`* — i.e. the rep target extends to `hi + 2` (I2's own number) before the jump. The jump
+  itself is unchanged; it is delayed until it is earned at a rep count where a 17 % jump lands near
+  the bottom of the range instead of below it. The existing I2 rider is the mitigation already
+  written; the change is to promote it from a footnote to the sentence when the arithmetic says the
+  footnote is the instruction.
+- **It is a rule change because it re-prescribes** — the same reason B-58 was ruled a coach item, not
+  a setting. It needs its own worked examples on both roles and both implements, a mutant pass on the
+  threshold, and it touches P1 and H1 output strings that are pinned today.
+- **It does not block WO-008.** The failure mode on a light load is a failed set on a dumbbell or a
+  stack, followed by P1.2 or P1.5 telling her to hold — the same exposure Chady has on his own light
+  slots now, and not a loaded-bar failure. `[Likely]` ship W4 without it; file it P2 and do it before
+  either of them has logged six weeks of light-load history that the old rule has been advising on.
+
+**The 0.1 kg bodyweight step holds for anyone.** `[Certain]`. It is scale resolution, not a
+prescription.
+
+**The 30–300 kg guard holds for anyone.** `[Certain]`. It is a write-boundary sanity check
+(`index.html:4056`, `:5301`; `logic.js` deliberately imposes no bound of its own), not advice. 30 kg
+is below any adult who should be on a five-day barbell programme, and 300 kg is above any adult who
+will ever open this app. It refuses a typo; it never interprets a number. Note it is exclusive on
+both ends (`> 30`, `< 300`) — irrelevant to any real person, and not worth a change.
+
+---
+
+## 16.5 Question 5 — PHAT to an adult the coach has never assessed
+
+**The question, split, because it has two answers.**
+
+**(a) May the app *run* PHAT for her — display the plan, log her sets against it, and apply P1 / H1
+/ G1 / SP1 / V1 / R1 / ST1's measurement / D1 / S1 to her log? Yes.** `[Likely]`, and the reason is
+structural, not a judgement about PHAT: **the app never selects a load.** She types her first
+weights. P1 case 4 adds 2.5 kg only after she has completed every set at the top of the range at a
+load she chose; G1 adds a fraction of her own load only after she has exceeded the range by two reps
+or more; SP1 is 65–70 % of her own triple; V1 starts her on *less* volume for four weeks, and for a
+novice that is more appropriate, not less; S1 holds every increase the moment she writes the word
+pain and points her at a physio. Every instruction the training layer can produce is a small step
+from a thing she has already done. That is the same safety model as a printed programme in a
+notebook, and it is the model the whole advice layer was signed off against. The residual risk —
+technique under a 3–5 rep barbell load by someone the app cannot see — is real, is not reduced by
+refusing to log the set, and is outside what any logger can do about it. `[Convention]` 3–5 reps at a
+self-selected load is standard prescription for a healthy adult; `[Opinion]` that the ✂ block makes
+PHAT a reasonable *first* programme, which Norton did not write it to be.
+
+**(b) May the app *vouch* for PHAT as right for her? No.** `[Certain]`. There are exactly two places
+the app currently vouches, and both are closed by PR1 and C7c: the Diet tab (a diet written for a
+different body, presented as targets) and ST1's PHAT-provenance diagnosis (*"the split isn't the
+problem and neither is the diet"* — a `[Certain]` earned by assessing him). With those ABSENT, nothing
+the app says to her is a claim about her; every sentence is a claim about her log or about the plan.
+
+**The first-run line.** The existing programme-level copy (*"Two power days, three hypertrophy
+days"*) survives; it describes the plan. One line is added beneath it, and it must be true of
+**anyone** holding a phone at first run — including Chady on a new phone before he taps `Sign in` —
+because at that moment the store is fresh, unstamped, and the app genuinely knows nothing about
+whoever is holding it:
+
+```
+The app knows nothing about you yet. Choose your own starting weights; it adds weight only after
+you hit the full range on every set.
+```
+
+Three clauses: the fact, an instruction the app can honour (she picks the loads — that is what the
+app does anyway), and the consequence that tells her what the training advice is. It does not mention
+diet — the Weight and Diet tabs carry their own ABSENT lines where the absence is (C7a: once, in the
+place). It does not name Chady, Diana or an account. It never renders on his current phone, where
+onboarding is done. **No medical boilerplate on first run**, `[Opinion]`: a "consult a doctor before
+exercising" line on a screen everyone taps through is the kind of line people learn not to read, and
+the app's refusal to assess is expressed where it matters — S1, on the set, the day she logs pain.
+
+---
+
+## 16.6 Question 6 — the minimum profile (B-93's contents)
+
+Filed, not built. Two tiers: what the **calorie decision** needs before it may say one word, and what
+the **Diet tab** needs on top. The app needs to know only *whether* it has tier 1; W4 stores a stamp,
+nothing more.
+
+**Tier 1 — the calorie decision (Rule W1 for a person who is not Chady).**
+
+| Field | Required | What it unlocks | Note |
+|---|---|---|---|
+| `goal` | yes | which ladder *shape* runs | `"bulk"` \| `"maintain"` \| `"cut"`. **Only `bulk` has an authored ladder shape today** (Rule W1). `maintain` and `cut` remain ABSENT until a coach authors their ladders — a profile field does not create a protocol. `[Certain]` |
+| `rateBand` | yes | the six bands | `{lo, hi, cutAbove, addBelow}` in kg/week, signed. Chady's stamp resolves to `{0.20, 0.30, 0.50, 0.10}` — the exact edges `calorieAdvice` compares in hundredths today. For anyone else the numbers are authored for that body, `[Likely]` from body mass (0.25–0.5 %/week for a bulk is the convention), never copied. |
+| `lever` | yes | the instruction's number | kcal per step. 200 for him. |
+| `leverDays` | yes | the instruction's object | `"training"` \| `"all"`. *"Add 200 kcal to your training days"* only makes sense on a training-day/rest-day split; a person on one daily target gets *"Add 200 kcal a day"*. The string is authored per value, not templated from one. |
+| `authoredBy`, `authoredOn` | yes | provenance of every number above | `"coach"` \| `"self"` and a date. The app must never present a self-typed number in the voice it uses for a coach's prescription; the copy difference is UX's, the field is mine. `[Certain]` the field is required. |
+| `bodyweightAt` | no | staleness | The bodyweight the band and lever were set at. `[Opinion]`: when the 7-day average drifts more than 5 % from it the tab says the numbers are older than the body, and nothing else. Do not build the check before there is a profile to check. |
+
+**Tier 2 — the Diet tab.**
+
+| Field | Required for the tab | Note |
+|---|---|---|
+| `maintenanceKcal` | yes for `weekly`, no for the grid | An **estimate typed in**, never computed. See below. |
+| `targets` | yes | Per day type, `{kcal, protein}` minimum; `carb` and `fat` optional. The tab renders the grid only when every cell it shows has a number; a two-cell tab is a B-93 UX call, not a partial eight-cell grid. Chady's stamp resolves to `DIET_TARGETS` unchanged. |
+| the caveats | derived | The medical line renders when a fat target exceeds a threshold the coach sets in B-93 (his 175 g is the reason it exists). `weekly` renders only when the split arithmetic holds, as now. |
+
+**What is deliberately NOT in the minimum, and why. `[Certain]`.**
+
+- **No height, sex, age, activity level — and no formula.** The app must not compute a maintenance
+  estimate. Mifflin-St Jeor and its relatives are ±10–15 % on an individual (`[Convention]`), which on
+  2,700 kcal is a ±350 kcal error — larger than the 200 kcal lever the whole protocol turns on. The
+  brief itself tags his 2,700 `[Guessing]` and says the 14-day trend overrides it; that is the right
+  model. A profile carries a number a person wrote down; the scale corrects it. If sex ever enters
+  the profile it enters for one stated reason — widening the bodyweight comparison window for
+  cycle-driven water — and only when B-93 rules on that; a field collected and not read is B-26's
+  failure class.
+- **No "on PHAT" flag.** Which plan she is on is the plan document's business, already handled by
+  provenance (C7b) and the plan-specific ABSENT states (C7a).
+
+**What the stamp is.** `profile: {diet:"phat-brief"}` is a *named* profile whose contents are the
+compiled-in constants; B-93 adds a second kind, `{diet:"custom", …fields}`. PR1 tests the name; W4
+needs nothing else. When B-93 ships, `calorieAdvice` reads its bands from the profile in both cases
+and the constants become the `phat-brief` profile's values — that refactor is B-93's, and it must
+leave every one of Chady's strings byte-identical.
+
+---
+
+## 16.7 Rule C7c — the diet clause of ST1's diagnosis
+
+```
+Rule: C7c — profile gating on the PHAT-provenance diagnosis
+Applies to:   ST1's OUTPUT COPY only, on top of C7b. The measurement is unchanged. Trend tab.
+Inputs:       C7b's provenance result; the log store's meta `profile`.
+Logic:        PHAT-provenance TRUE  AND profile is {diet:"phat-brief"}  -> the brief's copy,
+                                                                          unchanged from §8.4.
+              PHAT-provenance TRUE  AND anything else                  -> the GENERIC copy (§8.4),
+                                                                          unchanged.
+              PHAT-provenance FALSE                                    -> generic, as C7b already
+                                                                          says. Profile not read.
+              ABSENT / PRESENT-THIN / all-progressing: unchanged. Profile not read.
+Output copy:  no new string. Both sentences exist in §8.4.
+Not enough data: unchanged from C7b.
+Rationale:    "neither is the diet" was earned by assessing one diet and "you aren't eating
+              enough" presumes one goal. Provenance proves the programme is his; only the
+              profile proves the diet is. The generic copy names food without a direction and
+              is what the app may say to a person whose plate it has never seen.
+```
+
+**Worked examples.**
+
+1. Chady's stamped store, `planId:"phat"`, week 7, Row and Squat stalled → provenance TRUE, profile
+   `phat-brief` → *"This is the check we agreed on. The split isn't the problem and neither is the
+   diet…"* Identical to today.
+2. Diana, on the shipped PHAT plan untouched, week 7, Row and Squat stalled → provenance TRUE,
+   profile absent → *"Six weeks of data and the numbers have not moved. Change one thing — how hard
+   the sets are, how much you are eating, or the plan — and give it three weeks."* The app reports the
+   fact and vouches for neither the split nor the diet.
+3. **Boundary.** Chady's stamped store, he has changed squat to `5 × 5` → provenance FALSE → generic
+   copy; the profile is not consulted. C7b's failure-closed behaviour is unchanged by C7c.
+4. **Failing case.** A store stamped `phat-brief` by a wrong migration on Diana's phone (16.8) →
+   provenance TRUE and profile present → the brief's copy prints *"neither is the diet"* about a diet
+   the app has never seen. **This is why the stamp's discriminator matters and why the safe default
+   is to not stamp.**
+
+---
+
+## 16.8 What this changes, by work item — and the hazard
+
+| Item | Change |
+|---|---|
+| `logic.js` `calorieAdvice` | Takes the profile (signature is `backend-engineer`'s; semantics are PR1's: exactly `{diet:"phat-brief"}` runs W1, anything else is ABSENT, checked first, fail-closed). ABSENT shape and the two literals in 16.2. **No band, threshold, window or existing string moves.** `bwWindows` untouched and un-gated. |
+| `logic.js` `dietTargets` | Same gate, same contract. ABSENT shape and the two literals in 16.2, plus the sub-kicker `No targets`. No figure, no sentence in the ABSENT object. |
+| `logic.js` `stallVerdict` (or wherever C7b's copy selection lives) | Rule C7c: the PHAT-provenance copy additionally requires the stamp. No new string. |
+| `index.html` Weight tab | Renders the ABSENT lines in the calorie-decision slot, sub-line token, no kicker, no enclosure, no controls; average and rate rows unchanged; empty-state sentence unchanged. **Assembles no sentence.** |
+| `index.html` Diet tab + Home strip | Diet: kicker, sub-kicker, two lines, nothing else, no prefs write for the tick. Home: no strip, no line. |
+| `index.html` first run | The one line in 16.5, beneath the programme copy, every first run. Not on a stamped store's Home; not anywhere else. |
+| `tests.html` | Pin: (a) Chady's stamped store → every existing `calorieAdvice` / `dietTargets` / C7b assertion green, byte-identical strings; (b) an unstamped store → `absent:true`, `rate:null`, `text:""`, `holdUntil:null` from `calorieAdvice` at **every** data state including `empty` and a fully populated ten-entry pair of windows; `bwWindows` on the same entries still returns the rate; (c) `dietTargets` ABSENT carries no numeric field and no sentence; (d) C7c example 2; (e) a call with no profile argument is ABSENT (the fail-closed contract, mutant-tested by flipping it to fail-open). |
+| Backlog | **New P2, own order:** P1.4b / G1b — the increment as a fraction of the load (16.4). Not a WO-008 item. B-93 receives 16.6 as its contents. |
+
+**The hazard, for `project-manager` and `backend-engineer` — not mine to solve, mine to name.** W4
+says *"the existing store is stamped `phat-brief` by the schema pass … and a fresh store is not."* The
+only thing a schema pass can see is schema age. W3 has Diana creating her account **now**, from the
+live app, on her phone — and today's first run has one action, `Start with an empty log`, so reaching
+Settings → Backup creates an onboarded store on her phone at the *current* schema. When W4's pass runs
+on that phone, her store is older than `V_PROFILE` and indistinguishable from Chady's. It gets his
+stamp; she gets his Diet tab, his calorie ladder, and C7c worked example 4. Two ways out, either is
+fine, one must be chosen before W4 is dispatched: **(i)** W3's runbook says she creates the account and
+does *not* tap `Start with an empty log` until W8 is live — which today is impossible without a
+`Sign in` on first run, so this is really "W2's first-run `Sign in` ships first"; or **(ii)** the pass
+stamps on evidence other than age, and **when it cannot tell, it does not stamp** — Chady's stamp lives
+on his account (`user_state.log_meta`, per W4) and comes back with one tap of `Restore from backup`,
+which has a keep; Diana's wrong stamp has no undo she can see. Silence is the recoverable error. My
+default if nobody rules: (ii).
+
+**One consequence to record so it is not filed as a bug.** Chady on a new phone who taps `Start with
+an empty log` instead of `Sign in` has an unstamped store: no Diet tab, no calorie ladder, until he
+restores. That is correct — that store has none of his history either, and the stamp travels with the
+account, not the device.
+
+---
+
+## 16.9 What the brief cannot settle — left open
+
+1. **Whether Diana should be on PHAT at all.** Not a question the app or I can answer from a brief
+   that never mentions her. The app may log her on it (16.5a); whether it is the right programme for
+   her is a coach's call made in a room, and until it is made the app must not imply one was.
+2. **Her bands, her lever, her targets, her maintenance.** Every number in 16.6 tier 1 and 2 is
+   authored for a body by someone who has seen it. `[Certain]` none of them can be derived from a
+   training log, and `[Certain]` the app must not run a formula to fake it.
+3. **Whether a two-week bodyweight comparison is enough for her.** The `bwWindows` minima are a
+   floor; for some women the cycle's water term will make two windows band nothing reliably. Opens
+   only if B-93 puts a reason to read `sex` on the profile, and then as a widened window, never as a
+   different formula.
+4. **The 10 % threshold in 16.4.** `[Opinion]`, uncalibrated, and calibrated the way everything in
+   this file is: by someone logging a light-load session and reading the verdict.
+
+---
+
+## 16.10 Verdict
+
+**Sign off the PM's reading with two changes and one overturn.** PR1 as specified in 16.2 is the
+gate; it closes B-90 for a second account and changes nothing for a stamped store. The two changes:
+**C7c** — the ST1 diagnosis needs the profile as well as provenance, which the WO did not list — and
+the **stamp hazard** in 16.8, which W4 must resolve before it is dispatched. The overturn: §7 q2 does
+not narrow q3. Silence is confirmed. The 2.5 kg step opens a rule change in its own order and blocks
+nothing here.
+
+**And the standing item, for the seventh time in this file.** Every engine in 16.1 is history-relative
+or programme-specific, which means every one of them was built to read a log, and there are now two
+accounts' worth of nothing for them to read. One session by either of them would be the first fact
+this document has ever had.
