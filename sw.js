@@ -50,7 +50,13 @@
    imports is cross-origin and is NOT precached - the fetch handler ignores
    every origin but this one, and an opaque response cannot be verified by
    usable(), so it has no place in an atomic shell. */
-var VERSION = 'v3';
+/* v4 (2026-09-12, WO-006 W5): the Plan Editor release. Bumped on the release
+   instruction because index.html and logic.js both changed shape (PROGRAM is
+   now plan-derived). Strictly, the rule above did not require it - the file
+   list is unchanged and the per-launch refresh would have carried the new
+   pair on its own - and it is harmless: install fills v4 completely before
+   activate deletes v3, so no launch is ever left without a shell. */
+var VERSION = 'v4';
 var PREFIX  = 'phat-shell-';
 var CACHE   = PREFIX + VERSION;
 
