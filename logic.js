@@ -1434,6 +1434,233 @@
     return { ok: true, plan: next, problems: [] };
   }
 
+  /* ------------------------------------------ W15: the rest of the editor
+
+     WO-004 W14/W15. The five editors the Plan Editor screen needs that W2
+     did not ship, plus the plan-store operations and the name resolver the
+     Plans list needs. Same contract as everything above: pure, a NEW plan
+     (or store) comes back, the argument is never mutated, `ok:false` returns
+     the original untouched with `problems` as developer signals - never copy.
+
+     Nothing here can touch a logged session. `moveDay` reorders the `days`
+     array and rewrites no `id` (C-5). `setExerciseTarget` writes s/lo/hi and
+     nothing else - Rule PE1 sees that as a new prescription epoch, which is
+     the correct reading, and phatProvenance drops if a key lift's numbers
+     move, which is also correct. `restoreExercise` is `removeExercise`'s
+     undo: the removed object goes back BYTE-FOR-BYTE at its original index,
+     and the plan-scoped references scrubPlanRefs dropped are reinstated
+     from the pre-removal snapshot, so delete-then-undo is the identity. */
+
+  function renamePlan(plan, name) {
+    var nm = (typeof name === "string") ? name.trim() : "";
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (nm === "") return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "name", reason: "empty" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    next.name = nm;
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  /* moveDay(plan, from, to) -> {ok, plan, problems}. Display order only. */
+  function moveDay(plan, from, to) {
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    if (!Array.isArray(next.days)) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "days", reason: "type" }]);
+    var n = next.days.length;
+    if (!isInt(from, 0, n - 1) || !isInt(to, 0, n - 1)) {
+      return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "index", reason: "range" }]);
+    }
+    next.days.splice(to, 0, next.days.splice(from, 1)[0]);
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  /* setExerciseTarget(plan, exId, {s, lo, hi}) -> {ok, plan, problems}
+     Any subset of the three; each is validated against the same bounds
+     validatePlan enforces, and lo > hi is refused whichever side moved. */
+  function setExerciseTarget(plan, exId, spec) {
+    var id = str(exId).trim();
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (!isObj(spec)) return editFail(plan, [{ scope: "ex", id: id, field: null, reason: "missing" }]);
+    var cur = exById(plan, id);
+    if (!cur) return editFail(plan, [{ scope: "ex", id: id, field: "id", reason: "unknown" }]);
+    var s = spec.s === undefined ? cur.s : spec.s;
+    var lo = spec.lo === undefined ? cur.lo : spec.lo;
+    var hi = spec.hi === undefined ? cur.hi : spec.hi;
+    var problems = [];
+    if (!isInt(s, 1, 20)) problems.push({ scope: "ex", id: id, field: "s", reason: "range" });
+    if (!isInt(lo, R_MIN, R_MAX)) problems.push({ scope: "ex", id: id, field: "lo", reason: "range" });
+    if (!isInt(hi, R_MIN, R_MAX)) problems.push({ scope: "ex", id: id, field: "hi", reason: "range" });
+    if (isInt(lo, R_MIN, R_MAX) && isInt(hi, R_MIN, R_MAX) && lo > hi) {
+      problems.push({ scope: "ex", id: id, field: spec.lo !== undefined ? "lo" : "hi", reason: "range" });
+    }
+    if (problems.length) return editFail(plan, problems);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var target = exById(next, id);
+    target.s = s; target.lo = lo; target.hi = hi;
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  /* restoreExercise(plan, dayId, index, ex, snapshot) -> {ok, plan, problems}
+     The undo. `ex` is the object removeExercise returned; `snapshot` is the
+     plan AS IT WAS before the removal (optional) and is read only for the
+     three rule tables. Refused if the id is already back in the plan, so a
+     double undo cannot mint a duplicate. */
+  function restoreExercise(plan, dayId, index, ex, snapshot) {
+    var did = str(dayId).trim();
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (!isObj(ex) || str(ex.id).trim() === "") return editFail(plan, [{ scope: "ex", id: null, field: "id", reason: "missing" }]);
+    var id = str(ex.id).trim();
+    if (exById(plan, id)) return editFail(plan, [{ scope: "ex", id: id, field: "id", reason: "duplicate" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var days = planDays(next), day = null, i;
+    for (i = 0; i < days.length; i++) if (isObj(days[i]) && str(days[i].id).trim() === did) day = days[i];
+    if (!day) return editFail(plan, [{ scope: "day", id: did, field: "id", reason: "unknown" }]);
+    if (!Array.isArray(day.ex)) day.ex = [];
+    var at = isInt(index, 0, day.ex.length) ? index : day.ex.length;
+    var back = clonePlan(ex);
+    if (!back) return editFail(plan, [{ scope: "ex", id: id, field: null, reason: "unclonable" }]);
+    day.ex.splice(at, 0, back);
+    /* The references, from the snapshot, only where BOTH ends now exist. */
+    if (isObj(snapshot)) {
+      if (Array.isArray(snapshot.keyLifts) && snapshot.keyLifts.indexOf(id) >= 0) {
+        var kl = Array.isArray(next.keyLifts) ? next.keyLifts.slice() : [];
+        if (kl.indexOf(id) < 0) {
+          var kAt = snapshot.keyLifts.indexOf(id);
+          kl.splice(Math.min(kAt, kl.length), 0, id);
+          next.keyLifts = kl;
+        }
+      }
+      if (isObj(snapshot.speedSource)) {
+        /* Rebuilt in the SNAPSHOT's key order, so delete-then-undo gives
+           back the same bytes and not merely the same map. */
+        var ss = isObj(next.speedSource) ? next.speedSource : {}, rebuilt = {}, touched = false;
+        Object.keys(snapshot.speedSource).forEach(function (k) {
+          var v = str(snapshot.speedSource[k]).trim();
+          if (own(ss, k)) { rebuilt[k] = ss[k]; return; }
+          if (str(k).trim() !== id && v !== id) return;
+          if (!exById(next, k) || !exById(next, v)) return;
+          rebuilt[k] = v; touched = true;
+        });
+        Object.keys(ss).forEach(function (k) { if (!own(rebuilt, k)) rebuilt[k] = ss[k]; });
+        if (touched) next.speedSource = rebuilt;
+      }
+      if (isObj(snapshot.reintroOrder)) {
+        Object.keys(snapshot.reintroOrder).forEach(function (k) {
+          var list = snapshot.reintroOrder[k];
+          if (!Array.isArray(list) || list.indexOf(id) < 0) return;
+          if (!isObj(next.reintroOrder)) next.reintroOrder = {};
+          var cur = Array.isArray(next.reintroOrder[k]) ? next.reintroOrder[k].slice() : [];
+          if (cur.indexOf(id) < 0) {
+            cur.splice(Math.min(list.indexOf(id), cur.length), 0, id);
+            next.reintroOrder[k] = cur;
+          }
+        });
+      }
+    }
+    return { ok: true, plan: next, problems: [] };
+  }
+
+  /* newPlan(name, todayStr) -> {ok, plan, problems}. Build from empty.
+     No `derivedFrom` (it is not PHAT and never becomes it), no rule tables
+     (every plan-scoped rule answers ABSENT until one is declared), `days`
+     present and empty so isPlanDoc is true from the first second. */
+  function newPlan(name, todayStr) {
+    var nm = (typeof name === "string" && name.trim() !== "") ? name.trim() : "New plan";
+    var plan = { planId: mintId({}, "plan"), name: nm, from: "Built from empty",
+                 readOnly: false, createdAt: dateOrNull(todayStr), days: [] };
+    return { ok: true, plan: plan, problems: [] };
+  }
+
+  /* ---- the plan store: {schemaVersion, plans:[...], activePlanId} ----
+     Two operations, both returning a NEW store. There is NO remove: plan
+     deletion is out of scope (WO-006 §2) and a plan the log references is
+     never dropped. The shipped PHAT plan is
+     code, never stored, so `activePlanId:"phat"` is legal with an empty
+     `plans` array and PHAT can neither be upserted nor removed. */
+  function planStoreUpsert(store, plan) {
+    if (!isObj(plan) || str(plan.planId).trim() === "" || str(plan.planId).trim() === PHAT_PLAN_ID) {
+      return { ok: false, store: store, problems: [{ scope: "plan", id: null, field: "planId", reason: "missing" }] };
+    }
+    var next = copyObj(isObj(store) ? store : {});
+    var list = Array.isArray(next.plans) ? next.plans.slice() : [];
+    var id = str(plan.planId).trim(), hit = -1, i;
+    for (i = 0; i < list.length; i++) if (isObj(list[i]) && str(list[i].planId).trim() === id) hit = i;
+    var doc = clonePlan(plan);
+    if (!doc) return { ok: false, store: store, problems: [{ scope: "plan", id: id, field: null, reason: "unclonable" }] };
+    if (hit >= 0) list[hit] = doc; else list.push(doc);
+    next.plans = list;
+    if (next.activePlanId === undefined) next.activePlanId = PHAT_PLAN_ID;
+    next.schemaVersion = SCHEMA_VERSION;
+    return { ok: true, store: next, problems: [] };
+  }
+
+  function planStoreSetActive(store, planId) {
+    var id = str(planId).trim();
+    var next = copyObj(isObj(store) ? store : {});
+    if (!Array.isArray(next.plans)) next.plans = [];
+    var known = id === PHAT_PLAN_ID, i;
+    for (i = 0; i < next.plans.length && !known; i++) {
+      if (isObj(next.plans[i]) && str(next.plans[i].planId).trim() === id) known = true;
+    }
+    if (!known) return { ok: false, store: store, problems: [{ scope: "plan", id: id, field: "planId", reason: "unknown" }] };
+    next.activePlanId = id;
+    next.schemaVersion = SCHEMA_VERSION;
+    return { ok: true, store: next, problems: [] };
+  }
+
+  /* ---- name resolution for a session whose plan is gone ----
+     resolveEx(plans, exId) -> the exercise, from the first plan in `plans`
+     that carries the id, or null. Callers pass [active, ...stored, PHAT]:
+     ids are preserved across copies (copyPlan), so a set logged on `d1a`
+     under a copy that was later deleted still resolves to PHAT's slot. Only
+     an id no plan on the device has ever carried falls through, and then the
+     screen prints EX_GONE - never a raw id, never blank. */
+  var EX_GONE = "Exercise no longer in any plan";
+  var DAY_GONE = "Day no longer in any plan";
+  function resolveEx(plans, exId) {
+    var list = Array.isArray(plans) ? plans : [plans];
+    for (var i = 0; i < list.length; i++) {
+      var e = exById(list[i], exId);
+      if (e) return e;
+    }
+    return null;
+  }
+  function resolveDay(plans, dayId) {
+    var id = str(dayId).trim();
+    if (id === "") return null;
+    var list = Array.isArray(plans) ? plans : [plans];
+    for (var i = 0; i < list.length; i++) {
+      var days = planDays(list[i]);
+      for (var j = 0; j < days.length; j++) {
+        if (isObj(days[j]) && str(days[j].id).trim() === id) return days[j];
+      }
+    }
+    return null;
+  }
+  /* sessionsWithEx / sessionsUnderPlan: the counts the confirmations name. */
+  function sessionsWithEx(sessions, exId) {
+    var id = str(exId).trim(), n = 0;
+    if (id === "" || !Array.isArray(sessions)) return 0;
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i];
+      if (isObj(s) && isObj(s.entries) && own(s.entries, id)) n++;
+    }
+    return n;
+  }
+  function sessionsUnderPlan(sessions, planId) {
+    var id = str(planId).trim(), n = 0;
+    if (id === "" || !Array.isArray(sessions)) return 0;
+    for (var i = 0; i < sessions.length; i++) if (planIdOf(sessions[i]) === id) n++;
+    return n;
+  }
+
   /* ------------------------------------------------- the shipped PHAT plan
 
      The 42 coach-verified slots, byte-for-byte the ids, names, s/lo/hi/k/cut
@@ -7162,6 +7389,22 @@
     moveExercise: moveExercise,
     removeExercise: removeExercise,
     copyPlan: copyPlan,
+    /* ---- W14/W15 (WO-006 W1). The editors the Plan Editor screen needed
+       that W2 did not ship, the plan-store operations, and the resolver a
+       session whose plan is gone renders its names through. All pure. */
+    renamePlan: renamePlan,
+    moveDay: moveDay,
+    setExerciseTarget: setExerciseTarget,
+    restoreExercise: restoreExercise,
+    newPlan: newPlan,
+    planStoreUpsert: planStoreUpsert,
+    planStoreSetActive: planStoreSetActive,
+    EX_GONE: EX_GONE,
+    DAY_GONE: DAY_GONE,
+    resolveEx: resolveEx,
+    resolveDay: resolveDay,
+    sessionsWithEx: sessionsWithEx,
+    sessionsUnderPlan: sessionsUnderPlan,
     clonePlan: clonePlan,
     normalisePlanStore: normalisePlanStore,
     /* ---- the plan-scoped rule tables — WO-004 W3. The four programme

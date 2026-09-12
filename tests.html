@@ -55,8 +55,14 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 593 / 590 / 3, no skips.</b> The three reds are S30&rsquo;s C-14 tests, written before the fix
-(see the S30 paragraph at the end of this note); the suite reads N / N / 0 the commit backend closes them.
+<b>Today: 605 / 605 / 0, no skips.</b> S30&rsquo;s three C-14 tests went green when the backend closed the demo
+boundary (the S30 paragraph at the end of this note is the history). <b>S31</b> is WO-006 W1, the Plan Editor: the
+headline data criterion D1 (rename every exercise, reorder every day, change two set counts &mdash; <code>lastFor</code>,
+<code>stallReport</code>, <code>speedLoad</code>, <code>e1rmByDate</code>, <code>liftDays</code> byte-identical, no id moves),
+D2 (delete-then-undo is the identity, tables included; history untouched), D5 (<code>resolveEx</code> /
+<code>resolveDay</code> and the <code>Exercise no longer in any plan</code> sentence), D8 (an entry the day no longer
+lists still builds), D9 / B-70 (a draft with no <code>planId</code> is a PHAT draft), the four ABSENT probes on a plan built
+from empty, and the store operations. There is deliberately no <code>planStoreRemove</code>: plan deletion is out of scope.
 <code>strength-coach</code> ruled on 2026-09-10 (addendum &sect;9.13.3) that the trainingWeeks-0 line
 must read <code>3 sessions logged. Week 1 starts when three land in one week.</code>; the regression
 test was written <em>before</em> the fix and went green on <code>5cd014a</code> with one string in
@@ -11191,6 +11197,222 @@ T("E-3 OBSERVED - the store-level META key order is the server's after a restore
   a.ok(deepEq(rp.bw, st.bw), "every value of the bodyweight store survives");
   a.ne(Object.keys(rp.log).join(","), Object.keys(st.log).join(","), "OBSERVED: meta key order differs (" + Object.keys(rp.log).join(",") + ")");
   a.eq(Object.keys(rp.log)[Object.keys(rp.log).length - 1], "sessions", "sessions is appended last");
+});
+
+group("S31 WO-006 W1 / W14+W15 plan editor / D1 D2 D5 D9 / B-70");
+
+/* The five engines' outputs for every exercise id of a plan, NAME-FREE, as
+   one string. D1 asserts this is byte-identical before and after every edit
+   the editor can make. Names are deliberately kept out (stallReport is
+   handed ids as names, speedLoad's `text` names the source): a rename
+   changing a label is correct, a rename changing a number is the P0. */
+function W1SNAP(plan, sessions, today){
+  var ids = [], out = { lastFor: {}, speedLoad: {}, e1rm: {}, liftDays: {} }, i;
+  allEx(plan).forEach(function(e){ ids.push(e.id); });
+  ids.sort();   /* by id, so a reordered day cannot change the KEY ORDER of the snapshot */
+  var kl = P.planKeyLifts(plan).map(function(l){ return { id: l.id, n: l.id, s: l.s, lo: l.lo }; });
+  out.stall = P.stallReport(sessions, today, kl, {});
+  for (i = 0; i < ids.length; i++) {
+    out.lastFor[ids[i]] = P.lastFor(sessions, ids[i]);
+    var sl = P.speedLoad(sessions, ids[i], today, null, plan); delete sl.text; delete sl.instruction;
+    out.speedLoad[ids[i]] = sl;
+    out.e1rm[ids[i]] = P.e1rmByDate(sessions, ids[i]);
+    out.liftDays[ids[i]] = P.liftDays(sessions, ids[i], today);
+  }
+  return JSON.stringify(out);
+}
+/* Thirty sessions under PHAT plus three logged under a copy, via the real builder. */
+function W1LOG(copy){
+  var d = P.demoStore(42), log = clone(d.log), i;
+  var plan = [["d1", "2026-09-07"], ["d2", "2026-09-08"], ["d3", "2026-09-10"]];
+  for (i = 0; i < plan.length; i++) {
+    var day = copy.days.filter(function(x){ return x.id === plan[i][0]; })[0];
+    var draft = { date: plan[i][1], entries: {} };
+    day.ex.forEach(function(e){ var s = [], k; for (k = 0; k < e.s; k++) s.push({ w: "60", r: String(e.lo) }); draft.entries[e.id] = { sets: s, note: "" }; });
+    var sess = P.buildSession(draft, plan[i][0], plan[i][1], 900000 + i, copy.planId, copy);
+    if (!sess) throw new Error("W1LOG: buildSession refused day " + plan[i][0]);
+    log.sessions.push(sess);
+  }
+  log.sessions = P.sortSessions(log.sessions);
+  return log;
+}
+
+T("W1 - the editor surface WO-006 needed is exported, pure, and callable from file://", function(a){
+  var need = ["renamePlan", "moveDay", "setExerciseTarget", "restoreExercise", "newPlan", "planStoreUpsert",
+              "planStoreSetActive", "resolveEx", "resolveDay", "sessionsWithEx", "sessionsUnderPlan"], missing = [], i;
+  for (i = 0; i < need.length; i++) if (typeof P[need[i]] !== "function") missing.push(need[i]);
+  a.eq(missing.join(",") || "none", "none");
+  a.eq(P.EX_GONE, "Exercise no longer in any plan", "UX 9.1's sentence, verbatim - never a raw id, never blank");
+  a.eq(P.DAY_GONE, "Day no longer in any plan");
+  a.eq(typeof P.planStoreRemove, "undefined", "WO-006 s2: plan deletion is OUT of scope and there is no remove");
+});
+
+T("D1 (headline) - rename every exercise, reorder every day, change two set counts: five engines byte-identical, no id/lift/dayId/wd moves", function(a){
+  var copy = MYPHAT(), log = W1LOG(copy), S = log.sessions, TODAY = "2026-09-11";
+  var copy0 = JSON.stringify(copy);
+  var before = W1SNAP(copy, S, TODAY);
+  var p = copy, r, i, j;
+  allEx(p).forEach(function(e){ r = P.renameExercise(p, e.id, "Renamed " + e.id); if (!r.ok) throw new Error("rename refused " + e.id); p = r.plan; });
+  for (i = 0; i < p.days.length; i++) { r = P.renameDay(p, p.days[i].id, "Day " + p.days[i].id); p = r.plan; }
+  r = P.renamePlan(p, "My PHAT, renamed"); a.ok(r.ok); p = r.plan;
+  /* every day changes position: last to first, twice */
+  for (j = 0; j < 4; j++) { r = P.moveDay(p, 4 - j, 3 - j); a.ok(r.ok, "moveDay"); p = r.plan; }
+  for (j = 0; j < 4; j++) { r = P.moveDay(p, 4 - j, 3 - j); p = r.plan; }
+  r = P.setExerciseTarget(p, "d1a", { s: 4 }); a.ok(r.ok); p = r.plan;
+  r = P.setExerciseTarget(p, "d2a", { s: 2 }); a.ok(r.ok); p = r.plan;
+  a.deep(p.days.map(function(d){ return d.id; }), ["d4", "d5", "d1", "d2", "d3"], "every day moved");
+  a.eq(P.validatePlan(p).ok, true, "the edited copy validates");
+  a.ok(allEx(p).every(function(e){ return e.n === "Renamed " + e.id; }), "every exercise renamed");
+  a.eq(P.exById(p, "d1a").s, 4); a.eq(P.exById(p, "d2a").s, 2);
+  var idsB = JSON.stringify(copy.days.map(function(d){ return [d.id, d.wd, d.ex.map(function(e){ return [e.id, e.lift]; })]; }).sort());
+  var idsA = JSON.stringify(p.days.map(function(d){ return [d.id, d.wd, d.ex.map(function(e){ return [e.id, e.lift]; })]; }).sort());
+  a.eq(idsA, idsB, "not one id, lift or wd changed (C-5, C-6)");
+  a.eq(W1SNAP(p, S, TODAY), before, "lastFor, stallReport, speedLoad, e1rmByDate, liftDays: byte-identical after every edit");
+  a.eq(JSON.stringify(copy), copy0, "and the input plan was never mutated");
+});
+
+T("D2 - delete an exercise with history: the count is the confirmation's number, history is untouched, undo is the identity (tables included)", function(a){
+  var copy = MYPHAT(), log = W1LOG(copy), before = JSON.stringify(log);
+  a.eq(P.sessionsWithEx(log.sessions, "d1d"), 7, "6 demo sessions on d1 plus 1 under the copy hold d1d");
+  a.eq(P.sessionsWithEx(log.sessions, "x_never"), 0);
+  a.eq(P.sessionsUnderPlan(log.sessions, copy.planId), 3);
+  a.eq(P.sessionsUnderPlan(log.sessions, "phat"), 30, "a session with no planId IS a PHAT session");
+  var r = P.removeExercise(copy, "d1d");
+  a.ok(r.ok); a.eq(P.exById(r.plan, "d1d"), null);
+  a.deep(P.planKeyLiftIds(r.plan), ["d1a", "d2a", "d2d"], "the key-lift reference is scrubbed");
+  a.eq(P.planSpeedSource(r.plan).d5a, undefined, "d5a's speed source (d1d) is scrubbed");
+  a.eq(JSON.stringify(log), before, "removeExercise cannot reach the log");
+  a.eq(P.lastFor(log.sessions, "d1d") !== null, true, "and d1d's history is still found by id");
+  var u = P.restoreExercise(r.plan, "d1", 3, r.removed, copy);
+  a.ok(u.ok);
+  a.eq(JSON.stringify(u.plan), JSON.stringify(copy), "delete then undo is the identity, byte for byte - exercise, index, keyLifts, speedSource, reintroOrder");
+  a.eq(P.restoreExercise(u.plan, "d1", 3, r.removed, copy).ok, false, "a second undo is refused: no duplicate id");
+  ["d1a", "d3a", "d1c", "d5j", "d2d"].forEach(function(id){
+    var did = P.dayIdOfEx(copy, id), day = copy.days.filter(function(d){ return d.id === did; })[0];
+    var ix = day.ex.map(function(e){ return e.id; }).indexOf(id);
+    var rr = P.removeExercise(copy, id), uu = P.restoreExercise(rr.plan, did, ix, rr.removed, copy);
+    a.eq(JSON.stringify(uu.plan), JSON.stringify(copy), "identity holds for " + id);
+  });
+});
+
+T("W15 - moveDay reorders the array and nothing else; out-of-range and read-only are refused", function(a){
+  var c = MYPHAT();
+  var r = P.moveDay(c, 0, 4);
+  a.deep(r.plan.days.map(function(d){ return d.id; }), ["d2", "d3", "d4", "d5", "d1"]);
+  a.eq(JSON.stringify(r.plan.days.slice().sort(function(x, y){ return x.id < y.id ? -1 : 1; })), JSON.stringify(c.days), "the day objects are byte-identical, just reordered");
+  a.eq(P.moveDay(c, 0, 5).ok, false); a.eq(P.moveDay(c, -1, 0).ok, false); a.eq(P.moveDay(c, 1.5, 0).ok, false);
+  a.eq(P.moveDay(P.PHAT_PLAN, 0, 1).ok, false, "PHAT is read-only");
+  a.eq(P.moveDay(P.PHAT_PLAN, 0, 1).problems[0].reason, "locked");
+});
+
+T("W15 - setExerciseTarget writes s/lo/hi only, refuses lo > hi whichever side moved, and refuses the bounds validatePlan enforces", function(a){
+  var c = MYPHAT();
+  var r = P.setExerciseTarget(c, "d1a", { s: 5, lo: 4, hi: 6 });
+  a.ok(r.ok); var e = P.exById(r.plan, "d1a");
+  a.eq(e.s, 5); a.eq(e.lo, 4); a.eq(e.hi, 6); a.eq(e.n, "Bent-over row"); a.eq(e.lift, "l_row"); a.eq(e.id, "d1a");
+  a.eq(P.exById(c, "d1a").s, 3, "input untouched");
+  a.eq(P.setExerciseTarget(c, "d1a", { lo: 9 }).ok, false, "lo above hi (5)");
+  a.eq(P.setExerciseTarget(c, "d1a", { lo: 9 }).problems[0].field, "lo", "the side that moved is the one named");
+  a.eq(P.setExerciseTarget(c, "d1a", { hi: 2 }).problems[0].field, "hi");
+  a.eq(P.setExerciseTarget(c, "d1a", { s: 0 }).ok, false); a.eq(P.setExerciseTarget(c, "d1a", { s: 21 }).ok, false);
+  a.eq(P.setExerciseTarget(c, "d1a", { hi: 101 }).ok, false); a.eq(P.setExerciseTarget(c, "d1a", { s: "3" }).ok, false, "a string is not an integer");
+  a.eq(P.setExerciseTarget(c, "nope", { s: 3 }).ok, false);
+  a.eq(P.setExerciseTarget(P.PHAT_PLAN, "d1a", { s: 3 }).ok, false, "read-only");
+  a.eq(P.validatePlan(r.plan).ok, true);
+  a.eq(P.phatProvenance(r.plan), false, "a key lift's numbers moved: provenance drops (C7b) - correct, not a defect");
+  a.eq(P.phatProvenance(P.setExerciseTarget(c, "d1b", { s: 3 }).plan), true, "a non-key lift's numbers moving keeps it");
+});
+
+T("W15 - renamePlan writes name only; empty and read-only are refused", function(a){
+  var c = MYPHAT();
+  var r = P.renamePlan(c, "  Travel  ");
+  a.ok(r.ok); a.eq(r.plan.name, "Travel"); a.eq(r.plan.planId, c.planId); a.eq(r.plan.derivedFrom, "phat", "derivedFrom is carried, never rewritten by a rename");
+  a.eq(P.renamePlan(c, "   ").ok, false); a.eq(P.renamePlan(c, "   ").problems[0].reason, "empty");
+  a.eq(P.renamePlan(P.PHAT_PLAN, "X").ok, false);
+  a.eq(P.renamePlan(null, "X").ok, false);
+});
+
+T("W14 - newPlan builds from empty: opaque id, no derivedFrom, no rule tables, isPlanDoc true, every plan-specific rule ABSENT on day zero", function(a){
+  var r = P.newPlan("", "2026-09-11");
+  a.ok(r.ok); var p = r.plan;
+  a.eq(p.name, "New plan"); a.match(p.planId, /^p_/); a.eq(p.derivedFrom, undefined); a.eq(p.readOnly, false);
+  a.eq(p.createdAt, "2026-09-11"); a.eq(P.newPlan("X", "not a date").plan.createdAt, null, "a date nobody chose is null, not a guess");
+  a.deep(p.days, []); a.eq(p.keyLifts, undefined); a.eq(p.speedSource, undefined); a.eq(p.reintroOrder, undefined); a.eq(p.reducedWeeks, undefined);
+  a.eq(P.validatePlan(p).ok, true, "a zero-day plan is a valid plan");
+  a.eq(P.phatProvenance(p), false);
+  a.eq(P.stallAdvice({ plan: p, sessions: [], todayStr: "2026-09-11", state: {}, keyLifts: P.planKeyLifts(p) }).absent, true, "ST1 ABSENT");
+  a.eq(P.deloadCheck({ sessions: [], todayStr: "2026-09-11", stallReport: null, keyLifts: P.planKeyLifts(p), state: {}, plan: p }).absent, true, "D1 ABSENT");
+  var d = P.addDay(p, "Day A"); var x = P.addExercise(d.plan, d.dayId, { n: "Speed squat", s: 6, lo: 2, hi: 3, k: "speed", implement: "bb" });
+  a.ok(x.ok);
+  a.eq(P.speedLoad([], x.exId, "2026-09-11", null, x.plan).absent, true, "SP1 ABSENT on a speed slot with no source");
+  a.eq(P.volumeTier({ dayId: d.dayId, program: x.plan.days, sessions: [], state: {}, todayStr: "2026-09-11", draft: null, plan: x.plan }).absent, true, "V1 ABSENT with no cut tier");
+  a.eq(P.stallAdvice({ plan: P.PHAT_PLAN, sessions: [], todayStr: "2026-09-11", state: {}, keyLifts: P.planKeyLifts(P.PHAT_PLAN) }).absent, false, "and PHAT itself is never ABSENT - the probe must pass the plan's own key lifts");
+});
+
+T("W14 - planStoreUpsert / planStoreSetActive: new stores, PHAT never stored, unknown never activated, meta keys carried", function(a){
+  var c = MYPHAT(), st0 = { schemaVersion: 5, plans: [], activePlanId: "phat", demo: true };
+  var r = P.planStoreUpsert(st0, c);
+  a.ok(r.ok); a.eq(r.store.plans.length, 1); a.eq(r.store.activePlanId, "phat"); a.eq(r.store.demo, true, "a key this build does not own is carried");
+  a.eq(st0.plans.length, 0, "input untouched");
+  a.eq(JSON.stringify(r.store.plans[0]), JSON.stringify(c), "the document is stored byte for byte");
+  var c2 = P.renamePlan(c, "Two").plan;
+  var r2 = P.planStoreUpsert(r.store, c2);
+  a.eq(r2.store.plans.length, 1, "same planId replaces, never duplicates"); a.eq(r2.store.plans[0].name, "Two");
+  a.eq(P.planStoreUpsert(r.store, P.PHAT_PLAN).ok, false, "PHAT is code, never stored");
+  a.eq(P.planStoreUpsert(r.store, { name: "no id", days: [] }).ok, false);
+  a.eq(P.planStoreUpsert(undefined, c).ok, true, "an absent store is an empty one");
+  a.eq(P.planStoreUpsert(undefined, c).store.activePlanId, "phat");
+  var s = P.planStoreSetActive(r.store, c.planId);
+  a.ok(s.ok); a.eq(s.store.activePlanId, c.planId); a.eq(r.store.activePlanId, "phat", "input untouched");
+  a.eq(P.planStoreSetActive(r.store, "p_unknown").ok, false, "an id the store does not hold is never made active");
+  a.eq(P.planStoreSetActive(r.store, "phat").ok, true, "PHAT is always known");
+  a.eq(P.planStoreSetActive(undefined, "phat").ok, true);
+});
+
+T("D5 - resolveEx / resolveDay walk plans in order; a copy's ids resolve to PHAT's slot once the copy is gone; an id nobody carried is null", function(a){
+  var c = MYPHAT(), e = P.newPlan("E", null).plan;
+  var d = P.addDay(e, "Day A"); var x = P.addExercise(d.plan, d.dayId, { n: "Goblet squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db" }); e = x.plan;
+  a.eq(P.resolveEx([e, P.PHAT_PLAN], "d1a").n, "Bent-over row", "logged on d1a under a deleted copy: PHAT's slot answers");
+  a.eq(P.resolveEx([P.renameExercise(c, "d1a", "Pendlay row").plan, P.PHAT_PLAN], "d1a").n, "Pendlay row", "the first plan in order wins");
+  a.eq(P.resolveEx([e, P.PHAT_PLAN], x.exId).n, "Goblet squat");
+  a.eq(P.resolveEx([e, P.PHAT_PLAN], "x_nowhere"), null, "an id no plan carried: null, and the SCREEN prints EX_GONE");
+  a.eq(P.resolveEx(P.PHAT_PLAN, "d1a").n, "Bent-over row", "a single plan is accepted");
+  a.eq(P.resolveDay([e, P.PHAT_PLAN], "d3").name, "Back & shoulders");
+  a.eq(P.resolveDay([e, P.PHAT_PLAN], d.dayId).name, "Day A");
+  a.eq(P.resolveDay([e, P.PHAT_PLAN], "y_nowhere"), null);
+  a.eq(P.resolveDay([e], ""), null);
+});
+
+T("D9 / B-70 - planIdOf reads a draft the way it reads a session: a stored draft with no planId is a PHAT draft", function(a){
+  a.eq(P.planIdOf({ dayId: "d1", entries: {} }), "phat", "pre-WO-006 drafts carry no planId and were written under PHAT");
+  a.eq(P.planIdOf({ dayId: "d1", planId: "p_abc", entries: {} }), "p_abc");
+  a.eq(P.planIdOf({ dayId: "d1", planId: "  ", entries: {} }), "phat");
+  var raw = JSON.stringify({ schemaVersion: 5, dayId: "d1", planId: "p_abc", date: "2026-09-11", entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" } }, exIx: 0, savedAt: 1 });
+  var c = P.classifyDraftPayload(raw);
+  a.eq(c.status, "ok"); a.eq(c.draft.planId, "p_abc", "the classifier hands back the whole object - planId survives the read");
+});
+
+T("D8 - a draft entry whose exercise is not in the day is data the builder keeps: it saves, without an rx, and drops nothing", function(a){
+  var c = MYPHAT(), r = P.removeExercise(c, "d1a"), p = r.plan;
+  var draft = { date: "2026-09-11", entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" }, d1b: { sets: [{ w: "", r: "" }], note: "" } } };
+  var s = P.buildSession(draft, "d1", "2026-09-11", 1, p.planId, p);
+  a.ok(s !== null, "the session builds");
+  a.deep(Object.keys(s.entries), ["d1a"], "the typed entry is kept, the blank one is not");
+  a.deep(s.entries.d1a.sets, [{ w: 100, r: 5 }]);
+  a.eq(s.entries.d1a.rx, undefined, "no prescription in this plan for d1a, so no rx is guessed");
+  a.eq(s.planId, p.planId);
+  a.ok(P.lastFor([s], "d1a") !== null, "and lastFor finds it by id, whatever the plan says now");
+});
+
+T("W14 - copyPlan keeps ids AND the four rule tables, and a session logged on d1a under the copy is found by lastFor", function(a){
+  var c = MYPHAT();
+  a.deep(c.keyLifts, P.PHAT_PLAN.keyLifts); a.deep(c.speedSource, P.PHAT_PLAN.speedSource);
+  a.deep(c.reintroOrder, P.PHAT_PLAN.reintroOrder); a.eq(c.reducedWeeks, 4);
+  a.eq(allEx(c).length, 42); a.deep(allEx(c).map(function(e){ return e.id; }), allEx(P.PHAT_PLAN).map(function(e){ return e.id; }), "all 42 ids survive");
+  a.eq(c.readOnly, false); a.eq(c.derivedFrom, "phat"); a.eq(c.from, "Copied from PHAT"); a.eq(c.name, "My PHAT");
+  a.eq(P.copyPlan(P.PHAT_PLAN, null, TODAY).plan.name, "PHAT — my version", "the default name the editor opens with");
+  var s = P.buildSession({ date: TODAY, entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" } } }, "d1", TODAY, 1, c.planId, c);
+  a.eq(P.lastFor([s], "d1a").sets[0].w, 100);
 });
 
 group("S9 harness budget / W7");
