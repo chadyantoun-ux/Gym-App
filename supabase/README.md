@@ -115,13 +115,15 @@ Re-run Check A after any future change to this schema. Adding a table and forget
 
 ### 2.1 Two accounts, then the lock — WO-008 W3 runbook (written 2026-09-12, not yet run)
 
-**Read this first. Until WO-008 W4 ships, never sign into a second account on a phone that already
-holds a log.** B-88 is live: the app pushes *this phone's* log to *whoever is signed in*, automatically,
-about 2 seconds after a sign-in and after every saved session or weight. There is no ownership check.
-Sign in as Diana on Chady's phone and Chady's sessions are copied into Diana's backup; her next
-Restore brings them into her log, her Trend and her advice. Nothing is destroyed, but it is
-contamination, and this runbook **cannot prevent it** — only the W4 code can. Until then the rule is
-one phone, one account, and no experiments.
+**Read this first. One phone, one account, and no experiments.** That is a rule of thumb now, not a
+guard against contamination: since WO-008 W4 (`main` @ `cc47084`, live) the app refuses to push or
+restore under an account that does not own this phone's log. A phone's log belongs to the account that
+first backed it up (`prefs.backup.user`); sign in as anyone else on a phone that holds data and the app
+says `This device's log belongs to <owner>.`, sends nothing, restores nothing and writes nothing —
+verified by QA with two real accounts against this project (decisions 2026-09-12, WO-008 W7). What the
+rule of thumb still buys you: an **empty** phone may be claimed by any account (that is how a second
+phone restores), so the first sign-in on a fresh phone decides whose phone it is. Do it with your own
+account, once, and the question never comes up again.
 
 The order below cannot lock anyone out: both accounts exist before sign-ups close.
 
@@ -134,7 +136,9 @@ Diana's phone:
 
 1. Open `https://gym-app-psi-eight.vercel.app` in the phone browser and install it (Add to Home
    Screen), then open the installed app. Backup does not run from a `file://` copy.
-2. First run shows `Start with an empty log`. Tap it. (There is no `Sign in` on first run until W5.)
+2. First run shows `Start with an empty log` and, under it, `Sign in`. Tap **`Start with an empty
+   log`**. `Sign in` is for a phone claiming an account that already exists; you have none yet, and
+   creating one lives in Settings.
 3. Home → `Settings` (the button at the top of Home) → the **Backup** section.
 4. It must read `Keeps a copy of your log off this phone. Logging works the same signed in or out.`
    with `Email`, `Password`, `Sign in`, `Create account`. If it reads `Backup needs a connection` —

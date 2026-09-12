@@ -2258,3 +2258,80 @@ chars, second boot zero writes); D1 from outside with the one account (own row a
 **Rules out:** extracting `authBusy` to `logic.js` to make it a `file://` test — it is two lines of routing around a
 module call, and the extraction would test itself, not the race between `onAuthStateChange` and the route; the rig is
 the test, re-run when `authTap`, `paintBackup`, `obPull` or `sync.js` change.
+
+## 2026-09-12 — WO-008 closed: two phones, so the stores never moved; the stamp is evidence not age; PR1 shipped as silence; the Weight ABSENT slot follows the coach over UX; `sw.js` stayed `v4` a second time
+
+**Closed on `main` @ `cc47084`**, deployed from merge `6f55539`, all eleven files byte-verified on the production
+origin, `Log of `, `This device's log belongs to` and the first-run `Sign in` route confirmed live, suite
+**689 / 689 / 0**, `offline-check.mjs` PASS. Closes B-88, B-89, B-90, B-92; closes B-91 as not needed; leaves B-93
+filed; files B-97, B-98, B-99, B-100. Chain: W1 coach `c53841e` (§16) ∥ W2 ux `77fa4c3` (§18) ∥ W3 release
+`b0189f7` (README §2.1) → W4 backend `e5cf2aa` → W5 frontend `8c1cff7` → W7 QA `2e98f15` (**not a pass**) →
+frontend `c102240` → W7 second pass `c5bea82` (**pass**) → W8 release `6f55539`, `3698082`, `cc47084`. The
+database was clean at close: zero users, zero rows. Sign-ups still enabled — that is Chady's step, below.
+
+**Two phones — Chady's answer, and W6 died with it.** WO-008 §7 q1 was the forcing question and he answered it:
+each of them has a phone. So the device is the person, RLS already separates the server side, and not one store
+key moved. B-91 is closed as not needed rather than deferred, so nobody re-litigates a profile switcher from the
+backlog; the W6 shape (existing keys are profile 0, a second profile prefixes, one pointer key resolved at boot
+only, switch = pointer write + reload) stays in the order as the spec for the day they share a device. The cost
+avoided is the largest in the order: the migration that touched every key the app has.
+
+**The premise the coach overturned.** The order asked Chady whether Diana is "on PHAT and bulking", on the PM's
+premise that yes to both would narrow q3 and let some of the diet layer render. The coach ruled that the premise
+is wrong: `DIET_TARGETS`, `DIET_WEEKLY` and the W1 bands are **one 85 kg male's numbers** — person-specific, not
+goal-specific — so her goal changes nothing until B-93 holds her own numbers. §7 q2 is therefore **withdrawn**,
+not answered. The PM's recommendation on q3 (silence) was confirmed: a flipped bulk ladder is not a cut protocol,
+a generic maintain ladder is a protocol nobody authored, a user-set sign gives the app a direction and still no
+numbers. **Rule PR1 shipped as silence**: a store with no profile gets no ladder, no band, no hold controls, no
+Diet grid, no Home macro strip; the 7-day average and the rate render because they are measurements.
+
+**The stamp is evidence, not age — and the consequence for Chady's own phone is accepted.** Backend's ruling
+(W4 entry above) stands as the close: `profilePass` stamps `phat-brief` on the pre-WO-001 marker, a session, a
+bodyweight entry or `calChangedAt`, else writes `null` once and never asks that store again. **If Chady's phone
+holds none of those on its first boot after this release, his store answers `null` and his Diet tab goes ABSENT**
+until a stamped store pushes to his account and he restores — or until B-93's first field exists to re-stamp by
+hand. That is the price of not handing Diana his diet, the coach recorded it (§16.8), and no control in this
+order re-stamps a store. Including bodyweight in the evidence list was backend's judgement, made so that a
+phone with a weight and no session (his, today) does not fall into that state; QA observed the shape it
+creates (a pre-W4 log with `sessions:[]` beside one weight is stamped) and showed the live first run cannot
+produce it. It is filed as B-99 — recorded, not open — and Chady may overrule it.
+
+**The Weight ABSENT placement follows coach §16.2, not UX §18.7.** UX specified the *slot* and deferred the
+content to the coach, but the two differed on what the Weight tab shows with no profile. This is advice
+domain: what a number means to the person reading it is the coach's call (CLAUDE.md §1 — the code can be
+perfect and the coaching wrong). §16.2 rules: average and rate render, one ABSENT line in the calorie-decision
+slot, nothing else; Diet ABSENT whole. Frontend built that. Recorded so the next UX pass does not "fix" the
+Weight tab back toward §18.7.
+
+**The false C3 — why W7's first pass was right to fail it, and what the fix is not.** Every first-run
+sign-in landed on `Could not read the backup. A backup is already running.` with zero REST reads. Frontend's
+stub could not show it (the stub clears busy before it emits); the real module fires `onAuthStateChange`
+inside `signInWithPassword` while `runAuth` still holds busy. QA refused to file it as a rig artefact and
+refused to pass W5 with it — the first sentence Diana's phone says after she signs in must not be false, even
+though `Try again` recovered every time and nothing was written. Closed at `c102240` with an `authBusy` gate
+and a single route to C; QA re-observed five of five correct against the live module. **Rules out** extracting
+`authBusy` into `logic.js` to make it a `file://` test: the race is between the module's event and the
+route, and the rig is the test — re-run it when `authTap`, `paintBackup`, `obPull` or `sync.js` change.
+
+**`sw.js` stayed `v4` by the header rule, a second time.** The precache file list did not change (the same
+eleven files; content changes are served by the atomic shell refresh, decisions 2026-09-10), so the header's
+own rule says no bump. WO-007 applied it first; this is the second application and it is now the standing
+reading: **bump the worker when the file list changes, not when a release ships.**
+
+**CLAUDE.md line 3 and the auth row were edited on "diana has her own".** §7 q3 and q4 asked him to reaffirm
+the ask against the one-user foundation and to authorise the CLAUDE.md edit. "diana has her own" was taken as
+both — it names the second person and the second phone in one breath — and `cc47084` changed line 3 and the
+auth row. If that reading was too generous, the edit is one commit to revert; nothing in the code depends on it.
+
+**The Home fold was already broken.** Frontend found and QA measured it: on `9ee456f`, before any WO-008
+code, SAT sat 67 px under the dock at 393 × 852, because the day rows are 90 px, not the 56 UX assumed, and the
+cycle block is three sentences (121 px), not one. The 48 px owner row made it worse (FRI 26 px under, SAT
+115 px under). Filed B-97 against WO-004 W9, P2, UX first. The owner row is not shrunk to buy it back.
+
+**What stays Chady's.** The two sign-ups from two phones, then the lock — `supabase/README.md` §2.1. No agent
+can do it: credentials are his and Diana's, and the lock before both accounts exist locks one of them out.
+
+**Rules out:** deferring B-91 instead of closing it; reading "on PHAT and bulking" as a way to render any of
+the diet layer for a second account; loosening the evidence rule so a fresh store can be stamped on its own
+first session; bumping `sw.js` for a release whose file list did not change; treating this close as reversing
+the standing recommendation — seven tools, zero sessions, log one.

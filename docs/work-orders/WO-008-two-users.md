@@ -2,7 +2,8 @@
 
 Author: `project-manager` · Date: 2026-09-12 · Base: `main @ 270e7e0` (WO-007 in flight on
 `wo-007-resplit` @ `c6c9b0d`) · Branch: `wo-008-two-users`, cut from `main` **after** WO-007 W4 lands
-Status: **specified** — no code written. Blocked on §7 question 1 before any store key changes.
+Status: **closed 2026-09-12** — merged to `main` @ `6f55539`, closed at `cc47084`, deployed and byte-verified.
+Chady answered §7 q1: **two phones**; W6 was never dispatched. See §10.
 
 ---
 
@@ -420,3 +421,54 @@ not built; B-93 filed.
    authorisation (§7 item 4).*
 8. **Only if Chady answers "same phone":** back to `project-manager` to write W6 in full with its own
    gate, then `backend-engineer` + `frontend-engineer` + `qa-engineer`.
+
+## 10. Closure record (2026-09-12)
+
+**Closed on `main` @ `cc47084`**, deployed from merge `6f55539`. All eleven files byte-verified on the
+production origin; `Log of `, `This device's log belongs to` and the first-run `Sign in` route confirmed
+live. `sw.js` stays `v4` by the header rule (file list unchanged), applied for the second time. Suite
+**689 / 689 / 0**, `offline-check.mjs` PASS. Database clean at close: zero users, zero rows. **Sign-ups still
+enabled** — the two accounts and the lock are Chady's to run (`supabase/README.md` §2.1).
+
+### What happened against the dispatch list
+
+| # | Item | Owner | Commit | Outcome |
+|---|---|---|---|---|
+| 1 | W1 | `strength-coach` | `c53841e` | `coach-audit-addendum.md` §16. Every engine classified (§16.1): person-specific are W1's bands and both instructions, `BW_SUBLINE`, `DIET_TARGETS`, `DIET_WEEKLY`, `dietTargets` whole, and the diet clause of ST1's PHAT diagnosis; everything else runs for anyone with a plan and a log. **Rule PR1**: silence for a store with no profile — Weight renders the average and the rate, one ABSENT line in the calorie slot, no band; Diet ABSENT whole; Home macro strip nothing. **Rule C7c** for the diet clause of the diagnosis. q3 silence confirmed `[Certain]`; q4 the 2.5 kg step opens a rule change in its own order; q5 PHAT as a log yes `[Likely]`, as a prescription the app vouches for no, with one first-run line (§16.5); q6 the B-93 minimum (§16.6, no formula, the app does not compute maintenance). **Overturned the order's premise** that "on PHAT and bulking" narrows q3: the numbers are person-specific, not goal-specific. Named the hazard W4 must not walk into (§16.8): a store on Diana's phone is indistinguishable from Chady's by schema age |
+| 2 | W2 | `ux-designer` | `77fa4c3` | `wo-004-screens.md` §18. The owner rule (§18.1): the screen names the account that owns *this device's log*, not whoever is signed in; only Settings names both. Home owner row (§18.2), Session/Summary owner line (§18.3), first run A/B/C with `Sign in` as a second action (§18.4), the three refusals R-a/R-b/R-c naming the owner and the one way out (§18.5), the Settings line amended (§18.6), the ABSENT slot placement deferred to the coach (§18.7), every string in one table (§18.8). **Two code defects found in the spec pass**: the sign-in push fired from first-run; `Never backed up.` printed for a viewer who is not the owner of a backed-up device |
+| 3 | W3 | `release-engineer` | `b0189f7` | The runbook, `supabase/README.md` §2.1: both accounts from two phones, then the lock, then the RLS re-verification with the two real accounts. Not run — see below |
+| 4 | W4 | `backend-engineer` | `e5cf2aa` | `PHAT.storeOwner` (`no-user` / `fresh` / `claim` / `owner` / `foreign`) wired into `runBackup`, `restoreStart` and the sign-in push, which no longer runs on a device that has not finished first run. `prefs.backup.user` `{id,email}` with the E-3 string read, never rewritten at boot (`PHAT.backupOwner`). `PHAT.profilePass`: the stamp is **evidence-gated** (pre-WO-001 marker, session, bodyweight, `calChangedAt`), else `null`, once per store, never re-asked; `V_PROFILE = 1`, never compared to `SCHEMA_VERSION`; every new store born `profile:null`. PR1 and C7c implemented; a stamped store's engine output byte-identical to `9ee456f` (S36). 678 / 678 / 0. **Chady answered two phones during W4; W6 not built** |
+| 5 | W5 | `frontend-engineer` | `8c1cff7` | H1–H7 on Home; the owner line on Session and Summary; first-run A/B/C with the sign-in form reused; the refusals through `#bk-status .refuse` with `role="alert"` and `announce()`; the ABSENT slots per coach §16.2. **Found the Home fold regression is pre-existing**: rows 90 px not 56, SAT already 67 px under the dock on `9ee456f`; the owner row pushed FRI under too. 44 px at 400 px and 200 % measured; draft byte-identical across every added navigation |
+| 6 | W7 | `qa-engineer` | `2e98f15` | **Not a pass.** Every data criterion held with two real accounts against the live project through the real module — D1 both ways with positive controls, D2, D3, D4 from a cold page, D5 byte-identical, D7 — and B-88 closed as specified. But **every first-run sign-in, four of four, landed on C3 `A backup is already running`** with zero REST reads: `onAuthStateChange` fires SIGNED_IN while `runAuth` still holds busy; the stub hid it, the real module showed it. Also: an authenticated self-`DELETE` is blocked by the `4d69225` archive guard (B-98); the Home fold measured in pixels (B-97); the stamp hazard pinned three ways as OBSERVED |
+| 6a | fix | `frontend-engineer` | `c102240` | `authBusy` gate for one attempt; `paintBackup` does not route screen B while it is set; `authTap`'s success path is the only route to C; Enter double-submit closed |
+| 6b | W7 second pass | `qa-engineer` | `c5bea82` | **Pass.** Five of five fresh first-run sign-ins `A > B > B[Signing in.] > C-pull > C2`, no C3 for one frame; eleven across the run C2 × 10 / C1 × 1 / C3 × 0. Wrong password, Enter twice, network cut, persisted session — all correct. D2–D5, D7 re-run. 689 / 689 / 0. Item 33 |
+| 7 | W8 | `release-engineer` | `6f55539`, `3698082`, `cc47084` | Merge; README §4 and §8 to two accounts; CLAUDE.md line 3 and the auth row on Chady's "diana has her own". Upload and byte verification of eleven files by the main session; three live strings confirmed. No `sw.js` bump — the header rule |
+| — | W6 | — | — | **Not dispatched, not built.** Two phones |
+
+### §7's five "needs from Chady", as they resolved
+
+1. **Same phone or two phones?** **Two.** Answered during W4. W6 does not exist; B-91 closed as not needed.
+2. **Is Diana on PHAT, and is she bulking?** **Withdrawn.** The coach ruled the premise wrong: the diet numbers
+   are one person's, not one goal's, so her answer would have narrowed nothing. Her account gets PR1 silence
+   until B-93 holds her numbers.
+3. **Confirm the ask against the conflict.** Reaffirmed by "diana has her own". The reading in §2 stood.
+4. **Authorise the CLAUDE.md edit.** Taken as given by the same sentence; done at `cc47084` (line 3, the auth
+   row). One commit to revert if the reading was too generous.
+5. **Two sign-ups from two phones.** **Still his.** Runbook §2.1: his account from his phone, Diana's from
+   hers, then tell the agent and the lock is flipped. Sign-ups are enabled until then; the database is empty.
+
+### Backlog
+
+Closed: B-88, B-89, B-90, B-92. Closed as not needed: B-91. Still filed: B-93 (now with §16.6's minimum on
+record). Filed at close: B-97 (Home fold, P2, WO-004 layout, QA's pixel numbers), B-98 (archive guard blocks a
+self-DELETE, P3 → P1 when a delete ships), B-99 (bodyweight as stamp evidence — backend's judgement, recorded,
+Chady may overrule), B-100 (the §16.5 first-run line, not built, P2). The stale "until W4 ships / cannot
+prevent it" paragraph in README §2.1 was corrected at close: the rule of thumb stays, the claim changed.
+The decisions entry of 2026-09-12 ("WO-008 closed") carries the two-phones answer, the evidence rule and its
+consequence for Chady's own phone, PR1, the §16.2-over-§18.7 placement, and the `sw.js` rule as applied again.
+
+### Hand-back
+
+Create your account from your phone, Diana hers from her phone — Settings → Backup → `Create account`, exactly
+as `supabase/README.md` §2.1 step 1 says — then tell me the two emails and I lock sign-ups. Do it before either
+of you logs anything. Then log Upper Power. Seventh tool, zero sessions.
