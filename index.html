@@ -6174,14 +6174,25 @@ async function runBackup(manual,reason){
 }
 
 /* ---- auth, from the Settings form. The two fields are read at the tap and
-   never stored anywhere by this file. */
+   never stored anywhere by this file.
+   authBusy is true for exactly the span of one attempt. The library emits
+   SIGNED_IN from INSIDE signInWithPassword, while the module's busy flag is
+   still "auth" and before the call has returned; onSync wipes S.sync.last on
+   that user change, so the {busy:"auth"} marker cannot be the gate. While
+   this is true, paintBackup does not route first-run screen B anywhere: the
+   attempt's outcome, success or failure, is this function's to route. */
+let authBusy=false;
 async function authTap(kind){
-  const Y=window.PHAT_SYNC; if(!syncOn()) return;
+  const Y=window.PHAT_SYNC; if(!syncOn()||authBusy) return;
   const em=document.getElementById("bk-email"), pw=document.getElementById("bk-pass");
   const email=em?String(em.value||"").trim():"", pass=pw?String(pw.value||""):"";
   if(!email||!pass){ S.sync.last={ok:false,phase:"auth",message:"Email and password, both."}; paintBackup(); return; }
   S.sync.last={busy:"auth"}; paintBackup();
-  const r=kind==="up"?await Y.signUp(email,pass):await Y.signIn(email,pass);
+  authBusy=true;
+  let r;
+  try{ r=kind==="up"?await Y.signUp(email,pass):await Y.signIn(email,pass); }
+  catch(err){ r={ok:false,reason:"auth",message:"Could not sign in."}; }
+  finally{ authBusy=false; }
   if(r.ok){
     S.sync.user=r.user; S.sync.last=null; S.sync.refused=null;
     /* WO-008 W5 (spec 18.4). On first-run screen B a successful sign-in goes
@@ -6479,8 +6490,16 @@ function paintBackup(){
   /* First-run screen B paints the same form into the same #bk-body. If the
      module answers with a persisted session while B is up, B would show the
      signed-in form - BACK UP NOW on a first-run device - so it routes to
-     screen C instead (spec 18.4). */
-  if(S.sub==="onboard-signin"&&S.sync.user){ obToC(); return; }
+     screen C instead (spec 18.4). NOT while a sign-in tapped on B is in
+     flight: the library announces SIGNED_IN before signIn() has returned,
+     with the module still busy, and a route to C from here would make C's
+     one pull collide with that busy flag - C3 on the first landing, every
+     time. B already says "Signing in."; authTap routes when the attempt
+     ends, and it is the only route on that path. */
+  if(S.sub==="onboard-signin"){
+    if(authBusy) return;
+    if(S.sync.user){ obToC(); return; }
+  }
   if(S.sub!=="settings"&&S.sub!=="onboard-signin") return;
   const box=document.getElementById("bk-body"); if(!box) return;
   /* ALWAYS carried across: the module emits a busy-flag change in the middle
