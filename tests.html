@@ -200,7 +200,19 @@ premise that makes that right stated in the test; and the full seam order.
 Also pinned: the refusal and problem sentences carry a plan name raw and every renderer was observed escaping it
 (B7); a 0-day plan stores, activates and validates and an emptied day still validates (both observed on screen);
 and <code>planIdOf</code> / <code>buildSession</code> are honest about a draft whose plan is gone, which is the
-pure half of a call-site observation listed under &ldquo;not testable&rdquo;.</p>
+pure half of a call-site observation listed under &ldquo;not testable&rdquo;.
+<b>S34</b> is WO-007 W3, the re-split: <code>moveExerciseToDay</code> (a slot moves to another day with its id and
+every byte intact; a cut slot leaves the origin&rsquo;s declared <code>reintroOrder</code> and is declared last on the
+destination, Rule RI1) and <code>removeDay</code> (empty days only, never the last). The headline D1 moves all 42 of
+PHAT&rsquo;s slots onto a six-day Push / Pull / Legs and pins <code>lastFor</code>, <code>stallReport</code>,
+<code>speedLoad</code>, <code>e1rmByDate</code>, <code>liftDays</code> byte-identical for every id. D3 is the identity
+on move-then-undo (the returned <code>from</code> handed back) for all 336 round trips; a plain move back is pinned as
+<em>not</em> the identity for a cut slot, on purpose. Rule PV1 (<code>phatProvenanceReport</code>: provenance
+survives placement only when the power days are intact, coach fixture A true, the six-day PPL false, each of
+(a)/(b)/(c) alone false, the 5&times;5 edit reports no placement) and Rule RI1 (<code>reconcileReintro</code>: the
+coach&rsquo;s four examples, example 2 being the pin that stops <code>d3g</code> reading as back though never offered).
+<code>moveWarning</code> is the one predicate for the coach&rsquo;s warn-once questions, Q3 &gt; Q1 &gt; Q4. D6 is in the
+contract notes: nineteen mutants, nineteen killed.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -11970,6 +11982,457 @@ T("D9 (pure half) - planIdOf on a draft naming a plan the store no longer holds 
   a.eq(s.planId, "p_gone", "buildSession stamps whatever planId the caller hands it - so the caller can be honest");
 });
 
+/* ============================================================ S34 - WO-007 W3, the re-split
+   `moveExerciseToDay`, `removeDay`, Rule PV1 (provenance and placement) and
+   Rule RI1 (the reintro counter after a plan edit), pure, from file://. The
+   one operation that can silently re-key a history is "move Bent-over row
+   onto a Pull day", and before this it was delete-then-add, which mints a
+   new id and orphans every logged set (B-83). The headline criterion D1 is
+   therefore the whole §3.3 constraint applied once: move all 42 of PHAT's
+   slots onto a full Push / Pull / Legs and five engines answer the same
+   bytes, by id, for every slot.
+   `speedSource` and `keyLifts` are never written by a move. `reintroOrder`
+   IS, for a cut slot only (RI1: leaves the origin's declared list, appended
+   to the destination's), and the `from` the move returns carries enough to
+   take that write back, so move-then-UNDO is the identity on the bytes while
+   a plain move back is honestly not (the accessory arrives last, re-earned).
+   D6, the ten mutants, is recorded in the contract notes below the results:
+   each was injected into a copy of logic.js and the suite run against it. */
+group("S34 WO-007 W3 / moveExerciseToDay / removeDay / PV1 / RI1 / D1-D6 / B-83 B-84 B-86 B-87");
+
+/* Every exercise object, keyed by id, as one string - the day it sits on is
+   deliberately NOT in the string, so this compares the SLOTS and nothing
+   about their arrangement. */
+function W3EX(plan){
+  var m = {}; allEx(plan).forEach(function(e){ m[e.id] = e; });
+  return JSON.stringify(Object.keys(m).sort().map(function(k){ return m[k]; }));
+}
+function W3MOVE(p, id, to, ix){
+  var r = P.moveExerciseToDay(p, id, to, ix);
+  if (!r.ok) throw new Error("moveExerciseToDay refused " + id + " -> " + to + ": " + JSON.stringify(r.problems));
+  return r.plan;
+}
+/* The PPL out of PHAT's own 42 slots (WO-007 §2 reading B). Three days added
+   (Push A, Pull A, Legs A), three PHAT days renamed (d1 Pull B, d2 Legs B,
+   d3 Push B), every one of the 42 moved to a day it was not on, d4 and d5
+   left empty and removed. Returns {plan, ids:{push, pull, legs}, map}. */
+function W3PPL(copy){
+  var p = copy, r, ids = {};
+  r = P.addDay(p, "Push A"); if (!r.ok) throw new Error("addDay"); p = r.plan; ids.push = r.dayId;
+  r = P.addDay(p, "Pull A"); p = r.plan; ids.pull = r.dayId;
+  r = P.addDay(p, "Legs A"); p = r.plan; ids.legs = r.dayId;
+  p = P.renameDay(p, "d1", "Pull B").plan; p = P.renameDay(p, "d2", "Legs B").plan; p = P.renameDay(p, "d3", "Push B").plan;
+  var map = {
+    d1a: ids.pull, d1b: ids.pull, d1c: ids.pull, d1g: ids.pull,
+    d1d: ids.push, d1e: ids.push, d1f: ids.push, d1h: ids.push,
+    d2a: ids.legs, d2b: ids.legs, d2c: ids.legs, d2d: ids.legs, d2e: ids.legs, d2f: ids.legs, d2g: ids.legs,
+    d3a: "d1", d3b: "d1", d3c: "d1", d3d: "d1", d3e: "d1",
+    d3f: ids.push, d3g: ids.push, d3h: ids.push,
+    d4a: "d2", d4b: "d2", d4c: "d2", d4d: "d2", d4e: "d2", d4f: "d2", d4g: "d2", d4h: "d2", d4i: "d2",
+    d5a: "d3", d5b: "d3", d5c: "d3", d5d: "d3", d5h: "d3", d5i: "d3", d5j: "d3",
+    d5e: "d1", d5f: "d1", d5g: "d1"
+  };
+  Object.keys(map).forEach(function(id){ p = W3MOVE(p, id, map[id]); });
+  r = P.removeDay(p, "d4"); if (!r.ok) throw new Error("removeDay d4 " + JSON.stringify(r.problems)); p = r.plan;
+  r = P.removeDay(p, "d5"); if (!r.ok) throw new Error("removeDay d5 " + JSON.stringify(r.problems)); p = r.plan;
+  return { plan: p, ids: ids, map: map };
+}
+/* The coach's fixture A (WO-007 reading A): the two power days stand, the
+   three hypertrophy days regroup. d3 renamed Pull, a Push day added, the
+   shoulder work (d3f/g/h) and all of Chest & arms' pushing (d5a/b/c/d/h/i/j)
+   moved to Push, the arm curls (d5e/f/g) moved to Pull, the emptied d5
+   removed. Five days, no power day mixed. */
+function W3READING_A(copy){
+  var p = P.renameDay(copy, "d3", "Pull").plan;
+  var d = P.addDay(p, "Push"); p = d.plan;
+  ["d3f", "d3g", "d3h", "d5a", "d5b", "d5c", "d5d", "d5h", "d5i", "d5j"].forEach(function(id){ p = W3MOVE(p, id, d.dayId); });
+  ["d5e", "d5f", "d5g"].forEach(function(id){ p = W3MOVE(p, id, "d3"); });
+  var r = P.removeDay(p, "d5"); if (!r.ok) throw new Error("removeDay d5 " + JSON.stringify(r.problems));
+  return { plan: r.plan, pushId: d.dayId };
+}
+/* A stalled log: eight weeks of filler on d1f plus a Row that did not move -
+   the S19 "true stall" fixture - so stallAdvice reaches the state where
+   `provenance` picks the sentence. */
+function W3STALLED(){
+  return ST1BG().concat([
+    ROW(41, "p1", SETS(100, 5, 100, 5, 100, 4)), ROW(38, "p2", SETS(100, 5, 100, 5, 100, 4)),
+    ROW(20, "r1", SETS(100, 5, 100, 5, 100, 5)), ROW(17, "r2", SETS(100, 5, 100, 5, 100, 5))
+  ]);
+}
+
+T("W3 - moveExerciseToDay / removeDay / moveWarning / reconcileReintro / phatProvenanceReport / dayById are exported and callable from file://; the editor contract holds on refusal", function(a){
+  ["moveExerciseToDay", "removeDay", "moveWarning", "reconcileReintro", "phatProvenanceReport", "dayById"].forEach(function(n){ a.isFn(P[n], n); });
+  var c = MYPHAT();
+  var r = P.moveExerciseToDay(c, "d1a", "d1");
+  a.eq(r.ok, false); a.eq(r.from, null); a.ok(r.plan === c, "the ORIGINAL object comes back, not a clone");
+  a.deep(r.problems, [{ scope: "day", id: "d1", field: "id", reason: "same" }], "same day is moveExercise's job and is refused by name");
+  a.eq(P.dayById(c, "d3").name, "Back & shoulders"); a.eq(P.dayById(c, "nope"), null); a.eq(P.dayById(c, ""), null);
+  a.eq(P.SCHEMA_VERSION, 5, "WO-007 is a plan-document edit: no schema bump, no migration");
+});
+
+T("D2 - the moved exercise object is byte-identical: id, n, s, lo, hi, k, implement, lift, cut, cue, and a key this build does not know", function(a){
+  var c = MYPHAT();
+  P.exById(c, "d1c").note42 = "carried";           /* an unknown key must travel too */
+  var c0 = JSON.stringify(c), before = JSON.stringify(P.exById(c, "d1c"));
+  var r = P.moveExerciseToDay(c, "d1c", "d3");
+  a.ok(r.ok, JSON.stringify(r.problems));
+  a.eq(r.from.dayId, "d1"); a.eq(r.from.index, 2, "where it came from, so the undo has an address");
+  a.eq(JSON.stringify(P.exById(r.plan, "d1c")), before, "the object is the same bytes on the new day");
+  a.ok(P.exById(r.plan, "d1c") !== P.exById(c, "d1c"), "and a copy, not a shared reference into the input");
+  a.eq(P.dayIdOfEx(r.plan, "d1c"), "d3"); a.eq(P.dayIdOfEx(c, "d1c"), "d1", "input untouched");
+  a.eq(JSON.stringify(c), c0, "input untouched, byte for byte");
+  var d3 = P.dayById(r.plan, "d3");
+  a.eq(d3.ex[d3.ex.length - 1].id, "d1c", "toIndex omitted: appended");
+  a.eq(d3.ex.length, 9); a.eq(P.dayById(r.plan, "d1").ex.length, 7);
+  a.eq(P.exById(r.plan, "d1c").cut, 1, "cut travels"); a.eq(P.exById(r.plan, "d1c").k, "power", "k travels with the slot (K1), not the heading");
+  a.eq(P.exById(r.plan, "d1c").cue, "Rest the heels on the rack without pushing through them.");
+  a.eq(P.validatePlan(r.plan).ok, true);
+  a.eq(allEx(r.plan).length, 42, "42 in, 42 out");
+  var ids = allEx(r.plan).map(function(e){ return e.id; });
+  a.eq(ids.length, new Set(ids).size, "a duplicate id after a move is impossible by construction (W3 item 4)");
+  /* an explicit index, a non-cut slot: no table is written */
+  var r2 = P.moveExerciseToDay(c, "d1a", "d5", 0);
+  a.ok(r2.ok); a.eq(P.dayById(r2.plan, "d5").ex[0].id, "d1a"); a.eq(P.dayById(r2.plan, "d5").ex[1].id, "d5a");
+  a.eq(r2.from.dayId, "d1"); a.eq(r2.from.index, 0); a.eq(r2.from.reintro, null, "a non-cut slot writes no reintro entry");
+  a.eq(P.dayById(r2.plan, "d1").ex[0].id, "d1b", "the origin closes the gap");
+  a.deep(r2.plan.reintroOrder, c.reintroOrder, "reintroOrder untouched by a non-cut move");
+});
+
+T("RI1 - a cut slot leaves the origin's declared reintro list and is APPENDED to the destination's as a declared entry; keyLifts and speedSource are never written", function(a){
+  var c = MYPHAT();
+  var r = P.moveExerciseToDay(c, "d3d", "d1");
+  a.ok(r.ok);
+  a.deep(r.plan.reintroOrder.d3, ["d3g"], "out of Back & shoulders' declared order");
+  a.deep(r.plan.reintroOrder.d1, ["d1c", "d3d"], "declared LAST on Upper power - not left to reconciliation");
+  a.deep(r.from.reintro, { index: 0, destListed: true, table: true }, "and the write is recorded on `from` for the undo");
+  a.deep(Object.keys(r.plan.reintroOrder), ["d1", "d2", "d3", "d4", "d5"], "key order unchanged");
+  a.deep(r.plan.keyLifts, c.keyLifts); a.deep(r.plan.speedSource, c.speedSource);
+  a.deep(c.reintroOrder.d3, ["d3d", "d3g"], "input untouched");
+  /* into a day with no declared list, on a plan with no table at all */
+  var n = P.addDay(c, "New"); var m = P.moveExerciseToDay(n.plan, "d3g", n.dayId);
+  a.deep(m.plan.reintroOrder[n.dayId], ["d3g"], "a list is declared for the new day");
+  a.deep(m.from.reintro, { index: 1, destListed: false, table: true });
+  var e = P.newPlan("E", null).plan; e = P.addDay(e, "A").plan; e = P.addDay(e, "B").plan;
+  var x = P.addExercise(e, e.days[0].id, { n: "Fly", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", cut: 1 }); e = x.plan;
+  a.eq(e.reintroOrder, undefined, "built from empty: no table");
+  var mm = P.moveExerciseToDay(e, x.exId, e.days[1].id);
+  a.deep(mm.plan.reintroOrder, (function(){ var o = {}; o[e.days[1].id] = [x.exId]; return o; })(), "the table is created for the arrival");
+  a.deep(mm.from.reintro, { index: null, destListed: false, table: false });
+  a.eq(P.validatePlan(mm.plan).ok, true);
+  /* the read-time view agrees with the declared one */
+  a.deep(P.planReintroOrder(r.plan, "d1"), ["d1c", "d3d"]); a.deep(P.planReintroOrder(r.plan, "d3"), ["d3g"]);
+});
+
+T("D3 - move then UNDO (from handed back) is the identity on the document bytes, reintroOrder and key order included: every one of the 42, to every other day, at append and at index 0", function(a){
+  var c = MYPHAT(), c0 = JSON.stringify(c), n = 0, i, j, k;
+  var r = P.moveExerciseToDay(c, "d1a", "d3"), u = P.moveExerciseToDay(r.plan, "d1a", r.from.dayId, r.from);
+  a.ok(r.ok && u.ok);
+  a.eq(JSON.stringify(u.plan), c0, "d1a -> d3 -> undo: identical");
+  a.eq(JSON.stringify(c), c0, "and neither call touched the input");
+  var days = c.days.map(function(d){ return d.id; }), ex = allEx(c).map(function(e){ return e.id; });
+  for (i = 0; i < ex.length; i++) for (j = 0; j < days.length; j++) {
+    if (P.dayIdOfEx(c, ex[i]) === days[j]) continue;
+    for (k = 0; k < 2; k++) {
+      var m = P.moveExerciseToDay(c, ex[i], days[j], k === 0 ? undefined : 0);
+      if (!m.ok) throw new Error("refused " + ex[i] + " -> " + days[j]);
+      var b = P.moveExerciseToDay(m.plan, ex[i], m.from.dayId, m.from);
+      if (!b.ok || JSON.stringify(b.plan) !== c0) throw new Error("not the identity: " + ex[i] + " -> " + days[j] + " (index " + (k === 0 ? "append" : "0") + ")");
+      n++;
+    }
+  }
+  a.eq(n, 42 * 4 * 2, "336 round trips, every one the identity");
+  /* a whole day out and back, undone in reverse, is still the identity */
+  var p = c, moves = [];
+  c.days[2].ex.forEach(function(e){ var mm = P.moveExerciseToDay(p, e.id, "d4"); moves.push({ id: e.id, from: mm.from }); p = mm.plan; });
+  a.eq(P.dayById(p, "d3").ex.length, 0, "Back & shoulders emptied by moves"); a.deep(p.reintroOrder.d3, [], "its two cut ids left its declared list");
+  for (i = moves.length - 1; i >= 0; i--) p = P.moveExerciseToDay(p, moves[i].id, moves[i].from.dayId, moves[i].from).plan;
+  a.eq(JSON.stringify(p), c0, "eight out, eight undone in reverse: identical");
+  /* the undo of a move that CREATED the table takes the table away again */
+  var e = P.newPlan("E", null).plan; e = P.addDay(e, "A").plan; e = P.addDay(e, "B").plan;
+  var x = P.addExercise(e, e.days[0].id, { n: "Fly", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", cut: 1 }); e = x.plan;
+  var e0 = JSON.stringify(e), mv = P.moveExerciseToDay(e, x.exId, e.days[1].id);
+  a.eq(JSON.stringify(P.moveExerciseToDay(mv.plan, x.exId, mv.from.dayId, mv.from).plan), e0, "no table before, no table after");
+  /* the undo address must name the day it is going back to */
+  a.eq(P.moveExerciseToDay(r.plan, "d1a", "d2", r.from).problems[0].reason, "mismatch");
+  a.eq(P.moveExerciseToDay(r.plan, "d1a", "d1", { dayId: "d1", index: 99 }).problems[0].reason, "range", "an undo index is bounds-checked like any other");
+});
+
+T("RI1 - a PLAIN move back (integer index) is not an undo: everything is identical except that the cut accessory arrives LAST in its old day's declared order - moved twice, re-earned twice", function(a){
+  var c = MYPHAT(), c0 = JSON.stringify(c);
+  var out = P.moveExerciseToDay(c, "d3d", "d1"), back = P.moveExerciseToDay(out.plan, "d3d", "d3", out.from.index);
+  a.ok(back.ok);
+  a.deep(back.plan.reintroOrder.d3, ["d3g", "d3d"], "was [d3d, d3g]: it comes home last");
+  a.deep(back.plan.reintroOrder.d1, ["d1c"], "and leaves Upper power's list clean");
+  var q = clone(back.plan); q.reintroOrder = c.reintroOrder;
+  a.eq(JSON.stringify(q), c0, "with the declared order set aside, the two documents are the same bytes");
+  var nc = P.moveExerciseToDay(c, "d1a", "d3"), ncb = P.moveExerciseToDay(nc.plan, "d1a", "d1", nc.from.index);
+  a.eq(JSON.stringify(ncb.plan), c0, "for a non-cut slot the plain move back IS the identity: nothing was written");
+});
+
+T("D4 - speedSource and keyLifts are byte-identical across any sequence of moves; the declared reintro order always agrees with the read-time one; speedLoad for d3a is the same {kg, text} with d1a on d1 or on Pull", function(a){
+  var c = MYPHAT(), p = c, j;
+  var t0 = JSON.stringify({ speedSource: c.speedSource, keyLifts: c.keyLifts });
+  /* round robin: every slot one day forward, twice */
+  var days = c.days.map(function(d){ return d.id; });
+  for (j = 0; j < 2; j++) allEx(c).forEach(function(e){
+    var at = days.indexOf(P.dayIdOfEx(p, e.id)); p = W3MOVE(p, e.id, days[(at + 1) % days.length]);
+  });
+  a.eq(JSON.stringify({ speedSource: p.speedSource, keyLifts: p.keyLifts }), t0, "84 moves later the two id tables are the same bytes");
+  a.eq(JSON.stringify(P.planSpeedSource(p)), JSON.stringify(P.planSpeedSource(c)), "and the reconciled speed map reads the same");
+  a.deep(P.planKeyLiftIds(p), ["d1a", "d1d", "d2a", "d2d"]);
+  a.eq(JSON.stringify(P.planReintroOrder(p)), JSON.stringify(p.reintroOrder), "declared == reconciled: nothing dangling, nothing appended at read time");
+  var cuts = [].concat.apply([], Object.keys(p.reintroOrder).map(function(k){ return p.reintroOrder[k]; })).sort();
+  a.deep(cuts, allEx(c).filter(function(e){ return e.cut === 1; }).map(function(e){ return e.id; }).sort(), "every cut id is declared exactly once, somewhere");
+  var log = W1LOG(c), S = log.sessions;
+  var pull = P.addDay(c, "Pull"); var q = W3MOVE(pull.plan, "d1a", pull.dayId);
+  a.eq(JSON.stringify(P.speedLoad(S, "d3a", "2026-09-11", null, q)), JSON.stringify(P.speedLoad(S, "d3a", "2026-09-11", null, c)), "same {kg, text}, d1a on d1 or on Pull");
+});
+
+T("D1 (headline) - a full Push / Pull / Legs out of PHAT's 42 slots: every slot moved, two days removed - lastFor, stallReport, speedLoad, e1rmByDate, liftDays byte-identical for every id; not one slot byte changed; the log untouched", function(a){
+  var copy = MYPHAT(), log = W1LOG(copy), S = log.sessions, TD = "2026-09-11";
+  var copy0 = JSON.stringify(copy), log0 = JSON.stringify(log), ex0 = W3EX(copy);
+  var before = W1SNAP(copy, S, TD);
+  var b = W3PPL(copy), p = b.plan;
+  a.eq(p.days.length, 6, "six days");
+  a.deep(p.days.map(function(d){ return d.name; }), ["Pull B", "Legs B", "Push B", "Push A", "Pull A", "Legs A"]);
+  a.eq(P.dayById(p, "d4"), null); a.eq(P.dayById(p, "d5"), null);
+  a.eq(allEx(p).length, 42, "42 slots, none lost, none minted");
+  Object.keys(b.map).forEach(function(id){
+    if (P.dayIdOfEx(p, id) !== b.map[id]) throw new Error(id + " is on " + P.dayIdOfEx(p, id) + ", not " + b.map[id]);
+    if (P.dayIdOfEx(copy, id) === b.map[id]) throw new Error(id + " did not change day");
+  });
+  a.eq(W3EX(p), ex0, "not one id, n, s, lo, hi, k, implement, lift, cut or cue changed (D1)");
+  a.eq(JSON.stringify({ speedSource: p.speedSource, keyLifts: p.keyLifts }), JSON.stringify({ speedSource: copy.speedSource, keyLifts: copy.keyLifts }), "speedSource and keyLifts byte-identical");
+  var ro = {}; ro.d1 = ["d3d", "d5g"]; ro.d2 = ["d4c", "d4g"]; ro.d3 = ["d5d", "d5j"]; ro[b.ids.pull] = ["d1c"]; ro[b.ids.legs] = ["d2c"]; ro[b.ids.push] = ["d3g"];
+  a.eq(JSON.stringify(p.reintroOrder), JSON.stringify(ro), "reintroOrder: each cut id declared once, on the day it now sits, in arrival order; d4/d5 keys gone with the days (RI1)");
+  a.eq(P.validatePlan(p).ok, true, "the PPL validates (W3 item 4)");
+  var ids = allEx(p).map(function(e){ return e.id; });
+  a.eq(ids.length, new Set(ids).size, "no duplicate id");
+  a.eq(W1SNAP(p, S, TD), before, "lastFor, stallReport, speedLoad, e1rmByDate, liftDays: byte-identical for every id, name-free");
+  a.eq(JSON.stringify(log), log0, "phat:v1:log untouched");
+  a.eq(JSON.stringify(copy), copy0, "the input plan was never mutated");
+  a.eq(P.planStoreUpsert(undefined, p).ok, true, "and it stores");
+  /* Attack A's pure half: log a session on Pull A holding d1a, and the history is one line */
+  var draft = { date: "2026-09-12", entries: { d1a: { sets: [{ w: "102.5", r: "5" }], note: "" } } };
+  var s = P.buildSession(draft, b.ids.pull, "2026-09-12", 999, p.planId, p);
+  a.ok(s !== null, "a session on Pull A builds"); a.eq(s.dayId, b.ids.pull);
+  a.deep(s.entries.d1a.rx, { s: 3, lo: 3, hi: 5, k: "power" }, "the rx is d1a's own prescription, unchanged by the move (PE1: no new epoch)");
+  var S2 = P.sortSessions(S.concat([s]));
+  a.eq(P.lastFor(S2, "d1a").sets[0].w, 102.5, "lastFor finds it by id");
+  a.deep(P.exIdsForLift(p, "l_row").slice().sort(), ["d1a", "d3a"], "one lift line for l_row, wherever the slots sit (plan order, so Pull B before Pull A)");
+  a.deep(P.phatProvenanceReport(p), { phat: false, prescription: true, placement: false }, "PV1: the prescription is PHAT's, the placement is not - the Plans screen gets its placement line");
+});
+
+T("PV1 (D5) - provenance survives placement only when the power days are intact: the coach's fixture A is true, the six-day PPL is false, and stallAdvice picks the sentence accordingly", function(a){
+  var c = MYPHAT();
+  var A = W3READING_A(c), pa = A.plan;
+  a.eq(pa.days.length, 5); a.eq(allEx(pa).length, 42); a.eq(P.validatePlan(pa).ok, true);
+  a.deep(pa.days.map(function(d){ return d.name; }), ["Upper power", "Lower power", "Pull", "Lower hypertrophy", "Push"]);
+  a.deep(P.phatProvenanceReport(pa), { phat: true, prescription: true, placement: true }, "fixture A: reading (A) keeps the brief's [Certain]");
+  a.eq(P.phatProvenance(pa), true);
+  var B = W3PPL(c).plan;
+  a.deep(P.phatProvenanceReport(B), { phat: false, prescription: true, placement: false }, "fixture B: a six-day PPL, d1a beside hypertrophy work, is not the programme the brief assessed");
+  a.eq(P.phatProvenance(B), false);
+  /* through ST1: the same stalled log, two plans, two sentences */
+  var S = W3STALLED();
+  var sa = P.stallAdvice({ plan: pa, sessions: S, todayStr: TODAY, state: STORE() });
+  var sb = P.stallAdvice({ plan: B, sessions: S, todayStr: TODAY, state: STORE() });
+  a.eq(sa.state, "stalled"); a.eq(sb.state, "stalled");
+  a.eq(sa.provenance, "phat"); a.eq(sb.provenance, "generic");
+  a.ok(sa.lines.join(" ").indexOf("The split isn't the problem and neither is the diet.") >= 0, "reading A: the brief's diagnosis");
+  a.ok(sb.lines.join(" ").indexOf("The split isn't the problem") < 0, "reading B: never the brief's [Certain] about a split it never saw (B-86)");
+  a.ok(sb.lines.join(" ").indexOf("Six weeks of data and the numbers have not moved.") >= 0, "the generic C7b copy runs instead");
+  a.eq(P.phatProvenance(P.PHAT_PLAN), true); a.deep(P.phatProvenanceReport(P.PHAT_PLAN), { phat: true, prescription: true, placement: true });
+  a.deep(P.phatProvenanceReport(P.newPlan("E", null).plan), { phat: false, prescription: false, placement: null }, "built from empty: no prescription, and placement is not a question");
+  a.deep(P.phatProvenanceReport(null), { phat: false, prescription: false, placement: null });
+});
+
+T("PV1 - each of (a), (b), (c) failing alone is false; a rename keeps it; the 5x5 edit fails on prescription and reports NO placement", function(a){
+  var c = MYPHAT();
+  /* (a) alone: d1a onto Lower power - both power days, nothing mixed, five days held */
+  var ra = P.phatProvenanceReport(W3MOVE(c, "d1a", "d2"));
+  a.deep(ra, { phat: false, prescription: true, placement: false }, "(a): a key lift off the day the brief put it on");
+  /* (b) alone: d3c (hyp) onto Upper power - every key lift where it was, five days held */
+  var rb = P.phatProvenanceReport(W3MOVE(c, "d3c", "d1"));
+  a.deep(rb, { phat: false, prescription: true, placement: false }, "(b): d1a beside d3c - power mixed with hyp");
+  /* (b) boundary: d1g (power) onto a hypertrophy day */
+  a.deep(P.phatProvenanceReport(W3MOVE(c, "d1g", "d3")), { phat: false, prescription: true, placement: false }, "(b) boundary: Cambered bar curl, power, on Back & shoulders");
+  /* (b) boundary the other way: d2g d2 -> d1, both power */
+  a.deep(P.phatProvenanceReport(W3MOVE(c, "d2g", "d1")), { phat: true, prescription: true, placement: true }, "(b) boundary: Seated calf raise, power, onto Upper power - still PHAT");
+  /* speed beside hyp is not a mix: every hypertrophy day already has one */
+  a.deep(P.phatProvenanceReport(W3MOVE(c, "d4a", "d3")), { phat: true, prescription: true, placement: true }, "speed work onto a hypertrophy day is not power mixed with anything");
+  /* (c) alone: all of Chest & arms onto Back & shoulders (no power on either), d5 left empty */
+  var p = c; c.days[4].ex.forEach(function(e){ p = W3MOVE(p, e.id, "d3"); });
+  a.deep(P.phatProvenanceReport(p), { phat: false, prescription: true, placement: false }, "(c): four days hold exercises, an empty fifth does not count");
+  a.deep(P.phatProvenanceReport(P.removeDay(p, "d5").plan), { phat: false, prescription: true, placement: false }, "(c): and with the day gone");
+  /* an added empty sixth day is not a placement change */
+  a.deep(P.phatProvenanceReport(P.addDay(c, "Scratch").plan), { phat: true, prescription: true, placement: true });
+  /* renames keep it */
+  var rn = P.renameDay(P.renameExercise(c, "d1a", "Pendlay row").plan, "d1", "Pull").plan;
+  a.deep(P.phatProvenanceReport(rn), { phat: true, prescription: true, placement: true }, "a rename is cosmetic");
+  /* the 5x5 squat: prescription fails, placement is NOT reported */
+  var five = P.setExerciseTarget(c, "d2a", { s: 5, lo: 5, hi: 5 }).plan;
+  a.deep(P.phatProvenanceReport(five), { phat: false, prescription: false, placement: null }, "never a placement line on a 5x5 edit");
+  a.eq(P.phatProvenance(five), false);
+  /* the placement line renders iff prescription && placement === false: count the cases */
+  var line = function(r){ return r.prescription === true && r.placement === false; };
+  a.eq(line(ra) && line(rb) && line(P.phatProvenanceReport(p)), true);
+  a.eq(line(P.phatProvenanceReport(five)) || line(P.phatProvenanceReport(c)) || line(P.phatProvenanceReport(P.PHAT_PLAN)), false);
+});
+
+T("RI1 - reconcileReintro: a day's counter means the accessories it actually reintroduced - the coach's four examples", function(a){
+  var c = MYPHAT();
+  /* Example 2, THE pin: d3 counter 1, order [d3d, d3g]; move d3d away -> d3 order [d3g], intersection {} -> 0. d3g is NOT back. */
+  var st = STORE({ reintro: { d3: 1 } });
+  var after = W3MOVE(c, "d3d", "d1");
+  var r = P.reconcileReintro(st, c, after);
+  a.eq(r.reintro.d3, 0, "example 2: the counter drops to 0 - without RI1 d3g would be silently back though never offered (B-87)");
+  a.deep(P.planReintroOrder(after, "d3"), ["d3g"]);
+  a.deep(P.planReintroOrder(after, "d3").slice(0, r.reintro.d3), [], "nothing on d3 reads as back");
+  a.eq(r.reintro.d1, undefined, "d1 had no counter and gets none: d3d arrives NOT back");
+  a.eq(st.reintro.d3, 1, "input state untouched"); a.ok(r !== st);
+  a.eq(JSON.stringify(Object.keys(r).sort()), JSON.stringify(Object.keys(st).sort()), "no other key touched");
+  a.eq(r.sessions, st.sessions, "sessions come out by reference, untouched");
+  /* Example 1: d3 counter 1, order [d3d, d3g]; move d3g (the one NOT back) away -> [d3d], intersection {d3d} -> 1. */
+  var r1 = P.reconcileReintro(st, c, W3MOVE(c, "d3g", "d1"));
+  a.eq(r1.reintro.d3, 1, "example 1: the reintroduced accessory is still there, the counter holds");
+  /* Example 3: d3 counter 2 (both back); move d3d away -> [d3g], intersection {d3g} -> 1, and d3g stays back. */
+  var r3 = P.reconcileReintro(STORE({ reintro: { d3: 2 } }), c, after);
+  a.eq(r3.reintro.d3, 1, "example 3: one of two back stays back");
+  a.deep(P.planReintroOrder(after, "d3").slice(0, r3.reintro.d3), ["d3g"]);
+  /* Example 4: a counter can never exceed the day's order length - d5 counter 3 (all three back), two moved away -> 1 */
+  var p4 = W3MOVE(W3MOVE(c, "d5d", "d3"), "d5j", "d3");
+  var r4 = P.reconcileReintro(STORE({ reintro: { d5: 3 } }), c, p4);
+  a.eq(r4.reintro.d5, 1, "example 4: 3 of 3 became 1 of 1"); a.eq(P.planReintroOrder(p4, "d5").length, 1);
+  a.ok(r4.reintro.d5 <= P.planReintroOrder(p4, "d5").length, "counter never exceeds order.length");
+  /* an arrival on a day with a counter: d1 counter 1 ([d1c] back); d3d arrives -> [d1c, d3d], intersection {d1c} -> 1, d3d not back */
+  var r5 = P.reconcileReintro(STORE({ reintro: { d1: 1 } }), c, after);
+  a.eq(r5.reintro.d1, 1); a.deep(P.planReintroOrder(after, "d1").slice(0, 1), ["d1c"], "the arrival is not back; the one already back still is");
+  /* days absent from `after` are untouched; a stale counter for a gone day is inert */
+  var gone = W3PPL(c).plan;
+  var r6 = P.reconcileReintro(STORE({ reintro: { d4: 2, d5: 1, d3: 1 } }), c, gone);
+  a.eq(r6.reintro.d4, 2); a.eq(r6.reintro.d5, 1, "d4 and d5 are not in `after`: untouched");
+  a.eq(r6.reintro.d3, 0, "d3's [d3d, d3g] both left: 0");
+  var back = 0; gone.days.forEach(function(d){ var cuts = d.ex.filter(function(e){ return e.cut === 1; }).length; back += Math.min(r6.reintro[d.id] || 0, cuts); });
+  a.eq(back, 0, "and a reader that iterates the plan's days (accessoryTotals) sees the stale d4/d5 counters as nothing");
+  /* no edit, no change: the identity on state */
+  a.eq(JSON.stringify(P.reconcileReintro(st, c, c)), JSON.stringify(st), "before == after: state byte-identical");
+  /* no state -> no write; a missing before -> nothing zeroed */
+  a.eq(P.reconcileReintro(null, c, after), null, "null: the caller must not write it");
+  a.eq(P.reconcileReintro(st, null, after).reintro.d3, 1, "no `before` to reconcile against: the counter is left alone, never zeroed");
+  a.eq(P.reconcileReintro(st, c, { deload: null }).reintro.d3, 1, "a non-plan `after` reconciles nothing");
+});
+
+T("W1 q1/q3/q4 - moveWarning: one predicate, Q3 > Q1 > Q4, warnings never refusals, null when there is no legal move", function(a){
+  var c = MYPHAT(), c0 = JSON.stringify(c);
+  a.deep(P.moveWarning(c, "d3c", "d1"), { which: "Q1", q1: true, q3: false, q4: false }, "q1: Seated cable row (hyp) onto an all-power day mixes it for the first time");
+  a.deep(P.moveWarning(c, "d1g", "d3"), { which: "Q1", q1: true, q3: false, q4: false }, "q1: a power slot onto a hypertrophy day");
+  a.deep(P.moveWarning(c, "d2g", "d1"), { which: null, q1: false, q3: false, q4: false }, "power onto power: nothing to say");
+  a.deep(P.moveWarning(c, "d4a", "d3"), { which: null, q1: false, q3: false, q4: false }, "speed onto hyp: nothing to say");
+  var mixed = W3MOVE(c, "d3c", "d1");
+  a.deep(P.moveWarning(mixed, "d3e", "d1"), { which: null, q1: false, q3: false, q4: false }, "q1 fires ONCE: a day already mixed does not warn again");
+  a.deep(P.moveWarning(c, "d3a", "d1"), { which: "Q3", q1: true, q3: true, q4: true }, "q3: Row speed work onto the day holding its source d1a - and Q3 outranks the Q1 and Q4 that also hold");
+  a.deep(P.moveWarning(c, "d1a", "d3"), { which: "Q3", q1: true, q3: true, q4: true }, "q3 the other way: the source onto the day holding its speed slot");
+  a.deep(P.moveWarning(c, "d1h", "d5"), { which: "Q1", q1: true, q3: false, q4: true }, "d1h and d5i are both l_skull: q4 holds, but the first power/hyp mix outranks it");
+  var q4pure = W3MOVE(c, "d1h", "d4");   /* Lower hypertrophy now mixed, and holds l_skull */
+  a.deep(P.moveWarning(q4pure, "d5i", "d4"), { which: "Q4", q1: false, q3: false, q4: true }, "q4 alone: the day is already mixed, and the same lift is already on it");
+  var push = P.addDay(c, "Push"); var pushy = W3MOVE(push.plan, "d5i", push.dayId);
+  a.deep(P.moveWarning(pushy, "d5h", push.dayId), { which: null, q1: false, q3: false, q4: false }, "hyp onto a hyp-only added day, different lift: nothing");
+  a.deep(P.moveWarning(pushy, "d1h", push.dayId), { which: "Q1", q1: true, q3: false, q4: true }, "power onto it: the mix, and the lift");
+  a.eq(P.moveWarning(c, "d1a", "d1"), null, "same day: no move to advise on");
+  a.eq(P.moveWarning(c, "nope", "d1"), null); a.eq(P.moveWarning(c, "d1a", "nope"), null); a.eq(P.moveWarning(null, "d1a", "d1"), null);
+  a.ok(P.moveExerciseToDay(c, "d3a", "d1").ok, "and none of it refuses: the move that warns still moves");
+  a.eq(JSON.stringify(c), c0, "the predicate reads and never writes");
+});
+
+T("W3 - moveExerciseToDay refusals: read-only PHAT, unknown exercise, unknown day, empty ids, index past the end, negative, non-integer; the length itself is append", function(a){
+  var c = MYPHAT();
+  var r = P.moveExerciseToDay(P.PHAT_PLAN, "d1a", "d3");
+  a.eq(r.ok, false); a.eq(r.problems[0].reason, "locked"); a.eq(r.from, null); a.ok(r.plan === P.PHAT_PLAN);
+  a.eq(P.moveExerciseToDay(c, "x_nope", "d3").problems[0].reason, "unknown");
+  a.eq(P.moveExerciseToDay(c, "x_nope", "d3").problems[0].scope, "ex");
+  a.eq(P.moveExerciseToDay(c, "d1a", "y_nope").problems[0].reason, "unknown");
+  a.eq(P.moveExerciseToDay(c, "d1a", "y_nope").problems[0].scope, "day");
+  a.eq(P.moveExerciseToDay(c, "", "d3").problems[0].reason, "missing");
+  a.eq(P.moveExerciseToDay(c, "d1a", "").problems[0].reason, "unknown");
+  a.eq(P.moveExerciseToDay(null, "d1a", "d3").problems[0].reason, "missing");
+  a.eq(P.moveExerciseToDay(c, "d1a", "d3", 8).ok, true, "d3 holds 8: index 8 is append");
+  a.eq(P.dayById(P.moveExerciseToDay(c, "d1a", "d3", 8).plan, "d3").ex[8].id, "d1a");
+  var past = P.moveExerciseToDay(c, "d1a", "d3", 9);
+  a.eq(past.ok, false, "index 9 on a day of 8 is past the end - refused, never clamped");
+  a.deep(past.problems, [{ scope: "day", id: "d3", field: "index", reason: "range" }]);
+  a.eq(P.moveExerciseToDay(c, "d1a", "d3", -1).ok, false);
+  a.eq(P.moveExerciseToDay(c, "d1a", "d3", 1.5).ok, false);
+  a.eq(P.moveExerciseToDay(c, "d1a", "d3", "0").ok, false, "a string is not an index");
+  a.eq(P.moveExerciseToDay(c, "d1a", "d3", null).ok, true, "null is append, like undefined");
+  var e = P.newPlan("E", null).plan; e = P.addDay(e, "A").plan; var dayA = e.days[0].id; e = P.addDay(e, "B").plan; var dayB = e.days[1].id;
+  var x = P.addExercise(e, dayA, { n: "Goblet squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db" }); e = x.plan;
+  var m = P.moveExerciseToDay(e, x.exId, dayB);
+  a.ok(m.ok, "into an empty day"); a.eq(P.dayById(m.plan, dayB).ex[0].id, x.exId); a.eq(P.dayById(m.plan, dayA).ex.length, 0);
+  a.eq(P.moveExerciseToDay(e, x.exId, dayB, 1).ok, false, "index 1 into an empty day is past the end");
+  /* a mid-edit document: the destination's `ex` is missing rather than [] */
+  var q = clone(c); delete q.days[4].ex;
+  var mq = P.moveExerciseToDay(q, "d1a", "d5");
+  a.ok(mq.ok, "a day with no ex key takes the exercise"); a.deep(P.dayById(mq.plan, "d5").ex.map(function(e){ return e.id; }), ["d1a"]);
+  q.days[4].ex = "nope";
+  a.eq(P.moveExerciseToDay(q, "d1a", "d5").problems[0].reason, "type", "an ex that is not a list is refused, never overwritten");
+});
+
+T("D4 - removeDay: refused on a day with one exercise (nonempty, count named, plan untouched); succeeds on an empty day; validatePlan passes; the last day is refused; PHAT is refused", function(a){
+  var c = MYPHAT(), c0 = JSON.stringify(c);
+  var r = P.removeDay(c, "d1");
+  a.eq(r.ok, false); a.ok(r.plan === c); a.eq(r.removed, null);
+  a.deep(r.problems, [{ scope: "day", id: "d1", field: "ex", reason: "nonempty", count: 8 }], "the count is on the problem");
+  a.eq(JSON.stringify(c), c0);
+  var p = c, i, ex = c.days[0].ex.map(function(e){ return e.id; });
+  for (i = 0; i < ex.length - 1; i++) p = W3MOVE(p, ex[i], "d3");
+  a.eq(P.removeDay(p, "d1").problems[0].count, 1, "one exercise left: refused, count 1");
+  p = W3MOVE(p, ex[ex.length - 1], "d3");
+  a.eq(P.dayById(p, "d1").ex.length, 0);
+  a.deep(p.reintroOrder.d1, [], "RI1 already emptied its declared list when d1c left");
+  var ok = P.removeDay(p, "d1");
+  a.ok(ok.ok, JSON.stringify(ok.problems));
+  a.eq(ok.plan.days.length, 4); a.eq(P.dayById(ok.plan, "d1"), null);
+  a.deep(ok.plan.days.map(function(d){ return d.id; }), ["d2", "d3", "d4", "d5"], "no other dayId changes");
+  a.eq(JSON.stringify(ok.removed), JSON.stringify(P.dayById(p, "d1")), "the removed day comes back byte for byte");
+  a.eq(P.validatePlan(ok.plan).ok, true);
+  a.eq(allEx(ok.plan).length, 42, "not a slot lost");
+  a.eq(ok.plan.reintroOrder.d1, undefined, "the empty day's declared order key is dropped");
+  a.deep(Object.keys(ok.plan.reintroOrder), ["d2", "d3", "d4", "d5"], "and no other key moves");
+  a.deep(ok.plan.keyLifts, c.keyLifts); a.deep(ok.plan.speedSource, c.speedSource);
+  a.eq(P.dayById(p, "d1").ex.length, 0, "input untouched");
+  a.eq(P.removeDay(P.PHAT_PLAN, "d1").problems[0].reason, "locked");
+  a.eq(P.removeDay(c, "y_nope").problems[0].reason, "unknown");
+  a.eq(P.removeDay(c, "").problems[0].reason, "unknown");
+  a.eq(P.removeDay(null, "d1").problems[0].reason, "missing");
+  /* a freshly added empty day is removable; the last day is not */
+  var d = P.addDay(c, "Scratch");
+  var rd = P.removeDay(d.plan, d.dayId);
+  a.ok(rd.ok); a.eq(JSON.stringify(rd.plan), JSON.stringify(c), "add a day, remove it: identity (no reintroOrder key was ever declared for it)");
+  var e = P.addDay(P.newPlan("E", null).plan, "Only").plan;
+  var last = P.removeDay(e, e.days[0].id);
+  a.eq(last.ok, false); a.eq(last.problems[0].reason, "last"); a.eq(e.days.length, 1);
+  a.eq(P.removeDay(P.newPlan("E", null).plan, "y").problems[0].reason, "unknown", "a zero-day plan has nothing to remove");
+  var q = clone(c); q.days[0].ex = { not: "a list" };
+  a.eq(P.removeDay(q, "d1").problems[0].reason, "type", "an ex that is not a list is not 'empty' - refused, fail closed");
+  delete q.days[0].ex;
+  a.eq(P.removeDay(q, "d1").ok, true, "an absent ex key is an empty day");
+  /* a session that names a surviving day still resolves; one that names the gone day resolves through PHAT (D5's rule) */
+  a.eq(P.resolveDay([ok.plan, P.PHAT_PLAN], "d2").name, "Lower power");
+  a.eq(P.resolveDay([ok.plan, P.PHAT_PLAN], "d1").name, "Upper power", "the shipped plan still answers for a copy's removed day");
+});
+
+T("W3 - planProblemText turns the new reasons into sentences and never prints the token", function(a){
+  a.eq(P.planProblemText({ scope: "day", id: "d4", field: "ex", reason: "nonempty", count: 3 }), "day d4 still holds 3 exercises");
+  a.eq(P.planProblemText({ scope: "day", id: "d4", field: "ex", reason: "nonempty", count: 1 }), "day d4 still holds 1 exercise");
+  a.eq(P.planProblemText({ scope: "day", id: "d4", field: "ex", reason: "nonempty" }), "day d4 still holds exercises");
+  a.eq(P.planProblemText({ scope: "day", id: "d1", field: "id", reason: "same" }), "day d1 is the day the exercise is already on");
+  a.eq(P.planProblemText({ scope: "plan", id: "p_x", field: "days", reason: "last" }), "the plan's last day cannot be removed");
+  ["nonempty", "same", "last", "mismatch"].forEach(function(tok){
+    a.ok(P.planProblemText({ scope: "day", id: "d4", field: "ex", reason: tok, count: 2 }).indexOf(tok) < 0, "never the token: " + tok);
+  });
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -12180,6 +12643,23 @@ contract("<b>WO-004 W2 &mdash; one surviving mutant, proved equivalent.</b> Dele
   "id is always <code>x_</code> and a minted lift always <code>l_</code>. The line stays (it becomes " +
   "load-bearing the moment two kinds share a prefix) and S25 now pins the disjoint-prefix invariant, so " +
   "the mutant cannot quietly stop being equivalent. 23 of 24 injected mutants killed.");
+
+/* ---------------------------------------------------- WO-007 W3 (S34) --- */
+contract("<b>WO-007 W3 D6 &mdash; nineteen mutants injected, nineteen killed (2026-09-12).</b> Each was a " +
+  "one-line edit to a copy of <code>logic.js</code>, syntax-checked, with this file run against it headless. " +
+  "The ten the work order names, against <code>moveExerciseToDay</code>: M01 drop <code>cut</code> on arrival " +
+  "(6 red), M02 drop <code>cue</code> (4), M03 re-mint <code>id</code> (9), M04 rewrite <code>lift</code> (5), " +
+  "M05 forget the origin's <code>reintroOrder</code> entry (6), M06 allow the same day (1: the contract test), " +
+  "M07 allow <code>readOnly</code> (1: the refusals test), M08 an unknown day falls back to the last day (1), " +
+  "M09 mutate the argument instead of cloning (8), M10 accept an index past the end &mdash; splice clamps, so " +
+  "it silently appends (2). Nine more: X11 <code>removeDay</code> allows a non-empty day (1), X12/X13/X14 PV1 " +
+  "drops clause (a), (b) or (c) (1 each &mdash; the isolated-clause test is the only one that sees them, " +
+  "which is why it exists), X15 <code>reconcileReintro</code> keeps the old counter (1: example 2), X16 the " +
+  "arrival is left to read-time reconciliation instead of being declared (4), X17 <code>moveWarning</code> " +
+  "ranks Q1 above Q3 (1), X18 the undo appends instead of restoring the declared position (1: D3), X19 " +
+  "<code>removeDay</code> keeps the gone day's <code>reintroOrder</code> key (2). <b>Guard, not a killer:</b> " +
+  "<i>W3 - planProblemText turns the new reasons into sentences</i> passed under every mutant, as it must &mdash; " +
+  "it pins the sentence layer, not the editor, and is listed here so nobody reads it as evidence about a move.");
 
 /* ---------------------------------------------------- WO-005 T4 (S29) --- */
 contract("<b>WO-005 T4 &mdash; <code>dietTargets</code> answers <code>reason:\"manual\"</code> when nothing " +

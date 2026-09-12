@@ -844,6 +844,18 @@
     return null;
   }
 
+  /* dayById(plan, dayId) -> the day object, or null. The day-side twin of
+     exById; the first day carrying the id wins, as everywhere else. */
+  function dayById(plan, dayId) {
+    var id = str(dayId).trim();
+    if (id === "") return null;
+    var days = planDays(plan);
+    for (var i = 0; i < days.length; i++) {
+      if (isObj(days[i]) && str(days[i].id).trim() === id) return days[i];
+    }
+    return null;
+  }
+
   function liftOf(plan, exId) {
     var e = exById(plan, exId);
     if (!e) return null;
@@ -1059,32 +1071,87 @@
     return d === null ? PLAN_REDUCED_DEFAULT : d;
   }
 
-  /* phatProvenance(plan) -> Boolean. Rule C7b, addendum 8.4.
+  /* phatProvenance(plan) -> Boolean. Rule C7b, addendum 8.4, plus Rule PV1.
 
      TRUE means: this is the programme a coach assessed, so the brief's
      DIAGNOSIS may be spoken. It is not "this looks like PHAT" - it is
      `planId === "phat"`, or a copy that still carries `derivedFrom:"phat"`
      AND still declares the same four key lifts AND has not changed one of
-     their s / lo / hi. Renaming a slot or editing a cue keeps provenance;
-     turning squat from 3x3-5 into 5x5 loses it, because a 5x5 squat is not
-     the programme the brief was certain about.
+     their s / lo / hi (the PRESCRIPTION test, C7b) AND still has the four
+     lifts where the brief put them (the PLACEMENT test, PV1). Renaming a
+     slot or editing a cue keeps provenance; turning squat from 3x3-5 into
+     5x5 loses it, because a 5x5 squat is not the programme the brief was
+     certain about; moving Bent-over row onto a "Pull" day loses it, because
+     a PPL out of PHAT's slots is a split the brief never assessed (B-86).
 
-     It FAILS CLOSED. Every uncertain path returns false, and false costs one
+     RULE PV1 (coach W1 q5, 2026-09-12) - provenance survives placement only
+     when the power days are intact. Additive to C7b; true iff ALL of:
+       (0) the prescription test above
+       (a) every key lift's dayId equals the shipped plan's: d1a, d1d on d1;
+           d2a, d2d on d2
+       (b) no day holds a k:"power" slot together with a k:"hyp" or
+           k:"speed" slot
+       (c) at least five days hold one or more exercises
+     Each of (a)-(c) failing alone is false. Regrouping the three hypertrophy
+     days into Push / Pull / Legs while the two power days stand (reading A)
+     passes; a full six-day PPL (reading B) fails.
+
+     phatProvenanceReport(plan) -> {phat, prescription, placement} keeps the
+     two tests apart WITHOUT overloading a `reason`: the Plans screen renders
+     the coach's placement line ONLY when `prescription` is true and
+     `placement` is false - never on a 5x5 edit, where `placement` is null
+     because there is no placement to speak about once the prescription has
+     moved.
+
+     Both FAIL CLOSED. Every uncertain path returns false, and false costs one
      sentence of specificity - never a wrong claim. */
-  function phatProvenance(plan) {
-    if (!isObj(plan)) return false;
-    if (str(plan.planId).trim() === PHAT_PLAN_ID) return true;
-    if (str(plan.derivedFrom).trim() !== PHAT_PLAN_ID) return false;
+  function phatProvenanceReport(plan) {
+    var out = { phat: false, prescription: false, placement: null };
+    if (!isObj(plan)) return out;
+    if (str(plan.planId).trim() === PHAT_PLAN_ID) {
+      out.phat = true; out.prescription = true; out.placement = true;
+      return out;
+    }
+    if (str(plan.derivedFrom).trim() !== PHAT_PLAN_ID) return out;
     var want = planKeyLiftIds(PHAT_PLAN), got = planKeyLiftIds(plan), i;
-    if (got.length !== want.length) return false;
-    for (i = 0; i < want.length; i++) if (got[i] !== want[i]) return false;
+    if (got.length !== want.length) return out;
+    for (i = 0; i < want.length; i++) if (got[i] !== want[i]) return out;
     for (i = 0; i < want.length; i++) {
       var a = exById(PHAT_PLAN, want[i]), b = exById(plan, want[i]);
-      if (!isObj(a) || !isObj(b)) return false;
-      if (b.s !== a.s || b.lo !== a.lo || b.hi !== a.hi) return false;
+      if (!isObj(a) || !isObj(b)) return out;
+      if (b.s !== a.s || b.lo !== a.lo || b.hi !== a.hi) return out;
     }
-    return true;
+    out.prescription = true;
+    /* PV1 (a): the four lifts sit where the brief put them. */
+    var placed = true;
+    for (i = 0; i < want.length && placed; i++) {
+      if (dayIdOfEx(plan, want[i]) !== dayIdOfEx(PHAT_PLAN, want[i])) placed = false;
+    }
+    /* PV1 (b) and (c): no day mixes power with hyp or speed; five days hold
+       something. */
+    var days = planDays(plan), held = 0, j;
+    for (i = 0; i < days.length && placed; i++) {
+      var ex = (isObj(days[i]) && Array.isArray(days[i].ex)) ? days[i].ex : [];
+      var power = false, other = false, any = false;
+      for (j = 0; j < ex.length; j++) {
+        if (!isObj(ex[j])) continue;
+        any = true;
+        if (ex[j].k === "power") power = true;
+        else if (ex[j].k === "hyp" || ex[j].k === "speed") other = true;
+      }
+      if (any) held++;
+      if (power && other) placed = false;
+    }
+    if (held < 5) placed = false;
+    out.placement = placed;
+    out.phat = placed;
+    return out;
   }
+
+  function phatProvenance(plan) {
+    return phatProvenanceReport(plan).phat === true;
+  }
+
 
   /* scrubPlanRefs(plan, exId) -> the same plan object, mutated.
      PRIVATE, and it only ever runs on a fresh clone inside an editor - never
@@ -1565,6 +1632,240 @@
       }
     }
     return { ok: true, plan: next, problems: [] };
+  }
+
+  /* ------------------------------------------ WO-007 W3: the re-split
+
+     Editors that let him compose a different split out of a plan's OWN
+     slots - Push / Pull / Legs out of PHAT's 42 - without re-keying one
+     history. Same contract as everything above: pure, a NEW plan comes back,
+     the argument is never mutated, `ok:false` returns the original untouched
+     with `problems` as developer signals, never copy.
+
+     Nothing here can touch a logged session. Nothing here bumps
+     SCHEMA_VERSION, runs a migration or rewrites a stored value: the plan
+     document's shape does not change, only which `days[].ex` array an object
+     sits in, how many days there are, and which day's `reintroOrder` list
+     names a cut accessory. */
+
+  /* moveExerciseToDay(plan, exId, toDayId, toIndex?) -> {ok, plan, from, problems}
+
+     A POINTER CHANGE. The exercise object leaves one day's `ex` array and
+     enters another's byte-for-byte - id, n, s, lo, hi, k, implement, lift,
+     cut, cue, and any key this build does not know - nothing re-minted and
+     nothing re-derived. That is the whole guarantee: every engine reads
+     history by `id` (lastFor, stallReport, speedLoad, e1rmByDate, liftDays),
+     so a slot on a "Pull" day answers the same bytes it answered on Upper
+     power. `k` travels with the slot: it is a routing tag on the exercise,
+     not on the heading (K1), and the history and rest row follow it.
+
+     `speedSource` and `keyLifts` are NOT written: both are id -> id and
+     day-agnostic. `reintroOrder` IS written, and only for a `cut` slot -
+     Rule RI1 (coach W1 q6, 2026-09-12): the id leaves the origin day's
+     declared list and is APPENDED to the destination's as a declared entry,
+     not left to read-time reconciliation. It arrives NOT back - the day's
+     counter is reconciled at SAVE PLAN by reconcileReintro, and the accessory
+     is re-earned through the normal offer. A non-cut slot writes nothing.
+
+     `toIndex` omitted or null is "append"; an integer must be in
+     0..destination length (the length itself is append). The same day is
+     refused - that is moveExercise's job, and a same-day "move" that
+     appended would be a reorder wearing the wrong name.
+
+     THE UNDO. `from` is returned as {dayId, index, reintro} and is accepted
+     back as the 4th argument: moveExerciseToDay(next, exId, from.dayId, from)
+     puts the slot at its original index AND its original place in the
+     origin's declared reintro list, and takes back whatever the forward move
+     created (a destination list, the table itself), so move-then-undo is the
+     identity on the document bytes, key order included. A plain move back
+     with an integer index is NOT an undo: under RI1 the accessory arrives
+     last in its old day's order, as it should - he moved it, twice. */
+  function moveExerciseToDay(plan, exId, toDayId, toIndex) {
+    var id = str(exId).trim(), to = str(toDayId).trim();
+    function fail(problems) { return { ok: false, plan: plan, from: null, problems: problems }; }
+    if (!isObj(plan)) return fail([{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return fail([{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (id === "") return fail([{ scope: "ex", id: null, field: "id", reason: "missing" }]);
+    if (!exById(plan, id)) return fail([{ scope: "ex", id: id, field: "id", reason: "unknown" }]);
+    var fromId = dayIdOfEx(plan, id);
+    if (fromId === null) return fail([{ scope: "day", id: null, field: "id", reason: "missing" }]);
+    if (to === "" || !dayById(plan, to)) return fail([{ scope: "day", id: to || null, field: "id", reason: "unknown" }]);
+    if (to === fromId) return fail([{ scope: "day", id: to, field: "id", reason: "same" }]);
+    var dstEx = dayById(plan, to).ex;
+    if (dstEx !== undefined && !Array.isArray(dstEx)) return fail([{ scope: "day", id: to, field: "ex", reason: "type" }]);
+    var n = Array.isArray(dstEx) ? dstEx.length : 0;
+    /* The undo address, or an index, or nothing. */
+    var undo = null, at;
+    if (isObj(toIndex)) {
+      undo = toIndex;
+      if (str(undo.dayId).trim() !== to) return fail([{ scope: "day", id: to, field: "from", reason: "mismatch" }]);
+      at = undo.index;
+    } else {
+      at = (toIndex === undefined || toIndex === null) ? n : toIndex;
+    }
+    if (!isInt(at, 0, n)) return fail([{ scope: "day", id: to, field: "index", reason: "range" }]);
+
+    var next = clonePlan(plan);
+    if (!next) return fail([{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var src = dayById(next, fromId), dst = dayById(next, to);
+    var ix = -1, i;
+    for (i = 0; i < src.ex.length; i++) {
+      if (isObj(src.ex[i]) && str(src.ex[i].id).trim() === id) { ix = i; break; }
+    }
+    if (ix < 0) return fail([{ scope: "ex", id: id, field: "id", reason: "unknown" }]);
+    if (!Array.isArray(dst.ex)) dst.ex = [];
+    var moved = src.ex.splice(ix, 1)[0];
+    dst.ex.splice(at, 0, moved);
+    var from = { dayId: fromId, index: ix, reintro: null };
+
+    var ro, k;
+    if (undo && isObj(undo.reintro)) {
+      /* Reverse exactly what the forward move wrote, and nothing else. */
+      ro = isObj(next.reintroOrder) ? next.reintroOrder : null;
+      if (ro && Array.isArray(ro[fromId])) {
+        ro[fromId] = ro[fromId].filter(function (v) { return str(v).trim() !== id; });
+        if (undo.reintro.destListed === false) delete ro[fromId];
+      }
+      if (undo.reintro.index !== null && isInt(undo.reintro.index, 0, 1000000)) {
+        if (!ro) ro = next.reintroOrder = {};
+        if (!Array.isArray(ro[to])) ro[to] = [];
+        if (ro[to].indexOf(id) < 0) ro[to].splice(Math.min(undo.reintro.index, ro[to].length), 0, id);
+      }
+      if (undo.reintro.table === false && ro && Object.keys(ro).length === 0) delete next.reintroOrder;
+    } else if (moved && moved.cut) {
+      /* Rule RI1: out of the origin's declared list, appended to the
+         destination's. Everything the write creates is recorded in `from`
+         so the undo can take it back. */
+      var hadTable = isObj(next.reintroOrder);
+      if (!hadTable) next.reintroOrder = {};
+      ro = next.reintroOrder;
+      from.reintro = { index: null, destListed: Array.isArray(ro[to]), table: hadTable };
+      if (Array.isArray(ro[fromId])) {
+        for (k = 0; k < ro[fromId].length; k++) if (str(ro[fromId][k]).trim() === id) { from.reintro.index = k; break; }
+        ro[fromId] = ro[fromId].filter(function (v) { return str(v).trim() !== id; });
+      }
+      if (!Array.isArray(ro[to])) ro[to] = [];
+      if (ro[to].indexOf(id) < 0) ro[to].push(id);
+    }
+    return { ok: true, plan: next, from: from, problems: [] };
+  }
+
+  /* moveWarning(plan, exId, toDayId) -> {which, q1, q3, q4} or null
+
+     The three warn-once conditions the coach ruled on (W1 q1, q3, q4) for
+     the move sheet, as ONE predicate: the frontend asks before it moves and
+     transcribes the coach's string for `which`. Warnings, never refusals -
+     the move is his to make. Null when there is no legal move to advise on
+     (the same refusals moveExerciseToDay would return). Priority when they
+     coincide: Q3 > Q1 > Q4, one message per move.
+
+       q1  the destination, after the move, would hold a `power` slot
+           together with a `hyp` or `speed` slot FOR THE FIRST TIME - a day
+           already mixed does not warn again.
+       q3  the destination holds the slot's speed source, or the slot is the
+           source of a speed slot the destination holds - the heavy lift and
+           its 65-70 % work on one day.
+       q4  the destination already holds a slot with the same `lift`. */
+  function moveWarning(plan, exId, toDayId) {
+    var id = str(exId).trim(), to = str(toDayId).trim();
+    if (!isObj(plan) || id === "" || to === "") return null;
+    var e = exById(plan, id), dst = dayById(plan, to);
+    if (!e || !dst || dayIdOfEx(plan, id) === to) return null;
+    var ex = Array.isArray(dst.ex) ? dst.ex : [], i;
+    var kinds = {};
+    for (i = 0; i < ex.length; i++) if (isObj(ex[i])) kinds[str(ex[i].k)] = true;
+    function mixed(ks) { return !!ks.power && !!(ks.hyp || ks.speed); }
+    var after = copyObj(kinds); after[str(e.k)] = true;
+    var q1 = !mixed(kinds) && mixed(after);
+    var ss = planSpeedSource(plan), q3 = false, q4 = false;
+    var lift = str(e.lift).trim();
+    for (i = 0; i < ex.length; i++) {
+      if (!isObj(ex[i])) continue;
+      var oid = str(ex[i].id).trim();
+      if (own(ss, id) && ss[id] === oid) q3 = true;        /* the slot's source is here */
+      if (own(ss, oid) && ss[oid] === id) q3 = true;       /* a speed slot sourced from it is here */
+      if (lift !== "" && str(ex[i].lift).trim() === lift) q4 = true;
+    }
+    return { which: q3 ? "Q3" : q1 ? "Q1" : q4 ? "Q4" : null, q1: q1, q3: q3, q4: q4 };
+  }
+
+  /* reconcileReintro(state, before, after) -> a NEW state, or null
+
+     Rule RI1 (coach W1 q6, 2026-09-12): a day's counter means the
+     accessories it ACTUALLY reintroduced. The counter is an index into the
+     day's reintroduction order, and a plan edit can change that order
+     underneath it - move d3d away from a day whose counter is 1 and, with
+     no reconciliation, d3g is silently "back" though it was never offered.
+     That is B-87's hazard and the reason this exists.
+
+     For each day in `after`:
+       reintroducedBefore = planReintroOrder(before, day).slice(0, counter)
+       counter := | reintroducedBefore  intersect  after's order for that day |
+     Days absent from `after` are untouched. The frontend calls this at SAVE
+     PLAN with the STORED plan as `before` and the working copy as `after`.
+
+     setCalChanged's shape: shallow copy, `reintro` copied one level down, no
+     other key touched, null when `state` is not an object - and the caller
+     MUST NOT write null over the store. When either plan is not a plan
+     document there is nothing to reconcile against and the state comes back
+     as a copy, unchanged: a missing `before` must never zero a counter. */
+  function reconcileReintro(state, before, after) {
+    if (!isObj(state)) return null;
+    var out = copyObj(state);
+    if (!isPlanDoc(before) || !isPlanDoc(after)) return out;
+    out.reintro = copyObj(state.reintro);
+    var days = planDays(after), i, j;
+    for (i = 0; i < days.length; i++) {
+      if (!isObj(days[i])) continue;
+      var did = str(days[i].id).trim();
+      if (did === "") continue;
+      var n = counterOf(state, did);
+      var was = planReintroOrder(before, did).slice(0, n);
+      var now = planReintroOrder(after, did), count = 0;
+      for (j = 0; j < was.length; j++) if (now.indexOf(was[j]) >= 0) count++;
+      if (count !== n || own(out.reintro, did)) out.reintro[did] = count;
+    }
+    return out;
+  }
+
+  /* removeDay(plan, dayId) -> {ok, plan, removed, problems}
+
+     Refused unless the day holds ZERO exercises - `reason:"nonempty"`, with
+     `count` on the problem - so there is no path that removes a slot, and
+     its history's name, by removing the day around it. Empty a day first
+     (removeExercise or moveExerciseToDay, each of which is honest on its
+     own), then remove it. Also refused on the last day (`reason:"last"`).
+
+     Display order only: `days` loses one entry and no other day's id
+     changes, so every session that names a surviving dayId still resolves.
+     `reintroOrder[dayId]` is dropped if declared, because an empty day's
+     order names nothing the day holds. Nothing is written to
+     `state.reintro`: a stale counter for a gone day is inert
+     (accessoryTotals iterates the plan's days). The removed day object is
+     RETURNED, byte-for-byte, as removeExercise returns the slot. */
+  function removeDay(plan, dayId) {
+    var did = str(dayId).trim();
+    function fail(problems) { return { ok: false, plan: plan, removed: null, problems: problems }; }
+    if (!isObj(plan)) return fail([{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return fail([{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (!Array.isArray(plan.days)) return fail([{ scope: "plan", id: str(plan.planId), field: "days", reason: "type" }]);
+    var ix = -1, i;
+    if (did !== "") {
+      for (i = 0; i < plan.days.length; i++) {
+        if (isObj(plan.days[i]) && str(plan.days[i].id).trim() === did) { ix = i; break; }
+      }
+    }
+    if (ix < 0) return fail([{ scope: "day", id: did || null, field: "id", reason: "unknown" }]);
+    var ex = plan.days[ix].ex;
+    if (ex !== undefined && !Array.isArray(ex)) return fail([{ scope: "day", id: did, field: "ex", reason: "type" }]);
+    var count = Array.isArray(ex) ? ex.length : 0;
+    if (count > 0) return fail([{ scope: "day", id: did, field: "ex", reason: "nonempty", count: count }]);
+    if (plan.days.length <= 1) return fail([{ scope: "plan", id: str(plan.planId), field: "days", reason: "last" }]);
+    var next = clonePlan(plan);
+    if (!next) return fail([{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var removed = next.days.splice(ix, 1)[0];
+    if (isObj(next.reintroOrder) && own(next.reintroOrder, did)) delete next.reintroOrder[did];
+    return { ok: true, plan: next, removed: removed, problems: [] };
   }
 
   /* newPlan(name, todayStr) -> {ok, plan, problems}. Build from empty.
@@ -2716,14 +3017,19 @@
     if (sc === "plan") {
       if (f === "planId") return "the plan has no id";
       if (f === "name") return "the plan has no name";
+      if (f === "days" && r === "last") return "the plan's last day cannot be removed";
       if (f === "days") return "the plan's days are not a list";
       if (f === "keyLifts" && r === "range") return "the plan names more than " + PLAN_KEYLIFT_MAX + " key lifts";
       if (f) return "the plan's " + f + " table is malformed";
       return "the plan is not a plan document";
     }
     if (!f) return who + " is not an object";
+    if (f === "id" && r === "same") return who + " is the day the exercise is already on";
     if (f === "id") return r === "duplicate" ? who + " is listed twice" : who + " has no id";
     if (f === "name" || f === "n") return who + " has no name";
+    if (f === "ex" && r === "nonempty") {
+      return who + " still holds " + (isInt(p.count, 1, 1000) ? p.count + (p.count === 1 ? " exercise" : " exercises") : "exercises");
+    }
     if (f === "ex") return who + " has no exercise list";
     if (f === "k" || f === "implement") return who + " has no type or implement";
     if (f === "s" || f === "lo" || f === "hi") return who + " has a target outside 1 to 20 sets and " + R_MIN + " to " + R_MAX + " reps";
@@ -7581,6 +7887,7 @@
     planIdOf: planIdOf,
     exById: exById,
     dayIdOfEx: dayIdOfEx,
+    dayById: dayById,
     liftOf: liftOf,
     exIdsForLift: exIdsForLift,
     liftName: liftName,
@@ -7600,6 +7907,12 @@
     moveDay: moveDay,
     setExerciseTarget: setExerciseTarget,
     restoreExercise: restoreExercise,
+    /* ---- WO-007 W3. The re-split: move a slot to another day with its id
+       and every byte intact, and remove a day only once it is empty. */
+    moveExerciseToDay: moveExerciseToDay,
+    moveWarning: moveWarning,
+    reconcileReintro: reconcileReintro,
+    removeDay: removeDay,
     newPlan: newPlan,
     planStoreUpsert: planStoreUpsert,
     planStoreSetActive: planStoreSetActive,
@@ -7633,6 +7946,10 @@
     V1A_PROMPT_SUGGEST: V1A_PROMPT_SUGGEST,
     V1A_ABSENT: V1A_ABSENT,
     phatProvenance: phatProvenance,
+    /* Rule PV1 (WO-007 W3 item 3). The two halves of provenance kept apart:
+       the Plans screen renders the coach's placement line only when
+       `prescription` is true and `placement` is false. */
+    phatProvenanceReport: phatProvenanceReport,
     /* advice — W5/W6. Pure, DOM-free, storage-free, callable from tests.html
        over file://. The rule each one implements is named at its definition. */
     completedSets: completedSets,
