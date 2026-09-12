@@ -55,7 +55,19 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 653 / 653 / 0, no skips.</b> S35 (WO-007 W5) added five on 2026-09-12 and the third tripwire; before it S34 read 648. B-73 (S33) was the one red on the first WO-006 W4 pass &mdash; the fix&rsquo;s proof,
+<b>Today: 689 / 689 / 0, no skips.</b> <b>S37</b> (WO-008 W7, 2026-09-12) added 11: the two-account browser run replayed
+(&ldquo;Already proven&rdquo; item 32) &mdash; the shared device&rsquo;s three refusals byte for byte, the second phone&rsquo;s
+restore with <code>profile:null</code> riding <code>log_meta</code>, D2 on B&rsquo;s rows, D5 on the seed both commits rendered
+(strip, Diet figures, the <code>+0.27 kg per week</code> band), and <b>the stamp hazard pinned as OBSERVED three ways</b>: a
+bodyweight-only pre-W4 store IS stamped (backend&rsquo;s deliberate choice, coach 16.8), while the path the live app actually
+produces &mdash; first run with the weight typed, no log key &mdash; is not. Before S37 the count read 678. <b>S36</b> (WO-008 W4, 2026-09-12) added 25: B-88&rsquo;s <code>storeOwner</code> truth table and
+the stamp reader in both shapes, the three refusal sentences verbatim, the profile pass (stamps on evidence, writes null when it
+cannot tell, never re-asks a store that carries the key &mdash; the &sect;16.8 hazard replayed as a counterfactual), Rule PR1 on
+<code>calorieAdvice</code> / <code>dietTargets</code> (ABSENT at every data state, fail-closed on every non-profile value) with the
+<b>headline pins</b>: a store stamped <code>phat-brief</code> is byte-identical to <code>main @ 9ee456f</code> on literals frozen from
+that commit&rsquo;s <code>logic.js</code>; and Rule C7c both ways. Every pre-existing <code>calorieAdvice</code> / <code>dietTargets</code>
+call in this file now passes <code>PB</code> (the brief&rsquo;s profile) and pins the same numbers it always did. The E-3 fixtures gained
+<code>profile: null</code> because every store this build writes carries the key. Before S36 the count read 653 (S35, WO-007 W5). B-73 (S33) was the one red on the first WO-006 W4 pass &mdash; the fix&rsquo;s proof,
 written first &mdash; and went green in <code>3bd35ac</code> when backend keyed the plans keep on content and
 <code>index.html</code> marked a store readable after writing it (both halves; &ldquo;Already proven&rdquo; item 30).
 That fix moved the red to S32 R1, whose <em>absent / unreadable</em> fixtures held a plan while their message said
@@ -224,7 +236,19 @@ showed them (Q3 on the three speed-beside-source arrivals, Q1 once on each of th
 four same-lift arrivals, nothing on the other 33). <b>One edge is pinned as OBSERVED, not accepted</b> &mdash; a plain
 out-and-back of a counted accessory in one SAVE keeps the counter at 1 but flips <em>which</em> accessory reads as back
 (B-87 through the plain-move door; the contract note below has it, backend&rsquo;s to rule). The B1 inventory for the
-new controls is transcribed from the measurement, as S27&rsquo;s is.</p>
+new controls is transcribed from the measurement, as S27&rsquo;s is.<br>
+<b>S37</b> is WO-008 W7, the QA pass on two users, and holds what the two-account run of 2026-09-12 against the <b>live</b>
+project (&ldquo;Already proven&rdquo; item 32) found that the pure half can pin: <code>storeOwner</code> and the three
+<code>ownerRefusal</code> sentences exactly as <code>#bk-status</code> and the live region carried them on the shared device,
+<code>restorePayload</code> bringing A&rsquo;s session down byte-identical with <code>profile:null</code> never re-asked, the C1 / C2
+decision from the counts, no recover copy on an empty device, D2 (nothing of A&rsquo;s in B&rsquo;s rows, <code>lastFor</code> blind
+to A&rsquo;s exercise), and D5 on the very seed the browser booted on both commits. <b>Two things the pure half cannot reach are
+real findings, not gaps</b>: the false C3 on every first-run sign-in (a race between <code>sync.js</code>&rsquo;s
+<code>onAuthStateChange</code> and <code>paintBackup</code>&rsquo;s route to screen C &mdash; <em>Could not read the backup. A backup is
+already running.</em> with zero REST reads, four times out of four) and the R-a latch; both are under &ldquo;Not testable&rdquo;.
+<b>The false C3 is closed at <code>c102240</code></b> and the second pass (item 33) observed it closed against the live project:
+eleven first-run sign-ins on eleven fresh phones, every first landing C1 or C2 with four REST reads, a screen timeline recorded
+from inside the page showing no C3 for even one frame; a true C3 (reads cut after a good token) still names <em>No connection.</em></p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -386,6 +410,12 @@ function tzDate(utcISO, offsetHours){
 function pad2(n){ return (n < 10 ? "0" : "") + n; }
 function localDateOf(d){ return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
+/* WO-008 W4, Rule PR1. The diet profile Chady's stamped store carries. Every
+   pre-existing calorieAdvice / dietTargets call in this file passes it, so
+   the numbers those tests pin are pinned for HIS store and stay green; the
+   ABSENT contract for a store without it is S36's. Frozen: a fixture that
+   mutated it would unlock or lock every gated engine at once. */
+var PB = Object.freeze({ diet: "phat-brief" });
 
 /* Minutes east of UTC for a specific date (Beirut in January = +120). */
 function offsetOf(d){ return -d.getTimezoneOffset(); }
@@ -3257,7 +3287,7 @@ T("W7 / B-06 - PHAT exposes the Rule W1 surface and its two constants", function
    this seed (1 + 2 + 5) fills window B and starves window A. */
 T("W7 / B-06 HEADLINE (audit ex4 seed, 1+2+5) - 8 entries over 24 days: no rate, no advice", function(a){
   var e = BW([23, 13, 10, 4, 3, 2, 1, 0], 85);
-  var r = P.calorieAdvice(e, TODAY, null);
+  var r = P.calorieAdvice(e, TODAY, null, PB);
   a.eq(e.length, 8, "eight entries");
   a.eq(P.dayGap(e[0].date, TODAY) + 1, 24, "spread over 24 days");
   a.eq(r.state, "thin-window-a", "window B is full, window A holds 2");
@@ -3274,7 +3304,7 @@ T("W7 / B-06 HEADLINE (even 3-day spread) - 8 entries over 24 days: thin window 
      gate fires and the sentence is a different one. Both outputs are correct;
      a test naming only one of them passes on the wrong seed. */
   var e = BW([21, 18, 15, 12, 9, 6, 3, 0], 85);
-  var r = P.calorieAdvice(e, TODAY, null);
+  var r = P.calorieAdvice(e, TODAY, null, PB);
   a.eq(e.length, 8);
   a.eq(r.state, "thin-window-b");
   a.eq(r.rate, null);
@@ -3325,7 +3355,7 @@ T("W7 - audit ex1: mean A 85.00, mean B 85.25 over 14 daily weights -> on target
   var e = [], i;
   for (i = 13; i >= 7; i--) e.push({ date: DA(-i), kg: 85 });
   for (i = 6; i >= 0; i--) e.push({ date: DA(-i), kg: 85.25 });
-  var w = P.bwWindows(e, TODAY), r = P.calorieAdvice(e, TODAY, null);
+  var w = P.bwWindows(e, TODAY), r = P.calorieAdvice(e, TODAY, null, PB);
   a.eq(w.meanA, 85, "mean A");
   a.eq(w.meanB, 85.25, "mean B");
   a.eq(r.state, "on-target");
@@ -3353,7 +3383,7 @@ T("W7 / B-06 - the boundary ladder: +0.51 +0.50 +0.31 +0.30 +0.20 +0.19 +0.10 +0
   ], i, r, want, printed, hundredths;
   for (i = 0; i < table.length; i++){
     want = table[i];
-    r = P.calorieAdvice(RATE(want[0]), TODAY, null);
+    r = P.calorieAdvice(RATE(want[0]), TODAY, null, PB);
     a.eq(r.state, want[1], "band at rate " + want[0]);
     a.eq(r.tone, want[2], "tone at rate " + want[0]);
     a.eq(r.text, want[3], "copy at rate " + want[0]);
@@ -3368,19 +3398,19 @@ T("W7 / B-06 - the boundary ladder: +0.51 +0.50 +0.31 +0.30 +0.20 +0.19 +0.10 +0
 });
 
 T("W7 / B-06 - +0.34 is inside the margin: the app must not say cut, which is what it says today", function(a){
-  var r = P.calorieAdvice(RATE(0.34), TODAY, null);
+  var r = P.calorieAdvice(RATE(0.34), TODAY, null, PB);
   a.eq(r.state, "above");
   a.eq(r.text, "+0.34 kg per week. Above target, inside the margin. Change nothing. Recheck in 7 days.");
   a.eq(strOf(r).toLowerCase().indexOf("cut"), -1, "neither Cut nor cut 200 may appear anywhere");
 });
 
 T("W7 - flat 0.00 and losing -0.35 give the same action in different words", function(a){
-  var flat = P.calorieAdvice(RATE(0), TODAY, null);
+  var flat = P.calorieAdvice(RATE(0), TODAY, null, PB);
   a.eq(flat.state, "flat");
   a.eq(flat.rate, 0);
   a.eq(flat.text, "Flat at +0.00 kg per week. Add 200 kcal to your training days.");
   a.eq(flat.text.indexOf("-0.00"), -1, "never a negative zero");
-  var down = P.calorieAdvice(RATE(-0.35), TODAY, null);
+  var down = P.calorieAdvice(RATE(-0.35), TODAY, null, PB);
   a.eq(down.state, "losing");
   a.eq(down.text, "Down 0.35 kg this week. You are not bulking. Add 200 kcal to your training days.");
   a.eq(down.text.indexOf("Gaining too slowly"), -1,
@@ -3391,24 +3421,24 @@ T("W7 - the sub-line appears in exactly the states that show a rate", function(a
   var sub = "Target: +0.2 to +0.3 kg per week. Averages over 14 days.";
   var withRate = [0.51, 0.30, 0.19, 0, -0.35], i, r;
   for (i = 0; i < withRate.length; i++){
-    r = P.calorieAdvice(RATE(withRate[i]), TODAY, null);
+    r = P.calorieAdvice(RATE(withRate[i]), TODAY, null, PB);
     a.eq(r.subline, sub, "rate " + withRate[i]);
   }
-  a.eq(P.calorieAdvice(RATE(0), TODAY, DA(-3)).subline, sub, "cooldown shows a rate, so it shows the sub-line");
-  a.eq(P.calorieAdvice(BW([23, 13, 10, 4, 3, 2, 1, 0], 85), TODAY, null).subline, "", "thin window A");
-  a.eq(P.calorieAdvice(BW([21, 18, 15, 12, 9, 6, 3, 0], 85), TODAY, null).subline, "", "thin window B");
-  a.eq(P.calorieAdvice(BW([7, 6, 5, 4, 3, 2, 1, 0], 85), TODAY, null).subline, "", "short history");
-  a.eq(P.calorieAdvice([], TODAY, null).subline, "", "empty");
+  a.eq(P.calorieAdvice(RATE(0), TODAY, DA(-3), PB).subline, sub, "cooldown shows a rate, so it shows the sub-line");
+  a.eq(P.calorieAdvice(BW([23, 13, 10, 4, 3, 2, 1, 0], 85), TODAY, null, PB).subline, "", "thin window A");
+  a.eq(P.calorieAdvice(BW([21, 18, 15, 12, 9, 6, 3, 0], 85), TODAY, null, PB).subline, "", "thin window B");
+  a.eq(P.calorieAdvice(BW([7, 6, 5, 4, 3, 2, 1, 0], 85), TODAY, null, PB).subline, "", "short history");
+  a.eq(P.calorieAdvice([], TODAY, null, PB).subline, "", "empty");
 });
 
 T("W7 - fewer than 14 days of history: weigh daily, and the count is honest", function(a){
-  var r = P.calorieAdvice(BW([7, 6, 5, 4, 3, 2, 1, 0], 85), TODAY, null);
+  var r = P.calorieAdvice(BW([7, 6, 5, 4, 3, 2, 1, 0], 85), TODAY, null, PB);
   a.eq(r.state, "need-history");
   a.eq(r.text, "Weigh daily. 6 more days before this becomes a calorie decision.");
   a.eq(r.rate, null);
   var e = [], i;
   for (i = 13; i >= 0; i--) e.push({ date: DA(-i), kg: 85 });
-  a.ne(P.calorieAdvice(e, TODAY, null).state, "need-history", "a span of exactly 14 days passes the gate");
+  a.ne(P.calorieAdvice(e, TODAY, null, PB).state, "need-history", "a span of exactly 14 days passes the gate");
 });
 
 T("W7 - the history gate outranks the window gates: 5 in each window inside 12 days still waits", function(a){
@@ -3420,23 +3450,23 @@ T("W7 - the history gate outranks the window gates: 5 in each window inside 12 d
   var w = P.bwWindows(e, TODAY);
   a.eq(w.aCount, 5); a.eq(w.bCount, 5);
   a.ne(w.rate, null, "the windows themselves are full");
-  a.eq(P.calorieAdvice(e, TODAY, null).state, "need-history", "but the advice waits for 14 days");
-  a.eq(P.calorieAdvice(e, TODAY, null).rate, null, "and prints no rate while it waits");
+  a.eq(P.calorieAdvice(e, TODAY, null, PB).state, "need-history", "but the advice waits for 14 days");
+  a.eq(P.calorieAdvice(e, TODAY, null, PB).rate, null, "and prints no rate while it waits");
 });
 
 T("W7 - an empty store renders no panel: no text, no rate, no tone", function(a){
-  var r = P.calorieAdvice([], TODAY, null);
+  var r = P.calorieAdvice([], TODAY, null, PB);
   a.eq(r.state, "empty");
   a.eq(r.text, "");
   a.eq(r.rate, null);
   a.eq(r.tone, "none");
-  a.eq(P.calorieAdvice(null, TODAY, null).state, "empty", "a non-array never throws");
-  a.eq(P.calorieAdvice([{ date: "nope", kg: 85 }, { date: DA(0), kg: 0 }], TODAY, null).state, "empty",
+  a.eq(P.calorieAdvice(null, TODAY, null, PB).state, "empty", "a non-array never throws");
+  a.eq(P.calorieAdvice([{ date: "nope", kg: 85 }, { date: DA(0), kg: 0 }], TODAY, null, PB).state, "empty",
     "an unreadable date and a 0 kg reading are not measurements");
 });
 
 T("W7 / cooldown - a change 3 days ago holds the three acting bands and instructs nothing", function(a){
-  var r = P.calorieAdvice(RATE(0), TODAY, DA(-3));
+  var r = P.calorieAdvice(RATE(0), TODAY, DA(-3), PB);
   a.eq(r.state, "cooldown", "the flat band would have said add 200");
   a.eq(r.tone, "hold");
   a.eq(r.rate, 0, "the rate is still reported - it is the INSTRUCTION that is held");
@@ -3444,16 +3474,16 @@ T("W7 / cooldown - a change 3 days ago holds the three acting bands and instruct
   a.eq(r.holdUntil, "2026-09-14");
   a.eq(r.text, "You changed calories 3 days ago. Hold until 14 Sep before changing again.");
   a.eq(strOf(r).indexOf("200 kcal"), -1, "no add or cut instruction anywhere in the output");
-  a.eq(P.calorieAdvice(RATE(0.62), TODAY, DA(-3)).state, "cooldown", "cut is held too");
-  a.eq(P.calorieAdvice(RATE(-0.35), TODAY, DA(-3)).state, "cooldown", "and so is losing");
+  a.eq(P.calorieAdvice(RATE(0.62), TODAY, DA(-3), PB).state, "cooldown", "cut is held too");
+  a.eq(P.calorieAdvice(RATE(-0.35), TODAY, DA(-3), PB).state, "cooldown", "and so is losing");
 });
 
 T("W7 / cooldown - state 7 does not outrank 2/3/4: at +0.34 the cooldown still prints the +0.34 line", function(a){
-  var r = P.calorieAdvice(RATE(0.34), TODAY, DA(-3));
+  var r = P.calorieAdvice(RATE(0.34), TODAY, DA(-3), PB);
   a.eq(r.state, "above", "a band that instructs nothing has nothing to suppress");
   a.eq(r.text, "+0.34 kg per week. Above target, inside the margin. Change nothing. Recheck in 7 days.");
-  a.eq(P.calorieAdvice(RATE(0.25), TODAY, DA(-3)).state, "on-target");
-  a.eq(P.calorieAdvice(RATE(0.19), TODAY, DA(-3)).state, "below");
+  a.eq(P.calorieAdvice(RATE(0.25), TODAY, DA(-3), PB).state, "on-target");
+  a.eq(P.calorieAdvice(RATE(0.19), TODAY, DA(-3), PB).state, "below");
 });
 
 T("W7 / calCooldown - 6 days holds, 7 does not, a future stamp holds, junk never holds", function(a){
@@ -3477,7 +3507,7 @@ T("W7 - tone act is EXACTLY the set that shows the acknowledgement control", fun
     [BW([7, 6, 5, 4, 3, 2, 1, 0], 85), null], [[], null]
   ];
   for (i = 0; i < states.length; i++){
-    r = P.calorieAdvice(states[i][0], TODAY, states[i][1]);
+    r = P.calorieAdvice(states[i][0], TODAY, states[i][1], PB);
     seen[r.state] = true;
     a.oneOf(r.tone, ["ok", "hold", "act", "none"], "tone for state " + r.state);
     if (r.tone === "act") act.push(r.state);
@@ -3490,7 +3520,7 @@ T("W7 - tone act is EXACTLY the set that shows the acknowledgement control", fun
 });
 
 T("W7 / B-44 - the cooldown line goes through dayMon, never Intl: Sep, never Sept", function(a){
-  var r = P.calorieAdvice(RATE(0), TODAY, DA(-3));
+  var r = P.calorieAdvice(RATE(0), TODAY, DA(-3), PB);
   a.ok(r.text.indexOf("14 Sep") >= 0, "the signed-off copy is '14 Sep'");
   a.eq(r.text.indexOf("Sept"), -1, "en-GB short month on current ICU is 'Sept' - B-44");
   a.eq(P.dayMon("2026-09-14"), "14 Sep");
@@ -3525,7 +3555,7 @@ T("W7 setters - setCalChanged and clearCalChanged copy, never mutate, and touch 
 
 T("W7 - calorieAdvice reads the bodyweight store and writes nothing back", function(a){
   var e = RATE(0.25), before = JSON.stringify(e);
-  P.calorieAdvice(e, TODAY, null);
+  P.calorieAdvice(e, TODAY, null, PB);
   P.bwWindows(e, TODAY);
   a.eq(JSON.stringify(e), before, "DATA LOSS: reading for advice changed what would be written back");
   var w = P.bwWindows(e, TODAY);
@@ -3580,7 +3610,7 @@ function clause1(s){ var i = String(s).indexOf("."); return i < 0 ? "" : String(
 var H_RATES = [0.62, 0.41, 0.25, 0.14, 0, -0.35];
 
 T("W1h / 14.7 row 1 - stamped TODAY, +0.41 above: the hold is stated and dated", function(a){
-  var r = P.calorieAdvice(HRATE(0.41), HT, HDA(0));
+  var r = P.calorieAdvice(HRATE(0.41), HT, HDA(0), PB);
   a.eq(r.state, "above", "a band that instructs nothing is not resolved to cooldown");
   a.eq(r.rate, 0.41);
   a.eq(r.daysAgo, 0);
@@ -3592,7 +3622,7 @@ T("W1h / 14.7 row 1 - stamped TODAY, +0.41 above: the hold is stated and dated",
 });
 
 T("W1h / 14.7 row 2 - stamped 8 Sep, +0.25 on target: `You changed calories 3 days ago. Hold ends 15 Sep.`", function(a){
-  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(-3));
+  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(-3), PB);
   a.eq(r.state, "on-target");
   a.eq(r.daysAgo, 3);
   a.eq(r.holdUntil, "2026-09-15");
@@ -3603,7 +3633,7 @@ T("W1h / 14.7 row 2 - stamped 8 Sep, +0.25 on target: `You changed calories 3 da
 });
 
 T("W1h / 14.7 row 3 - BOUNDARY, last day of the hold: 6 days ago still renders", function(a){
-  var r = P.calorieAdvice(HRATE(0.14), HT, HDA(-6));
+  var r = P.calorieAdvice(HRATE(0.14), HT, HDA(-6), PB);
   a.eq(r.state, "below");
   a.eq(r.daysAgo, 6, "gap 6 < 7, so the hold is still active");
   a.eq(r.holdUntil, "2026-09-12");
@@ -3617,11 +3647,11 @@ T("W1h / 14.7 row 3 - BOUNDARY, last day of the hold: 6 days ago still renders",
    11th. Both days are asserted here, because the absence only means something
    next to the presence it follows. */
 T("W1h / 14.7 row 4 - ABSENCE, first free day: the note does not render on the date it printed yesterday", function(a){
-  var y = P.calorieAdvice(HRATE(0.14, "2026-09-10"), "2026-09-10", "2026-09-04");
+  var y = P.calorieAdvice(HRATE(0.14, "2026-09-10"), "2026-09-10", "2026-09-04", PB);
   a.eq(y.holdUntil, "2026-09-11");
   a.eq(y.holdNote, "You changed calories 6 days ago. Hold ends 11 Sep.",
     "on 10 Sep the note names 11 Sep as the day the hold ends");
-  var r = P.calorieAdvice(HRATE(0.14), HT, "2026-09-04");
+  var r = P.calorieAdvice(HRATE(0.14), HT, "2026-09-04", PB);
   a.eq(r.state, "below", "the band is unchanged - only the hold expired");
   a.eq(r.holdNote, "", "and on 11 Sep the note is GONE. The date it printed is not a day it renders on");
   a.eq(r.holdUntil, null, "holdUntil is null, so the clear control goes with it");
@@ -3630,7 +3660,7 @@ T("W1h / 14.7 row 4 - ABSENCE, first free day: the note does not render on the d
 });
 
 T("W1h / 14.7 row 5 - ABSENCE, cooldown: `text` IS the disclosure, so the note is empty", function(a){
-  var r = P.calorieAdvice(HRATE(0.04), HT, HDA(-3));
+  var r = P.calorieAdvice(HRATE(0.04), HT, HDA(-3), PB);
   a.eq(r.state, "cooldown", "+0.04 is flat, which instructs, so the hold resolves to state 7");
   a.eq(r.text, "You changed calories 3 days ago. Hold until 15 Sep before changing again.");
   a.eq(r.holdNote, "",
@@ -3640,7 +3670,7 @@ T("W1h / 14.7 row 5 - ABSENCE, cooldown: `text` IS the disclosure, so the note i
 });
 
 T("W1h / 14.7 row 6 - ABSENCE, thin window A: a screen with no rate does not explain a suppression", function(a){
-  var r = P.calorieAdvice(HBW([23, 13, 10, 4, 3, 2, 1, 0], 85), HT, HDA(-3));
+  var r = P.calorieAdvice(HBW([23, 13, 10, 4, 3, 2, 1, 0], 85), HT, HDA(-3), PB);
   a.eq(r.state, "thin-window-a");
   a.eq(r.text, "Not enough daily weights. 2 of those 7 days logged; this needs 5.");
   a.eq(r.holdNote, "", "the note is UNREACHABLE in every not-enough-data state and must stay so (14.2)");
@@ -3662,27 +3692,27 @@ T("W1h / 14.7 row 6 - ABSENCE, thin window A: a screen with no rate does not exp
    So: do not "fix" this. If it must change, it changes in agoWord, for both
    sentences at once, and it goes back to strength-coach first. */
 T("W1h / 14.7 row 7 - EDGE, a future stamp reads `today`, and that is the signed-off behaviour", function(a){
-  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(7));      /* stamped 18 Sep */
+  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(7), PB);      /* stamped 18 Sep */
   a.eq(r.state, "on-target");
   a.eq(r.daysAgo, -7, "a negative gap: the stamp is ahead of today");
   a.eq(r.holdUntil, "2026-09-25", "the hold is still active - suppressing is the safe direction");
   a.eq(r.holdNote, "You changed calories today. Hold ends 25 Sep.",
     "14.5 / 14.7 row 7: signed off, marked do not fix");
-  var seven = P.calorieAdvice(HRATE(0), HT, HDA(7));
+  var seven = P.calorieAdvice(HRATE(0), HT, HDA(7), PB);
   a.eq(seven.state, "cooldown");
   a.eq(clause1(seven.text), clause1(r.holdNote),
     "the note is not inventing this - state 7 has always printed the same clause on the same stamp");
 });
 
 T("W1h / 14.7 row 8 - ABSENCE, no stamp at all: no hold, no note", function(a){
-  var r = P.calorieAdvice(HRATE(0.41), HT, null);
+  var r = P.calorieAdvice(HRATE(0.41), HT, null, PB);
   a.eq(r.state, "above");
   a.eq(r.holdNote, "");
   a.eq(r.holdUntil, null);
   a.eq(r.daysAgo, null);
-  a.eq(P.calorieAdvice(HRATE(0.41), HT, "").holdNote, "", "an empty stamp is not a hold");
-  a.eq(P.calorieAdvice(HRATE(0.41), HT, "2026-9-4").holdNote, "", "an unpadded date is not a date");
-  a.eq(P.calorieAdvice(HRATE(0.41), HT, "nope").holdNote, "", "and junk never holds");
+  a.eq(P.calorieAdvice(HRATE(0.41), HT, "", PB).holdNote, "", "an empty stamp is not a hold");
+  a.eq(P.calorieAdvice(HRATE(0.41), HT, "2026-9-4", PB).holdNote, "", "an unpadded date is not a date");
+  a.eq(P.calorieAdvice(HRATE(0.41), HT, "nope", PB).holdNote, "", "and junk never holds");
 });
 
 /* THE RULE ITSELF, AS A SWEEP. One worked example proves one cell; the rule is
@@ -3694,7 +3724,7 @@ T("W1h - THE IFF, swept: holdNote is non-empty exactly when holdUntil is set and
   var i, g, r, cases = 0, nonEmpty = 0, bad = [];
   for (i = 0; i < H_RATES.length; i++){
     for (g = -3; g <= 9; g++){
-      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g), PB);
       cases++;
       if (r.holdNote !== "") nonEmpty++;
       if ((r.holdNote !== "") !== (r.holdUntil !== null && r.state !== "cooldown"))
@@ -3711,7 +3741,7 @@ T("W1h - and exactly ONE hold disclosure is on screen whenever holdUntil is set"
   var i, g, r, held = 0, bad = [], n;
   for (i = 0; i < H_RATES.length; i++){
     for (g = -3; g <= 9; g++){
-      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g), PB);
       if (r.holdUntil === null) continue;
       held++;
       n = (r.text.indexOf("Hold") >= 0 ? 1 : 0) + (r.holdNote !== "" ? 1 : 0);
@@ -3735,7 +3765,7 @@ T("W1h - INSTRUCTION GUARD: every input yielding a note also yields `Change noth
   var i, g, r, checked = 0, bad = [];
   for (i = 0; i < H_RATES.length; i++){
     for (g = -3; g <= 9; g++){
-      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g), PB);
       if (r.holdNote === "") continue;
       checked++;
       if (r.text.indexOf("Change nothing.") < 0)
@@ -3759,8 +3789,8 @@ T("W1h - the opening clause is byte-identical between state 7's text and the ban
   var days = [0, 1, 3, 6], i, stamp, cool, band, c;
   for (i = 0; i < days.length; i++){
     stamp = HDA(-days[i]);
-    cool = P.calorieAdvice(HRATE(0), HT, stamp);          /* flat -> instructs -> state 7 */
-    band = P.calorieAdvice(HRATE(0.25), HT, stamp);       /* on target -> band + note */
+    cool = P.calorieAdvice(HRATE(0), HT, stamp, PB);          /* flat -> instructs -> state 7 */
+    band = P.calorieAdvice(HRATE(0.25), HT, stamp, PB);       /* on target -> band + note */
     a.eq(cool.state, "cooldown", "seed check at daysAgo " + days[i]);
     a.eq(band.state, "on-target", "seed check at daysAgo " + days[i]);
     c = clause1(cool.text);
@@ -3768,9 +3798,9 @@ T("W1h - the opening clause is byte-identical between state 7's text and the ban
     a.eq(clause1(band.holdNote), c,
       "one helper, two sentences, at daysAgo " + days[i] + " - not two literals that match today");
   }
-  a.eq(clause1(P.calorieAdvice(HRATE(0.25), HT, HDA(0)).holdNote), "You changed calories today.",
+  a.eq(clause1(P.calorieAdvice(HRATE(0.25), HT, HDA(0), PB).holdNote), "You changed calories today.",
     "daysAgo 0 is where a re-implemented clause would say `0 days ago`");
-  a.eq(clause1(P.calorieAdvice(HRATE(0.25), HT, HDA(-1)).holdNote), "You changed calories 1 day ago.",
+  a.eq(clause1(P.calorieAdvice(HRATE(0.25), HT, HDA(-1), PB).holdNote), "You changed calories 1 day ago.",
     "and 1 is where it would say `1 days ago`");
 });
 
@@ -3782,7 +3812,7 @@ T("W1h - the note never grows a figure: no `200 kcal`, no ` kg per week`, no imp
   var i, g, r, checked = 0, bad = [];
   for (i = 0; i < H_RATES.length; i++){
     for (g = -3; g <= 9; g++){
-      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g), PB);
       if (r.holdNote === "") continue;
       checked++;
       if (r.holdNote.indexOf("200 kcal") >= 0) bad.push("kcal figure: " + r.holdNote);
@@ -3799,12 +3829,12 @@ T("W1h / B-44 - the note's date comes from dayMon, never Intl: `15 Sep`, never `
   var i, g, r, bad = [];
   for (i = 0; i < H_RATES.length; i++){
     for (g = -3; g <= 9; g++){
-      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g));
+      r = P.calorieAdvice(HRATE(H_RATES[i]), HT, HDA(-g), PB);
       if (r.holdNote !== "" && r.holdNote.indexOf("Sept") >= 0) bad.push(r.holdNote);
     }
   }
   a.eq(bad.join(" | ") || "none", "none", "en-GB short month on current ICU is `Sept` - B-44");
-  var note = P.calorieAdvice(HRATE(0.25), HT, HDA(-3)).holdNote;
+  var note = P.calorieAdvice(HRATE(0.25), HT, HDA(-3), PB).holdNote;
   a.eq(note.slice(-7), "15 Sep.", "the date is the last thing in the sentence");
   a.eq(note.indexOf(P.dayMon("2026-09-15")) >= 0, true, "and it is dayMon's");
 });
@@ -3830,7 +3860,7 @@ T("W1h - holdNote is a string on every return path, never undefined", function(a
     ["cooldown",       HRATE(0),                              HDA(-3)]
   ], i, r, seen = {};
   for (i = 0; i < seeds.length; i++){
-    r = P.calorieAdvice(seeds[i][1], HT, seeds[i][2]);
+    r = P.calorieAdvice(seeds[i][1], HT, seeds[i][2], PB);
     a.eq(r.state, seeds[i][0], "seed " + i + " lands in the state it says it does");
     a.eq(typeof r.holdNote, "string", "holdNote is missing on the " + r.state + " path");
     a.eq("holdNote" in r, true, "and the key is present, not merely undefined-valued");
@@ -3840,8 +3870,8 @@ T("W1h - holdNote is a string on every return path, never undefined", function(a
     ["above", "below", "cooldown", "cut", "empty", "flat", "losing", "need-history",
      "on-target", "thin-window-a", "thin-window-b"],
     "all eleven states carry the field");
-  a.eq(P.calorieAdvice(null, HT, HDA(-3)).holdNote, "", "and a non-array never throws its way past it");
-  a.eq(P.calorieAdvice(undefined, HT, undefined).holdNote, "");
+  a.eq(P.calorieAdvice(null, HT, HDA(-3), PB).holdNote, "", "and a non-array never throws its way past it");
+  a.eq(P.calorieAdvice(undefined, HT, undefined, PB).holdNote, "");
 });
 
 T("W1h - the four not-enough-data states can never reach a hold at all", function(a){
@@ -3853,7 +3883,7 @@ T("W1h - the four not-enough-data states can never reach a hold at all", functio
   ], stamps = [HDA(0), HDA(-3), HDA(-6), HDA(-7), HDA(7)], i, j, r;
   for (i = 0; i < seeds.length; i++){
     for (j = 0; j < stamps.length; j++){
-      r = P.calorieAdvice(seeds[i][0], HT, stamps[j]);
+      r = P.calorieAdvice(seeds[i][0], HT, stamps[j], PB);
       a.eq(r.state, seeds[i][1]);
       a.eq(r.holdNote, "", seeds[i][1] + " must not explain a suppression it cannot compute");
       a.eq(r.holdUntil, null, seeds[i][1] + " returns before the cooldown test");
@@ -3865,7 +3895,7 @@ T("W1h - the four not-enough-data states can never reach a hold at all", functio
 T("W1h - the note is additive: no other returned field moved to make room for it", function(a){
   /* A new field is the cheap half; the expensive half is proving the rate, the
      tone and the sub-line all came out of the change untouched. */
-  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(-3));
+  var r = P.calorieAdvice(HRATE(0.25), HT, HDA(-3), PB);
   a.deep(Object.keys(r).sort(),
     ["aCount", "bCount", "daysAgo", "holdNote", "holdUntil", "meanA", "meanB",
      "rate", "state", "subline", "text", "tone"],
@@ -3875,7 +3905,7 @@ T("W1h - the note is additive: no other returned field moved to make room for it
   a.eq(r.rate, 0.25, "and the rate is still reported");
   a.eq(r.tone, "ok", "a hold does not repaint a band's tone - only state 7 does that");
   var e = HRATE(0.25), before = JSON.stringify(e);
-  P.calorieAdvice(e, HT, HDA(-3));
+  P.calorieAdvice(e, HT, HDA(-3), PB);
   a.eq(JSON.stringify(e), before, "DATA LOSS: building the note changed the bodyweight rows");
 });
 
@@ -5298,7 +5328,7 @@ function ENGINES(){
   return {
     sessions: sessions, entries: entries, state: state,
     out: [
-      P.calorieAdvice(entries, TODAY, state.calChangedAt),
+      P.calorieAdvice(entries, TODAY, state.calChangedAt, PB),
       P.bwWindows(entries, TODAY),
       ST1CALL(sessions, TODAY, KLIFTS, state),
       P.speedLoad(sessions, "d3a", TODAY, "Bent-over or Pendlay row"),
@@ -9792,7 +9822,7 @@ function DTALL(){
   for (i = 0; i < plans.length; i++)
     for (d in DTW) if (DTOWN(DTW, d))
       for (v = 0; v < views.length; v++)
-        out.push(P.dietTargets(DTW[d], plans[i], views[v]));
+        out.push(P.dietTargets(DTW[d], plans[i], views[v], PB));
   return out;
 }
 
@@ -9826,7 +9856,7 @@ function(a){
     "the shipped plan rests Wed and Sun; if this changes it is a programme change, not a test fix");
 
   ["Wed", "Sun"].forEach(function(w){
-    var r = P.dietTargets(DTW[w]);
+    var r = P.dietTargets(DTW[w], null, null, PB);
     a.eq(r.dayType, "rest", w + " is a rest day");
     a.eq(r.label, DT_REST_TODAY, w + " label, exact string, not a substring");
     a.eq(r.kcal, 2500, w + " kcal");
@@ -9849,7 +9879,7 @@ T("DT1 / THE 700 kcal ERROR - no rest day may show a training number anywhere in
      from every string this call would put on screen", because the prototype's
      defect was a LABEL and a strip, not a field. */
   ["Wed", "Sun"].forEach(function(w){
-    var r = P.dietTargets(DTW[w]), s = strOf(r);
+    var r = P.dietTargets(DTW[w], null, null, PB), s = strOf(r);
     a.ne(r.kcal, 3200, w + " must never carry the training calorie figure");
     a.ne(r.carb, 300,  w + " must never carry the training carb figure");
     a.eq(s.indexOf("3,200"), -1, w + ": the string 3,200 reached the screen on a rest day");
@@ -9870,7 +9900,7 @@ T("DT1 / THE INVERSE - no value of view can make a Sunday say the training-day s
   var i, r, v, s;
   for (i = 0; i < DT_VIEWS.length; i++) {
     v = DT_VIEWS[i];
-    r = P.dietTargets(DTW.Sun, null, v);
+    r = P.dietTargets(DTW.Sun, null, v, PB);
     s = strOf(r);
     a.ne(r.label, DT_TRAIN_TODAY, "view " + show(v) + " produced the forbidden Sunday label");
     a.eq(s.indexOf(DT_TRAIN_TODAY), -1, "view " + show(v) + ": the sentence appeared somewhere in the output");
@@ -9881,7 +9911,7 @@ T("DT1 / THE INVERSE - no value of view can make a Sunday say the training-day s
   /* The one view that IS honoured, checked in the same test so "everything
      went quiet" cannot pass as a fix: the numbers move, the label does not
      claim today. */
-  var t = P.dietTargets(DTW.Sun, null, "training");
+  var t = P.dietTargets(DTW.Sun, null, "training", PB);
   a.eq(t.kcal, 3200, "tapping TRAINING DAY still shows the training numbers");
   a.eq(t.label, DT_TRAIN_PLAIN, "and the label drops the Today prefix");
   a.eq(t.claimsToday, false);
@@ -9896,7 +9926,7 @@ T("DT1 / THE INVERSE, every Sunday of a year - the forbidden sentence is unreach
   a.eq(P.wdOf(d), "Sun", "the walk must start on a Sunday");
   while (d < "2027-01-01") {
     for (i = 0; i < 3; i++) {
-      r = P.dietTargets(d, null, [undefined, "training", "rest"][i]);
+      r = P.dietTargets(d, null, [undefined, "training", "rest"][i], PB);
       a.ne(r.label, DT_TRAIN_TODAY, d + " produced the forbidden label");
       a.eq(r.todayType, "rest", d + " is a Sunday and the plan rests on it");
     }
@@ -9913,7 +9943,7 @@ T("DT1 / the five training days are 3,200 / 170 / 300 / 145 and claim today", fu
   var train = P.planTrainingWeekdays(P.PHAT_PLAN), i, w, r;
   a.eq(train.length, 5, "five training days");
   for (i = 0; i < train.length; i++) {
-    w = train[i]; r = P.dietTargets(DTW[w]);
+    w = train[i]; r = P.dietTargets(DTW[w], null, null, PB);
     a.eq(r.dayType, "training", w);
     a.eq(r.label, DT_TRAIN_TODAY, w + " label, exact string");
     a.eq(r.kcal, 3200); a.eq(r.protein, 170); a.eq(r.carb, 300); a.eq(r.fat, 145);
@@ -9930,7 +9960,7 @@ T("DT1 / a full year of dates lands on the day type the plan's own wd fields say
      these; one that reads the wrong field fails on all of them. */
   var rest = P.planRestWeekdays(P.PHAT_PLAN), d = "2026-01-01", n = 0, r, want, bad = [];
   while (d < "2027-01-01") {
-    r = P.dietTargets(d);
+    r = P.dietTargets(d, null, null, PB);
     want = rest.indexOf(P.wdOf(d)) >= 0 ? "rest" : "training";
     if (r.dayType !== want) bad.push(d + " " + P.wdOf(d) + " got " + r.dayType + " want " + want);
     if (r.label !== (want === "rest" ? DT_REST_TODAY : DT_TRAIN_TODAY)) bad.push(d + " label " + r.label);
@@ -9952,7 +9982,7 @@ T("DT1 / B-66 - rewrite a day's wd and the derived rest days move with it", func
   p.days[0].wd = "Wed";
 
   a.deep(P.planRestWeekdays(p), ["Mon", "Sun"], "Monday is now a rest day and Wednesday is not");
-  var mon = P.dietTargets(DTW.Mon, p), wed = P.dietTargets(DTW.Wed, p);
+  var mon = P.dietTargets(DTW.Mon, p, null, PB), wed = P.dietTargets(DTW.Wed, p, null, PB);
   a.eq(mon.dayType, "rest", "Monday follows the edited plan");
   a.eq(mon.label, DT_REST_TODAY);
   a.eq(mon.kcal, 2500);
@@ -9962,8 +9992,8 @@ T("DT1 / B-66 - rewrite a day's wd and the derived rest days move with it", func
   a.eq(wed.kcal, 3200);
 
   /* and the shipped plan is untouched by the edit - no shared mutable state */
-  a.eq(P.dietTargets(DTW.Mon).dayType, "training", "PHAT_PLAN still trains on Monday");
-  a.eq(P.dietTargets(DTW.Wed).dayType, "rest", "PHAT_PLAN still rests on Wednesday");
+  a.eq(P.dietTargets(DTW.Mon, null, null, PB).dayType, "training", "PHAT_PLAN still trains on Monday");
+  a.eq(P.dietTargets(DTW.Wed, null, null, PB).dayType, "rest", "PHAT_PLAN still rests on Wednesday");
   a.deep(P.planRestWeekdays(P.PHAT_PLAN), ["Wed", "Sun"]);
 });
 
@@ -9976,7 +10006,7 @@ T("DT1 / B-66 - all 35 one-day rewrites of the schedule move the answer with the
       p = DTPLAN(); p.days[i].wd = P.WD_ORDER[j];
       rest = P.planRestWeekdays(p);
       for (w in DTW) if (DTOWN(DTW, w)) {
-        r = P.dietTargets(DTW[w], p);
+        r = P.dietTargets(DTW[w], p, null, PB);
         /* A plan with a duplicated weekday declares fewer than five training
            days; the derived answer is still the plan's own, which is the
            whole point. */
@@ -9999,14 +10029,14 @@ T("DT1 / a plan that names no weekday makes NO claim about today", function(a){
   a.deep(P.planTrainingWeekdays(p), [], "no weekday declared");
   a.deep(P.planRestWeekdays(p), [], "and no rest day inferred from that silence");
 
-  r = P.dietTargets(DTW.Sun, p);
+  r = P.dietTargets(DTW.Sun, p, null, PB);
   a.eq(r.label, DT_TRAIN_PLAIN, "no Today prefix");
   a.eq(r.claimsToday, false);
   a.eq(r.todayType, null, "the function does not guess a day type");
   a.eq(r.reason, "no-schedule");
   a.eq(strOf(r).indexOf("Today —"), -1, "the words Today - appear nowhere in the output");
 
-  r = P.dietTargets(DTW.Sun, p, "rest");
+  r = P.dietTargets(DTW.Sun, p, "rest", PB);
   a.eq(r.label, DT_REST_PLAIN, "the segment still switches the numbers");
   a.eq(r.kcal, 2500);
   a.eq(r.claimsToday, false);
@@ -10033,7 +10063,7 @@ T("DT1 / PROVISIONAL - a plan that trains all seven days also makes no claim abo
   a.eq(P.planTrainingWeekdays(p).length, 7, "all seven weekdays are trained");
   a.deep(P.planRestWeekdays(p), [], "so there is no rest day to be on");
 
-  var r = P.dietTargets(DTW.Sun, p);
+  var r = P.dietTargets(DTW.Sun, p, null, PB);
   a.eq(r.todayType, "training", "the plan does place today - it trains every day");
   a.eq(r.claimsToday, false, "PROVISIONAL: no claim about today, pending coach sign-off");
   a.eq(r.label, DT_TRAIN_PLAIN, "PROVISIONAL: the plain label, no Today prefix");
@@ -10049,7 +10079,7 @@ T("DT1 / weekly is the full sentence for a 5/2 week and empty for every other sp
      recomputing them for another split would be the app inventing a macro
      target - the one thing this block exists to stop. */
   var WEEKLY = "Weekly average ~3,000 kcal against an estimated 2,700 maintenance. The 300 is the surplus.";
-  a.eq(P.dietTargets(DTW.Sun).weekly, WEEKLY, "PHAT is 5 training / 2 rest");
+  a.eq(P.dietTargets(DTW.Sun, null, null, PB).weekly, WEEKLY, "PHAT is 5 training / 2 rest");
   a.eq(P.DIET_WEEKLY.trainingDays, 5); a.eq(P.DIET_WEEKLY.restDays, 2);
   a.eq(P.DIET_WEEKLY.avg, 3000); a.eq(P.DIET_WEEKLY.maintenance, 2700); a.eq(P.DIET_WEEKLY.surplus, 300);
   a.eq((5 * 3200 + 2 * 2500) / 7, 3000, "the arithmetic behind the sentence, checked by hand");
@@ -10057,29 +10087,29 @@ T("DT1 / weekly is the full sentence for a 5/2 week and empty for every other sp
 
   var four = DTPLAN(); four.days.pop();
   a.eq(P.planTrainingWeekdays(four).length, 4);
-  a.eq(P.dietTargets(DTW.Sun, four).weekly, "", "4/3 gets no sentence");
+  a.eq(P.dietTargets(DTW.Sun, four, null, PB).weekly, "", "4/3 gets no sentence");
 
   var six = DTPLAN(), extra = clone(six.days[0]);
   extra.id = "d6"; extra.wd = "Wed";
   extra.ex.forEach(function(e, i){ e.id = "d6x" + i; e.lift = "l_d6x" + i; });
   six.days.push(extra);
   a.eq(P.planTrainingWeekdays(six).length, 6);
-  a.eq(P.dietTargets(DTW.Sun, six).weekly, "", "6/1 gets no sentence");
+  a.eq(P.dietTargets(DTW.Sun, six, null, PB).weekly, "", "6/1 gets no sentence");
 
   var none = DTPLAN();
   none.days.forEach(function(d){ delete d.wd; });
-  a.eq(P.dietTargets(DTW.Sun, none).weekly, "", "a plan with no schedule gets no sentence");
+  a.eq(P.dietTargets(DTW.Sun, none, null, PB).weekly, "", "a plan with no schedule gets no sentence");
 
   /* two days sharing a weekday is a 4-training week, not a 5-training one */
   var dup = DTPLAN(); dup.days[1].wd = dup.days[0].wd;
   a.eq(P.planTrainingWeekdays(dup).length, 4, "a duplicated weekday is one weekday");
-  a.eq(P.dietTargets(DTW.Sun, dup).weekly, "", "and so it gets no sentence either");
+  a.eq(P.dietTargets(DTW.Sun, dup, null, PB).weekly, "", "and so it gets no sentence either");
 });
 
 /* ------------------------------------------- 6. calibration and the medical line */
 
 T("DT1 / calibration has exactly 3 lines and the medical sentence is the last of them", function(a){
-  var r = P.dietTargets(DTW.Sun);
+  var r = P.dietTargets(DTW.Sun, null, null, PB);
   a.eq(r.calibration.heading, "Calibration");
   a.eq(r.calibration.lines.length, 3, "two coach lines plus the medical sentence");
   a.eq(r.calibration.lines[2], P.DIET_COPY.medical, "8.6 item 3: in the calibration block on BOTH segments");
@@ -10101,12 +10131,12 @@ T("DT1 / calibration has exactly 3 lines and the medical sentence is the last of
 });
 
 T("DT1 / the returned calibration array is a COPY - a caller cannot poison the next call", function(a){
-  var r = P.dietTargets(DTW.Sun);
+  var r = P.dietTargets(DTW.Sun, null, null, PB);
   r.calibration.lines.push("injected");
   r.calibration.lines[0] = "rewritten";
-  a.eq(P.dietTargets(DTW.Sun).calibration.lines.length, 3, "the next call is unaffected");
+  a.eq(P.dietTargets(DTW.Sun, null, null, PB).calibration.lines.length, 3, "the next call is unaffected");
   a.eq(P.DIET_COPY.calibration.lines[0].indexOf("rewritten"), -1, "and the source copy is intact");
-  a.eq(P.dietTargets(DTW.Sun).calibration.lines[0], P.DIET_COPY.calibration.lines[0]);
+  a.eq(P.dietTargets(DTW.Sun, null, null, PB).calibration.lines[0], P.DIET_COPY.calibration.lines[0]);
 });
 
 T("DT1 / medicalUnderGrid is true on rest and false on training, on every branch", function(a){
@@ -10116,9 +10146,9 @@ T("DT1 / medicalUnderGrid is true on rest and false on training, on every branch
       bad.push(all[i].date + "/" + all[i].dayType + "=" + all[i].medicalUnderGrid);
   a.eq(bad.slice(0, 5).join(" | ") || "none", "none",
     "8.6 item 3: below the macro grid on the REST DAY segment");
-  a.eq(P.dietTargets(DTW.Sun, null, "training").medicalUnderGrid, false,
+  a.eq(P.dietTargets(DTW.Sun, null, "training", PB).medicalUnderGrid, false,
     "the flag follows the SHOWN day, not the real one - the grid it sits under is the training grid");
-  a.eq(P.dietTargets(DTW.Mon, null, "rest").medicalUnderGrid, true);
+  a.eq(P.dietTargets(DTW.Mon, null, "rest", PB).medicalUnderGrid, true);
 });
 
 /* ----------------------------------------------------- 7. the eight figures */
@@ -10167,16 +10197,20 @@ T("DT1 / THE PROTEIN TICK IS NOT DATA - no parameter, no reader, no store key", 
   }
   a.eq(hits.join(" | ") || "none", "none", "nothing on PHAT reads or writes the tick");
 
-  /* a fourth and a fifth argument change nothing: there is no parameter one
-     could be smuggled through */
-  var base = JSON.stringify(P.dietTargets(DTW.Sun, null, undefined));
+  /* The fourth argument is now the diet PROFILE (WO-008 W4, Rule PR1) and
+     the only thing it can do is switch the tab OFF: a tick-shaped value in
+     that slot is not the brief's profile and gets the ABSENT object - never
+     the figures with a tick folded in. A fifth argument changes nothing:
+     there is still no parameter a tick could be smuggled through. */
+  var base = JSON.stringify(P.dietTargets(DTW.Sun, null, undefined, PB));
   [true, false, 1, 0, "hit", { protein: true }, { tick: 1 }].forEach(function(x){
-    a.eq(JSON.stringify(P.dietTargets(DTW.Sun, null, undefined, x)), base,
-      "a 4th argument of " + show(x) + " changed the output");
-    a.eq(JSON.stringify(P.dietTargets(DTW.Sun, null, undefined, x, x)), base,
+    var r = P.dietTargets(DTW.Sun, null, undefined, x);
+    a.eq(r.absent, true, "a 4th argument of " + show(x) + " is not a profile: ABSENT, fail closed");
+    a.eq(r.kcal, null, "and carries no figure");
+    a.eq(JSON.stringify(P.dietTargets(DTW.Sun, null, undefined, PB, x)), base,
       "a 5th argument of " + show(x) + " changed the output");
   });
-  a.eq(P.dietTargets.length, 3, "the signature is (dateStr, plan, view) and nothing else");
+  a.eq(P.dietTargets.length, 4, "the signature is (dateStr, plan, view, profile) and nothing else");
 });
 
 T("DT1 / a protein tick smuggled into the STORE changes no engine's answer", function(a){
@@ -10187,8 +10221,8 @@ T("DT1 / a protein tick smuggled into the STORE changes no engine's answer", fun
   needFns(a, "calorieAdvice", "verdict");
   var clean = RATE(0.25), ticked = clone(clean), i;
   for (i = 0; i < ticked.length; i++) ticked[i].protein = (i % 2 === 0);
-  a.eq(JSON.stringify(P.calorieAdvice(ticked, TODAY, null)),
-       JSON.stringify(P.calorieAdvice(clean, TODAY, null)),
+  a.eq(JSON.stringify(P.calorieAdvice(ticked, TODAY, null, PB)),
+       JSON.stringify(P.calorieAdvice(clean, TODAY, null, PB)),
        "Rule W1's calorie decision moved because of a habit tick");
 
   var sets = SETS(100, 5, 100, 5, 100, 5), tickedSets = clone(sets);
@@ -10200,8 +10234,8 @@ T("DT1 / a protein tick smuggled into the STORE changes no engine's answer", fun
   var p = DTPLAN();
   p.proteinTick = { "2026-09-13": true };
   p.days[0].protein = true;
-  a.eq(JSON.stringify(P.dietTargets(DTW.Sun, p)),
-       JSON.stringify(P.dietTargets(DTW.Sun, DTPLAN())),
+  a.eq(JSON.stringify(P.dietTargets(DTW.Sun, p, null, PB)),
+       JSON.stringify(P.dietTargets(DTW.Sun, DTPLAN(), null, PB)),
        "dietTargets read a tick off the plan document");
 });
 
@@ -10255,10 +10289,10 @@ T("DT1 / determinism - same arguments in, byte-identical JSON out", function(a){
   }
   a.eq(bad.join(" | ") || "none", "none", "a repeated call returned a different object");
   /* and call ORDER does not matter - no memo, no accumulated state */
-  var first1 = JSON.stringify(P.dietTargets(DTW.Sun));
-  P.dietTargets(DTW.Mon, DTPLAN(), "rest"); P.dietTargets("2026-13-45"); DTALL();
-  a.eq(JSON.stringify(P.dietTargets(DTW.Sun)), first1, "an intervening call changed the answer");
-  a.ok(JSON.stringify(P.dietTargets(DTW.Sun)).length > 500, "the object serialises in full");
+  var first1 = JSON.stringify(P.dietTargets(DTW.Sun, null, null, PB));
+  P.dietTargets(DTW.Mon, DTPLAN(), "rest", PB); P.dietTargets("2026-13-45", null, null, PB); DTALL();
+  a.eq(JSON.stringify(P.dietTargets(DTW.Sun, null, null, PB)), first1, "an intervening call changed the answer");
+  a.ok(JSON.stringify(P.dietTargets(DTW.Sun, null, null, PB)).length > 500, "the object serialises in full");
 });
 
 /* ----------------------------------------------- 11. dates the caller got wrong */
@@ -10285,7 +10319,7 @@ function(a){
      PHAT.localDate()) and both are reachable from the WO-002 importer, which
      is where a coerced guess is worst. Pinned as OBSERVED so the fix inverts
      a named test. NOT a ruling. */
-  var r = P.dietTargets("2026-13-45");
+  var r = P.dietTargets("2026-13-45", null, null, PB);
   a.eq(r.weekday, null, "the date could not be read");
   a.eq(r.todayType, null, "so no day type is derived");
   a.eq(r.claimsToday, false, "and nothing is claimed about today - the part that is right");
@@ -10310,7 +10344,7 @@ T("DT1 / a date that ROLLS OVER makes a confident claim about a day that does no
      are cosmetic next to the confident claim, which is closed. */
   a.ok(!isNaN(Date.parse("2026-02-30T12:00:00")), "V8 parses it rather than rejecting it - which is WHY the round trip is needed");
   a.eq(P.wdOf("2026-02-30"), null, "FIXED: a day the calendar never had has no weekday");
-  var r = P.dietTargets("2026-02-30");
+  var r = P.dietTargets("2026-02-30", null, null, PB);
   a.eq(r.claimsToday, false, "FIXED: the app makes no claim about a date that does not exist");
   a.eq(r.label, "Training day", "FIXED: no `Today -` prefix");
   a.ok(r.label.indexOf("Today") === -1, "FIXED: the word Today appears nowhere in the label");
@@ -10325,7 +10359,7 @@ T("DT1 / a date that ROLLS OVER makes a confident claim about a day that does no
   a.eq(r.reason, "manual", "OBSERVED residual: still says manual when nothing was switched");
   /* the real leap day, which is not a defect at all */
   a.eq(P.wdOf("2024-02-29"), "Thu", "a real leap day reads correctly");
-  a.eq(P.dietTargets("2024-02-29").dayType, "training", "and lands on the day type Thursday says");
+  a.eq(P.dietTargets("2024-02-29", null, null, PB).dayType, "training", "and lands on the day type Thursday says");
 });
 
 T("DT1 / an UNREADABLE date falls back to the real local date and still advises", function(a){
@@ -10336,7 +10370,7 @@ T("DT1 / an UNREADABLE date falls back to the real local date and still advises"
   var todayReal = P.localDate(), i, r;
   var junk = ["", " ", "not-a-date", "2026-9-1", "13/09/2026", null, undefined, 42, {}, [], NaN];
   for (i = 0; i < junk.length; i++) {
-    r = P.dietTargets(junk[i]);
+    r = P.dietTargets(junk[i], null, null, PB);
     a.eq(r.date, todayReal, "fallback for " + show(junk[i]));
     a.eq(r.weekday, P.wdOf(todayReal), "and the weekday of the real today");
     a.oneOf(r.dayType, ["training", "rest"]);
@@ -10345,15 +10379,15 @@ T("DT1 / an UNREADABLE date falls back to the real local date and still advises"
 
 T("DT1 / an unusable PLAN falls back to PHAT, and an empty one declares no schedule", function(a){
   var i, r, junk = [null, undefined, 42, "PHAT", true, {}, [], { days: "x" }, { days: null }];
-  var phat = JSON.stringify(P.dietTargets(DTW.Sun, P.PHAT_PLAN));
+  var phat = JSON.stringify(P.dietTargets(DTW.Sun, P.PHAT_PLAN, null, PB));
   for (i = 0; i < junk.length; i++) {
-    r = P.dietTargets(DTW.Sun, junk[i]);
+    r = P.dietTargets(DTW.Sun, junk[i], null, PB);
     a.eq(JSON.stringify(r), phat, "plan " + show(junk[i]) + " must answer exactly as PHAT does");
   }
   /* a plan document with zero days is a DIFFERENT thing from rubbish: it is a
      real plan that declares no schedule, and it must not silently answer as
      PHAT */
-  r = P.dietTargets(DTW.Sun, { days: [] });
+  r = P.dietTargets(DTW.Sun, { days: [] }, null, PB);
   a.eq(r.reason, "no-schedule");
   a.eq(r.claimsToday, false);
   a.deep(r.trainingDays, []);
@@ -10396,8 +10430,8 @@ T("DT1 / DST - the weekday never moves, three years of dates in this device's re
   /* the transition dates most zones use, named so a failure says which */
   ["2026-03-08", "2026-03-29", "2026-10-25", "2026-11-01", "2026-04-05", "2026-10-04"].forEach(function(x){
     a.eq(P.wdOf(x), "Sun", x + " is a Sunday in every timezone on earth");
-    a.eq(P.dietTargets(x).dayType, "rest", x + " must be a rest day");
-    a.eq(P.dietTargets(x).label, DT_REST_TODAY, x);
+    a.eq(P.dietTargets(x, null, null, PB).dayType, "rest", x + " must be a rest day");
+    a.eq(P.dietTargets(x, null, null, PB).label, DT_REST_TODAY, x);
   });
 });
 
@@ -10407,7 +10441,7 @@ T("DT1 / month, year and leap boundaries land on the right day type", function(a
                "2026-03-01", "2026-06-30", "2026-07-01", "2026-12-31", "2027-01-01",
                "2024-02-28", "2024-02-29", "2024-03-01", "2028-02-29"];
   for (i = 0; i < edges.length; i++) {
-    r = P.dietTargets(edges[i]);
+    r = P.dietTargets(edges[i], null, null, PB);
     want = rest.indexOf(P.wdOf(edges[i])) >= 0 ? "rest" : "training";
     a.eq(r.dayType, want, edges[i] + " (" + P.wdOf(edges[i]) + ")");
     a.eq(r.date, edges[i], "the date is carried through unchanged");
@@ -10490,11 +10524,11 @@ T("DT1 / the returned object's shape is stable across every branch", function(a)
   a.eq(bad.slice(0, 3).join(" | ") || "none", "none", "every branch returns the same 22 keys");
   /* derived and manual are not the same question as claimsToday, and a caller
      that confuses them is how the label goes wrong again */
-  var d = P.dietTargets(DTW.Sun);
+  var d = P.dietTargets(DTW.Sun, null, null, PB);
   a.eq(d.derived, true); a.eq(d.manual, false); a.eq(d.claimsToday, true);
-  var m = P.dietTargets(DTW.Sun, null, "training");
+  var m = P.dietTargets(DTW.Sun, null, "training", PB);
   a.eq(m.derived, false); a.eq(m.manual, true); a.eq(m.claimsToday, false);
-  var s = P.dietTargets(DTW.Sun, null, "rest");
+  var s = P.dietTargets(DTW.Sun, null, "rest", PB);
   a.eq(s.derived, false, "he tapped REST on a Sunday - that is still a manual switch");
   a.eq(s.manual, true);
   a.eq(s.claimsToday, true, "but it agrees with today, so the app may say Today");
@@ -10502,19 +10536,19 @@ T("DT1 / the returned object's shape is stable across every branch", function(a)
 });
 
 T("DT1 / timing copy follows the day SHOWN, and the two blocks never mix", function(a){
-  var tr = P.dietTargets(DTW.Mon), re = P.dietTargets(DTW.Sun);
+  var tr = P.dietTargets(DTW.Mon, null, null, PB), re = P.dietTargets(DTW.Sun, null, null, PB);
   a.eq(tr.timing.heading, "Carb placement");
   a.eq(re.timing.heading, "Rest-day watch item");
   a.ok(tr.timing.text.indexOf("two hours before lifting") >= 0);
   a.ok(re.timing.text.indexOf("60 g, not zero") >= 0);
   a.eq(tr.timing.text.indexOf("60 g, not zero"), -1, "a training day must not carry the rest-day watch item");
   a.eq(re.timing.text.indexOf("two hours before lifting"), -1, "and a rest day must not carry carb placement");
-  a.eq(P.dietTargets(DTW.Sun, null, "training").timing.heading, "Carb placement");
-  a.eq(P.dietTargets(DTW.Mon, null, "rest").timing.heading, "Rest-day watch item");
+  a.eq(P.dietTargets(DTW.Sun, null, "training", PB).timing.heading, "Carb placement");
+  a.eq(P.dietTargets(DTW.Mon, null, "rest", PB).timing.heading, "Rest-day watch item");
 });
 
 T("DT1 / trainingDays and restDays are the plan's, in Mon..Sun order, and disjoint", function(a){
-  var r = P.dietTargets(DTW.Sun), i, all, seq = [];
+  var r = P.dietTargets(DTW.Sun, null, null, PB), i, all, seq = [];
   a.deep(r.trainingDays, P.planTrainingWeekdays(P.PHAT_PLAN));
   a.deep(r.restDays, P.planRestWeekdays(P.PHAT_PLAN));
   all = r.trainingDays.concat(r.restDays);
@@ -10590,6 +10624,10 @@ function E3STORE(){
   var d = P.demoStore(42), log = clone(d.log), bw = clone(d.bw), i;
   delete log.demo; delete bw.demo;
   for (i = 0; i < log.sessions.length; i++) delete log.sessions[i].demo;
+  /* WO-008 W4: a store of this build carries the profile key (see E3LOG).
+     null here, not the brief's stamp - the round-trip must hold for both and
+     the unstamped one is the one a restore would otherwise re-ask. */
+  log.profile = null;
   return { log: log, bw: bw };
 }
 /* A session in the shape the SAVE PATH writes today, hand-built so the test
@@ -10599,9 +10637,14 @@ function E3SESS(id, date, dayId, w, r){
            entries: { d1a: { sets: [{ w: w === undefined ? 100 : w, r: r === undefined ? 5 : r }], note: "",
                              rx: { s: 3, lo: 3, hi: 5, k: "power" } } } };
 }
+/* `profile: null` since WO-008 W4: every log store THIS build writes carries
+   the key (the boot default is null, "asked, could not tell"), and a
+   restored log_meta that lacks it is given null by restorePayload - so the
+   round-trip pins below hold for a store of this build exactly as before.
+   A pre-W4 log_meta (no key) is S36's: it gains null and one note. */
 function E3LOG(sessions, extra){
   var log = { schemaVersion: P.SCHEMA_VERSION, sessions: sessions, includeCut: false,
-              reintro: 0, lastReintroDate: null, calChangedAt: null, deload: null }, k;
+              reintro: 0, lastReintroDate: null, calChangedAt: null, deload: null, profile: null }, k;
   if (extra) for (k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) log[k] = extra[k];
   return log;
 }
@@ -12265,8 +12308,11 @@ T("PV1 (D5) - provenance survives placement only when the power days are intact:
   a.eq(P.phatProvenance(B), false);
   /* through ST1: the same stalled log, two plans, two sentences */
   var S = W3STALLED();
-  var sa = P.stallAdvice({ plan: pa, sessions: S, todayStr: TODAY, state: STORE() });
-  var sb = P.stallAdvice({ plan: B, sessions: S, todayStr: TODAY, state: STORE() });
+  /* C7c (WO-008 W4): the brief's diagnosis needs the diet profile as well as
+     provenance. Reading A is Chady's stamped store; reading B passes it too,
+     so that the sentence it loses is lost to provenance and nothing else. */
+  var sa = P.stallAdvice({ plan: pa, sessions: S, todayStr: TODAY, state: STORE(), profile: PB });
+  var sb = P.stallAdvice({ plan: B, sessions: S, todayStr: TODAY, state: STORE(), profile: PB });
   a.eq(sa.state, "stalled"); a.eq(sb.state, "stalled");
   a.eq(sa.provenance, "phat"); a.eq(sb.provenance, "generic");
   a.ok(sa.lines.join(" ").indexOf("The split isn't the problem and neither is the diet.") >= 0, "reading A: the brief's diagnosis");
@@ -12591,6 +12637,614 @@ T("W5 B1 - the new controls' hit areas at 400 px, 100 % and 200 % text, transcri
      clientHeight) with Not now inside the viewport (bottom 834 of 850, and
      644 of 660) - "Already proven" item 31 */
 });
+
+group("S36 WO-008 W4 / two users / B-88 storeOwner / Rule PR1 / Rule C7c / the profile pass");
+
+/* ---- WO-008 W4 (backend). Two pure decisions and one pass:
+     (a) B-88 - a device's stores belong to the account that first backed
+         them up. storeOwner decides, backupOwner reads the stamp in both
+         shapes, ownerRefusal carries UX spec §18.5's three sentences.
+     (b) Rule PR1 (coach addendum §16.2) - calorieAdvice and dietTargets take
+         the log store's `profile` and FAIL CLOSED: anything but the brief's
+         stamp is ABSENT, and for the stamp every byte is what it was.
+         Rule C7c (§16.7) - ST1's brief diagnosis needs the stamp as well as
+         provenance.
+     (c) The profile pass - stamps on EVIDENCE, writes null when it cannot
+         tell, runs once per store, never reads schemaVersion (§16.8).
+   THE HEADLINE PIN IS THE LAST GROUP: a stamped store renders exactly what
+   main @ 9ee456f rendered, byte for byte, on frozen literals generated from
+   that commit's logic.js under node on 2026-09-12. */
+
+/* Deterministic bodyweight fixture on a FIXED date (not TODAY): n daily rows
+   ending on S36T at 85 kg plus `rate` kg/week, rounded to 2dp. The frozen
+   literals below were generated from exactly this. */
+var S36T = "2026-09-12";
+function S36BW(rate, n){
+  var out = [], i, k = n === undefined ? 14 : n;
+  for (i = k - 1; i >= 0; i--) out.push({ date: P.dateAdd(S36T, -i), kg: Math.round((85 + (k - 1 - i) * rate / 7) * 100) / 100 });
+  return out;
+}
+/* A pre-W4 log store: schema 5, NO profile key. */
+function S36PRE(over){
+  var s = { schemaVersion: 5, sessions: [], includeCut: false, reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null }, k;
+  if (over) for (k in over) if (Object.prototype.hasOwnProperty.call(over, k)) s[k] = over[k];
+  return s;
+}
+
+/* ------------------------------------------------------ 0. surface, and the no-bump pin */
+
+T("W4 - the surface: storeOwner, backupOwner, ownerRefusal, profilePass, isPhatBrief, V_PROFILE, the two ABSENT copies; SCHEMA_VERSION is still 5", function(a){
+  ["storeOwner", "backupOwner", "ownerRefusal", "profilePass", "isPhatBrief"].forEach(function(n){ a.isFn(P[n], n); });
+  a.eq(P.SCHEMA_VERSION, 5, "NO SCHEMA BUMP. The profile is an additive key gated on its own presence, never on age (§16.8)");
+  a.eq(P.V_PROFILE, 1, "the pass's own number - a constant a second pass would be gated apart by; never compared to schemaVersion");
+  a.eq(P.PROFILE_PHAT_BRIEF, "phat-brief");
+  a.deep(P.W1_ABSENT, ["No diet protocol on this account.", "The app reports your weight and says nothing about what to eat."], "§16.2 Weight, verbatim");
+  a.eq(P.DIET_ABSENT.kicker, "Diet"); a.eq(P.DIET_ABSENT.kickerSub, "No targets");
+  a.deep(P.DIET_ABSENT.lines, ["No diet targets on this account.", "The app cannot work them out from a training log, and it will not guess."], "§16.2 Diet, verbatim");
+  a.ok(Object.isFrozen(P.DIET_ABSENT) && Object.isFrozen(P.DIET_ABSENT.lines), "frozen: nothing may push onto the coach's copy");
+  a.eq(P.calorieAdvice.length, 4); a.eq(P.dietTargets.length, 4);
+});
+
+T("W4 - isPhatBrief is the one test: exactly an object whose diet is the brief's name; every other value is not a profile", function(a){
+  a.eq(P.isPhatBrief({ diet: "phat-brief" }), true);
+  a.eq(P.isPhatBrief({ diet: "phat-brief", authoredBy: "coach" }), true, "an additive B-93 field on the brief's profile does not lock the tab (the NAME is the test, §16.6)");
+  [undefined, null, "", "phat-brief", true, 1, {}, [], { diet: null }, { diet: "PHAT-BRIEF" }, { diet: "phat-brief " },
+   { diet: "custom" }, { diet: "phat" }, { profile: "phat-brief" }, ["phat-brief"]].forEach(function(x){
+    a.eq(P.isPhatBrief(x), false, "not a profile: " + show(x));
+  });
+});
+
+/* ------------------------------------------------------ 1. B-88: storeOwner truth table */
+
+T("B-88 - storeOwner truth table: null owner + data claims; same account owns; different account with data is REFUSED; an empty device may be claimed by anyone", function(a){
+  a.deep(P.storeOwner({ ownerId: null, userId: "A", hasData: true }),  { allowed: true,  reason: "claim" },   "first push claims the device");
+  a.deep(P.storeOwner({ ownerId: "A",  userId: "A", hasData: true }),  { allowed: true,  reason: "owner" },   "the owner backs up");
+  a.deep(P.storeOwner({ ownerId: "A",  userId: "B", hasData: true }),  { allowed: false, reason: "foreign" }, "THE BUG: B on A's phone. Refused.");
+  a.deep(P.storeOwner({ ownerId: "A",  userId: "B", hasData: false }), { allowed: true,  reason: "fresh" },   "nothing on the device: the second-phone case, and a stale stamp protects nothing");
+  a.deep(P.storeOwner({ ownerId: null, userId: "B", hasData: false }), { allowed: true,  reason: "fresh" });
+  a.deep(P.storeOwner({ ownerId: "A",  userId: "A", hasData: false }), { allowed: true,  reason: "fresh" });
+});
+
+T("B-88 - storeOwner fails closed on a missing user, and treats a blank or non-string id as absent", function(a){
+  a.deep(P.storeOwner({ ownerId: "A", userId: null, hasData: true }), { allowed: false, reason: "no-user" });
+  a.deep(P.storeOwner({ ownerId: "A", userId: "",   hasData: true }), { allowed: false, reason: "no-user" });
+  a.deep(P.storeOwner({ ownerId: "A", userId: "  ", hasData: true }), { allowed: false, reason: "no-user" });
+  a.deep(P.storeOwner({ ownerId: "A", userId: 42,   hasData: true }), { allowed: false, reason: "no-user" });
+  a.deep(P.storeOwner({ ownerId: "",  userId: "B", hasData: true }), { allowed: true, reason: "claim" }, "a blank owner is no owner");
+  a.deep(P.storeOwner({ ownerId: 7,   userId: "B", hasData: true }), { allowed: true, reason: "claim" }, "a non-string owner is no owner");
+  a.deep(P.storeOwner({ ownerId: "A", userId: "B", hasData: "yes" }), { allowed: true, reason: "fresh" }, "hasData is a boolean: only `true` is data");
+  a.deep(P.storeOwner({ ownerId: "A", userId: "B" }), { allowed: true, reason: "fresh" }, "hasData omitted reads as no data - the CALLER must pass !D.empty from disk, and index.html does");
+  a.deep(P.storeOwner(), { allowed: false, reason: "no-user" }); a.deep(P.storeOwner(null), { allowed: false, reason: "no-user" }); a.deep(P.storeOwner("A"), { allowed: false, reason: "no-user" });
+});
+
+T("B-88 - the refusal is a VALUE. storeOwner, backupOwner and ownerRefusal mutate nothing they are handed and touch no store", function(a){
+  var q = { ownerId: "A", userId: "B", hasData: true }, q0 = JSON.stringify(q);
+  var b = { at: 1, sig: "x", user: { id: "A", email: "a@x" }, n: 1, m: 0, x: 0 }, b0 = JSON.stringify(b);
+  P.storeOwner(q); P.backupOwner(b); P.ownerRefusal("auto", P.backupOwner(b), "b@x"); P.ownerRefusal("restore", P.backupOwner(b), "b@x");
+  a.eq(JSON.stringify(q), q0); a.eq(JSON.stringify(b), b0);
+  /* the byte-identity of phat:v1:log / bw / plans / prefs under a refusal is
+     index.html's to keep: it returns before any save() and before the pull.
+     What the pure layer can prove is that nothing here CAN write: the suite
+     tripwire at the end asserts no phat:* key was touched during this run. */
+});
+
+/* ------------------------------------------------------ 2. B-88: the stamp in both shapes */
+
+T("B-88 - backupOwner reads the E-3 string stamp AND the {id, email} stamp; a string stamp has no email and says so", function(a){
+  a.deep(P.backupOwner({ at: 1, user: "uid-a" }), { id: "uid-a", email: null }, "E-3 wrote the id as a string");
+  a.deep(P.backupOwner({ at: 1, user: { id: "uid-a", email: "chady@x" } }), { id: "uid-a", email: "chady@x" });
+  a.deep(P.backupOwner({ at: 1, user: { id: "uid-a" } }), { id: "uid-a", email: null });
+  a.deep(P.backupOwner({ at: 1, user: { id: "uid-a", email: "" } }), { id: "uid-a", email: null }, "a blank email is no email");
+  a.deep(P.backupOwner({ at: 1, user: { id: "uid-a", email: 7 } }), { id: "uid-a", email: null });
+  [null, undefined, "uid-a", 1, [], {}, { at: 1 }, { user: "" }, { user: "  " }, { user: null }, { user: {} }, { user: { id: "" } }, { user: { id: 5 } }, { user: { email: "x@y" } }].forEach(function(x){
+    a.eq(P.backupOwner(x), null, "no owner from " + show(x));
+  });
+});
+
+T("B-88 - ownerRefusal: the three sentences, verbatim from UX spec §18.5 R-a / R-b / R-c, naming the owner's email and what did NOT happen", function(a){
+  var o = { id: "A", email: "chady@x" };
+  a.eq(P.ownerRefusal("auto", o, "diana@x"),
+    "This device's log belongs to chady@x. Nothing was backed up to diana@x. Sign in as chady@x to back it up.", "R-a, the automatic push");
+  a.eq(P.ownerRefusal("manual", o, "diana@x"),
+    "Not backed up. This device's log belongs to chady@x, not to diana@x. Sign in as chady@x to back it up.", "R-b, BACK UP NOW");
+  a.eq(P.ownerRefusal("restore", o, "diana@x"),
+    "Not restored. This device's log belongs to chady@x. The backup under diana@x was not read and nothing on this device changed. Sign in as chady@x to restore.", "R-c, Restore from backup");
+  a.eq(P.ownerRefusal("anything-else", o, "diana@x"), P.ownerRefusal("auto", o, "diana@x"), "an unknown kind is the automatic sentence, never silence");
+  ["auto", "manual", "restore"].forEach(function(k){
+    var s = P.ownerRefusal(k, o, "diana@x");
+    a.eq(s.indexOf("!"), -1, "no exclamation mark"); a.ok(s.indexOf("chady@x") >= 0 && s.indexOf("diana@x") >= 0, "both accounts named");
+  });
+});
+
+T("B-88 - ownerRefusal with an unknown owner (a string stamp migrated offline): `another account` and `Sign in as that account`; the app invents no address", function(a){
+  var o = { id: "A", email: null };
+  a.eq(P.ownerRefusal("manual", o, "diana@x"),
+    "Not backed up. This device's log belongs to another account, not to diana@x. Sign in as that account to back it up.", "§18.5's own worked substitution");
+  a.eq(P.ownerRefusal("auto", o, "diana@x"),
+    "This device's log belongs to another account. Nothing was backed up to diana@x. Sign in as that account to back it up.");
+  a.eq(P.ownerRefusal("restore", o, "diana@x"),
+    "Not restored. This device's log belongs to another account. The backup under diana@x was not read and nothing on this device changed. Sign in as that account to restore.");
+  a.eq(P.ownerRefusal("manual", null, "diana@x"), P.ownerRefusal("manual", o, "diana@x"), "no owner object at all reads the same way");
+  a.eq(P.ownerRefusal("manual", o, ""),
+    "Not backed up. This device's log belongs to another account, not to this account. Sign in as that account to back it up.", "and a signed-in account with no email is `this account`");
+});
+
+/* ------------------------------------------------------ 3. the profile pass */
+
+T("PROFILE PASS - a fresh pre-W4 store with no evidence is asked, answered null, and never stamped; sessions and every other key byte-identical", function(a){
+  var s = S36PRE(), s0 = JSON.stringify(s);
+  var r = P.profilePass(s, { bwCount: 0 });
+  a.eq(r.asked, true); a.eq(r.stamped, false); a.eq(r.changed, true, "null IS a write: the store must carry the key so it is never asked again");
+  a.eq(r.log.profile, null); a.ok(Object.prototype.hasOwnProperty.call(r.log, "profile"), "own key, value null");
+  a.deep(r.evidence, []);
+  a.match(r.note.msg, /^Profile pass 1: no evidence of use; profile set to null\. Nothing else was changed\.$/);
+  a.eq(JSON.stringify(s), s0, "the input is not mutated");
+  var k, c = {}; for (k in r.log) if (k !== "profile") c[k] = r.log[k];
+  a.eq(JSON.stringify(c), s0, "every other key and value is byte-identical");
+  a.eq(r.log.schemaVersion, 5, "schemaVersion untouched - this is not a migration");
+});
+
+T("PROFILE PASS - each evidence stamps the brief: utcDatedBefore (a store older than WO-001), a session, a bodyweight entry, a calorie stamp", function(a){
+  var cases = [
+    ["utcDatedBefore", S36PRE({ utcDatedBefore: "2026-09-09" }), 0],
+    ["sessions",       S36PRE({ sessions: [E3SESS(1, "2026-09-09")] }), 0],
+    ["bodyweight",     S36PRE(), 1],
+    ["calChangedAt",   S36PRE({ calChangedAt: "2026-09-10" }), 0]
+  ], i, r, s0;
+  for (i = 0; i < cases.length; i++) {
+    s0 = JSON.stringify(cases[i][1]);
+    r = P.profilePass(cases[i][1], { bwCount: cases[i][2] });
+    a.eq(r.stamped, true, cases[i][0] + " is evidence"); a.eq(r.changed, true);
+    a.deep(r.log.profile, { diet: "phat-brief" }, cases[i][0] + ": the brief's stamp, exactly");
+    a.deep(r.evidence, [cases[i][0]], "the note names its evidence");
+    a.match(r.note.msg, new RegExp("^Profile pass 1: stamped diet phat-brief on evidence \\(" + cases[i][0] + "\\)\\. Nothing else was changed\\.$"));
+    a.eq(JSON.stringify(cases[i][1]), s0, "input not mutated");
+    a.eq(JSON.stringify(r.log.sessions), JSON.stringify(cases[i][1].sessions), "sessions[] byte-identical");
+  }
+  r = P.profilePass(S36PRE({ utcDatedBefore: "2026-09-09", sessions: [E3SESS(1, "2026-09-09")], calChangedAt: "2026-09-10" }), { bwCount: 3 });
+  a.deep(r.evidence, ["utcDatedBefore", "sessions", "bodyweight", "calChangedAt"], "all four, in a fixed order");
+});
+
+T("PROFILE PASS - the §16.8 hazard: a store that already carries the key is NEVER asked again, whatever evidence it has gained since", function(a){
+  /* Diana's phone. Her first save writes profile:null (index.html's boot
+     default). A week later the store holds seven sessions and a weight. */
+  var s = S36PRE({ profile: null, sessions: [E3SESS(1, "2026-09-14"), E3SESS(2, "2026-09-15")] });
+  var r = P.profilePass(s, { bwCount: 4 });
+  a.eq(r.asked, false); a.eq(r.stamped, false); a.eq(r.changed, false);
+  a.ok(r.log === s, "the same reference comes back: nothing to write");
+  a.eq(r.note, null);
+  /* THE COUNTERFACTUAL, written down so the reason for the null is visible:
+     the identical store WITHOUT the key would be stamped on its sessions.
+     That is why every store this build creates carries the key from birth. */
+  var t = S36PRE({ sessions: [E3SESS(1, "2026-09-14"), E3SESS(2, "2026-09-15")] });
+  a.eq(P.profilePass(t, { bwCount: 4 }).stamped, true, "counterfactual: no key + her sessions = his diet. The key is the guard.");
+});
+
+T("PROFILE PASS - idempotent: a second pass over its own output changes nothing, for the stamped store and for the null one", function(a){
+  var st = P.profilePass(S36PRE({ sessions: [E3SESS(1, "2026-09-09")] }), { bwCount: 0 }).log;
+  var nu = P.profilePass(S36PRE(), { bwCount: 0 }).log;
+  var r1 = P.profilePass(st, { bwCount: 0 }), r2 = P.profilePass(nu, { bwCount: 9 });
+  a.eq(r1.changed, false); a.ok(r1.log === st); a.deep(st.profile, { diet: "phat-brief" });
+  a.eq(r2.changed, false); a.ok(r2.log === nu); a.eq(nu.profile, null, "and evidence arriving later does not flip a null");
+});
+
+T("PROFILE PASS - a demo store is nobody's: sessions and all, it is answered null, never stamped", function(a){
+  var d = P.demoStore(42), log = clone(d.log);
+  a.eq(log.demo, true); a.ok(log.sessions.length > 0);
+  var r = P.profilePass(log, { bwCount: d.bw.entries.length });
+  a.eq(r.asked, true); a.eq(r.stamped, false); a.eq(r.log.profile, null);
+  a.deep(r.evidence, [], "a demo store's rows are not evidence of a person");
+  a.match(r.note.msg, /\(demo store\)/);
+});
+
+T("PROFILE PASS - nothing is invented: an absent, null or non-object log store comes back as it was, changed:false, and a throw is caught", function(a){
+  [undefined, null, "log", 5, [], true].forEach(function(x){
+    var r = P.profilePass(x, { bwCount: 3 });
+    a.eq(r.changed, false, "no change for " + show(x)); a.eq(r.stamped, false); a.eq(r.asked, false);
+    a.ok(r.log === x, "same value back for " + show(x)); a.eq(r.note, null);
+  });
+  a.eq(P.profilePass(S36PRE(), undefined).changed, true, "ev omitted: bwCount reads as 0, the store is still asked");
+  a.eq(P.profilePass(S36PRE(), { bwCount: "3" }).stamped, false, "a bwCount that is not a number is not evidence");
+  a.eq(P.profilePass(S36PRE({ sessions: "not an array" }), {}).stamped, false, "sessions that is not an array is not evidence");
+  a.eq(P.profilePass(S36PRE({ utcDatedBefore: "" }), {}).stamped, false, "an empty utcDatedBefore is not evidence");
+  a.eq(P.profilePass(S36PRE({ calChangedAt: "" }), {}).stamped, false, "an empty calChangedAt is not evidence");
+});
+
+T("PROFILE PASS - a store one byte short (schema 3, no profile) still loads: migrateStore brings it to 5 WITHOUT a profile key, then the pass stamps it on its sessions; sessions[] and entries[] byte-identical end to end", function(a){
+  var v3 = STORE({ sessions: [E3SESS(1, "2026-09-09", "d1", 100, 5), E3SESS(2, "2026-09-10", "d2", 120, 3)] });
+  var bw = { schemaVersion: 3, entries: [{ date: "2026-09-09", kg: 85 }] };
+  var s0 = JSON.stringify(v3.sessions), e0 = JSON.stringify(bw.entries);
+  var m = P.migrateStore(v3, bw);
+  a.eq(m.log.schemaVersion, 5); a.eq(Object.prototype.hasOwnProperty.call(m.log, "profile"), false, "migrateStore adds NO profile key - the pass is not a schema pass");
+  var r = P.profilePass(m.log, { bwCount: m.bw.entries.length });
+  a.eq(r.stamped, true); a.deep(r.evidence, ["sessions", "bodyweight"]);
+  a.eq(JSON.stringify(r.log.sessions), s0, "sessions[] byte-identical through both passes");
+  a.eq(JSON.stringify(m.bw.entries), e0, "entries[] untouched");
+  a.eq(P.migrateStore(r.log, m.bw).changed, false, "and the stamped store is a settled schema-5 store to migrateStore");
+  /* a v1 store with utcDatedBefore set by the v2 pass is stamped on that alone */
+  var v1 = { sessions: [], includeCut: false }, bw1 = { entries: [{ date: "2026-01-10", kg: 84 }] };
+  var m1 = P.migrateStore(v1, bw1);
+  a.ok(typeof m1.log.utcDatedBefore === "string", "the v2 pass marks it");
+  a.deep(P.profilePass(m1.log, { bwCount: 0 }).evidence, ["utcDatedBefore"], "older than WO-001: his, [Certain]");
+});
+
+T("PROFILE PASS - restorePayload: a backup whose log_meta carries the stamp brings it down untouched; one that carries null keeps null; one that lacks the key (pre-W4 backup) gets null and a note, so the pass never re-asks a restored store", function(a){
+  var bp = P.backupPayload(E3LOG([E3SESS(1, "2026-09-09")], { profile: { diet: "phat-brief" } }), E3BW([]), undefined);
+  a.deep(bp.logMeta.profile, { diet: "phat-brief" }, "the stamp rides logMeta into user_state.log_meta");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true); a.deep(rp.log.profile, { diet: "phat-brief" }); a.eq(rp.notes.length, 0);
+  a.eq(P.profilePass(rp.log, { bwCount: 0 }).changed, false, "a restored stamped store is not asked");
+  rp = P.restorePayload(ROWS(P.backupPayload(E3LOG([E3SESS(1, "2026-09-09")]), E3BW([]), undefined)));
+  a.eq(rp.log.profile, null); a.eq(rp.notes.length, 0, "null round-trips silently");
+  var rows = ROWS(P.backupPayload(E3LOG([E3SESS(1, "2026-09-09")]), E3BW([]), undefined));
+  delete rows.user_state.log_meta.profile;
+  rp = P.restorePayload(rows);
+  a.eq(rp.ok, true); a.eq(rp.log.profile, null); a.ok(Object.prototype.hasOwnProperty.call(rp.log, "profile"));
+  a.deep(rp.notes, ["log_meta had no profile; set to null (no diet protocol)"]);
+  a.eq(P.profilePass(rp.log, { bwCount: 0 }).changed, false, "THE RESTORE-SHAPED HAZARD: a pre-W4 backup with sessions, restored, is NOT then stamped by the pass");
+  rp = P.restorePayload(ROWS(P.backupPayload(E3LOG([]), E3BW([]), undefined), { noUserState: true }));
+  a.eq(rp.log.profile, null, "no user_state row at all: null as well");
+});
+
+/* ------------------------------------------------------ 4. Rule PR1 - calorieAdvice */
+
+T("PR1 - calorieAdvice with NO profile is ABSENT at every data state: empty, need-history, thin B, thin A, every band, cooldown, hold - no rate, no band, no hold, no mean, the two lines verbatim", function(a){
+  var cases = {
+    "empty": [[], S36T, null],
+    "need-history": [S36BW(0.25, 10), S36T, null],
+    "on-target": [S36BW(0.25), S36T, null],
+    "flat": [S36BW(0), S36T, null],
+    "losing": [S36BW(-0.4), S36T, null],
+    "cut": [S36BW(0.8), S36T, null],
+    "cooldown": [S36BW(0.8), S36T, P.dateAdd(S36T, -2)],
+    "hold-note": [S36BW(0.25), S36T, P.dateAdd(S36T, -2)],
+    "thin-b": [S36BW(0.25).filter(function(e, i){ return i < 7 || i === 13; }), S36T, null],
+    "thin-a": [S36BW(0.25).filter(function(e, i){ return i === 0 || i >= 7; }), S36T, null]
+  }, k, r, expect = JSON.stringify({
+    state: "absent", rate: null, text: "", subline: "", tone: "none", aCount: 0, bCount: 0, meanA: null, meanB: null,
+    daysAgo: null, holdUntil: null, holdNote: "", absent: true,
+    absentLines: ["No diet protocol on this account.", "The app reports your weight and says nothing about what to eat."],
+    absentLine: "No diet protocol on this account. The app reports your weight and says nothing about what to eat."
+  });
+  for (k in cases) {
+    r = P.calorieAdvice(cases[k][0], cases[k][1], cases[k][2]);
+    a.eq(JSON.stringify(r), expect, k + ": the one ABSENT object, whatever the data");
+    a.eq(strOf(r).indexOf("kg per week"), -1, k + ": no kg-per-week anywhere"); a.eq(strOf(r).indexOf("kcal"), -1, k + ": no kcal anywhere");
+    a.eq(strOf(r).indexOf("Hold"), -1, k + ": no hold anywhere");
+  }
+  /* the MEASUREMENT is not gated: the same entries still give the Weight tab its average and rate */
+  var w = P.bwWindows(cases["on-target"][0], S36T);
+  a.eq(w.rate, 0.25, "bwWindows still returns the rate - it is the scale's, not the protocol's");
+  a.eq(w.bCount, 7); a.ok(w.meanB > 85);
+});
+
+T("PR1 - calorieAdvice fails CLOSED on every non-profile value in the fourth slot; a caller that passes nothing gets ABSENT", function(a){
+  var e = S36BW(0.25);
+  [undefined, null, "phat-brief", true, 1, {}, { diet: "custom" }, { diet: "PHAT-BRIEF" }, { diet: null }, ["phat-brief"], { profile: { diet: "phat-brief" } }].forEach(function(x){
+    var r = P.calorieAdvice(e, S36T, null, x);
+    a.eq(r.absent, true, "ABSENT for " + show(x)); a.eq(r.state, "absent"); a.eq(r.rate, null); a.eq(r.text, "");
+  });
+  a.eq(P.calorieAdvice(e, S36T, null).absent, true, "three arguments - the pre-W4 call shape - is ABSENT");
+  a.eq(P.calorieAdvice(e, S36T, null, PB).state, "on-target", "and the same call with the stamp is the band");
+  a.eq(P.calorieAdvice(e, S36T, null, { diet: "phat-brief", authoredBy: "coach" }).state, "on-target", "an additive field on the brief's profile still runs it");
+});
+
+T("PR1 HEADLINE - calorieAdvice with the brief's profile is BYTE-IDENTICAL to main @ 9ee456f: eight states against literals frozen from that commit's logic.js", function(a){
+  /* Generated 2026-09-12 by loading `git show main:logic.js` under node and
+     calling calorieAdvice(entries, "2026-09-12", calChangedAt) with S36BW.
+     If this fails, a string, a band or a field of Chady's advice moved. */
+  var frozen = {
+    "empty":        '{"state":"empty","rate":null,"text":"","subline":"","tone":"none","aCount":0,"bCount":0,"meanA":null,"meanB":null,"daysAgo":null,"holdUntil":null,"holdNote":""}',
+    "need-history": '{"state":"need-history","rate":null,"text":"Weigh daily. 4 more days before this becomes a calorie decision.","subline":"","tone":"none","aCount":3,"bCount":7,"meanA":85.04,"meanB":85.21,"daysAgo":null,"holdUntil":null,"holdNote":""}',
+    "on-target":    '{"state":"on-target","rate":0.25,"text":"+0.25 kg per week. On target. Change nothing.","subline":"Target: +0.2 to +0.3 kg per week. Averages over 14 days.","tone":"ok","aCount":7,"bCount":7,"meanA":85.11,"meanB":85.36,"daysAgo":null,"holdUntil":null,"holdNote":""}',
+    "flat":         '{"state":"flat","rate":0,"text":"Flat at +0.00 kg per week. Add 200 kcal to your training days.","subline":"Target: +0.2 to +0.3 kg per week. Averages over 14 days.","tone":"act","aCount":7,"bCount":7,"meanA":85,"meanB":85,"daysAgo":null,"holdUntil":null,"holdNote":""}',
+    "losing":       '{"state":"losing","rate":-0.4,"text":"Down 0.40 kg this week. You are not bulking. Add 200 kcal to your training days.","subline":"Target: +0.2 to +0.3 kg per week. Averages over 14 days.","tone":"act","aCount":7,"bCount":7,"meanA":84.83,"meanB":84.43,"daysAgo":null,"holdUntil":null,"holdNote":""}',
+    "cut":          '{"state":"cut","rate":0.8,"text":"Gaining too fast at +0.80 kg per week. Cut 200 kcal from training days.","subline":"Target: +0.2 to +0.3 kg per week. Averages over 14 days.","tone":"act","aCount":7,"bCount":7,"meanA":85.34,"meanB":86.14,"daysAgo":null,"holdUntil":null,"holdNote":""}',
+    "cooldown":     '{"state":"cooldown","rate":0.8,"text":"You changed calories 2 days ago. Hold until 17 Sep before changing again.","subline":"Target: +0.2 to +0.3 kg per week. Averages over 14 days.","tone":"hold","aCount":7,"bCount":7,"meanA":85.34,"meanB":86.14,"daysAgo":2,"holdUntil":"2026-09-17","holdNote":""}',
+    "hold-note":    '{"state":"on-target","rate":0.25,"text":"+0.25 kg per week. On target. Change nothing.","subline":"Target: +0.2 to +0.3 kg per week. Averages over 14 days.","tone":"ok","aCount":7,"bCount":7,"meanA":85.11,"meanB":85.36,"daysAgo":2,"holdUntil":"2026-09-17","holdNote":"You changed calories 2 days ago. Hold ends 17 Sep."}'
+  };
+  var args = {
+    "empty": [[], S36T, null], "need-history": [S36BW(0.25, 10), S36T, null], "on-target": [S36BW(0.25), S36T, null],
+    "flat": [S36BW(0), S36T, null], "losing": [S36BW(-0.4), S36T, null], "cut": [S36BW(0.8), S36T, null],
+    "cooldown": [S36BW(0.8), S36T, P.dateAdd(S36T, -2)], "hold-note": [S36BW(0.25), S36T, P.dateAdd(S36T, -2)]
+  }, k;
+  for (k in frozen) {
+    a.eq(JSON.stringify(P.calorieAdvice(args[k][0], args[k][1], args[k][2], PB)), frozen[k], k + ": byte-identical to main");
+  }
+  a.eq(Object.keys(P.calorieAdvice(S36BW(0.25), S36T, null, PB)).length, 12, "and no absent field is added to a stamped store's output - twelve keys, as before");
+});
+
+/* ------------------------------------------------------ 5. Rule PR1 - dietTargets */
+
+T("PR1 - dietTargets with NO profile is the WHOLE tab absent: kicker Diet, sub-kicker No targets, two lines, no figure, no sentence; the plan's schedule may come back, nothing renders from it", function(a){
+  var r = P.dietTargets(S36T);
+  a.eq(r.absent, true); a.eq(r.kicker, "Diet"); a.eq(r.kickerSub, "No targets");
+  a.deep(r.absentLines, ["No diet targets on this account.", "The app cannot work them out from a training log, and it will not guess."]);
+  a.eq(r.absentLine, "No diet targets on this account. The app cannot work them out from a training log, and it will not guess.");
+  ["kcal", "protein", "carb", "fat", "text", "dayType", "timing", "calibration", "nonNegotiables", "todayType"].forEach(function(k){ a.eq(r[k], null, k + " is null"); });
+  a.eq(r.label, ""); a.eq(r.weekly, ""); a.eq(r.medical, ""); a.eq(r.medicalUnderGrid, false); a.eq(r.claimsToday, false);
+  a.eq(r.date, S36T); a.eq(r.weekday, "Sat"); a.deep(r.trainingDays, ["Mon", "Tue", "Thu", "Fri", "Sat"]); a.deep(r.restDays, ["Wed", "Sun"]);
+  var s = strOf(r);
+  ["3,200", "2,500", "170", "175", "300", "145", "60 g", "kcal", "Creatine", "Protein every day", "dietitian", "surplus", "Carb placement", "Today", "training day", "rest day"].forEach(function(t){
+    a.eq(s.indexOf(t), -1, "no `" + t + "` anywhere in the ABSENT object");
+  });
+  /* every view and every weekday: still absent, still no number */
+  var d, v, days = ["2026-09-13", "2026-09-14", "2026-09-16"], views = [undefined, "training", "rest"], i, j;
+  for (i = 0; i < days.length; i++) for (j = 0; j < views.length; j++) {
+    d = P.dietTargets(days[i], P.PHAT_PLAN, views[j]);
+    a.eq(d.absent, true); a.eq(d.kcal, null); a.eq(d.manual, false, "a tapped segment cannot switch it on");
+  }
+  v = P.dietTargets(S36T, { planId: "p", name: "Mine", days: [] });
+  a.eq(v.absent, true, "on a user plan too"); a.deep(v.trainingDays, []);
+});
+
+T("PR1 - dietTargets fails CLOSED on every non-profile value; three arguments is ABSENT; the stamp runs it", function(a){
+  [undefined, null, "phat-brief", true, 1, {}, { diet: "custom" }, { diet: "PHAT-BRIEF" }].forEach(function(x){
+    a.eq(P.dietTargets(S36T, null, null, x).absent, true, "ABSENT for " + show(x));
+  });
+  a.eq(P.dietTargets(S36T, null, null).absent, true);
+  var r = P.dietTargets(S36T, null, null, PB);
+  a.eq(r.absent, undefined, "a stamped store's object carries no absent field at all - the shape is the pre-W4 shape");
+  a.eq(r.kcal, 3200); a.eq(r.label, "Today — high-carb training day");
+});
+
+T("PR1 HEADLINE - dietTargets with the brief's profile is BYTE-IDENTICAL to main @ 9ee456f: derived Saturday, manual training on a Sunday, derived Wednesday rest", function(a){
+  /* Frozen from `git show main:logic.js` under node, 2026-09-12. */
+  var CAL = '"calibration":{"heading":"Calibration","lines":["These targets are estimates from your height, weight and training load, not measurements. The bodyweight trend overrides them.","Weigh daily, same conditions. The Weight tab compares your last 7 days against the 7 before and tells you when to change something. It needs at least 5 weigh-ins in each of those weeks before it will say anything.","Not a dietitian. Rest-day fat is 175 g by design. If you have any cardiovascular or metabolic history, run this past a doctor before you run it for months."]},"nonNegotiables":{"heading":"Non-negotiables","lines":["Protein every day, rest days included.","Creatine monohydrate 5 g daily.","If the bar numbers do not move month over month, the surplus is being wasted."]},"medical":"Not a dietitian. Rest-day fat is 175 g by design. If you have any cardiovascular or metabolic history, run this past a doctor before you run it for months."';
+  var WEEKLY = '"weekly":"Weekly average ~3,000 kcal against an estimated 2,700 maintenance. The 300 is the surplus."';
+  var TRAIN = '"kcal":3200,"protein":170,"carb":300,"fat":145,"text":{"kcal":"3,200","protein":"170 g","carb":"300 g","fat":"145 g","strip":"3,200 · 170 g · 300 g · 145 g"}';
+  var REST = '"kcal":2500,"protein":175,"carb":60,"fat":175,"text":{"kcal":"2,500","protein":"175 g","carb":"60 g","fat":"175 g","strip":"2,500 · 175 g · 60 g · 175 g"}';
+  var SCHED = '"trainingDays":["Mon","Tue","Thu","Fri","Sat"],"restDays":["Wed","Sun"]';
+  var TIMING_T = '"timing":{"heading":"Carb placement","text":"80–100 g in the meal two hours before lifting, 80–100 g in the meal after, the rest spread across the day. Rice, potatoes, oats, fruit."}';
+  var TIMING_R = '"timing":{"heading":"Rest-day watch item","text":"60 g, not zero — vegetables, berries, a little dairy. Fat at 175 g is easy to overshoot because it\'s calorically dense; weigh it for the first two weeks."}';
+  var frozen = {
+    sat: '{"dayType":"training","label":"Today — high-carb training day",' + TRAIN + ',"date":"2026-09-12","weekday":"Sat","todayType":"training","claimsToday":true,"derived":true,"manual":false,"reason":null,' + SCHED + ',' + TIMING_T + ',' + WEEKLY + ',' + CAL + ',"medicalUnderGrid":false}',
+    sunManual: '{"dayType":"training","label":"Training day",' + TRAIN + ',"date":"2026-09-13","weekday":"Sun","todayType":"rest","claimsToday":false,"derived":false,"manual":true,"reason":"manual",' + SCHED + ',' + TIMING_T + ',' + WEEKLY + ',' + CAL + ',"medicalUnderGrid":false}',
+    wed: '{"dayType":"rest","label":"Today — low-carb rest day",' + REST + ',"date":"2026-09-16","weekday":"Wed","todayType":"rest","claimsToday":true,"derived":true,"manual":false,"reason":null,' + SCHED + ',' + TIMING_R + ',' + WEEKLY + ',' + CAL + ',"medicalUnderGrid":true}'
+  };
+  a.eq(JSON.stringify(P.dietTargets("2026-09-12", null, null, PB)), frozen.sat, "Saturday, derived: byte-identical to main");
+  a.eq(JSON.stringify(P.dietTargets("2026-09-13", null, "training", PB)), frozen.sunManual, "Sunday, TRAINING DAY tapped: byte-identical to main");
+  a.eq(JSON.stringify(P.dietTargets("2026-09-16", null, null, PB)), frozen.wed, "Wednesday, derived rest: byte-identical to main");
+});
+
+/* ------------------------------------------------------ 6. Rule C7c */
+
+T("C7c - the brief's diagnosis needs provenance AND the stamp: worked examples 1, 2 and 3 of §16.7; `copy` reports the choice and `provenance` keeps reporting the plan", function(a){
+  var S = W3STALLED(), base = { plan: P.PHAT_PLAN, sessions: S, todayStr: TODAY, state: STORE() };
+  function call(over){ var c = {}, k; for (k in base) c[k] = base[k]; for (k in over) c[k] = over[k]; return P.stallAdvice(c); }
+  var chady = call({ profile: PB });
+  a.eq(chady.state, "stalled"); a.eq(chady.provenance, "phat"); a.eq(chady.copy, "phat");
+  a.ok(chady.lines.join(" ").indexOf("This is the check we agreed on. The split isn't the problem and neither is the diet.") >= 0, "example 1: Chady's stamped store on PHAT - the brief's copy, identical to today");
+  a.ok(chady.lines.join(" ").indexOf("or you aren't eating enough") >= 0);
+  var diana = call({});
+  a.eq(diana.state, "stalled"); a.eq(diana.provenance, "phat", "provenance is still the plan's fact"); a.eq(diana.copy, "generic");
+  a.eq(diana.lines.join(" ").indexOf("neither is the diet"), -1, "example 2: no profile - never `neither is the diet` about a diet the app has never seen");
+  a.eq(diana.lines.join(" ").indexOf("eating enough"), -1, "and never a direction on food");
+  a.ok(diana.lines.join(" ").indexOf("Six weeks of data and the numbers have not moved. Change one thing — how hard the sets are, how much you are eating, or the plan — and give it three weeks.") >= 0, "the generic C7b sentence, unchanged");
+  a.eq(diana.lines[0], chady.lines[0], "the measurement line is the same for both");
+  [null, undefined, { diet: "custom" }, "phat-brief", true].forEach(function(x){
+    a.eq(call({ profile: x }).copy, "generic", "fail closed for profile " + show(x));
+  });
+  /* example 3: provenance false, the profile is not consulted */
+  var c = MYPHAT(), B = W3PPL(c).plan;
+  var pb = P.stallAdvice({ plan: B, sessions: S, todayStr: TODAY, state: STORE(), profile: PB });
+  a.eq(pb.state, "stalled"); a.eq(pb.provenance, "generic"); a.eq(pb.copy, "generic");
+  a.eq(pb.lines.join(" ").indexOf("The split isn't the problem"), -1, "example 3: the stamp cannot vouch for a split the coach never saw (C7b unchanged)");
+  /* no new string: both sentences existed before this rule */
+  a.eq(chady.lines.length, 4); a.eq(diana.lines.length, 2);
+});
+
+T("C7c - `copy` is null in every state that does not choose a sentence: absent, early, thin, quiet - the profile is not read there", function(a){
+  var noKl = { planId: "p", name: "Mine", days: [] };
+  a.eq(P.stallAdvice({ plan: noKl, sessions: [], todayStr: TODAY, profile: PB }).copy, null, "absent");
+  a.eq(P.stallAdvice({ plan: P.PHAT_PLAN, sessions: [], todayStr: TODAY, profile: PB }).state, "early");
+  a.eq(P.stallAdvice({ plan: P.PHAT_PLAN, sessions: [], todayStr: TODAY, profile: PB }).copy, null, "early");
+  var bg = ST1BG();
+  var thin = P.stallAdvice({ plan: P.PHAT_PLAN, sessions: bg, todayStr: TODAY, state: STORE(), profile: PB });
+  a.oneOf(thin.state, ["thin", "quiet", "stalled"]);
+  if (thin.state !== "stalled") a.eq(thin.copy, null, thin.state);
+});
+
+/* ------------------------------------------------------ 7. the two meta-tripwires, restated for this section */
+
+T("W4 - up to the end of S36 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S36 or earlier wrote into his history");
+});
+
+group("S37 WO-008 W7 QA / two real accounts / the shared device / the second phone / the stamp hazard / D1-D5 D7 replay");
+
+/* ---- WO-008 W7 (QA). What the two-account browser attacks of 2026-09-12
+   ("Already proven" item 32) found, replayed in the pure layer in the
+   browser's order. Two throwaway accounts on the LIVE project
+   (test+a@example.com, test+b@example.com), the real sync.js, four
+   "phones" (fresh contexts) and one shared device. Every string below is
+   the string the screen showed, transcribed from the run log, so a change
+   that would alter what the phone said goes red on file:// first.
+   What the pure layer CANNOT replay - the R-a latch, the false C3 on
+   first-run sign-in (a real defect, see "Not testable") - is named there. */
+
+/* A's phone after SC1: the stamp {id,email} the sign-in push wrote, the
+   fresh store born with profile:null, one session, one weight. Ids are the
+   two real uids the run created (their rows and the accounts are the PM's
+   to delete from the dashboard; the client cannot - see decisions). */
+var S37A = { id: "00b80e16-8c42-4726-890e-5d2ac2590e18", email: "test+a@example.com" };
+var S37B = { id: "e38f351f-64a3-4749-8c4e-fe8396e53c52", email: "test+b@example.com" };
+function S37STAMP(u, at){ return { at: at === undefined ? 1789242270000 : at, sig: "x", user: u, n: 1, m: 1, x: 0 }; }
+function S37ALOG(){ return E3LOG([E3SESS(1789242273250, "2026-09-12", "d1", 100, 5)]); }
+function S37ABW(){ return E3BW([{ date: "2026-09-12", kg: 85 }]); }
+
+/* ------------------------------------------------------ 1. D3 / D4: the shared device, in the browser's order */
+
+T("S37 - SHARED DEVICE replay (SC3): A's {id,email} stamp, B signed in, data on disk -> foreign; the three sentences are the ones #bk-status showed, byte for byte", function(a){
+  var owner = P.backupOwner(S37STAMP({ id: S37A.id, email: S37A.email }));
+  a.deep(owner, { id: S37A.id, email: S37A.email }, "the stamp SC1's sign-in push wrote reads back as {id,email}");
+  a.deep(P.storeOwner({ ownerId: owner.id, userId: S37B.id, hasData: true }), { allowed: false, reason: "foreign" }, "B on A's device with data: refused");
+  a.eq(P.ownerRefusal("auto", owner, S37B.email),
+    "This device's log belongs to test+a@example.com. Nothing was backed up to test+b@example.com. Sign in as test+a@example.com to back it up.", "R-a, as announced once (assertive) and as #bk-status rendered it");
+  a.eq(P.ownerRefusal("manual", owner, S37B.email),
+    "Not backed up. This device's log belongs to test+a@example.com, not to test+b@example.com. Sign in as test+a@example.com to back it up.", "R-b, BACK UP NOW");
+  a.eq(P.ownerRefusal("restore", owner, S37B.email),
+    "Not restored. This device's log belongs to test+a@example.com. The backup under test+b@example.com was not read and nothing on this device changed. Sign in as test+a@example.com to restore.", "R-c, before the pull (0 REST reads observed)");
+  /* the owner back on the device: allowed; and B on an EMPTY device: allowed (the second phone) */
+  a.deep(P.storeOwner({ ownerId: owner.id, userId: S37A.id, hasData: true }), { allowed: true, reason: "owner" }, "A signs in again: the push lands (observed: Backed up 1 session and 1 weight)");
+  a.deep(P.storeOwner({ ownerId: owner.id, userId: S37B.id, hasData: false }), { allowed: true, reason: "fresh" }, "B on a device with nothing on it");
+  a.deep(P.storeOwner({ ownerId: null, userId: S37B.id, hasData: true }), { allowed: true, reason: "claim" }, "B's own phone after the empty-log start: the first save's push claims it (observed H4 -> H1)");
+  /* the string stamp: no email, the substitution */
+  var s = P.backupOwner({ at: 1, sig: "x", user: "uid-chady-string", n: 6, m: 14, x: 0 });
+  a.deep(s, { id: "uid-chady-string", email: null }, "the E-3 string stamp (D5's seed) has no email");
+  a.eq(P.ownerRefusal("manual", s, S37B.email), "Not backed up. This device's log belongs to another account, not to test+b@example.com. Sign in as that account to back it up.");
+});
+
+T("S37 - D4 is a property of the pure layer too: a refusal returns before any store is touched - storeOwner/ownerRefusal produce values and the suite's write spy stays empty", function(a){
+  var owner = P.backupOwner(S37STAMP({ id: S37A.id, email: S37A.email }));
+  var n = PHAT_KEY_WRITES.length;
+  P.storeOwner({ ownerId: owner.id, userId: S37B.id, hasData: true });
+  P.ownerRefusal("auto", owner, S37B.email); P.ownerRefusal("manual", owner, S37B.email); P.ownerRefusal("restore", owner, S37B.email);
+  a.eq(PHAT_KEY_WRITES.length, n, "no phat:* write");
+  /* observed on the device, from a second page's cold read of localStorage: log, bw, plans, prefs byte-identical after R-a, R-b and R-c; nothing under phat:v1:recover:* */
+});
+
+/* ------------------------------------------------------ 2. D2 / D3: the second phone - C1 / C2 and the restore */
+
+T("S37 - A's SECOND PHONE replay (SC4): A's backup rows -> restorePayload -> the session byte-identical to what A's phone wrote, profile:null carried down, and screen C's decision (C1: rows; C2: nothing) from the counts", function(a){
+  var log = S37ALOG(), bw = S37ABW();
+  var bp = P.backupPayload(log, bw, null);
+  a.eq(bp.problems.length, 0); a.eq(bp.logMeta.profile, null, "the push carries profile:null in log_meta (observed on the server: {profile:null,includeCut:false,schemaVersion:5})");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true); a.deep(rp.counts, { sessions: 1, bodyweight: 1, plans: 0 });
+  a.eq(JSON.stringify(rp.log.sessions[0]), JSON.stringify(log.sessions[0]), "the restored session is byte-identical to the one A's phone saved");
+  a.ok(Object.prototype.hasOwnProperty.call(rp.log, "profile") && rp.log.profile === null, "profile:null comes down with the account (never re-asked on the new phone)");
+  a.eq(P.profilePass(rp.log, { bwCount: 1 }).changed, false, "and the boot pass over the restored store changes nothing - the second phone is not stamped by A's own session");
+  /* screen C: C1 when any count is non-zero, C2 when all are zero (obPull's own test) */
+  var c1 = !!(rp.counts.sessions || rp.counts.bodyweight || rp.counts.plans);
+  a.eq(c1, true, "C1: `2 sessions and 1 weight are backed up under this account.` was the observed sub-line; Restore offered, NO empty-log button");
+  var empty = P.restorePayload({ sessions: [], bodyweight: [], plans: [], user_state: null });
+  a.eq(empty.ok, true); a.eq(!!(empty.counts.sessions || empty.counts.bodyweight || empty.counts.plans), false, "C2: `Nothing is backed up under this account yet.` - the empty log offered");
+  /* the restore onto an EMPTY device keeps nothing aside: no recover copy was observed */
+  var st = P.restoreSteps(rp, { empty: true, stores: { log: "absent", bw: "absent", plans: "absent" }, log: null, bw: null, plans: null, blocked: {} }, W2KEYS, 1789242300000);
+  a.eq(st.ok, true); a.eq(st.keeps.length, 0, "empty device: no phat:v1:recover:* key (observed keys after the restore: phat:auth, bw, log, prefs)");
+  a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log", "phat:v1:bw"], "writes log then bw; no plans key when the backup carries none");
+});
+
+T("S37 - D2 replay (SC2): B's rows never carry A's session; a device restored from B's account holds only B's ids; the ghost for A's exercise is `No prior set`", function(a){
+  var aSess = E3SESS(1789242273250, "2026-09-12", "d1", 100, 5);
+  var bSess = E3SESS(1789242500000, "2026-09-12", "d1", 60, 8);
+  bSess.entries = { d1b: bSess.entries.d1a }; delete bSess.entries.d1a; bSess.entries.d1b.rx = { s: 3, lo: 6, hi: 10, k: "hyp" };
+  var bLog = E3LOG([bSess]);
+  var rp = P.restorePayload(ROWS(P.backupPayload(bLog, E3BW([]), null)));
+  a.eq(rp.ok, true);
+  a.eq(rp.log.sessions.some(function(s){ return s.id === aSess.id; }), false, "A's id " + aSess.id + " is in none of B's rows (server: 0 of A's client_ids under B; localStorage on B's phone: no occurrence)");
+  a.eq(JSON.stringify(rp.log).indexOf("100"), -1, "no 100 kg anywhere in B's restored store");
+  /* the engines read B's store and see nothing of A's: lastFor on A's exercise */
+  a.eq(P.lastFor(rp.log.sessions, "d1a"), null, "lastFor(d1a) on B's log finds nothing of A's (observed: `No prior set.` on Upper power's Bent-over row)");
+  a.ok(P.lastFor(rp.log.sessions, "d1b") !== null, "and B's own exercise resolves");
+});
+
+/* ------------------------------------------------------ 3. D5: Chady's stamped store, and the fresh one */
+
+/* The seed the browser booted on both commits: six sessions over eleven
+   days, fourteen daily weights rising 0.25 kg/week from 85, an E-3 string
+   stamp, no profile key. */
+function S37CHADY(){
+  function s(i, d, dayId, ex, w, r){ var e = {}; e[ex] = { sets: [{ w: w, r: r }, { w: w, r: r }, { w: w, r: r }], note: "" }; return { id: 1780000000000 + i, date: d, dayId: dayId, dateBasis: "local", entries: e }; }
+  var T = "2026-09-12";
+  var log = { schemaVersion: 5, includeCut: false, sessions: [
+    s(1, P.dateAdd(T, -11), "d1", "d1a", 100, 5), s(2, P.dateAdd(T, -10), "d2", "d2a", 140, 5), s(3, P.dateAdd(T, -8), "d3", "d3a", 60, 10),
+    s(4, P.dateAdd(T, -6), "d4", "d4a", 80, 10), s(5, P.dateAdd(T, -4), "d1", "d1a", 102.5, 5), s(6, P.dateAdd(T, -3), "d2", "d2a", 142.5, 5) ],
+    reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null };
+  var entries = [], i;
+  for (i = 0; i < 14; i++) entries.push({ date: P.dateAdd(T, -(13 - i)), kg: Math.round((85 + i * 0.25 / 7) * 10) / 10 });
+  return { log: log, bw: { schemaVersion: 5, entries: entries }, today: T };
+}
+
+T("S37 - D5 replay (SC5): the pre-W4 store is stamped on evidence in ONE write, sessions[] byte-identical; the strip, the Diet figures and the Weight band are what both commits rendered", function(a){
+  var c = S37CHADY(), l0 = JSON.stringify(c.log);
+  var m = P.migrateStore(clone(c.log), clone(c.bw), undefined);
+  var pp = P.profilePass(m.log, { bwCount: c.bw.entries.length });
+  a.eq(pp.stamped, true); a.deep(pp.evidence, ["sessions", "bodyweight"], "stamped on sessions and bodyweight (a v5 store carries no utcDatedBefore)");
+  a.deep(pp.log.profile, { diet: "phat-brief" });
+  a.eq(JSON.stringify(pp.log.sessions), JSON.stringify(c.log.sessions), "sessions[] byte-identical");
+  a.eq(JSON.stringify(c.log), l0, "the seed object was not mutated");
+  a.eq(P.profilePass(pp.log, { bwCount: 14 }).changed, false, "second boot: no write (observed: zero phat:* writes)");
+  var dt = P.dietTargets(c.today, null, null, pp.log.profile);
+  a.eq(dt.absent, undefined); a.eq(dt.label, "Today — high-carb training day"); a.eq(dt.text.strip, "3,200 · 170 g · 300 g · 145 g", "the Home strip's line, byte-identical on 9ee456f and 8c1cff7");
+  var adv = P.calorieAdvice(c.bw.entries, c.today, null, pp.log.profile);
+  a.eq(adv.state, "on-target"); a.eq(adv.text, "+0.27 kg per week. On target. Change nothing.", "the Weight band both commits rendered");
+  a.eq(adv.subline, "Target: +0.2 to +0.3 kg per week. Averages over 14 days.");
+  var w = P.bwWindows(c.bw.entries, c.today);
+  a.eq(w.aCount, 7); a.eq(w.bCount, 7, "7-day average (7 of 7 days)");
+});
+
+T("S37 - D5 replay: the FRESH store is ABSENT on all three screens and stays so after its first session; the boot default {profile:null} is never re-asked", function(a){
+  var born = { profile: null };                                   /* index.html's boot default for S.logMeta */
+  a.eq(P.profilePass(born, { bwCount: 1 }).changed, false, "a store born with the key is not asked, whatever is on disk");
+  var log = S37ALOG();
+  a.eq(P.profilePass(log, { bwCount: 1 }).changed, false, "after the first session (observed: profile still null on the second boot with a session and a weight present)");
+  var adv = P.calorieAdvice(S37ABW().entries, "2026-09-12", null, log.profile);
+  a.eq(adv.absent, true); a.deep(adv.absentLines, ["No diet protocol on this account.", "The app reports your weight and says nothing about what to eat."], "Weight: the two lines the tab showed, no kicker, no band, no hold controls");
+  a.eq(adv.rate, null); a.eq(adv.text, ""); a.eq(adv.subline, "");
+  var dt = P.dietTargets("2026-09-12", null, null, log.profile);
+  a.eq(dt.absent, true); a.eq(dt.kicker, "Diet"); a.eq(dt.kickerSub, "No targets");
+  a.deep(dt.absentLines, ["No diet targets on this account.", "The app cannot work them out from a training log, and it will not guess."], "Diet: `DIET / NO TARGETS` and the two lines");
+  a.eq(dt.kcal, null); a.eq(dt.text, null);
+  /* vHome's own gate for the strip, replayed: absent -> nothing */
+  var strip = !!(dt && dt.absent !== true && dt.label && dt.text && typeof dt.text.strip === "string" && dt.text.strip);
+  a.eq(strip, false, "Home renders no macro strip (observed: none on A's, B's, and the fresh phone)");
+});
+
+/* ------------------------------------------------------ 4. ATTACK 1: the stamp hazard, three ways, as observed */
+
+T("S37 - ATTACK 1 (a) OBSERVED, not accepted: a pre-W4 log store with NO session and ONE weight on disk is stamped the brief - Diana's diet becomes Chady's if her phone ever holds that shape", function(a){
+  /* The exact seed the browser booted: log {schemaVersion:5, includeCut:false, sessions:[]}, bw one entry, no owner stamp.
+     Observed: profile {diet:"phat-brief"}, Diet tab 3,200 / 2,500. Backend kept bodyweight as evidence deliberately
+     (decisions 2026-09-12); this pin records the consequence so a change either way is a deliberate edit here. */
+  var r = P.profilePass({ schemaVersion: 5, includeCut: false, sessions: [] }, { bwCount: 1 });
+  a.eq(r.stamped, true); a.deep(r.evidence, ["bodyweight"]);
+  a.deep(r.log.profile, { diet: "phat-brief" });
+  a.eq(P.dietTargets("2026-09-12", null, null, r.log.profile).kcal, 3200, "and the Diet tab would render his targets");
+});
+
+T("S37 - ATTACK 1 (b)+(c) OBSERVED: the path the live app actually produces is SAFE - a first run with the weight typed writes bw and prefs and NO log key; the pass over an absent log invents nothing; the first session is born profile:null", function(a){
+  /* 9ee456f first run, `Today's weight` 62.0, START WITH AN EMPTY LOG: keys were ["phat:v1:bw","phat:v1:prefs"]. Upgrade to 8c1cff7: log still absent. */
+  var r = P.profilePass(undefined, { bwCount: 1 });
+  a.eq(r.changed, false); a.eq(r.asked, false); a.eq(r.log, undefined, "an absent log store stays absent - nothing to stamp");
+  a.eq(P.profilePass(null, { bwCount: 1 }).changed, false);
+  /* the first save on that phone builds the log from index.html's boot default {profile:null} plus the session */
+  var first = { profile: null, sessions: [E3SESS(1, "2026-09-12", "d1", 50, 5)], includeCut: false };
+  a.eq(P.profilePass(first, { bwCount: 1 }).changed, false, "observed: `profile:null` after the first session, Diet still ABSENT");
+  a.eq(P.calorieAdvice([{ date: "2026-09-12", kg: 62 }], "2026-09-12", null, first.profile).absent, true);
+});
+
+/* ------------------------------------------------------ 5. the stamp travels with the ACCOUNT, not the device */
+
+T("S37 - the profile rides log_meta: a stamped store's push carries the stamp, a restore brings it down untouched, and the pass over the restored store changes nothing", function(a){
+  var c = S37CHADY(); var stamped = P.profilePass(c.log, { bwCount: 14 }).log;
+  var bp = P.backupPayload(stamped, c.bw, null);
+  a.eq(bp.problems.length, 0); a.deep(bp.logMeta.profile, { diet: "phat-brief" }, "user_state.log_meta.profile = the stamp");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true); a.deep(rp.log.profile, { diet: "phat-brief" }, "one Restore on a new phone brings his diet back (coach 16.8: the stamp lives on the account)");
+  a.eq(P.profilePass(rp.log, { bwCount: 0 }).changed, false, "never re-asked");
+  a.eq(rp.notes.some(function(n){ return /profile/.test(n); }), false, "no `set to null` note when the key came down");
+  /* and A's real account: null rides the same way */
+  var rpA = P.restorePayload(ROWS(P.backupPayload(S37ALOG(), S37ABW(), null)));
+  a.eq(rpA.log.profile, null); a.eq(P.dietTargets("2026-09-12", null, null, rpA.log.profile).absent, true, "Diet stays silent on A's restored phone (PR1 is about the profile, not ownership)");
+});
+
+/* ------------------------------------------------------ 6. D7, in the pure layer: nothing the app owns is touched by an auth change */
+
+T("S37 - D7: sign-out is sync.js's key alone - no PHAT export names phat:auth, and backupOwner/storeOwner read the stamp without needing a session", function(a){
+  var names = Object.keys(P), i, src = "";
+  for (i = 0; i < names.length; i++) if (typeof P[names[i]] === "function") src += String(P[names[i]]);
+  a.eq(src.indexOf("phat:auth"), -1, "no pure function knows the auth key (observed: sign-out removed phat:auth and left bw, log, prefs byte-identical)");
+  a.deep(P.backupOwner(S37STAMP({ id: S37A.id, email: S37A.email })), { id: S37A.id, email: S37A.email }, "the owner is readable signed out - H2 `test+a@example.com · signed out · last backup just now` rendered from it");
+});
+
+/* ------------------------------------------------------ 7. the meta-tripwire, restated for this section */
+
+T("W7 - up to the end of S37 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S37 or earlier wrote into his history");
+});
+
 
 group("S9 harness budget / W7");
 
@@ -13491,8 +14145,33 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
      be: a mobile OS, a software keyboard, a screen reader, an eye in bright
      light. Those residues, merged, are the four items here.
      --------------------------------------------------------------------- */
+  document.getElementById("untestable").innerHTML +=
+    "<p><b>WO-008 W7 &mdash; the two-account run found two things that live entirely on the wire side, and one of them is a " +
+    "defect.</b> <b>(1) The false C3 on first-run sign-in.</b> <code>sync.js</code> subscribes to <code>client.auth.onAuthStateChange</code> " +
+    "and <code>emit()</code>s while <code>runAuth</code> still holds <code>st.busy = \"auth\"</code>; <code>onSync</code> &rarr; " +
+    "<code>paintBackup</code> &rarr; (<code>S.sub === \"onboard-signin\"</code> and a user) &rarr; <code>obToC()</code> &rarr; " +
+    "<code>Y.pull()</code> &rarr; refused <code>busy</code>. Screen C then reads <em>Could not read the backup. A backup is already " +
+    "running.</em> with <b>zero</b> REST reads, on a working network, four sign-ins out of four against the live project; " +
+    "<em>Try again</em> recovers every time. Frontend&rsquo;s stubbed module could not show it because the stub clears busy before it " +
+    "emits. Nothing is written and nothing is lost; it is the first sentence a second phone ever sees. Not reachable from " +
+    "<code>file://</code> (an ES module with a CDN import); the observation is item 32 (B). <b>CLOSED at <code>c102240</code></b>: " +
+    "<code>authTap</code> holds a module-level <code>authBusy</code> for the span of one attempt and <code>paintBackup</code> does " +
+    "not route screen B anywhere while it is set; the success path of <code>authTap</code> is the one route to C, and a second " +
+    "tap or Enter while an attempt is in flight returns before the module is called. Observed closed against the live project on " +
+    "2026-09-12 (item 33): eleven first-run sign-ins, first landing C2 &times; 10 and C1 &times; 1, four <code>200</code> reads " +
+    "each, no C3 in a per-mutation screen timeline; the true C3 still renders when the reads are cut. Still not a " +
+    "<code>file://</code> test &mdash; <code>authBusy</code> is two lines of routing in <code>index.html</code> around a module " +
+    "call, and extracting a boolean gate to <code>logic.js</code> would test the extraction, not the race. The rig is the test; " +
+    "re-run it when <code>authTap</code>, <code>paintBackup</code>, <code>obPull</code> or <code>sync.js</code> change. " +
+    "<b>(2) The R-a latch</b> " +
+    "(<code>S.sync.refused</code>) is <code>index.html</code> state: observed once per sign-in, silent on the next save, reset by " +
+    "sign-out and by the owner signing in &mdash; item 32 (D). <b>(3) The seven identity states</b> H1&ndash;H7 and the three " +
+    "session / Summary lines are view strings; every one was read off the screen (item 32) and the refusal sentences underneath " +
+    "them are pinned in S36/S37. <b>(4) <code>hasData</code> is read from disk</b> by the call sites (<code>storesOnDisk()</code>); " +
+    "the pure function trusts its argument, and S36 says so.</p>";
+
   document.getElementById("manual").innerHTML =
-    "<p><b>Seven items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Eight items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -13585,7 +14264,16 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "software keyboard against the typed field (<code>autocapitalize=\"characters\"</code> is a hint the OS may " +
     "ignore), and whether the blob download actually lands on this WebView (B-16) &mdash; the restore proceeds " +
     "either way, and the on-device recover copy is what actually protects you, so the export is a bonus and not " +
-    "the safety net.</span></li></ol>" +
+    "the safety net.</span></li>" +
+
+    "<li><b>Two phones, one look each (WO-008).</b> On your phone, Home, under the next-session block: the row must read " +
+    "<i>This log</i> and <b>your</b> email. On Diana's phone the same row must read <b>her</b> email &mdash; or <i>On this device " +
+    "only</i> if she has not signed in yet. Turn the radio off on both and reopen: the two rows must not change. Then on her phone " +
+    "open Diet: it must read <i>No targets</i> and two sentences, and no number.<br><span class=\"skipmsg\">Why a phone: " +
+    "every state of that row was read off headless Chromium against the live project with two throwaway accounts (item 32), " +
+    "and the refusals when the wrong account is signed in were observed byte for byte. What no rig can answer is whether the " +
+    "installed PWA on each of your two real phones boots the identity from disk with no signal, and whether Diana can tell at a " +
+    "glance whose log she is about to add a set to. One look each.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -14182,6 +14870,176 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "label switched from <i>Undo: put Bent-over row back</i> to <i>Undo: move Weighted pull-up back to &hellip;</i>; " +
     "undo restored the move only and the deleted row stayed deleted, recoverable by DISCARD CHANGES, as ruled. " +
     "<b><code>file://</code> boot at 400 px: zero console errors; <code>scripts/offline-check.mjs</code>: PASS.</b></span></li>" +
+    "<li><b>WO-008 W7 &mdash; two real accounts against the live project: D1 from outside, D2&ndash;D5 and D7 through the app on four " +
+    "phones and one shared device, the stamp hazard three ways, the false C3, the fold in pixels, esc() on a hostile email, 44 px at " +
+    "200 %, and 26 mutants.</b> <span class=\"msg\">Run 2026-09-12 against <code>8c1cff7</code> (W5) with <code>9ee456f</code> " +
+    "served beside it from a <code>git show</code> checkout. Rig: a Node static server on <code>http://127.0.0.1:8789</code> serving " +
+    "the working tree, Playwright headless Chromium at 400 &times; 850 (393 &times; 852 for the fold), <b>the real " +
+    "<code>sync.js</code> and the real CDN module against the live Supabase project</b>, two throwaway accounts created through " +
+    "<code>/auth/v1/signup</code> with the publishable key (<code>test+a@example.com</code> " +
+    "<code>00b80e16-8c42-4726-890e-5d2ac2590e18</code>, <code>test+b@example.com</code> <code>e38f351f-64a3-4749-8c4e-fe8396e53c52</code>), " +
+    "every <code>/rest/v1</code> and <code>/auth/v1</code> request logged per page, <code>Storage.prototype.setItem</code> spied from an " +
+    "init script, a <code>MutationObserver</code> on <code>#bs-live</code> recording every announcement with its <code>aria-live</code>, " +
+    "and disk read from a <b>second page in the same context</b> for every byte-identity claim. Not checked in. <b>Re-run whenever " +
+    "<code>runBackup</code>, <code>authTap</code>, <code>restoreStart</code>, <code>obPull</code>, <code>whoState</code> or " +
+    "<code>sync.js</code> change.</b> " +
+    "<b>(A) D1, from outside, positive control first.</b> Each JWT reads exactly its own <code>user_state</code> row (A: " +
+    "<code>[{user_id:00b80e16&hellip;}]</code>, B: <code>[{user_id:e38f351f&hellip;}]</code>); every table filtered " +
+    "<code>user_id=eq.&lt;other&gt;</code> &rarr; <code>200 []</code> &times; 5, both directions; unfiltered, every row visible is the " +
+    "caller&rsquo;s (A: 2 sessions, 1 weight, 1 state, 1 conflict; B: 4 sessions, 0, 1, 0); a valid <code>bodyweight</code> and a valid " +
+    "<code>sessions</code> document POSTed under the other&rsquo;s <code>user_id</code> &rarr; <code>403</code> / <code>42501</code> " +
+    "<em>new row violates row-level security policy</em> (never <code>23514</code>), both directions; the publishable key alone &rarr; " +
+    "five <code>[]</code>. Sign-ups are <b>still enabled</b> (the two accounts were created by this run; W3&rsquo;s lock has not been " +
+    "done). " +
+    "<b>(B) A&rsquo;s phone, fresh.</b> First run: zero keys; exactly two actions. START WITH AN EMPTY LOG: one key (<code>prefs</code>). " +
+    "H5 <i>On this device only. Not backed up.</i> at 48 px; Weight <i>No diet protocol on this account. The app reports your weight " +
+    "and says nothing about what to eat.</i> with no kicker, no band, no hold controls; Diet <i>DIET / NO TARGETS</i> + the two lines, " +
+    "no figure; Home: no strip. Sign in as A from Settings &rarr; <i>Backed up 0 sessions and 0 weights, just now</i> (only " +
+    "<code>user_state</code> was upserted), stamp <code>{id,email}</code> naming A, still no log key, H1 <i>test+a@example.com &middot; " +
+    "last backup just now</i>. One session (<code>100 &times; 5</code>): header <i>Log of test+a@example.com</i>, Summary <i>Saves to " +
+    "this device. Backs up to test+a@example.com.</i>; on disk the log is born <code>profile:null</code>; server: the session under A, " +
+    "<code>log_meta {profile:null, includeCut:false, schemaVersion:5}</code>; Diet stays ABSENT after the session and the weight. " +
+    "<b>A second boot with a session and a weight on disk wrote nothing and did not stamp.</b> Sign-out: <code>phat:auth</code> " +
+    "removed, <code>bw</code> / <code>log</code> / <code>prefs</code> byte-identical (D7); Settings <i>This one was last backed up just " +
+    "now by test+a@example.com.</i>; H2. <b>The false C3</b> (see &ldquo;Not testable&rdquo;): every first-run sign-in, on every phone in this " +
+    "run, landed on <i>Could not read the backup. A backup is already running.</i> with zero REST reads; <i>Try again</i> then showed " +
+    "the truth. " +
+    "<b>(C) B&rsquo;s phone, first run through Sign in.</b> A &rarr; B: no key; typed an email, <i>&lsaquo; Back</i>: no key, focus " +
+    "back on <i>Sign in</i>, the typed address gone. Sign in: only <code>phat:auth</code>. Radio off, <i>Try again</i>: <i>Could not " +
+    "read the backup. No connection.</i>, twice, still only <code>phat:auth</code>; radio on, <i>Try again</i>: C2 <i>Nothing is " +
+    "backed up under this account yet.</i> (first pass) / C1 <i>{n} sessions and 0 weights are backed up under this account.</i> with " +
+    "<b>no</b> empty-log button (later passes, the account already holding rows). <i>Sign out</i> from C: screen A, zero keys, " +
+    "announced. C2 &rarr; START WITH AN EMPTY LOG: <code>prefs</code> only, <b>no push</b>, H4 <i>On this device only. Backs up to " +
+    "test+b@example.com after the next save.</i>; header <i>On this device only</i>, Summary U4; the first save&rsquo;s push claimed " +
+    "the device: H1 naming B, stamp B. C1 &rarr; RESTORE: <code>log</code> + <code>bw</code> + <code>prefs</code> written, " +
+    "<code>onboarded</code> in the same prefs write as the stamp, no recover key, <i>Restored &hellip;</i>, H1 naming B. <b>D2:</b> " +
+    "server B holds only B&rsquo;s client_ids, A&rsquo;s id nowhere; B&rsquo;s localStorage carries no occurrence of A&rsquo;s session " +
+    "id; Home / Trend / Weight / Diet / Session (A&rsquo;s Upper power: <i>No prior set.</i>, header <i>Log of test+b@example.com</i>) " +
+    "/ Summary show no 100 kg and no 85.0 kg; Settings &rarr; Restore on B&rsquo;s own device: the typed sheet counts B&rsquo;s backup " +
+    "only (<i>This replaces {n} sessions and 0 weights on this device with {n} and 0</i>) while A held 2 and 1. " +
+    "<b>(D) The shared device (B-88).</b> A&rsquo;s stores seeded, signed out: boot wrote nothing, H2 <i>signed out &middot; last " +
+    "backup 15 min ago</i>. B signs in: <i>Signed in as test+b@example.com. This device&rsquo;s log belongs to test+a@example.com.</i>; " +
+    "<code>#bk-status</code> <code>.refuse</code> <code>role=alert</code> with R-a verbatim then <i>Last backup 15 min ago, by " +
+    "test+a@example.com.</i>; R-a announced <b>once</b>, assertive; <b>zero</b> REST requests after the token; disk byte-identical " +
+    "from a second page; stamp still A; Home H3 (48 px, <code>.refuse</code>, no <code>role=alert</code>). BACK UP NOW: R-b " +
+    "verbatim, once, nothing sent, byte-identical. Restore from backup: R-c verbatim, once, <b>0 REST reads</b>, no sheet, " +
+    "byte-identical, nothing under <code>recover:*</code> (D3, D4). <b>The latch:</b> a weight logged while B is signed in saved " +
+    "locally (<i>Weight logged.</i>), its push refused silently (no second R-a, nothing sent), Settings still showing R-a; sign out " +
+    "and in as B: R-a once again; A signs in: <i>Backed up 1 session and 1 weight, just now</i> (the 70.0 kg B typed on A&rsquo;s " +
+    "phone went to A&rsquo;s account &mdash; the phone is the person, by design), stamp refreshed, log byte-identical; B again: once " +
+    "again, nothing sent. Server: B&rsquo;s rows unchanged throughout. " +
+    "<b>(E) A&rsquo;s second phone.</b> First run &rarr; Sign in as A &rarr; C1 <i>2 sessions and 1 weight are backed up under this " +
+    "account.</i>, <i>RESTORE 2 SESSIONS</i> primary, no empty-log button; only <code>phat:auth</code> before; after: " +
+    "<code>log</code> / <code>bw</code> / <code>prefs</code>, no recover key, prefs written exactly once with <code>onboarded</code> " +
+    "and the A stamp, A&rsquo;s session <b>byte-identical</b> to what A&rsquo;s first phone wrote, every restored session one of " +
+    "A&rsquo;s rows, <code>profile:null</code> carried down, nothing pushed back, H1 naming A, Diet and Weight ABSENT, no 60 kg " +
+    "(B&rsquo;s) on Trend. Settings &rarr; Restore on A&rsquo;s own device proceeds to the typed sheet; <i>Keep this device&rsquo;s " +
+    "log</i> leaves the log unchanged. " +
+    "<b>(F) D5, Chady&rsquo;s stamped store on both commits, same bytes.</b> Seed: six sessions over eleven days, fourteen daily " +
+    "weights rising 0.25 kg/week, an E-3 <b>string</b> stamp, no profile key. <code>8c1cff7</code>: <b>one</b> log write at boot, " +
+    "<code>profile {diet:phat-brief}</code>, <code>sessions[]</code> byte-identical, every other key value-identical (store-level key " +
+    "order is the builder&rsquo;s, as on every save), <code>bw</code> and <code>prefs</code> untouched (the string stamp is not " +
+    "rewritten), H6 <i>Backed up 3 days ago by an account this phone has not seen sign in.</i>; second boot: zero writes. Home strip " +
+    "<i>Today &mdash; high-carb training day &middot; 3,200 &middot; 170 g &middot; 300 g &middot; 145 g</i>, the Diet tab (1,108 " +
+    "chars) and the Weight tab (<i>7-DAY AVERAGE (7 OF 7 DAYS) 85.4 kg &middot; Change vs last week +0.27 kg &middot; CALORIE " +
+    "DECISION +0.27 kg per week. On target. Change nothing. Target: +0.2 to +0.3 kg per week.</i>) <b>byte-identical to " +
+    "<code>9ee456f</code></b>. A fresh onboarded store with no log key: zero writes, ABSENT everywhere, a weight alone writes no log, " +
+    "the first session is born <code>profile:null</code>. " +
+    "<b>(G) ATTACK 1, the stamp hazard.</b> (a) a pre-W4 log store with <code>sessions:[]</code> and one weight on disk &rarr; " +
+    "<b>stamped</b>, Diet renders 3,200 &mdash; observed and pinned in S37 as backend&rsquo;s deliberate choice; (b) a weight with " +
+    "<b>no</b> log key, second boot &rarr; no log key invented, nothing stamped; (c) <b>the live app today (<code>9ee456f</code>)</b>: " +
+    "first run with 62.0 typed in <i>Today&rsquo;s weight</i> &rarr; keys <code>bw</code>, <code>prefs</code> and <b>no log</b>; " +
+    "upgrade to <code>8c1cff7</code> in the same context &rarr; still no log key, Diet ABSENT. So the shape (a) needs a log store " +
+    "written with no session in it, which the live first run does not produce; the runbook&rsquo;s <i>log nothing until W8</i> " +
+    "holds, and the weight field is safe too. " +
+    "<b>(H) ATTACK 3, the fold at 393 &times; 852</b>, populated log (the D5 seed and a 12-session four-week log, same result): dock " +
+    "top 788. <code>9ee456f</code>: owner row none, cycle block 247&ndash;368 (121 px: three sentences), day rows MON 418&ndash;499, " +
+    "TUE 507&ndash;588, THU 596&ndash;677, FRI 685&ndash;766, <b>SAT 774&ndash;855 &mdash; 67 px under the dock already</b>. " +
+    "<code>8c1cff7</code>: owner row 247&ndash;295 (48), cycle 295&ndash;416, MON 466&ndash;547, TUE 555&ndash;636, THU 644&ndash;725, " +
+    "<b>FRI 733&ndash;814 (26 px under), SAT 822&ndash;903 (115 px under)</b>. The W9 criterion was already failing by one row before " +
+    "W5; W5 adds a second. UX&rsquo;s arithmetic assumed a 50 px cycle line; the block is 121. " +
+    "<b>(I) ATTACK 5, esc().</b> Owner stamp <code>&lt;img src=x onerror=&hellip;&gt;@x</code>, signed-in " +
+    "<code>&lt;b&gt;bold&lt;/b&gt;&lt;img &hellip;&gt;@y</code> (stubbed module &mdash; Supabase would not issue the address): H1, " +
+    "H2, H3, the 18.6 H2 intro and H3 line, R-a in <code>#bk-status</code> and in the live region, R-b, R-c, the session header " +
+    "(S1, S2), Summary (U1, U3), screen C&rsquo;s heading &mdash; every one rendered the raw text; zero <code>&lt;img&gt;</code>, zero " +
+    "<code>&lt;b&gt;</code>, no <code>onerror</code> ran, Settings <code>innerHTML</code> carried only escaped forms. " +
+    "<b>(J) 44 px.</b> Screens A, B, C3, Home H3 and Settings H3: 0 controls under 44 &times; 44 at 400 px and at 200 %, no " +
+    "horizontal overflow; the owner row 48 px, 74 px at 200 %. " +
+    "<b>(K) 26 mutants, all killed</b>, each injection matched exactly once (CRLF normalised): storeOwner &times; 7 (no-user dropped, " +
+    "hasData inverted / dropped, null owner refused, equality inverted, foreign allowed, blank owner kept), backupOwner &times; 2, " +
+    "ownerRefusal &times; 2, profilePass &times; 8 (early return dropped, null re-asked, demo guard dropped, sessions at zero, " +
+    "bodyweight dropped, key left absent, argument mutated, stamped on schema age), PR1 &times; 6 (isPhatBrief inverted / any " +
+    "object / null-as-Chady, both gates dropped, ABSENT carrying a rate), C7c &times; 1. " +
+    "<b>(L) Two side findings.</b> An authenticated DELETE of the account&rsquo;s <b>own</b> <code>sessions</code> / " +
+    "<code>bodyweight</code> / <code>user_state</code> rows now fails <code>403 42501 permission denied for table users</code>: the " +
+    "<code>4d69225</code> archive-trigger guard reads <code>auth.users</code> as the invoking role. No client path deletes today; it " +
+    "is why this run could not wipe its own rows. And the auth endpoint rate-limited a burst of sign-ins (a <code>429</code> without " +
+    "CORS headers reads as <i>No connection.</i> in the app &mdash; honest, if terse). " +
+    "<b>scripts/offline-check.mjs: PASS. file:// suite 689 / 689 / 0.</b></span></li>" +
+    "<li><b>WO-008 W7, second pass &mdash; the false C3 closed at <code>c102240</code>, observed against the live project with the " +
+    "real module: eleven first-run sign-ins, every first landing C1 or C2; the re-entrant tap refused; the network cut after the " +
+    "tap; the open-time push still gated; D2&ndash;D5 and D7 re-run on the one diff.</b> <span class=\"msg\">Run 2026-09-12 against " +
+    "<code>c102240</code> (one function and one gate over <code>2e98f15</code>: <code>authBusy</code> in <code>authTap</code>, and " +
+    "<code>paintBackup</code> not routing screen B while it is set). Rig as item 32 plus <b>the lesson from frontend&rsquo;s rig, " +
+    "applied</b>: screens B and C both carry <code>#ob-h</code> and <code>#ob-start</code>, so a landing check keyed on those " +
+    "reads &ldquo;C2&rdquo; while still on B. Here the screen is classified by a <code>MutationObserver</code> on <code>#view</code> " +
+    "<em>inside the page</em>, on every mutation, with B keyed on its own markers (<code>#ob-back</code> / <code>#bk-email</code>) " +
+    "and C on the heading class only C carries (<code>#ob-h.obh</code>), then C1 / C2 / C3 / C-pull by <code>#ob-restore</code> / " +
+    "<code>#ob-start</code> / <code>#ob-retry</code>; every transition is on the record with a timestamp, so a state that lived for " +
+    "one frame cannot be missed. Every <code>/auth/v1</code> and <code>/rest/v1</code> request is logged with its response status. " +
+    "One throwaway account, created through the app&rsquo;s own <i>Create account</i> on screen B: <code>test+d@example.com</code>, " +
+    "uid <code>aee69577-d260-4338-8bd8-9dacac75e21c</code>, password never written down; sign-ups were still enabled " +
+    "(<code>/auth/v1/settings</code> <code>disable_signup:false</code>). " +
+    "<b>(0) Sign-up on B</b> &rarr; timeline <code>A &gt; B &gt; B[Signing in.] &gt; C-pull &gt; C2</code>, <code>POST signup 200</code> " +
+    "then four <code>GET 200</code> (sessions, bodyweight, plans, user_state), zero writes, disk <code>[\"phat:auth\"]</code>; " +
+    "<i>Sign out</i> from C2 &rarr; A, zero keys. " +
+    "<b>(1) Five fresh phones, Sign in</b> &rarr; five of five <code>A &gt; B &gt; B[Signing in.] &gt; C-pull &gt; C2</code>, first " +
+    "C-state C2 every time, no C3 in any timeline, four reads all 200, one token request, zero writes, zero page errors. Timed, " +
+    "run 1: <code>+0 A, +940 B, +1088 Signing in., +1533 C-pull, +2870 C2</code> &mdash; 1.8 s from the tap to the answer; " +
+    "<i>Signed in.</i> announced once. Item 32 (B) had this at four of four C3 with zero reads. " +
+    "<b>(2) Wrong password</b> &rarr; <code>B[! Wrong email or password.]</code>, <code>#bk-status</code> <code>role=alert</code>, " +
+    "announced assertive once, email preserved, buttons enabled again, <code>POST token 400</code> and nothing else, <b>zero</b> " +
+    "localStorage keys; the right password typed into the same B &rarr; C2 on the first landing (the failure path clears the " +
+    "gate). <b>(3) Re-entrance</b>: two <code>Enter</code>s in the password field &rarr; <b>one</b> <code>/auth/v1/token</code>; " +
+    "three <code>keydown</code> Enters dispatched in one task (no scheduling gap) &rarr; one; Enter plus a <i>Sign in</i> tap " +
+    "plus a <i>Create account</i> tap in one task &rarr; one request and it is the sign-in, never the sign-up; C2 first in all " +
+    "three, <i>Wait for the current backup to finish.</i> never painted, <i>Signed in.</i> once. " +
+    "<b>(4) Network cut after the tap</b>: (a) the token request aborted at the socket and (b) the context taken offline in the " +
+    "same instant as the tap &rarr; both <code>B[! No connection.]</code>, never stuck on <i>Signing in.</i>, buttons live, email " +
+    "kept, zero keys, and the next tap with the radio back &rarr; C2 first (<code>authBusy</code> cleared by the failure); " +
+    "(c) the token lands and the reads are cut &rarr; <b>a true C3</b>, <code>C3[! Could not read the backup. No connection.]</code> " +
+    "&mdash; the sentence is the network&rsquo;s, not <i>A backup is already running.</i> &mdash; and <i>Try again</i> with the " +
+    "reads back &rarr; C2, still only <code>phat:auth</code> on disk. " +
+    "<b>(5) The open-time push gate</b>: on C2 (signed in, not onboarded) reload &rarr; screen A, seven seconds, <b>zero</b> " +
+    "<code>/rest/v1</code> writes, zero <code>phat:*</code> writes, no <code>phat:v1:*</code> key; <i>Sign in</i> on A with the " +
+    "persisted session &rarr; straight to C2 with no token request and four reads; START WITH AN EMPTY LOG &rarr; " +
+    "<code>prefs.onboarded=true</code>, no log key, no push in 4 s, Home H4 <i>On this device only. Backs up to " +
+    "test+d@example.com after the next save.</i> " +
+    "<b>(6) Settings unchanged</b> (the gate is scoped to <code>onboard-signin</code>): onboarded empty device, two Enters in " +
+    "Settings &rarr; one token request, <i>Signed in as test+d@example.com. Backs up after every saved session and weight.</i>, " +
+    "the sign-in push exactly one write (<code>POST user_state 201</code>), <i>Backed up 0 sessions and 0 weights, just now.</i>, " +
+    "no C-screen in the timeline. <b>(7) C1 on the first landing</b>: one session (<code>100 &times; 5</code>) logged and pushed " +
+    "from an onboarded phone; a fresh phone &rarr; <code>A &gt; B &gt; B[Signing in.] &gt; C-pull &gt; C1[1 session and 0 weights " +
+    "are backed up under this account.]</code>, no empty-log button, four reads, zero writes; RESTORE &rarr; the session " +
+    "byte-identical to what the first phone saved, prefs <code>onboarded</code> with the stamp naming test+d and <code>n:1</code> " +
+    "in one write, nothing pushed back, Home, no recover key. (A rig artefact, not a defect: comparing the server&rsquo;s " +
+    "<code>jsonb</code> document to the local JSON by string fails on key order alone &mdash; Postgres sorts jsonb keys; the restore " +
+    "round trip through <code>restorePayload</code> is byte-identical, which is the claim that matters.) " +
+    "<b>(D) The rest of W7 at this commit.</b> D3 / D4 / D7 on the shared device with A&rsquo;s stamped stores from item 32 " +
+    "(A&rsquo;s account since deleted; the ownership check is stamp against signed-in id and does not need A to exist): test+d signs " +
+    "in from Settings &rarr; H3 line, R-a verbatim in <code>.refuse</code> <code>role=alert</code> (<i>&hellip; Nothing was backed " +
+    "up to test+d@example.com &hellip;</i>), announced once assertive, zero REST after the token; BACK UP NOW &rarr; R-b once, " +
+    "nothing sent; Restore &rarr; R-c once, 0 reads, no sheet, no recover key; every store byte-identical from a cold second page " +
+    "after each; D2: A&rsquo;s session id and weight nowhere under test+d on the server; sign-out &rarr; <code>phat:auth</code> " +
+    "removed, log / bw / prefs byte-identical, <code>POST logout 204</code> only. D5 on the item-32 seed (six sessions, fourteen " +
+    "weights, a string stamp, no profile key): one log write at boot stamping <code>{diet:phat-brief}</code>, sessions[] " +
+    "byte-identical, bw and prefs untouched, H6, the strip <i>3,200 &middot; 170 g &middot; 300 g &middot; 145 g</i>, the Weight " +
+    "band <i>+0.27 kg per week. On target. Change nothing.</i>, the Diet tab 1,108 chars as before, second boot zero writes. D1 " +
+    "from outside with the one account: its own <code>user_state</code> row as the positive control, every table filtered to " +
+    "A&rsquo;s old uid &rarr; <code>200 []</code>, the publishable key alone &rarr; five <code>[]</code>, an insert under " +
+    "A&rsquo;s uid &rarr; <code>403 42501</code>. (D1&rsquo;s two-account, both-directions form is item 32; the SQL has not changed " +
+    "since.) <b>scripts/offline-check.mjs: PASS. file:// suite 689 / 689 / 0, three tripwires.</b> The account is test data " +
+    "holding one session and one state row and is to be deleted from the dashboard by uid.</span></li>" +
     "</ol>";
 })();
 </script>

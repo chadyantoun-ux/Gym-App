@@ -2088,3 +2088,173 @@ not change, and the "matched exactly once" assertion written down as a standing 
 **Rules out:** treating a warn-once as a refusal; re-widening PV1 to the PM's original "any move drops it";
 closing B-95 by editing the observed pin; bumping `sw.js` for a release whose file list did not change; reading
 this close as reversing the recommendation to log before rebuilding.
+
+## 2026-09-12 — WO-008 W4: the profile stamp is evidence-gated and one-shot per store; SCHEMA_VERSION stays 5; a device's stores belong to the account that first backed them up
+
+**The uncomfortable answer first.** The bytes on Chady's phone and on Diana's phone cannot be told apart by
+schema age (coach addendum §16.8), and after W3's runbook they cannot be told apart by the owner stamp either —
+both phones will carry a string stamp with `n:0, m:0`. So the pass does the only honest thing: it stamps
+`{diet:"phat-brief"}` on **evidence the store was in use before two accounts existed**, and when it cannot tell
+it writes `profile: null` and never asks that store again. **If Chady's phone holds no session, no weight, no
+calorie stamp and no pre-WO-001 marker, his store is answered null and his Diet tab and calorie ladder go
+ABSENT until a stamped store pushes to his account and he restores.** That is the coach's recorded consequence
+(§16.8) and it is the price of not handing Diana his diet. There is no control in this order that re-stamps a
+store by hand; if he finds himself in that state, that control is a one-line follow-up (B-93's first field),
+not a reason to loosen the pass.
+
+**The evidence rule, as shipped (`PHAT.profilePass(log, {bwCount})`).** Runs at boot on the migrated log store,
+after every schema pass and before the store is adopted, **only on a store with no own `profile` key**. Stamps
+iff the store is not `demo:true` and at least one of: `utcDatedBefore` set (migrated from schema 1 — older than
+WO-001, [Certain] his); ≥ 1 session; ≥ 1 bodyweight entry; `calChangedAt` set (an act that exists only inside
+Rule W1). Otherwise writes `null`. Idempotent by construction: a store that carries the key — `null` or the
+stamp — comes back as the same reference, `changed:false`, whatever evidence it has gained since. That is the
+whole defence against the hazard: Diana's first logged session must not become evidence, and it cannot, because
+by then her store has already been asked.
+
+**Why every store this build creates carries `profile: null` from birth.** The gate is key presence, so a store
+born without the key would be asked on its next boot and stamped on its own sessions. Three creation points,
+all closed: `S.logMeta` boots as `{profile:null}` (the first save on a fresh device writes it); `restorePayload`
+sets `null` on a `log_meta` that lacks the key (a pre-W4 backup restored onto any phone is never re-asked — the
+restore-shaped hazard); and the E-3 test fixtures carry it. A backup whose `log_meta` carries the stamp brings it
+down untouched, which is how the profile travels with the account.
+
+**No `SCHEMA_VERSION` bump — and why `V_PROFILE` is not compared to it.** The store's shape did not move: one
+additive key. A version gate is an age gate, and age is exactly what cannot decide this. `V_PROFILE = 1` names
+the pass (its note reads `Profile pass 1: …`; a second pass, if ever ruled, gets `2` and is gated apart by it);
+it is never compared to the store's `schemaVersion`, and `migrateStore` neither reads nor writes `profile`.
+WO-002's importer owes nothing new: a schema-2…5 store without the key loads, is asked once, and answers.
+
+**Rule PR1 as implemented — fail closed, byte-identical when open.** `calorieAdvice(entries, today,
+calChangedAt, profile)` and `dietTargets(date, plan, view, profile)` return the C7a ABSENT object for anything
+but an object whose `diet === "phat-brief"` (the NAME is the test, so a B-93 field added to the brief's profile
+does not lock the tab). For the stamp, the returned object is **byte-identical to `main @ 9ee456f`** — no
+`absent:false` field is added to a stamped store's output — pinned in S36 against literals frozen from that
+commit's `logic.js`. Every existing three-argument call in `index.html` and `tests.html` became four-argument;
+none was loosened. Rule C7c: `stallAdvice` reads `ctx.profile` in the stalled state only and reports `copy:
+"phat" | "generic"`; `provenance` still reports the plan fact alone.
+
+**B-88 — `storeOwner({ownerId, userId, hasData}) → {allowed, reason}`.** No user → refused (`no-user`); no data
+on disk → allowed (`fresh`, the second-phone case — a stale stamp on an empty device protects nothing); no owner →
+allowed (`claim`); same account → allowed (`owner`); otherwise refused (`foreign`). `hasData` is `!D.empty` from
+`storesOnDisk()` — a store that cannot be read counts as data. Wired before the signature skip in `runBackup`
+(automatic and manual), before the pull in `restoreStart` (nothing under `phat:v1:recover:*` is touched), and
+sign-in itself pushes only through that gate — and not at all on a device that has not finished first run
+(`S.prefs.onboarded`), per UX §18.4. A refusal sets `S.sync.last` with `reason:"owner"`, announces once
+assertively, and writes nothing; the automatic refusal is latched per signed-in account (`S.sync.refused`) so a
+mismatched account gets one alert per sign-in, not one per saved set (UX §18.5 rule 2 — the latch is W5's to
+move if it wants it elsewhere).
+
+**`prefs.backup.user` is `{id, email}`; the E-3 string is read, not rewritten.** `PHAT.backupOwner` reads both
+shapes and is the only reader; boot normalises in memory and writes nothing. The object lands on the next stamp
+a push or a restore writes, which is also how a string stamp gains its email — the owner's own next push. Until
+then the refusals say `another account` / `Sign in as that account` (UX §18.5 H6), and the app invents no
+address. `bkStatusLine`'s `Never backed up.` now prints only when there is no stamp; a viewer who is not the
+owner reads `Last backup {ago}, by {owner}.`
+
+**Rules out:** gating the stamp on `schemaVersion` or any age; a stamp on a `demo:true` store; re-asking a store
+that carries the key; adding `absent:false` to a stamped store's engine output; an override that re-claims a
+device's log for another account (B-88's note stands); a boot write to `prefs` for the stamp-shape migration.
+
+## 2026-09-12 — WO-008 W7: two real accounts against the live project; the data criteria pass; W5 fails one criterion on the first screen a second phone sees; not a pass for release until the false C3 is fixed
+
+Verified `8c1cff7` (W5 over W4) with `9ee456f` served beside it. Suite **689 / 689 / 0**, no skips, three tripwires,
+no changed assertion (11 added, S37). `scripts/offline-check.mjs` PASS. 26 mutants killed, each injection matched
+once. Two throwaway accounts (`test+a@example.com` / `test+b@example.com`) created on the live project through the
+publishable key, four fresh contexts and one shared device driven through the real `sync.js` and the real CDN module;
+the evidence is `tests.html` "Already proven" item 32 and the S37 replays.
+
+**The uncomfortable answer first: W7 is not a pass for release as `8c1cff7` stands.** Every data criterion holds —
+D1 both directions with positive controls, D2, D3, D4 from a cold second-page read, D5 byte-identical to `9ee456f`,
+D7 — and B-88 is closed as specified. But W5's criterion *"First-run → Sign in as Diana on a fresh phone → Restore
+from backup is offered"* fails as observed: **every first-run sign-in, four out of four, lands on C3 with
+`Could not read the backup. A backup is already running.`** and zero REST reads. Mechanism: `sync.js` subscribes to
+`client.auth.onAuthStateChange`, which fires SIGNED_IN inside `signInWithPassword` while `runAuth` still holds
+`st.busy = "auth"`; the `emit()` runs `onSync` → `paintBackup` → the `onboard-signin` route → `obToC()` →
+`Y.pull()` → refused `busy`. `authTap`'s own route then finds `S.sub` already moved and does nothing. `Try again`
+recovers every time and nothing is written, so it is P2 by the backlog's ladder — but it is the first sentence Diana's
+phone will ever say after she signs in, and it is false. Frontend's stub could not show it because the stub clears busy
+before it emits; it needs the real module. **Fix before W8** (owner: `frontend-engineer`, one of: `obPull` retries once
+on `reason:"busy"` after the module's busy clears; or `paintBackup` does not route to C while `S.sync.busy`), then
+re-observe with the real module — the rig is described in item 32 and takes one sign-in to check.
+
+**Ruled, QA:**
+- **The stamp hazard is real by construction and unreachable by the live first run.** A pre-W4 log store holding
+  `sessions:[]` beside one bodyweight entry is stamped `phat-brief` (S37 pins it as OBSERVED, backend's deliberate
+  choice). But the live app's first run with `Today's weight` typed writes `bw` and `prefs` and **no log key**; the pass
+  over an absent log invents nothing; the first session is born `profile:null`. So "log nothing until W8" is
+  sufficient and the weight field is safe. **Recommendation, stronger than the runbook:** deploy W8 *before* Diana's
+  first run, so she takes `Sign in` → C2 → `Start with an empty log` and her store carries `profile:null` from birth;
+  then no ordering rule has to be remembered at all.
+- **The Home fold at 393 × 852 was already failing before W5, and W5 makes it worse.** On `9ee456f` (dock top 788)
+  SAT sat 774–855, 67 px under the dock. On `8c1cff7` the 48 px owner row pushes FRI to 733–814 (26 px under) and SAT
+  to 822–903 (115 px under). The cycle block is 121 px (three sentences), not the 50 px UX's arithmetic assumed. A
+  WO-004 W9 criterion regression on the record for the PM; not a data item and not a W7 blocker.
+- **A side finding on the server.** With the `4d69225` archive-trigger guard, an authenticated `DELETE` of the
+  account's *own* `sessions` / `bodyweight` / `user_state` rows fails `403 42501 permission denied for table users`:
+  the guard's `select from auth.users` runs as the invoking role. No client path deletes today; it is why this run could
+  not wipe its own rows. Backlog it (P3 now, P1 the day a delete or a wipe ships): `security definer` on the four
+  archive functions with a pinned `search_path`, or a narrower test.
+- **The two accounts are not deleted and I could not delete them.** No `SB_PAT` in this session, no dashboard, and
+  the client cannot delete users. They hold 2 sessions / 1 weight (A) and 4 sessions (B), all test data. One SQL
+  statement in the dashboard removes both, cascade included (`4d69225`): `delete from auth.users where email in
+  ('test+a@example.com','test+b@example.com'); select count(*) from auth.users;` — expect the count to drop by two.
+  Sign-ups are still enabled; W3 has not been run.
+- **What was pinned, and what was not.** S37 replays the shared device (the three sentences byte for byte, with the
+  `another account` substitution), the second phone (restore byte-identical, `profile:null` riding `log_meta`, C1/C2
+  from the counts, no keep on an empty device), D2 on B's rows, D5 on the seed both commits rendered, and the hazard
+  three ways. The R-a latch and the false C3 are wire-side and are named under "Not testable", not pretended at.
+  `esc()` held on an owner and a signed-in email carrying `<img onerror>` in every one of the fourteen identity lines.
+
+**Rules out:** filing the false C3 as a rig artefact (the REST log shows zero reads on a working network); calling
+the stamp hazard closed because the live first run avoids it (the shape is one log write away, S37 says so); deleting
+the observed-pin on the bodyweight evidence to make the hazard disappear from the suite.
+
+## 2026-09-12 — WO-008 W7, second pass: the false C3 is closed at `c102240` as observed with the real module; W7 passes for release; one account to delete and sign-ups still on
+
+Verified `c102240` — one function and one gate over `2e98f15`: `authTap` holds a module-level `authBusy` for the span
+of one attempt and refuses a re-entrant call; `paintBackup` does not route first-run screen B anywhere while it is set,
+so `authTap`'s success path is the only route to C. Suite **689 / 689 / 0**, three tripwires, `scripts/offline-check.mjs`
+PASS. The evidence is `tests.html` "Already proven" item 33; the "Not testable" entry that carried the defect now
+carries its closure, and says why it stays a rig and not a `file://` test.
+
+**Pass for release.** Frontend's seven-step path, re-run against the live project through the real `sync.js` and the
+real CDN module, on fresh contexts, with every `/auth/v1` and `/rest/v1` request logged and the screen classified by a
+`MutationObserver` inside the page on every mutation (frontend's harness lesson applied: B is keyed on `#ob-back` /
+`#bk-email`, C on `#ob-h.obh`, never on `#ob-h` / `#ob-start`, which both screens carry):
+
+1. Fresh → Sign in → correct: **five of five** `A > B > B[Signing in.] > C-pull > C2`, first C-state C2, no C3 for
+   even one frame, four `GET 200` reads, one token request, zero writes. Eleven first-run sign-ins across the whole
+   run: C2 × 10, C1 × 1, C3 × 0. Tap to answer 1.8 s. Item 32 had four of four C3 with zero reads.
+2. Wrong password: `B[! Wrong email or password.]`, `role=alert`, announced once, email kept, buttons live, zero
+   keys, `POST token 400` and nothing else; the right password in the same B → C2 first.
+3. Enter twice in the password field: **one** `/auth/v1/token`. Three synchronous keydowns in one task: one. Enter
+   plus a Sign in tap plus a Create account tap in one task: one, and it is the sign-in. No busy refusal painted.
+4. Network cut after the tap (socket abort, and the context offline in the same instant): `B[! No connection.]`,
+   never stuck on `Signing in.`, and the next tap with the radio back → C2 — `authBusy` is cleared by the failure.
+   Control: reads cut after a good token → a **true** C3 that says `No connection.`, and Try again → C2.
+5. Persisted session on a first-run device: reload → A, seven seconds, zero `/rest/v1` writes, zero `phat:*` writes;
+   Sign in on A → straight to C2 with no token request; START WITH AN EMPTY LOG → `onboarded`, no log key, no push.
+
+Also observed, beyond the ask: the Settings sign-in path is unchanged (two Enters → one request, the sign-in push is
+one `user_state` write, no C-screen in the timeline); C1 on the first landing with the real count once the account
+held a session, then Restore byte-identical; D3 / D4 / D7 on the shared device with A's stamped stores (R-a, R-b, R-c
+verbatim, once each, nothing sent, byte-identical from a cold page, sign-out removes `phat:auth` only); D2 (nothing of
+A's under test+d on the server); D5 on the item-32 seed (one stamping write, the strip, the `+0.27 kg` band, Diet 1,108
+chars, second boot zero writes); D1 from outside with the one account (own row as positive control, A's uid → `[]`
+× 5, anon → `[]` × 5, insert under A → `403 42501`).
+
+**Observed, not ruled:**
+- **Sign-ups are still enabled** (`/auth/v1/settings` → `disable_signup:false`). W3's lock has not been run. The
+  throwaway `test+d@example.com`, uid `aee69577-d260-4338-8bd8-9dacac75e21c`, holds one test session and one state
+  row and is to be deleted from the dashboard; the client cannot delete users and this session has no dashboard.
+- **A rig artefact worth writing down so nobody files it:** the server returns the session document from `jsonb`,
+  which sorts keys; a string compare against the local JSON fails on order alone. The restore round trip through
+  `restorePayload` is byte-identical, which is the claim that matters (item 33 (7)).
+- **D1's two-account, both-directions form was not re-run** — the second account is gone and the SQL has not
+  changed since `2e98f15`. Item 32 (A) stands as the evidence for that shape.
+- The Home fold regression and the archive-trigger `DELETE` finding from the first pass are unchanged by this diff
+  and stay where they were filed.
+
+**Rules out:** extracting `authBusy` to `logic.js` to make it a `file://` test — it is two lines of routing around a
+module call, and the extraction would test itself, not the race between `onAuthStateChange` and the route; the rig is
+the test, re-run when `authTap`, `paintBackup`, `obPull` or `sync.js` change.

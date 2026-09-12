@@ -60,6 +60,46 @@
     return null;                                 // calChangedAt, deload
   }
 
+  /* ---- the diet profile (WO-008 W4, coach addendum §16, Rule PR1) ----
+     NOT A SCHEMA VERSION. SCHEMA_VERSION stays 5: the store's shape does not
+     move, `profile` is one additive key on the LOG store, and it has three
+     readings that every reader must keep apart:
+
+       absent (no own key)   never asked. Every store written before this pass.
+       null                  asked, and the pass could not tell whose store it
+                             is. Written by profilePass when the evidence is
+                             not there, and by EVERY log store this build
+                             creates from nothing (the boot default in
+                             index.html, restorePayload below) so a store born
+                             after the pass can never look like one born before
+                             it.
+       {diet:"phat-brief"}   the diet protocol compiled into this file - the
+                             one person the brief was written for. Written by
+                             profilePass ON EVIDENCE, or carried in from the
+                             account by a restore (user_state.log_meta).
+
+     THE GATE IS THE KEY'S OWN PRESENCE, never schemaVersion and never
+     SCHEMA_VERSION - the trap decisions.md records twice, and here it would be
+     worse than a relabel: a pass gated on age stamps Chady's diet on any store
+     old enough, and Diana's store on her phone is exactly as old as his (§16.8).
+     So the pass runs AT MOST ONCE PER STORE and never again, even when the
+     evidence appears later - her first logged session is the evidence that
+     must NOT count, because by then the store has already been asked and
+     answered null.
+
+     V_PROFILE names this pass. It is the number a second pass, if one is ever
+     ruled, is gated apart from this one by; this pass reports it in its note
+     and tests pin it. It is not compared to the store's schemaVersion, on
+     purpose - see above. */
+  var V_PROFILE = 1;
+  var PROFILE_PHAT_BRIEF = "phat-brief";
+  /* Rule PR1's test, in one place. An object whose `diet` is the brief's name.
+     Anything else - absent, undefined, null, a string, a caller that passed
+     nothing - is ABSENT, and the engines that read it fail CLOSED. */
+  function isPhatBrief(profile) {
+    return isObj(profile) && profile.diet === PROFILE_PHAT_BRIEF;
+  }
+
   /* Limits. Weight in kg, reps whole. w === 0 is legal: bodyweight rack chins
      and unweighted dips are real sets (B-21). */
   var W_MIN = 0, W_MAX = 500;
@@ -2529,6 +2569,85 @@
     }
   }
 
+  /* profilePass(log, ev) -> { log, changed, stamped, asked, evidence:[], note }
+
+     WO-008 W4 (b). The diet-profile stamp, and the hazard it is built around
+     (coach addendum §16.8): a schema pass can only see age, and by age
+     Diana's store is Chady's. So this pass stamps ON EVIDENCE and, when it
+     cannot tell, it does NOT stamp - it writes `profile: null` and never asks
+     that store again. Silence is the recoverable error: his stamp lives on his
+     account once any stamped device pushes, and one Restore brings it to any
+     phone; a wrong stamp on her phone has no undo she can see.
+
+     Runs at boot on the MIGRATED log store, before it is adopted, and only on
+     a store that has no own `profile` key (see V_PROFILE). Pure: returns a
+     copy when it changes anything and the same reference when it does not.
+
+       log   the log store object (after migrateStore). Not an object, or
+             absent: nothing to stamp, changed:false, and NOTHING is invented -
+             an absent store stays absent, and the first save creates one that
+             already carries `profile: null` (index.html's boot default).
+       ev    { bwCount }  what the pass may read that is not on the log store:
+             the bodyweight store's entry count, from the same boot read.
+
+     THE EVIDENCE RULE - stamp {diet:"phat-brief"} iff the store is not a demo
+     store and at least one of these is true of it AT THE MOMENT OF THE PASS:
+       utcDatedBefore   the store was migrated from schema 1 - it existed
+                        before WO-001 (2026-09-09), before any second account
+                        could. [Certain] it is his.
+       >= 1 session     the store has been trained on.
+       >= 1 weight      the store has been weighed on.
+       calChangedAt     `I changed my calories today` was tapped - an act that
+                        exists only inside Rule W1, the brief's own protocol.
+     Every one of them is "this store was in use before two users existed",
+     which on a phone that was the only phone is his. It is NOT a proof - a
+     second phone that logged a set before this build reached it would carry
+     the same evidence, which is why the release runbook has Diana log nothing
+     until W8 is live, and why this pass never runs twice. A store with none of
+     them is a store that had not been used, and a store that had not been used
+     has no diet the app could vouch for: null.
+
+     WHAT IT NEVER DOES: read schemaVersion; touch sessions[], any entry, any
+     date, any other key; run on a store that carries `profile` (null or
+     otherwise); stamp a demo store; throw. */
+  function profilePass(log, ev) {
+    var out = { log: log, changed: false, stamped: false, asked: false, evidence: [], note: null };
+    try {
+      if (!isObj(log)) return out;
+      if (Object.prototype.hasOwnProperty.call(log, "profile")) return out;   /* asked before */
+      out.asked = true;
+      var E = isObj(ev) ? ev : {};
+      var bwCount = (typeof E.bwCount === "number" && isFinite(E.bwCount)) ? E.bwCount : 0;
+      var nSess = Array.isArray(log.sessions) ? log.sessions.length : 0;
+      if (log.demo !== true) {
+        if (typeof log.utcDatedBefore === "string" && log.utcDatedBefore !== "") out.evidence.push("utcDatedBefore");
+        if (nSess > 0) out.evidence.push("sessions");
+        if (bwCount > 0) out.evidence.push("bodyweight");
+        if (typeof log.calChangedAt === "string" && log.calChangedAt !== "") out.evidence.push("calChangedAt");
+      }
+      var next = {};
+      Object.keys(log).forEach(function (k) { next[k] = log[k]; });
+      if (out.evidence.length) {
+        next.profile = { diet: PROFILE_PHAT_BRIEF };
+        out.stamped = true;
+        out.note = { level: "info", key: "log",
+          msg: "Profile pass " + V_PROFILE + ": stamped diet " + PROFILE_PHAT_BRIEF +
+               " on evidence (" + out.evidence.join(", ") + "). Nothing else was changed." };
+      } else {
+        next.profile = null;
+        out.note = { level: "info", key: "log",
+          msg: "Profile pass " + V_PROFILE + ": no evidence of use" +
+               (log.demo === true ? " (demo store)" : "") + "; profile set to null. Nothing else was changed." };
+      }
+      out.log = next;
+      out.changed = true;
+      return out;
+    } catch (err) {
+      return { log: log, changed: false, stamped: false, asked: false, evidence: [],
+               note: { level: "error", key: "log", msg: "Profile pass failed, store left untouched: " + (err && err.message) } };
+    }
+  }
+
   /* ============================================================ backup
      E-3. The pure half of sync.js: serialisation for the push and the
      validation for the restore. No network, no storage, no DOM, so the whole
@@ -2959,6 +3078,17 @@
                           : "backup has no user_state row; log stamped schema " + SCHEMA_VERSION + " with default state");
       }
       if (log.includeCut === undefined) log.includeCut = false;
+      /* WO-008 W4. A restored log that carries no `profile` key is a store
+         this build creates from nothing, and every such store carries
+         profile:null - "asked, could not tell" - so the boot pass can never
+         mistake it for a pre-W4 store and stamp it on the sessions it holds
+         (the §16.8 hazard, restore-shaped). A backup that carries the stamp
+         brings it down untouched, which is the whole point: the profile
+         travels with the account. */
+      if (!Object.prototype.hasOwnProperty.call(log, "profile")) {
+        log.profile = null;
+        out.notes.push("log_meta had no profile; set to null (no diet protocol)");
+      }
       log.sessions = sortSessions(sess);
 
       var bw = { schemaVersion: SCHEMA_VERSION, entries: bws.slice().sort(function (a, b) {
@@ -3079,6 +3209,93 @@
     var more = ids.length - 1;
     return "Save or discard your changes to " + name +
            (more > 0 ? " and " + more + " other plan" + (more === 1 ? "" : "s") : "") + " first.";
+  }
+
+  /* ================================================ ownership (WO-008 W4, B-88)
+
+     A device's stores belong to the account that first backed them up. Three
+     pure pieces: the stamp reader (both shapes), the decision, the sentences.
+     Nothing here reads storage or the network; index.html hands them the
+     stamp, the signed-in user and a disk read, and executes the answer. */
+
+  /* backupOwner(backup) -> { id, email } | null
+
+     The owner of this device's log, read off prefs.backup. Two shapes on
+     disk, forever: the E-3 stamp wrote `user` as the account id STRING; from
+     this build it is { id, email }. Both are read here and nowhere else, so
+     a reader that forgot one shape cannot print "Never backed up" over a
+     device that has (UX spec §18.5 rule 3). An id that is not a non-empty
+     string is no owner. `email` is null when the stamp never carried one - a
+     string stamp migrated offline - and the sentences below say "another
+     account" rather than invent an address. */
+  function backupOwner(backup) {
+    if (!isObj(backup)) return null;
+    var u = backup.user;
+    if (typeof u === "string") return u.trim() === "" ? null : { id: u, email: null };
+    if (!isObj(u) || typeof u.id !== "string" || u.id.trim() === "") return null;
+    return { id: u.id, email: (typeof u.email === "string" && u.email.trim() !== "") ? u.email : null };
+  }
+
+  /* storeOwner({ownerId, userId, hasData}) -> { allowed, reason }
+
+     The decision, and the whole of B-88's rule:
+       ownerId null, hasData true     -> allowed, "claim"    the first push claims
+                                                             the device; the caller
+                                                             stamps.
+       hasData false                  -> allowed, "fresh"    an empty device may be
+                                                             claimed by anyone - the
+                                                             second-phone case, and
+                                                             a stale stamp on a
+                                                             device with nothing on
+                                                             it protects nothing.
+       ownerId === userId             -> allowed, "owner"
+       otherwise, with data           -> REFUSED, "foreign"  the log is someone
+                                                             else's; nothing moves
+                                                             in either direction.
+       userId missing                 -> REFUSED, "no-user"  nothing to allow.
+
+     `hasData` is whether any of log / bodyweight / plans is non-empty ON DISK
+     (storesOnDisk, never S), and a store that could not be read counts as
+     data - unknown is not empty. The caller passes !D.empty. */
+  function storeOwner(q) {
+    var Q = isObj(q) ? q : {};
+    var owner = (typeof Q.ownerId === "string" && Q.ownerId.trim() !== "") ? Q.ownerId : null;
+    var user = (typeof Q.userId === "string" && Q.userId.trim() !== "") ? Q.userId : null;
+    if (user === null) return { allowed: false, reason: "no-user" };
+    if (Q.hasData !== true) return { allowed: true, reason: "fresh" };
+    if (owner === null) return { allowed: true, reason: "claim" };
+    if (owner === user) return { allowed: true, reason: "owner" };
+    return { allowed: false, reason: "foreign" };
+  }
+
+  /* ownerRefusal(kind, owner, me) -> the sentence, verbatim from UX spec §18.5.
+
+       kind   "auto"     R-a  the automatic push after a sign-in or a save
+              "manual"   R-b  BACK UP NOW
+              "restore"  R-c  Restore from backup
+       owner  backupOwner()'s object (email may be null)
+       me     the signed-in account's email
+
+     Each names the owner, names what did NOT happen, and offers the one way
+     out. When the owner's email is unknown, {owner} reads "another account"
+     and the way-out clause "Sign in as that account". Nothing is invented. */
+  var OWNER_UNKNOWN = "another account";
+  var OWNER_UNKNOWN_WAYOUT = "that account";
+  function ownerRefusal(kind, owner, me) {
+    var o = (isObj(owner) && typeof owner.email === "string" && owner.email !== "") ? owner.email : null;
+    var who = o === null ? OWNER_UNKNOWN : o;
+    var way = o === null ? OWNER_UNKNOWN_WAYOUT : o;
+    var m = (typeof me === "string" && me.trim() !== "") ? me : "this account";
+    if (kind === "manual") {
+      return "Not backed up. This device's log belongs to " + who + ", not to " + m +
+             ". Sign in as " + way + " to back it up.";
+    }
+    if (kind === "restore") {
+      return "Not restored. This device's log belongs to " + who + ". The backup under " + m +
+             " was not read and nothing on this device changed. Sign in as " + way + " to restore.";
+    }
+    return "This device's log belongs to " + who + ". Nothing was backed up to " + m +
+           ". Sign in as " + way + " to back it up.";
   }
 
   /* restoreSteps(rp, local, keys, ts)
@@ -4294,6 +4511,13 @@
   var BW_HISTORY = 14;       /* days of history before this is a decision */
   var CAL_COOLDOWN = 7;      /* days a calorie change is held */
   var BW_SUBLINE = "Target: +0.2 to +0.3 kg per week. Averages over 14 days.";
+  /* Rule PR1 (coach addendum §16.2), the Weight tab's ABSENT copy. Two lines,
+     rendered ONCE in the calorie-decision slot, in the sub-line's token, no
+     kicker, no enclosure, no control. Verbatim; nothing here is assembled. */
+  var W1_ABSENT = [
+    "No diet protocol on this account.",
+    "The app reports your weight and says nothing about what to eat."
+  ];
 
   function round2(x) {
     var n = Math.round(x * 100) / 100;
@@ -4439,9 +4663,15 @@
     return "You changed calories " + agoWord(daysAgo) + ".";
   }
 
-  /* calorieAdvice(entries, todayStr, calChangedAt)
+  /* calorieAdvice(entries, todayStr, calChangedAt, profile)
        -> {state, rate, text, subline, tone, aCount, bCount, meanA, meanB,
            daysAgo, holdUntil, holdNote}
+       or, when `profile` is not the brief's (Rule PR1, WO-008 W4), the same
+       twelve fields empty plus {absent:true, absentLines, absentLine} and
+       state "absent". The profile argument is the log store's meta `profile`;
+       the caller passes it, and a caller that passes nothing gets ABSENT.
+       For a store stamped {diet:"phat-brief"} every field and every string
+       below is byte-identical to what it was before the argument existed.
 
      state, one of eleven:
        "empty"          no usable entry at all. text "" - the tab keeps its own
@@ -4496,7 +4726,22 @@
 
      Pure: reads `entries`, writes nothing, touches no storage, and stamping
      the cooldown is a separate explicit call (setCalChanged). */
-  function calorieAdvice(entries, todayStr, calChangedAt) {
+  function calorieAdvice(entries, todayStr, calChangedAt, profile) {
+    /* Rule PR1 - THE PERSON GATE, FIRST. Before the rows, the history span,
+       either window: absence is a property of the store and is detectable on
+       day zero. Fail closed: a caller that does not say whose store this is
+       gets silence, not Chady's diet. The ABSENT object carries the twelve
+       fields every other state carries, every one of them empty - no rate, no
+       band, no hold, no mean - plus the C7a triple. bwWindows is NOT consulted:
+       the average is the Weight tab's to read from bwWindows directly, and it
+       still does. */
+    if (!isPhatBrief(profile)) {
+      return markAbsent({
+        state: "absent", rate: null, text: "", subline: "", tone: "none",
+        aCount: 0, bCount: 0, meanA: null, meanB: null,
+        daysAgo: null, holdUntil: null, holdNote: ""
+      }, W1_ABSENT);
+    }
     var today = safeToday(todayStr);
     var W = bwWindows(entries, today);
     var out = {
@@ -4950,10 +5195,16 @@
     return out;
   }
 
-  /* stallAdvice(ctx) -> { state, provenance, week, stalled, untested, lines,
-                           text, absent, absentLines, absentLine, report }
+  /* stallAdvice(ctx) -> { state, provenance, copy, week, stalled, untested,
+                           lines, text, absent, absentLines, absentLine, report }
 
-     ctx = { plan, sessions, todayStr, state, keyLifts, report }
+     ctx = { plan, sessions, todayStr, state, keyLifts, report, profile }
+
+     `profile` (WO-008 W4, Rule C7c) is the log store's meta `profile`. It is
+     read in exactly one state, "stalled", and decides between the brief's
+     diagnosis and the generic one TOGETHER WITH provenance: both, or generic.
+     `copy` reports which was chosen ("phat" | "generic", null elsewhere);
+     `provenance` keeps reporting the plan fact on its own.
 
      WHY THIS IS A SECOND FUNCTION AND NOT FOUR MORE KEYS ON stallReport.
      Rule C7b splits ST1 in two: a MEASUREMENT that travels to any plan, and a
@@ -4975,7 +5226,8 @@
        "thin"    tested lifts exist but some or all are below the block
                  minimum. Existing not-enough-data copy, unchanged.
        "stalled" at least one tested lift failed the 2.5% bar. `provenance`
-                 selects the brief's diagnosis or the generic one.
+                 AND `profile` together select the brief's diagnosis (C7c);
+                 either one short of it selects the generic one.
        "quiet"   everything tested is progressing. Nothing renders. The chart
                  is the feedback.
 
@@ -4992,7 +5244,7 @@
     var tw = trainingWeeks(sessions, today);
 
     var out = notAbsent({
-      state: "quiet", provenance: null, week: tw,
+      state: "quiet", provenance: null, copy: null, week: tw,
       stalled: [], untested: [], unreadable: [], lines: [], text: "",
       /* Addendum §9.9. Its own field, never joined into `text`: it is a
          disclosure about the CHECK, not a finding about a lift, and it renders
@@ -5030,11 +5282,20 @@
     if (rep.stalled.length) {
       out.state = "stalled";
       out.provenance = phatProvenance(plan) ? "phat" : "generic";
+      /* Rule C7c (coach addendum §16.7, WO-008 W4). The brief's copy says
+         "neither is the diet" and "you aren't eating enough" - two claims
+         earned by assessing one diet and one goal. Provenance proves the
+         PROGRAMME is his (C7b); only the profile proves the DIET is. So the
+         brief's lines need both, and anything else gets the generic sentence,
+         which names food without a direction. `provenance` keeps reporting
+         the plan fact; `copy` reports which sentence was chosen. No new
+         string. Fail closed: a caller that passes no profile gets generic. */
+      out.copy = (out.provenance === "phat" && isPhatBrief(c.profile)) ? "phat" : "generic";
       /* Comma-joined, in key-lift order, matching audit 4's own copy and the
          order he reads on the chart legend. Not andList - that is D1's
          vocabulary for D1's banner. */
       out.lines = ["Week " + tw + " and no progress on " + rep.stalled.join(", ") + "."]
-        .concat(out.provenance === "phat" ? ST1_PHAT_LINES : ST1_GENERIC_LINES);
+        .concat(out.copy === "phat" ? ST1_PHAT_LINES : ST1_GENERIC_LINES);
       out.text = out.lines.join(" ");
       return out;
     }
@@ -7261,6 +7522,17 @@
      (5 × 3,200 + 2 × 2,500) / 7 = 3,000, +300 over an estimated 2,700
      maintenance. It holds for a 5-training / 2-rest week and for no other
      split, which is exactly the condition `weekly` is emitted under. */
+  /* Rule PR1 (coach addendum §16.2), the Diet tab's ABSENT state. The WHOLE
+     tab: kicker, one sub-kicker, two lines - no grid, no tick, no caveat, no
+     figure. The Home macro strip renders nothing (once means once). Verbatim. */
+  var DIET_ABSENT = deepFreeze({
+    kicker: "Diet",
+    kickerSub: "No targets",
+    lines: [
+      "No diet targets on this account.",
+      "The app cannot work them out from a training log, and it will not guess."
+    ]
+  });
   var DIET_WEEKLY = deepFreeze({ avg: 3000, maintenance: 2700, surplus: 300,
                                  trainingDays: 5, restDays: 2 });
 
@@ -7360,7 +7632,7 @@
 
   /* -------------------------------------------------------- dietTargets */
 
-  /* dietTargets(dateStr, plan, view)
+  /* dietTargets(dateStr, plan, view, profile)
        -> { dayType, label, kcal, protein, carb, fat, text,
             date, weekday, todayType, claimsToday, derived, manual, reason,
             trainingDays, restDays,
@@ -7379,6 +7651,14 @@
                 shown and NEVER the claim about today: §8.6 worked example 2,
                 tapping TRAINING DAY on a Sunday must not be able to produce
                 the sentence `Today — high-carb training day`.
+     `profile`  the log store's meta `profile` (WO-008 W4, Rule PR1). Only
+                {diet:"phat-brief"} unlocks the eight figures and the nineteen
+                sentences - they are one person's numbers. Anything else, a
+                missing argument included, returns the ABSENT object below:
+                {absent:true, absentLines, absentLine, kicker, kickerSub} with
+                every figure null and every sentence empty. For the brief's
+                profile the returned object is byte-identical to what it was
+                before this argument existed.
 
      THE THREE LABEL CASES, §8.6 item 5, ruled by the coach and not by me:
        1. the plan declares rest days and the view is today's type
@@ -7406,12 +7686,29 @@
      block on both) so the frontend does not have to remember it. The
      calibration lines returned here ALREADY include the medical sentence as
      their last line, for the same reason. */
-  function dietTargets(dateStr, plan, view) {
+  function dietTargets(dateStr, plan, view, profile) {
     var p = isPlanDoc(plan) ? plan : PHAT_PLAN;
     var today = safeToday(dateStr);
     var wd = wdOf(today);
     var train = planTrainingWeekdays(p);
     var rest = planRestWeekdays(p);
+    /* Rule PR1 - THE PERSON GATE (WO-008 W4). Checked before a figure or a
+       sentence is chosen. The date, weekday and the plan's own schedule may
+       still come back - they are the plan's, not the person's - and nothing
+       on the tab renders from them. Every number field is null and every
+       sentence field is "" or null: no figure, no sentence, no tick. Fail
+       closed: a caller that passes no profile gets this. */
+    if (!isPhatBrief(profile)) {
+      return markAbsent({
+        kicker: DIET_ABSENT.kicker, kickerSub: DIET_ABSENT.kickerSub,
+        dayType: null, label: "", kcal: null, protein: null, carb: null, fat: null, text: null,
+        date: today, weekday: wd, todayType: null, claimsToday: false,
+        derived: false, manual: false, reason: null,
+        trainingDays: train, restDays: rest,
+        timing: null, weekly: "", calibration: null, nonNegotiables: null,
+        medical: "", medicalUnderGrid: false
+      }, DIET_ABSENT.lines);
+    }
     /* Does this plan declare rest days? It must name at least one weekday AND
        leave at least one unclaimed. Both halves matter: no `wd` at all means
        the app cannot place today, and all seven trained means there is no rest
@@ -8114,6 +8411,21 @@
     planTrainingWeekdays: planTrainingWeekdays,
     planRestWeekdays: planRestWeekdays,
     migrateStore: migrateStore,
+    /* WO-008 W4 — the diet profile and the person gate (Rule PR1, C7c).
+       V_PROFILE is the pass's own number, never compared to SCHEMA_VERSION;
+       profilePass stamps on evidence and writes null when it cannot tell;
+       isPhatBrief is the one test every gated engine runs. The two ABSENT
+       copies are exported so the suite pins the strings, not a regex. */
+    V_PROFILE: V_PROFILE,
+    PROFILE_PHAT_BRIEF: PROFILE_PHAT_BRIEF,
+    isPhatBrief: isPhatBrief,
+    profilePass: profilePass,
+    W1_ABSENT: W1_ABSENT,
+    DIET_ABSENT: DIET_ABSENT,
+    /* WO-008 W4 — ownership of a device's stores (B-88). */
+    backupOwner: backupOwner,
+    storeOwner: storeOwner,
+    ownerRefusal: ownerRefusal,
     /* E-3 — backup and restore, the pure half of sync.js. backupPayload
        serialises the three stores into the rows the server upserts and NAMES
        every document it will not send; restorePayload rebuilds the stores from
