@@ -52,44 +52,70 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 
 ---
 
-## 2. Current state
+## 2. Current state — 2026-09-11, after WO-004, WO-005 and E-3
 
-- `index.html` — the entire app today. ~700 lines: vanilla JS in one IIFE, inline CSS, no dependencies,
-  no build step. Data lives in `localStorage` under `phat:v1:log` and `phat:v1:bw`.
-- **Repo:** `https://github.com/chadyantoun-ux/Gym-App` (`main`).
-- `logic.js` — pure logic behind `window.PHAT`: local dates, set validation, migration, and the draft
-  and session builders. A **classic script**, not a module, so `tests.html` can load it from `file://`.
-  No DOM, no `S`. `index.html` will not run without it and says so rather than showing a black screen.
-- `tests.html` — assertions that open from `file://`, no Node. **The expected count moves with the
-  code; read the file rather than quoting a number from here.** On `main` it was 148 / 147 / 1 with one
-  deliberate failure; the `wo-003-advice` branch closed that one (B-38) and made four others stale by
-  bumping the schema to 3 and exporting `lastFor`, so the branch currently reads 148 / 143 / 5 until
-  `qa-engineer` folds them in. Ends with a manual checklist split into **"What only a phone can
-  answer"** (4 items) and **"Already proven — no action needed"** (16, each carrying its evidence).
-  A checklist item is retired by automating it and citing what was observed, never by deleting it.
-- **Repo:** `https://github.com/chadyantoun-ux/Gym-App` (`main`).
-- **Live:** `https://gym-app-psi-eight.vercel.app` — Vercel project `gym-app`, static, no build.
-  `/tests.html` is deployed too, so the checklist can be run from the phone.
-  **Not yet git-linked**: the Vercel GitHub App has to be installed on the repo before pushes
-  auto-deploy. Until then a deploy is a manual API call covering **all three files**, and a partial
-  upload is the black-screen failure mode — verify by fetching `/logic.js` and requiring a 200 with
-  `application/javascript` and real content, never a build status.
-- There is **no backend yet.** `backend-engineer`'s near-term scope is the data layer inside the app
-  (schema, validation, migrations, pure progression/analytics functions) plus standing up Supabase.
-- Known defects and planned work are in `docs/backlog.md`. Read it before proposing work.
+**The app is live, offline-capable, and backed up.** `https://gym-app-psi-eight.vercel.app`
 
-### Target stack (decided, not yet built)
+- **Files that ship — eleven.** `index.html` (shell, six screens, ~4,500 lines), `logic.js` (every rule
+  engine and every pure function behind `window.PHAT`, a classic script so `tests.html` runs from
+  `file://`), `sync.js` (the backup client, an ES module, injected after first render and only on
+  `http(s)` when online), `tests.html`, `sw.js`, `manifest.webmanifest`, `assets/archivo-inline.css`
+  (the typeface, inlined), and four PNG icons. **A deploy is all eleven or nothing** — a Vercel
+  deployment is an immutable snapshot, not a patch; a file left out ceases to exist at that
+  deployment. `docs/deploy.md` is the procedure; `scripts/verify-deploy.sh` fetches the bytes and
+  compares them to the tree.
+- **Screens built:** Train/Home (with onboarding and Settings), Session, Summary, Trend, Weight, Diet.
+  **Plan is a deliberate placeholder** — the Plan Editor (WO-004 W14–W15) was cut; the design's own
+  copy calls it *"the easiest thing in this app to do instead of training."*
+- **Storage:** `localStorage` under `phat:v1:log`, `phat:v1:bw`, `phat:v1:draft`, `phat:v1:prefs`,
+  `phat:v1:plans`; auth session under `phat:auth`. `SCHEMA_VERSION` is **5**. Migrations are gated on
+  their own version constants, never on `SCHEMA_VERSION`.
+- **Tests:** `tests.html` from `file://`, no Node. **Read the file for the count** — on `main` at
+  `4d69225` it is `593 / 593 / 0`. Two meta-tripwires forbid any named or expected failure. Every
+  rule change since WO-005 was pinned by running the new tests against the *pre-fix* `logic.js` and
+  confirming they go red — a test that passes in both regimes is a guard, and is named as one.
+- **Backup (E-3):** Supabase project `nkebsoqjtkcdiswrmely`, `us-west-2`, Postgres 17. **Backup and
+  restore, not two-way sync** — push-only; the server never writes to the device except on an explicit
+  Restore tap, which on a non-empty log requires typing `REPLACE`, exports first, and writes a
+  `phat:v1:recover:*` copy before replacing anything. RLS on all five tables, 18 policies, verified from
+  outside: the publishable key returns zero rows everywhere and an anon insert fails `42501`. Demo
+  data (`demo:true`) is refused and named on push and refused whole on restore (C-14). The draft and
+  preferences do not back up. Schema in `supabase/`; **the Management API runs a submission as one
+  transaction**, so `rls-selftest.sql` is separate — its trailing `rollback` once discarded all the
+  policies.
+- **Auth:** email + password, created from Settings. Magic links were rejected: a link from an email
+  opens in the browser, not the installed PWA. `mailer_autoconfirm` is on. **Sign-ups are still enabled
+  until Chady's own account exists; then disable them** (`Authentication → Providers → Email`) — RLS
+  scopes rows to a user, it does not stop a stranger creating an account in the project.
+- **Deploy:** manual Vercel API, **team-scoped** (`teamId` required on every call). The GitHub App is
+  still not installed; installing it on `chadyantoun-ux/Gym-App` makes a push to `main` deploy itself
+  and retires the manual upload. **Bytes come from `git cat-file blob`, never the working tree** —
+  `core.autocrlf` is on here and would inflate every text file.
+- **Live wrong-advice bugs closed in WO-005** — worth knowing because each shipped for a while: Rule
+  P1.2 fired on `!equal`, so a set *above* the working load counted as a failed prescription
+  (`100/100/120` earned a worse verdict than `100/100/100`); the diet screen had no day type, a
+  700 kcal error on rest days; `index.html` carried a duplicate 42-slot `PROGRAM` that had drifted
+  from the plan document, so none of the 43 signed-off cues could render. **There is one programme
+  source: `PHAT.PHAT_PLAN`.** `index.html`'s `PROGRAM` is a derived read of it.
+- **Open, on the record:** B-11 (chart points spaced by index), B-19 (render/timer seam), B-36 (fixed
+  dock with the software keyboard up — only a phone can answer), B-45 (S1's third line, deliberately
+  unwritten), `hydrateDraft()` drops entries whose exercise is not in the day (unreachable until the
+  Plan Editor or an importer exists), the `MANUAL` rest label means `OFF`, and the WO-002 importer.
+  `docs/backlog.md` is the list.
+
+### Stack — built
 
 | Layer | Choice |
 |---|---|
 | Source control | GitHub, `main` is deployable at all times |
-| Hosting | Vercel, auto-deploy from GitHub `main`, static — **no build step** |
-| Database | Supabase (Postgres) with Row Level Security |
-| Auth | Supabase Auth, single user |
-| Client | Vanilla JS; `@supabase/supabase-js` loaded from CDN (ESM), not npm |
-| Offline | localStorage stays the source of truth during a workout; Supabase is sync + backup |
+| Hosting | Vercel, static, **no build step**, manual API deploy until the GitHub App is installed |
+| Database | Supabase Postgres 17 with RLS on every table |
+| Auth | Supabase Auth, email + password, single user |
+| Client | Vanilla JS; `@supabase/supabase-js@2.116.0` from jsDelivr as ESM, in `sync.js` only |
+| Offline | `localStorage` is the source of truth during a workout; Supabase is backup, never a precondition |
 
-Rationale and alternatives in `docs/architecture.md`. Decisions log in `docs/decisions.md`.
+Rationale in `docs/architecture.md`. Decisions in `docs/decisions.md`. Coaching rules and every
+sign-off in `docs/coach-audit.md` and `docs/coach-audit-addendum.md` (§12–§14 are WO-005's).
 
 ---
 
