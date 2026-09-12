@@ -1746,3 +1746,70 @@ fixable by the app, and exactly what manual item 2 exists to measure on a phone.
 
 **Housekeeping:** the tests.html intro no longer says three tests are red for C-14; they went green in
 `d7b9f12` and the paragraph now says so.
+
+## 2026-09-12 — WO-006 W4 second pass: the S32 fixture was wrong, not the code; 634 / 634 / 0
+
+**The one red after `3bd35ac` was QA's own fixture, and it was corrected, not the code bent to.** S32 R1
+*"no plans keep when the device has nothing to keep: an ABSENT plan store, or an UNREADABLE one"* (then
+`tests.html:11546` and `:11549`, now `:11560`) built its `absent` and `unread` inputs with
+`W2LOCAL({stores:{plans:"absent"|"error"}})`, whose default `plans` is `W2PLANS()` — **one stored plan,
+active** — while the assertion message said the store was *"the empty default and not the bytes on
+disk"*. It was not the empty default. Under the pre-fix rule (keep when the boot read was `ok`) the
+content was never looked at and the test passed by accident. Under the content rule B-73 required
+(`tests.html:11827`, written red on the first pass), the same `local` object owes a keep — the S33 test
+asks for one and the S32 test forbade one. No rule satisfies both, and the S32 message was the one that
+did not describe its own input. **Change made:** both `W2LOCAL` calls now pass
+`plans: { schemaVersion: PHAT.SCHEMA_VERSION, plans: [], activePlanId: "phat" }` explicitly, so the test
+asserts what its message always claimed; the expectation did not move. A final assertion was added to the
+same test saying, in one line, that the fixture's OLD shape (a plan in memory under those statuses) is
+B-73's case and is kept — so the two tests read as one rule. Rejected alternative: leaving the fixture
+and weakening S33 — that would have re-opened the data-loss path to keep a test green.
+
+**Three pins on what the fix made true (S33, `tests.html:11851`, `:11877`, `:11908`).** (1) The plans
+keep is keyed on content alone: every boot status (`ok`, `absent`, `error`, and no `stores` object at
+all) × every content shape (empty default, one plan, no plan but a non-PHAT active id, and non-object
+garbage) — the answer never reads `stores`; a `[null]` plans array is kept because length is the test,
+not validity (the keep is a copy, not a document the app must open). (2) **The disputed edge, pinned with
+its premise stated:** `stores.plans:"ok"` with the empty default produces **no** keep; before `3bd35ac`
+it produced a `recover:plans:<ts>` holding `{schemaVersion, plans:[], activePlanId:"phat"}`. Right
+because the keep exists so a restore can be undone by hand and an empty default carries nothing a hand
+could put back; it rests on `local.plans` being what is on disk, which is true in one document and
+false across two (below). `"PHAT"` in capitals is a different id and is kept — the rule does not guess.
+(3) The whole seam order for a plan built after a corrupt boot, matching the browser's `setItem` order.
+
+**Browser evidence, "Already proven" item 30, all on `3bd35ac`.** B-73's exact steps: corrupt
+`phat:v1:plans` boot → DUPLICATE → Restore gives `recover:log → recover:bw → recover:plans → log → bw →
+plans → prefs`, the keep byte-identical to the pre-restore store holding *PHAT — my version*. The
+`index.html` half was read **directly** off a paused call frame (DevTools protocol breakpoints at
+`index.html:1102` and `:1106` inside `save()`): `S.stores.plans` is `"error"` before the flip and `"ok"`
+after, on the DUPLICATE's write. Restore is now refused on an **unreadable** draft and on a wrong-shape
+draft, fail-closed, 0 pulls, 0 writes, every key byte-identical — on `95829dd` (the same seed, run from a
+`git archive`) `restoreStart` read `!!(S.draft||S.offer)`, both null in that state, and opened the typed REPLACE
+sheet after one pull — observed, not inferred. Two-tab D10: tab B booted, tab A
+typed a set, tab B's SAVE PLAN, USE THIS PLAN and Restore all refuse with the session sentence and write
+nothing; after tab A discards, tab B's SAVE PLAN goes through. D7: USE, DUPLICATE and SAVE each refuse a
+`demo:true` store with the one `DEMO_STORE` sentence, 0 writes. `scripts/offline-check.mjs`: PASS.
+
+**A finding, not a regression — proposed B-74, P1, for the PM to file.** `restoreApply` hands
+`restoreSteps` the three stores from **memory** (`logPayload()`, `bwPayload()`, `plansPayload()`), the
+sheet counts `S.sessions.length`, and `exportAll()` exports memory. In one document memory equals disk.
+Across two (the installed app plus a browser tab is two): tab B booted on the empty default with 5
+sessions; tab A DUPLICATEd PHAT and saved a session (disk: 6 sessions, one plan); tab B's Restore said
+*"This replaces 5 sessions"*, kept `recover:log` with **5**, wrote no `recover:plans`, and afterwards tab
+A's session id and plan were on **no key on disk**. Pre-existing since E-3 — the log keep was always
+memory — so not `3bd35ac`'s to answer for, but it is the same shape as the D10 hole that commit closed for
+the draft, and the fix is the same shape: one `readRaw` per store before `restoreSteps`, the counts and
+the export off those bytes; the decision is then pure and pins in `tests.html`. P1 and not P0 because it
+sits behind a typed REPLACE in a second document; P1 and not P2 because the sheet's count was wrong, so
+the typed word was given on false information, and a saved set is unrecoverable afterwards.
+
+**One P3 aside:** tap Restore within 2 s of opening Settings and the refusal in `#bk-status` is replaced
+by the open-push's *"Backed up … just now"* line when that push lands (`backupSoon("open")` and the refusal
+share `S.sync.last`). Cosmetic, nothing written by the restore.
+
+**W4 verdict.** The P1 (B-73) is closed and verified on both halves. The two P2s from the first pass —
+D10 two-tab and D7 — are closed and verified. The open P2 (`p_gone` draft stamped with the active plan's
+`rx`, awaiting `strength-coach`) rewrites provenance and loses no set; it ships as a backlog row. The P3s
+(stale `aria-label` after a rename, *-1 days ago* on a future-dated demo anchor, the refusal-overwrite
+above) ship as backlog rows. B-74 is not WO-006's and does not block closing W4, but it is a data-loss
+path and should be the next backend item before any further plan-editor work.
