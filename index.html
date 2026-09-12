@@ -3149,7 +3149,16 @@ function vPlanEdit(){
 /* The add-exercise form (§9.5). A FORM, not a pre-filled row: k and
    implement have no default, and ADD is refused naming the first empty
    field. Values live in S.pe.form so a stepper tap's re-render cannot lose
-   a typed name. */
+   a typed name.
+   Rule K2 (strength-coach, WO-006 step 3): the line under Type states the
+   consequence of the option he picked, not the name of a rule he does not
+   know. Keyed to f.k; "none" is the prompt before a choice. */
+const KIND_HELP={
+  none:"Type sets how the app progresses this exercise and how long the timer gives you.",
+  power:"Power: rest 2–3 min. Add 2.5 kg once every set reaches the top of the range at the same weight.",
+  hyp:"Hypertrophy: rest 1–2 min. Add reps inside the range first; add weight once every set is above the top of it.",
+  speed:"Speed: rest 60–90 s. 3–5 reps at 65–70% of a heavy triple, moved fast. No verdict, and no computed weight on an added exercise."
+};
 function vExForm(plan,f){
   const seg=(name,list,cur,attr,lbl)=>`<span class="lbl">${lbl}</span><div class="seg" role="group" aria-label="${lbl}">${
     list.map(k=>`<button data-${attr}="${esc(k)}" aria-pressed="${cur===k?"true":"false"}"><span class="mk" aria-hidden="true"></span>${esc(name[k])}</button>`).join("")}</div>`;
@@ -3164,8 +3173,9 @@ function vExForm(plan,f){
     <input class="bkin" id="pf-n" data-pf="n" value="${esc(f.n)}" autocomplete="off" spellcheck="false">
     <div class="perange" style="margin-top:var(--s3)">${step("s","Sets")}${step("lo","Reps from")}${step("hi","Reps to")}</div>
     ${seg(KIND_LBL,PHAT.PLAN_KINDS,f.k,"pfk","Type")}
+    <p class="tiny" id="pf-kind-help">${esc(KIND_HELP[f.k]||KIND_HELP.none)}</p>
     ${seg(IMPL_LBL,PHAT.PLAN_IMPLEMENTS,f.implement,"pfi","Implement")}
-    <p class="tiny">Type decides which rule reads this exercise and how long you rest. Implement decides how loads are described.</p>
+    <p class="tiny">Implement sets how a zero load is named and whether you get a fallback when 2.5 kg is not available.</p>
     <label class="bklbl" for="pf-lift">Same movement as</label>
     <select class="bkin" id="pf-lift" data-pf="lift">
       <option value=""${f.lift?"":" selected"}>A new movement</option>
@@ -3173,7 +3183,8 @@ function vExForm(plan,f){
     </select>
     <label class="bklbl" for="pf-cue">Cue (optional, one line)</label>
     <input class="bkin" id="pf-cue" data-pf="cue" value="${esc(f.cue)}" autocomplete="off">
-    ${f.err?`<div class="refuse mt12" role="alert"><p><span aria-hidden="true">! </span>${esc(f.err)}</p></div>`:""}
+    ${f.err?`<div class="refuse mt12" role="alert"><p><span aria-hidden="true">! </span>${esc(f.err)}</p></div>`
+      :f.warn?`<div class="refuse mt12" role="alert"><p><span aria-hidden="true">! </span>${esc(f.warn.msg)}</p></div>`:""}
     <button class="primary mt12" data-pfadd="${esc(f.dayId)}">Add exercise</button>
     <button class="ghostbtn" id="pf-cancel">Cancel</button>
   </div>`;
@@ -3263,9 +3274,21 @@ function stepInt(cur,dir,lo,hi){
   const v=(isNaN(n)?0:n)+(dir==="+"?1:-1);
   return Math.max(lo,Math.min(hi,v));
 }
-function blankForm(dayId){ return {dayId:dayId,n:"",s:"",lo:"",hi:"",k:"",implement:"",lift:"",cue:"",err:""}; }
+function blankForm(dayId){ return {dayId:dayId,n:"",s:"",lo:"",hi:"",k:"",implement:"",lift:"",cue:"",err:"",warn:null}; }
+/* Rule K2 warn-once: the two type/reps mismatches that hurt in the harmful
+   direction (heavy sets under short rest). Returns the message or "". Power
+   never warns. */
+function kindWarn(k,lo,hi){
+  const range=lo===hi?String(lo):lo+"–"+hi;
+  if(k==="speed"&&hi>5) return "Speed work is 3–5 reps moved fast. At "+range+" reps this is hypertrophy work. Change the reps or the type, or tap Add exercise again to keep it.";
+  if(k==="hyp"&&hi<=5) return "Hypertrophy work rests 1–2 min. At "+range+" reps that is too short for heavy sets. Choose Power, or tap Add exercise again to keep it.";
+  return "";
+}
 /* ADD, refused naming the first empty field (§9.5). Nothing is created until
-   every required field is answered; addExercise re-validates regardless. */
+   every required field is answered; addExercise re-validates regardless.
+   Once every field is valid, a K2 mismatch warns once and arms f.warn on the
+   exact k/lo/hi it warned about; the same tap again adds it. Any change to
+   k, lo or hi disarms it (the event handlers clear f.warn). */
 function addFromForm(){
   const f=S.pe.form; if(!f) return;
   const w=workOf(); if(!w) return;
@@ -3278,6 +3301,9 @@ function addFromForm(){
   else if(!f.k) err="Not added. Choose a type.";
   else if(!f.implement) err="Not added. Choose an implement.";
   if(err){ f.err=err; render(true); const el=document.querySelector(".peform .refuse"); if(el) el.scrollIntoView({block:"nearest"}); return; }
+  const wmsg=kindWarn(f.k,lo,hi);
+  const armed=f.warn&&f.warn.k===f.k&&f.warn.lo===lo&&f.warn.hi===hi;
+  if(wmsg&&!armed){ f.warn={k:f.k,lo:lo,hi:hi,msg:wmsg}; render(true); const el=document.querySelector(".peform .refuse"); if(el) el.scrollIntoView({block:"nearest"}); return; }
   const spec={n:String(f.n).trim(),s:s,lo:lo,hi:hi,k:f.k,implement:f.implement};
   if(f.lift) spec.lift=f.lift;
   if(String(f.cue).trim()) spec.cue=String(f.cue).trim();
@@ -3481,8 +3507,8 @@ async function planClick(e){
   const f=S.pe.form;
   if(f){
     const st=t.closest("[data-pfstep]");
-    if(st){ const k=st.dataset.pfstep; f[k]=String(stepInt(f[k],st.dataset.dir,1,k==="s"?20:100)); f.err=""; render(true); return true; }
-    const pk=t.closest("[data-pfk]"); if(pk){ f.k=pk.dataset.pfk; f.err=""; render(true); return true; }
+    if(st){ const k=st.dataset.pfstep; f[k]=String(stepInt(f[k],st.dataset.dir,1,k==="s"?20:100)); f.err=""; if(k!=="s") f.warn=null; render(true); return true; }
+    const pk=t.closest("[data-pfk]"); if(pk){ f.k=pk.dataset.pfk; f.err=""; f.warn=null; render(true); return true; }
     const pi=t.closest("[data-pfi]"); if(pi){ f.implement=pi.dataset.pfi; f.err=""; render(true); return true; }
     if(t.closest("[data-pfadd]")){ addFromForm(); return true; }
     if(t.closest("#pf-cancel")){ S.pe.form=null; render(true); return true; }
@@ -4062,7 +4088,13 @@ document.getElementById("view").addEventListener("input",e=>{
   if(S.tab==="plan"&&S.pe){
     const t=e.target;
     if(t.id==="pe-name"||t.dataset.peday||t.dataset.peex){ scheduleNameCommit(t); return; }
-    if(t.dataset.pf&&S.pe.form){ S.pe.form[t.dataset.pf]=t.value; S.pe.form.err=""; return; }
+    if(t.dataset.pf&&S.pe.form){
+      S.pe.form[t.dataset.pf]=t.value; S.pe.form.err="";
+      /* a typed reps change disarms the K2 warning; drop that one node rather
+         than re-render under the keystroke */
+      if((t.dataset.pf==="lo"||t.dataset.pf==="hi")&&S.pe.form.warn){ S.pe.form.warn=null; const el=document.querySelector(".peform .refuse"); if(el) el.remove(); }
+      return;
+    }
     return;
   }
   if(e.target.classList.contains("note")){
