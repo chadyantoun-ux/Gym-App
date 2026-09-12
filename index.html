@@ -1063,6 +1063,12 @@ const EDITS="phat:v1:planedit";
    do: the draft and the working copy are live editing and do not back up
    (README §5), prefs are device state. */
 const BACKED_UP={[LOG]:1,[BWK]:1,[PLANS]:1};
+/* B-73. The three stores S.stores reports a status for, by key. A successful
+   save(k) marks the store "ok": a store that booted unreadable or absent and
+   was then WRITTEN is a readable store, and a boot-time status that outlives
+   a later write is a stale fact - restoreSteps was reading it and skipping
+   the recover:plans copy of a plan built after the boot. */
+const STORE_OF={[LOG]:"log",[BWK]:"bw",[PLANS]:"plans"};
 const hasNative = typeof window.storage!=="undefined" && window.storage && window.storage.get;
 /* readRaw distinguishes the three outcomes load() used to collapse into null:
    absent (nothing stored), ok (parsed), error (the read threw, or the stored
@@ -1091,6 +1097,9 @@ async function save(k,obj){
     if(hasNative) await window.storage.set(k,JSON.stringify(obj));
     else localStorage.setItem(k,JSON.stringify(obj));
     S.err=null;
+    /* B-73. The write landed, so the store on disk is what was just written:
+       readable. Set for every store, not only plans - the truth is the same. */
+    if(STORE_OF[k]) S.stores[STORE_OF[k]]="ok";
     /* E-3. The local write is DONE. Only now, and only for the three stores
        that back up, is a push scheduled - a timer, never an await, so nothing
        network-shaped sits between this return and the caller's toast. */
@@ -2931,12 +2940,30 @@ const HONEST_NOTE="Editing the plan is the easiest thing in this app to do inste
 const COPY_NOTE="The copy keeps this plan's history. Both plans read and write the same exercise history.";
 const READONLY_NOTE="PHAT is read-only. Duplicate it to make changes.";
 const SESSION_OPEN="Finish or discard the session in progress first.";
+/* D7. One sentence for the three writers of phat:v1:plans - SAVE PLAN, USE
+   THIS PLAN, DUPLICATE. A demo store must not be the base of anything that
+   persists (C-14), and one writer refusing while two do not is a seam. */
+const DEMO_STORE="Sample data is loaded. Leave it before saving a plan.";
 
 /* Is a session in progress? On screen, offered on the Train tab, or on disk
    but unreadable - all three block a plan commit and a plan switch (D10):
    a session reads its prescription from the plan, and the plan may not move
    under a half-logged set. The same condition E-3's restore refuses on. */
 const sessionOpen=()=>!!(S.draft||S.offer||S.draftRead.status==="error");
+/* D10 ON DISK. sessionOpen() is a memory check guarding a disk fact: a second
+   tab, or one that booted before the draft was written, holds no S.draft and
+   no S.offer while phat:v1:draft holds typed sets - and SAVE PLAN there could
+   delete an exercise the first tab has sets on. So the writers that commit a
+   plan change read the draft key before writing. One read. Memory OR disk:
+   memory covers the 400 ms the autosave debounce keeps a keystroke off disk;
+   disk covers every other document of the app. "none" is the only answer
+   that lets the write through - an unreadable draft is a session that may
+   exist, the same fail-closed reading startDay() gives it. */
+async function sessionOnDisk(){
+  if(sessionOpen()) return true;
+  const r=await loadDraft();
+  return r.status!=="none";
+}
 
 const exCount=p=>(p&&Array.isArray(p.days)?p.days:[]).reduce((a,d)=>a+((d&&d.ex)||[]).length,0);
 const setCount=d=>((d&&d.ex)||[]).reduce((a,e)=>a+(typeof e.s==="number"?e.s:0),0);
@@ -3349,9 +3376,14 @@ function undoDeleteEx(){
   applyEdit(r);
   toast(u.ex.n+" is back.",false);
 }
+/* USE THIS PLAN. Refused, in the same order and words as SAVE PLAN: a
+   session in progress (D10, read from disk), a store this build could not
+   read, a demo store (D7 - a demo store is the base of nothing that
+   persists, C-14). */
 async function usePlan(id){
-  if(sessionOpen()){ refuse(SESSION_OPEN,true); return; }
+  if(await sessionOnDisk()){ refuse(SESSION_OPEN,true); return; }
   if(S.blockWrites[PLANS]){ refuse(S.err||"Not saved. The plan store could not be read.",true); return; }
+  if(S.plansMeta.demo===true){ refuse(DEMO_STORE,true); return; }
   const r=PHAT.planStoreSetActive(S.plans,id);
   if(!r.ok){ refuse("That plan is not saved yet. Save it first.",true); return; }
   const prev=S.plans;
@@ -3370,9 +3402,9 @@ async function usePlan(id){
 async function savePlan(){
   const id=S.pe.planId, w=S.edits[id]&&S.edits[id].plan;
   if(!w) return;
-  if(sessionOpen()){ refuse(SESSION_OPEN,false); return; }
+  if(await sessionOnDisk()){ refuse(SESSION_OPEN,false); return; }
   if(S.blockWrites[PLANS]){ refuse(S.err||"Not saved. The plan store could not be read.",false); return; }
-  if(S.plansMeta.demo===true){ refuse("Sample data is loaded. Leave it before saving a plan.",false); return; }
+  if(S.plansMeta.demo===true){ refuse(DEMO_STORE,false); return; }
   let v; try{ v=PHAT.validatePlan(w); }catch(err){ v={ok:false,problems:[]}; }
   if(!v.ok){ refuse(validateCopy(v.problems),false); return; }
   const r=PHAT.planStoreUpsert(S.plans,w);
@@ -3423,6 +3455,9 @@ function askDuplicate(id){
     onDanger:async()=>{
       closeSheet();
       if(S.blockWrites[PLANS]){ refuse(S.err||"Not saved. The plan store could not be read.",true); return; }
+      /* D7: the copy would be written INTO the demo store, and a demo store is
+         the base of nothing that persists (C-14). Same sentence as SAVE PLAN. */
+      if(S.plansMeta.demo===true){ refuse(DEMO_STORE,true); return; }
       const r=PHAT.copyPlan(src,null,PHAT.localDate());
       if(!r.ok){ refuse("Could not copy it. Nothing changed.",true); return; }
       const up=PHAT.planStoreUpsert(S.plans,r.plan);
@@ -5487,7 +5522,9 @@ const restoreCounts=(n,m,p)=>p?plural(n,"session")+", "+plural(m,"weight")+" and
                             :plural(n,"session")+" and "+plural(m,"weight");
 async function restoreStart(){
   const Y=window.PHAT_SYNC; if(!signedIn()) return;
-  const why=PHAT.restoreRefusal({draft:!!(S.draft||S.offer),edits:S.edits});
+  /* The draft is read from DISK, like SAVE PLAN and USE THIS PLAN: a restore
+     replaces the log and the plan store under whatever a second tab holds. */
+  const why=PHAT.restoreRefusal({draft:await sessionOnDisk(),edits:S.edits});
   if(why){ S.sync.last={ok:false,phase:"restore",message:why}; paintBackup(); return; }
   S.sync.last={busy:"pull"}; paintBackup();
   const r=await Y.pull();

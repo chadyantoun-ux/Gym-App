@@ -2783,10 +2783,15 @@
      (phat:v1:recover:<store>:<ts>) and come first; every one must land
      before any write, or nothing is replaced. `writes` are the stores, log
      first. A plans keep is produced exactly when the backup carries a plan
-     store (so phat:v1:plans WILL be written) and the local one was read ok -
-     nothing to keep for an absent store, and an unreadable one was kept
-     aside at boot by preserveUnreadable. A backup with no plan store writes
-     no plans key and keeps none (R3): the local plans are untouched.
+     store (so phat:v1:plans WILL be written) and the local store HOLDS A
+     PLAN DOCUMENT - a stored plan, or an active id that is not PHAT. Keyed
+     on CONTENT, never on the boot status (B-73): the boot status says what
+     was readable at boot and nothing about what was written since, so a
+     plan built after a corrupt or absent boot was being replaced with no
+     copy. The empty default (no plans, PHAT active) is not kept: there is
+     nothing in it, and for an unreadable boot the bytes on disk were kept
+     aside by preserveUnreadable. A backup with no plan store writes no
+     plans key and keeps none (R3): the local plans are untouched.
 
      Refuses before producing a step when a store that would be written is
      blocked (its boot read failed and could not be copied aside): a restore
@@ -2798,9 +2803,19 @@
        local: { empty:bool, stores:{log,bw,plans}, log, bw, plans, blocked:{key:true} }
        keys:  { log, bw, plans } - the store keys, so the names live in one file
        ts:    the epoch the recover keys carry */
+  /* planStoreHolds(store) → true when a plan store holds something a restore
+     could destroy: at least one stored plan, or an active id that is not
+     PHAT. The empty default holds nothing. Shape-tolerant: it is asked about
+     whatever the device has in memory, not a validated document. */
+  function planStoreHolds(store) {
+    if (!isObj(store)) return false;
+    if (Array.isArray(store.plans) && store.plans.length > 0) return true;
+    var a = str(store.activePlanId).trim();
+    return a !== "" && a !== PHAT_PLAN_ID;
+  }
   function restoreSteps(rp, local, keys, ts) {
     var L = isObj(local) ? local : {}, K = isObj(keys) ? keys : {};
-    var st = isObj(L.stores) ? L.stores : {}, blocked = isObj(L.blocked) ? L.blocked : {};
+    var blocked = isObj(L.blocked) ? L.blocked : {};
     if (!isObj(rp) || rp.ok !== true) return { ok: false, message: "Nothing to restore." };
     if (typeof K.log !== "string" || typeof K.bw !== "string" || typeof K.plans !== "string")
       return { ok: false, message: "Nothing restored. The store keys were not given." };
@@ -2824,7 +2839,7 @@
     if (!L.empty) {
       keeps.push(keep(K.log, L.log, "log"));
       keeps.push(keep(K.bw, L.bw, "weights"));
-      if (plans && st.plans === "ok" && isObj(L.plans)) keeps.push(keep(K.plans, L.plans, "plans"));
+      if (plans && planStoreHolds(L.plans)) keeps.push(keep(K.plans, L.plans, "plans"));
     }
     var writes = [{ key: K.log, value: log, label: "log" }, { key: K.bw, value: bw, label: "weights" }];
     if (plans) writes.push({ key: K.plans, value: plans, label: "plans" });
