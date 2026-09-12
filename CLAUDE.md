@@ -198,9 +198,10 @@ An item is not done until all of these are true:
 start index.html                      # Windows
 ```
 
-No test runner yet; `qa-engineer` owns standing one up as a browser-based harness (`tests.html`),
-because Node is not available. Git is installed; `gh`, `vercel`, and `supabase` CLIs are not —
-GitHub and Vercel are wired through their web dashboards, which is sufficient for a static site.
+Tests: open `tests.html` from `file://`. Deploy: follow `docs/deploy.md`, then `sh scripts/verify-deploy.sh`.
+Offline proof: `node scripts/offline-check.mjs`. Node is at `C:\Program Files\nodejs` (not on the git-bash
+PATH). Playwright is installed globally and is how every screen measurement in this repo was taken.
+No `gh`, `vercel` or `supabase` CLI — GitHub via git, Vercel and Supabase via their REST APIs.
 
 ---
 
