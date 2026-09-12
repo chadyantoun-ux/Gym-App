@@ -36,7 +36,9 @@
    AUTH_KEY - deliberately not a phat:v1:* key, so the storage adapter's
    own keys, the recover: copies and the migration never see it. Magic links
    are not offered: a link opened from an email lands in the browser, not the
-   installed PWA, and the session would be in the wrong context.
+   installed PWA, and the session would be in the wrong context. A signed-in
+   user can set her own password (changePassword, WO-009 W8); there is no
+   reset for a forgotten one.
 
    VERSION PIN: the CDN import is an exact version, never @2. A moving tag is a
    dependency that can change under an installed app with no deploy. */
@@ -79,8 +81,23 @@ function subscribe(fn) {
   return () => { const i = subs.indexOf(fn); if (i >= 0) subs.splice(i, 1); };
 }
 
-client.auth.onAuthStateChange((_event, session) => {
+/* Two guards decide whether an auth event is a USER CHANGE the app must hear
+   about (index.html's onSync wipes S.sync.last and the owner refusal on a
+   change of user id, and repaints the owner row):
+     1. USER_UPDATED is gated by name. The library fires it from inside
+        updateUser() - after changePassword() below - with the SAME session
+        and the SAME user id. It is a password change, not a user change:
+        nothing is emitted, st.user is not reassigned, no subscriber runs, so
+        S.sync.last survives, no push is scheduled and the owner row is not
+        repainted as a different account (WO-009 W8). The gate holds only
+        while the id matches; an id that differs (which updateUser cannot
+        produce) falls through to the general path rather than being hidden.
+     2. Everything else - SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED,
+        INITIAL_SESSION - emits only when {id, email} actually differs, so a
+        token refresh on the same account is silent too. */
+client.auth.onAuthStateChange((event, session) => {
   const next = userOf(session);
+  if (event === "USER_UPDATED" && next && st.user && next.id === st.user.id) return;
   const changed = JSON.stringify(next) !== JSON.stringify(st.user);
   st.user = next;
   if (changed) emit();
@@ -125,16 +142,32 @@ function classify(err, fallback) {
 
 /* -------------------------------------------------------------- auth */
 
-function authMessage(err) {
-  const msg = String((err && err.message) || err || "");
-  if (offline() || /failed to fetch|networkerror|load failed|fetch failed/i.test(msg)) return "No connection.";
-  if (/invalid login credentials|invalid_credentials/i.test(msg)) return "Wrong email or password.";
-  if (/already registered|already exists/i.test(msg)) return "That email already has an account. Sign in instead.";
-  if (/signups? not allowed|signup_disabled/i.test(msg)) return "New accounts are switched off.";
-  if (/password should be at least|weak_password/i.test(msg)) return "Password needs at least 6 characters.";
-  if (/unable to validate email|invalid email|validation_failed/i.test(msg)) return "That is not an email address.";
-  if (/rate limit|too many requests|over_email_send_rate_limit/i.test(msg)) return "Too many attempts. Wait a minute.";
-  return msg || "Could not sign in.";
+/* authMessage(err, fallback) → one house-voice sentence for an auth error.
+   Matches on the server's message AND on the library's error code
+   (AuthApiError.code carries GoTrue's `error_code`, e.g. `same_password`),
+   so a reworded message still maps. `fallback` is the sentence for an error
+   with no words at all; sign-in and sign-up keep the old default. */
+function authMessage(err, fallback) {
+  const obj = !!err && typeof err === "object";
+  const msg = String((obj ? err.message : err) || "");   /* an object with no message is "", never "[object Object]" */
+  const code = obj && err.code ? String(err.code) : "";
+  const t = code + " " + msg;
+  if (offline() || /failed to fetch|networkerror|load failed|fetch failed/i.test(t)) return "No connection.";
+  if (/invalid login credentials|invalid_credentials/i.test(t)) return "Wrong email or password.";
+  if (/already registered|already exists/i.test(t)) return "That email already has an account. Sign in instead.";
+  if (/signups? not allowed|signup_disabled/i.test(t)) return "New accounts are switched off.";
+  if (/password should be at least|weak_password/i.test(t)) return "Password needs at least 6 characters.";
+  /* changePassword only. GoTrue: 422 `same_password` "New password should be
+     different from the old password." */
+  if (/different from the old password|same_password/i.test(t)) return "That is already your password.";
+  /* changePassword only, and only when the project's Secure password change
+     setting is on (supabase/README.md §4.1): 422 `reauthentication_needed`
+     "Password update requires reauthentication." A fresh sign-in is a new
+     session, which is what the server is asking for. */
+  if (/requires reauthentication|reauthentication_needed/i.test(t)) return "Sign out and sign in again, then retry.";
+  if (/unable to validate email|invalid email|validation_failed/i.test(t)) return "That is not an email address.";
+  if (/rate limit|too many requests|over_email_send_rate_limit/i.test(t)) return "Too many attempts. Wait a minute.";
+  return msg || fallback || "Could not sign in.";
 }
 
 async function runAuth(fn) {
@@ -175,6 +208,44 @@ async function signOut() {
     return { ok: true };
   } catch (err) {
     return classify(err, "Could not sign out.");
+  } finally { st.busy = null; emit(); }
+}
+
+/* changePassword(newPassword) → { ok:true } | { ok:false, reason, message }
+   WO-009 W8 (B-102). Sets the signed-in user's own password; the account
+   whose password was generated for her gets to choose one. The order of the
+   refusals is the order of what is cheapest to know, and every refusal
+   before `busy` is taken is decided on this device with NO request sent:
+     signed out   { reason:"auth",    message:"Sign in first." }
+     offline      { reason:"offline", message:"No connection." }
+     under 6      { reason:"auth",    message:"Password needs at least 6 characters." }
+                  - the server's own floor, refused here so a too-short
+                    password never leaves the phone
+     busy         { reason:"busy",    message:"Wait for the current backup to finish." }
+   Then client.auth.updateUser({ password }) under the same busy handling as
+   runAuth. It answers { data:{user}, error } with NO session, so runAuth's
+   "no session means not signed in" rule does not apply and it is not used.
+   The library fires USER_UPDATED from inside the call; onAuthStateChange
+   above swallows it, so st.user is untouched, no subscriber hears a user
+   change and nothing downstream is wiped or scheduled. st.user is not
+   reassigned here either: it is the same id and the same email.
+   The two errors this call can add are mapped in authMessage: same as the
+   old password, and - only if Secure password change is on in the project
+   (supabase/README.md §4.1) - reauthentication required. Not a store, not a
+   push, not a pull: push()/pull() are not touched by a change of password. */
+async function changePassword(newPassword) {
+  if (!st.user) return { ok: false, reason: "auth", message: "Sign in first." };
+  if (offline()) return { ok: false, reason: "offline", message: "No connection." };
+  const password = String(newPassword || "");
+  if (password.length < 6) return { ok: false, reason: "auth", message: "Password needs at least 6 characters." };
+  if (st.busy) return { ok: false, reason: "busy", message: "Wait for the current backup to finish." };
+  st.busy = "auth"; emit();
+  try {
+    const { error } = await client.auth.updateUser({ password });
+    if (error) return { ok: false, reason: "auth", message: authMessage(error, "Could not change the password.") };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: "auth", message: authMessage(err, "Could not change the password.") };
   } finally { st.busy = null; emit(); }
 }
 
@@ -276,7 +347,7 @@ async function pull() {
 
 const api = Object.freeze({
   ready, subscribe, snapshot,
-  signIn, signUp, signOut,
+  signIn, signUp, signOut, changePassword,
   push, pull,
   user: () => st.user,
   lib: LIB_VERSION
@@ -284,4 +355,4 @@ const api = Object.freeze({
 
 window.PHAT_SYNC = api;
 export default api;
-export { ready, subscribe, snapshot, signIn, signUp, signOut, push, pull };
+export { ready, subscribe, snapshot, signIn, signUp, signOut, changePassword, push, pull };
