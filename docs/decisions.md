@@ -2154,3 +2154,57 @@ owner reads `Last backup {ago}, by {owner}.`
 **Rules out:** gating the stamp on `schemaVersion` or any age; a stamp on a `demo:true` store; re-asking a store
 that carries the key; adding `absent:false` to a stamped store's engine output; an override that re-claims a
 device's log for another account (B-88's note stands); a boot write to `prefs` for the stamp-shape migration.
+
+## 2026-09-12 — WO-008 W7: two real accounts against the live project; the data criteria pass; W5 fails one criterion on the first screen a second phone sees; not a pass for release until the false C3 is fixed
+
+Verified `8c1cff7` (W5 over W4) with `9ee456f` served beside it. Suite **689 / 689 / 0**, no skips, three tripwires,
+no changed assertion (11 added, S37). `scripts/offline-check.mjs` PASS. 26 mutants killed, each injection matched
+once. Two throwaway accounts (`test+a@example.com` / `test+b@example.com`) created on the live project through the
+publishable key, four fresh contexts and one shared device driven through the real `sync.js` and the real CDN module;
+the evidence is `tests.html` "Already proven" item 32 and the S37 replays.
+
+**The uncomfortable answer first: W7 is not a pass for release as `8c1cff7` stands.** Every data criterion holds —
+D1 both directions with positive controls, D2, D3, D4 from a cold second-page read, D5 byte-identical to `9ee456f`,
+D7 — and B-88 is closed as specified. But W5's criterion *"First-run → Sign in as Diana on a fresh phone → Restore
+from backup is offered"* fails as observed: **every first-run sign-in, four out of four, lands on C3 with
+`Could not read the backup. A backup is already running.`** and zero REST reads. Mechanism: `sync.js` subscribes to
+`client.auth.onAuthStateChange`, which fires SIGNED_IN inside `signInWithPassword` while `runAuth` still holds
+`st.busy = "auth"`; the `emit()` runs `onSync` → `paintBackup` → the `onboard-signin` route → `obToC()` →
+`Y.pull()` → refused `busy`. `authTap`'s own route then finds `S.sub` already moved and does nothing. `Try again`
+recovers every time and nothing is written, so it is P2 by the backlog's ladder — but it is the first sentence Diana's
+phone will ever say after she signs in, and it is false. Frontend's stub could not show it because the stub clears busy
+before it emits; it needs the real module. **Fix before W8** (owner: `frontend-engineer`, one of: `obPull` retries once
+on `reason:"busy"` after the module's busy clears; or `paintBackup` does not route to C while `S.sync.busy`), then
+re-observe with the real module — the rig is described in item 32 and takes one sign-in to check.
+
+**Ruled, QA:**
+- **The stamp hazard is real by construction and unreachable by the live first run.** A pre-W4 log store holding
+  `sessions:[]` beside one bodyweight entry is stamped `phat-brief` (S37 pins it as OBSERVED, backend's deliberate
+  choice). But the live app's first run with `Today's weight` typed writes `bw` and `prefs` and **no log key**; the pass
+  over an absent log invents nothing; the first session is born `profile:null`. So "log nothing until W8" is
+  sufficient and the weight field is safe. **Recommendation, stronger than the runbook:** deploy W8 *before* Diana's
+  first run, so she takes `Sign in` → C2 → `Start with an empty log` and her store carries `profile:null` from birth;
+  then no ordering rule has to be remembered at all.
+- **The Home fold at 393 × 852 was already failing before W5, and W5 makes it worse.** On `9ee456f` (dock top 788)
+  SAT sat 774–855, 67 px under the dock. On `8c1cff7` the 48 px owner row pushes FRI to 733–814 (26 px under) and SAT
+  to 822–903 (115 px under). The cycle block is 121 px (three sentences), not the 50 px UX's arithmetic assumed. A
+  WO-004 W9 criterion regression on the record for the PM; not a data item and not a W7 blocker.
+- **A side finding on the server.** With the `4d69225` archive-trigger guard, an authenticated `DELETE` of the
+  account's *own* `sessions` / `bodyweight` / `user_state` rows fails `403 42501 permission denied for table users`:
+  the guard's `select from auth.users` runs as the invoking role. No client path deletes today; it is why this run could
+  not wipe its own rows. Backlog it (P3 now, P1 the day a delete or a wipe ships): `security definer` on the four
+  archive functions with a pinned `search_path`, or a narrower test.
+- **The two accounts are not deleted and I could not delete them.** No `SB_PAT` in this session, no dashboard, and
+  the client cannot delete users. They hold 2 sessions / 1 weight (A) and 4 sessions (B), all test data. One SQL
+  statement in the dashboard removes both, cascade included (`4d69225`): `delete from auth.users where email in
+  ('test+a@example.com','test+b@example.com'); select count(*) from auth.users;` — expect the count to drop by two.
+  Sign-ups are still enabled; W3 has not been run.
+- **What was pinned, and what was not.** S37 replays the shared device (the three sentences byte for byte, with the
+  `another account` substitution), the second phone (restore byte-identical, `profile:null` riding `log_meta`, C1/C2
+  from the counts, no keep on an empty device), D2 on B's rows, D5 on the seed both commits rendered, and the hazard
+  three ways. The R-a latch and the false C3 are wire-side and are named under "Not testable", not pretended at.
+  `esc()` held on an owner and a signed-in email carrying `<img onerror>` in every one of the fourteen identity lines.
+
+**Rules out:** filing the false C3 as a rig artefact (the REST log shows zero reads on a working network); calling
+the stamp hazard closed because the live first run avoids it (the shape is one log write away, S37 says so); deleting
+the observed-pin on the bodyweight evidence to make the hazard disappear from the suite.

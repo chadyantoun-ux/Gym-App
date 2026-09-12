@@ -55,7 +55,12 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 678 / 678 / 0, no skips.</b> <b>S36</b> (WO-008 W4, 2026-09-12) added 25: B-88&rsquo;s <code>storeOwner</code> truth table and
+<b>Today: 689 / 689 / 0, no skips.</b> <b>S37</b> (WO-008 W7, 2026-09-12) added 11: the two-account browser run replayed
+(&ldquo;Already proven&rdquo; item 32) &mdash; the shared device&rsquo;s three refusals byte for byte, the second phone&rsquo;s
+restore with <code>profile:null</code> riding <code>log_meta</code>, D2 on B&rsquo;s rows, D5 on the seed both commits rendered
+(strip, Diet figures, the <code>+0.27 kg per week</code> band), and <b>the stamp hazard pinned as OBSERVED three ways</b>: a
+bodyweight-only pre-W4 store IS stamped (backend&rsquo;s deliberate choice, coach 16.8), while the path the live app actually
+produces &mdash; first run with the weight typed, no log key &mdash; is not. Before S37 the count read 678. <b>S36</b> (WO-008 W4, 2026-09-12) added 25: B-88&rsquo;s <code>storeOwner</code> truth table and
 the stamp reader in both shapes, the three refusal sentences verbatim, the profile pass (stamps on evidence, writes null when it
 cannot tell, never re-asks a store that carries the key &mdash; the &sect;16.8 hazard replayed as a counterfactual), Rule PR1 on
 <code>calorieAdvice</code> / <code>dietTargets</code> (ABSENT at every data state, fail-closed on every non-profile value) with the
@@ -231,7 +236,16 @@ showed them (Q3 on the three speed-beside-source arrivals, Q1 once on each of th
 four same-lift arrivals, nothing on the other 33). <b>One edge is pinned as OBSERVED, not accepted</b> &mdash; a plain
 out-and-back of a counted accessory in one SAVE keeps the counter at 1 but flips <em>which</em> accessory reads as back
 (B-87 through the plain-move door; the contract note below has it, backend&rsquo;s to rule). The B1 inventory for the
-new controls is transcribed from the measurement, as S27&rsquo;s is.</p>
+new controls is transcribed from the measurement, as S27&rsquo;s is.<br>
+<b>S37</b> is WO-008 W7, the QA pass on two users, and holds what the two-account run of 2026-09-12 against the <b>live</b>
+project (&ldquo;Already proven&rdquo; item 32) found that the pure half can pin: <code>storeOwner</code> and the three
+<code>ownerRefusal</code> sentences exactly as <code>#bk-status</code> and the live region carried them on the shared device,
+<code>restorePayload</code> bringing A&rsquo;s session down byte-identical with <code>profile:null</code> never re-asked, the C1 / C2
+decision from the counts, no recover copy on an empty device, D2 (nothing of A&rsquo;s in B&rsquo;s rows, <code>lastFor</code> blind
+to A&rsquo;s exercise), and D5 on the very seed the browser booted on both commits. <b>Two things the pure half cannot reach are
+real findings, not gaps</b>: the false C3 on every first-run sign-in (a race between <code>sync.js</code>&rsquo;s
+<code>onAuthStateChange</code> and <code>paintBackup</code>&rsquo;s route to screen C &mdash; <em>Could not read the backup. A backup is
+already running.</em> with zero REST reads, four times out of four) and the R-a latch; both are under &ldquo;Not testable&rdquo;.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -13034,6 +13048,201 @@ T("W4 - up to the end of S36 no fixture wrote a phat:* key (the suite tripwire, 
   a.deep(PHAT_KEY_WRITES, [], "a fixture in S36 or earlier wrote into his history");
 });
 
+group("S37 WO-008 W7 QA / two real accounts / the shared device / the second phone / the stamp hazard / D1-D5 D7 replay");
+
+/* ---- WO-008 W7 (QA). What the two-account browser attacks of 2026-09-12
+   ("Already proven" item 32) found, replayed in the pure layer in the
+   browser's order. Two throwaway accounts on the LIVE project
+   (test+a@example.com, test+b@example.com), the real sync.js, four
+   "phones" (fresh contexts) and one shared device. Every string below is
+   the string the screen showed, transcribed from the run log, so a change
+   that would alter what the phone said goes red on file:// first.
+   What the pure layer CANNOT replay - the R-a latch, the false C3 on
+   first-run sign-in (a real defect, see "Not testable") - is named there. */
+
+/* A's phone after SC1: the stamp {id,email} the sign-in push wrote, the
+   fresh store born with profile:null, one session, one weight. Ids are the
+   two real uids the run created (their rows and the accounts are the PM's
+   to delete from the dashboard; the client cannot - see decisions). */
+var S37A = { id: "00b80e16-8c42-4726-890e-5d2ac2590e18", email: "test+a@example.com" };
+var S37B = { id: "e38f351f-64a3-4749-8c4e-fe8396e53c52", email: "test+b@example.com" };
+function S37STAMP(u, at){ return { at: at === undefined ? 1789242270000 : at, sig: "x", user: u, n: 1, m: 1, x: 0 }; }
+function S37ALOG(){ return E3LOG([E3SESS(1789242273250, "2026-09-12", "d1", 100, 5)]); }
+function S37ABW(){ return E3BW([{ date: "2026-09-12", kg: 85 }]); }
+
+/* ------------------------------------------------------ 1. D3 / D4: the shared device, in the browser's order */
+
+T("S37 - SHARED DEVICE replay (SC3): A's {id,email} stamp, B signed in, data on disk -> foreign; the three sentences are the ones #bk-status showed, byte for byte", function(a){
+  var owner = P.backupOwner(S37STAMP({ id: S37A.id, email: S37A.email }));
+  a.deep(owner, { id: S37A.id, email: S37A.email }, "the stamp SC1's sign-in push wrote reads back as {id,email}");
+  a.deep(P.storeOwner({ ownerId: owner.id, userId: S37B.id, hasData: true }), { allowed: false, reason: "foreign" }, "B on A's device with data: refused");
+  a.eq(P.ownerRefusal("auto", owner, S37B.email),
+    "This device's log belongs to test+a@example.com. Nothing was backed up to test+b@example.com. Sign in as test+a@example.com to back it up.", "R-a, as announced once (assertive) and as #bk-status rendered it");
+  a.eq(P.ownerRefusal("manual", owner, S37B.email),
+    "Not backed up. This device's log belongs to test+a@example.com, not to test+b@example.com. Sign in as test+a@example.com to back it up.", "R-b, BACK UP NOW");
+  a.eq(P.ownerRefusal("restore", owner, S37B.email),
+    "Not restored. This device's log belongs to test+a@example.com. The backup under test+b@example.com was not read and nothing on this device changed. Sign in as test+a@example.com to restore.", "R-c, before the pull (0 REST reads observed)");
+  /* the owner back on the device: allowed; and B on an EMPTY device: allowed (the second phone) */
+  a.deep(P.storeOwner({ ownerId: owner.id, userId: S37A.id, hasData: true }), { allowed: true, reason: "owner" }, "A signs in again: the push lands (observed: Backed up 1 session and 1 weight)");
+  a.deep(P.storeOwner({ ownerId: owner.id, userId: S37B.id, hasData: false }), { allowed: true, reason: "fresh" }, "B on a device with nothing on it");
+  a.deep(P.storeOwner({ ownerId: null, userId: S37B.id, hasData: true }), { allowed: true, reason: "claim" }, "B's own phone after the empty-log start: the first save's push claims it (observed H4 -> H1)");
+  /* the string stamp: no email, the substitution */
+  var s = P.backupOwner({ at: 1, sig: "x", user: "uid-chady-string", n: 6, m: 14, x: 0 });
+  a.deep(s, { id: "uid-chady-string", email: null }, "the E-3 string stamp (D5's seed) has no email");
+  a.eq(P.ownerRefusal("manual", s, S37B.email), "Not backed up. This device's log belongs to another account, not to test+b@example.com. Sign in as that account to back it up.");
+});
+
+T("S37 - D4 is a property of the pure layer too: a refusal returns before any store is touched - storeOwner/ownerRefusal produce values and the suite's write spy stays empty", function(a){
+  var owner = P.backupOwner(S37STAMP({ id: S37A.id, email: S37A.email }));
+  var n = PHAT_KEY_WRITES.length;
+  P.storeOwner({ ownerId: owner.id, userId: S37B.id, hasData: true });
+  P.ownerRefusal("auto", owner, S37B.email); P.ownerRefusal("manual", owner, S37B.email); P.ownerRefusal("restore", owner, S37B.email);
+  a.eq(PHAT_KEY_WRITES.length, n, "no phat:* write");
+  /* observed on the device, from a second page's cold read of localStorage: log, bw, plans, prefs byte-identical after R-a, R-b and R-c; nothing under phat:v1:recover:* */
+});
+
+/* ------------------------------------------------------ 2. D2 / D3: the second phone - C1 / C2 and the restore */
+
+T("S37 - A's SECOND PHONE replay (SC4): A's backup rows -> restorePayload -> the session byte-identical to what A's phone wrote, profile:null carried down, and screen C's decision (C1: rows; C2: nothing) from the counts", function(a){
+  var log = S37ALOG(), bw = S37ABW();
+  var bp = P.backupPayload(log, bw, null);
+  a.eq(bp.problems.length, 0); a.eq(bp.logMeta.profile, null, "the push carries profile:null in log_meta (observed on the server: {profile:null,includeCut:false,schemaVersion:5})");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true); a.deep(rp.counts, { sessions: 1, bodyweight: 1, plans: 0 });
+  a.eq(JSON.stringify(rp.log.sessions[0]), JSON.stringify(log.sessions[0]), "the restored session is byte-identical to the one A's phone saved");
+  a.ok(Object.prototype.hasOwnProperty.call(rp.log, "profile") && rp.log.profile === null, "profile:null comes down with the account (never re-asked on the new phone)");
+  a.eq(P.profilePass(rp.log, { bwCount: 1 }).changed, false, "and the boot pass over the restored store changes nothing - the second phone is not stamped by A's own session");
+  /* screen C: C1 when any count is non-zero, C2 when all are zero (obPull's own test) */
+  var c1 = !!(rp.counts.sessions || rp.counts.bodyweight || rp.counts.plans);
+  a.eq(c1, true, "C1: `2 sessions and 1 weight are backed up under this account.` was the observed sub-line; Restore offered, NO empty-log button");
+  var empty = P.restorePayload({ sessions: [], bodyweight: [], plans: [], user_state: null });
+  a.eq(empty.ok, true); a.eq(!!(empty.counts.sessions || empty.counts.bodyweight || empty.counts.plans), false, "C2: `Nothing is backed up under this account yet.` - the empty log offered");
+  /* the restore onto an EMPTY device keeps nothing aside: no recover copy was observed */
+  var st = P.restoreSteps(rp, { empty: true, stores: { log: "absent", bw: "absent", plans: "absent" }, log: null, bw: null, plans: null, blocked: {} }, W2KEYS, 1789242300000);
+  a.eq(st.ok, true); a.eq(st.keeps.length, 0, "empty device: no phat:v1:recover:* key (observed keys after the restore: phat:auth, bw, log, prefs)");
+  a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log", "phat:v1:bw"], "writes log then bw; no plans key when the backup carries none");
+});
+
+T("S37 - D2 replay (SC2): B's rows never carry A's session; a device restored from B's account holds only B's ids; the ghost for A's exercise is `No prior set`", function(a){
+  var aSess = E3SESS(1789242273250, "2026-09-12", "d1", 100, 5);
+  var bSess = E3SESS(1789242500000, "2026-09-12", "d1", 60, 8);
+  bSess.entries = { d1b: bSess.entries.d1a }; delete bSess.entries.d1a; bSess.entries.d1b.rx = { s: 3, lo: 6, hi: 10, k: "hyp" };
+  var bLog = E3LOG([bSess]);
+  var rp = P.restorePayload(ROWS(P.backupPayload(bLog, E3BW([]), null)));
+  a.eq(rp.ok, true);
+  a.eq(rp.log.sessions.some(function(s){ return s.id === aSess.id; }), false, "A's id " + aSess.id + " is in none of B's rows (server: 0 of A's client_ids under B; localStorage on B's phone: no occurrence)");
+  a.eq(JSON.stringify(rp.log).indexOf("100"), -1, "no 100 kg anywhere in B's restored store");
+  /* the engines read B's store and see nothing of A's: lastFor on A's exercise */
+  a.eq(P.lastFor(rp.log.sessions, "d1a"), null, "lastFor(d1a) on B's log finds nothing of A's (observed: `No prior set.` on Upper power's Bent-over row)");
+  a.ok(P.lastFor(rp.log.sessions, "d1b") !== null, "and B's own exercise resolves");
+});
+
+/* ------------------------------------------------------ 3. D5: Chady's stamped store, and the fresh one */
+
+/* The seed the browser booted on both commits: six sessions over eleven
+   days, fourteen daily weights rising 0.25 kg/week from 85, an E-3 string
+   stamp, no profile key. */
+function S37CHADY(){
+  function s(i, d, dayId, ex, w, r){ var e = {}; e[ex] = { sets: [{ w: w, r: r }, { w: w, r: r }, { w: w, r: r }], note: "" }; return { id: 1780000000000 + i, date: d, dayId: dayId, dateBasis: "local", entries: e }; }
+  var T = "2026-09-12";
+  var log = { schemaVersion: 5, includeCut: false, sessions: [
+    s(1, P.dateAdd(T, -11), "d1", "d1a", 100, 5), s(2, P.dateAdd(T, -10), "d2", "d2a", 140, 5), s(3, P.dateAdd(T, -8), "d3", "d3a", 60, 10),
+    s(4, P.dateAdd(T, -6), "d4", "d4a", 80, 10), s(5, P.dateAdd(T, -4), "d1", "d1a", 102.5, 5), s(6, P.dateAdd(T, -3), "d2", "d2a", 142.5, 5) ],
+    reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null };
+  var entries = [], i;
+  for (i = 0; i < 14; i++) entries.push({ date: P.dateAdd(T, -(13 - i)), kg: Math.round((85 + i * 0.25 / 7) * 10) / 10 });
+  return { log: log, bw: { schemaVersion: 5, entries: entries }, today: T };
+}
+
+T("S37 - D5 replay (SC5): the pre-W4 store is stamped on evidence in ONE write, sessions[] byte-identical; the strip, the Diet figures and the Weight band are what both commits rendered", function(a){
+  var c = S37CHADY(), l0 = JSON.stringify(c.log);
+  var m = P.migrateStore(clone(c.log), clone(c.bw), undefined);
+  var pp = P.profilePass(m.log, { bwCount: c.bw.entries.length });
+  a.eq(pp.stamped, true); a.deep(pp.evidence, ["sessions", "bodyweight"], "stamped on sessions and bodyweight (a v5 store carries no utcDatedBefore)");
+  a.deep(pp.log.profile, { diet: "phat-brief" });
+  a.eq(JSON.stringify(pp.log.sessions), JSON.stringify(c.log.sessions), "sessions[] byte-identical");
+  a.eq(JSON.stringify(c.log), l0, "the seed object was not mutated");
+  a.eq(P.profilePass(pp.log, { bwCount: 14 }).changed, false, "second boot: no write (observed: zero phat:* writes)");
+  var dt = P.dietTargets(c.today, null, null, pp.log.profile);
+  a.eq(dt.absent, undefined); a.eq(dt.label, "Today — high-carb training day"); a.eq(dt.text.strip, "3,200 · 170 g · 300 g · 145 g", "the Home strip's line, byte-identical on 9ee456f and 8c1cff7");
+  var adv = P.calorieAdvice(c.bw.entries, c.today, null, pp.log.profile);
+  a.eq(adv.state, "on-target"); a.eq(adv.text, "+0.27 kg per week. On target. Change nothing.", "the Weight band both commits rendered");
+  a.eq(adv.subline, "Target: +0.2 to +0.3 kg per week. Averages over 14 days.");
+  var w = P.bwWindows(c.bw.entries, c.today);
+  a.eq(w.aCount, 7); a.eq(w.bCount, 7, "7-day average (7 of 7 days)");
+});
+
+T("S37 - D5 replay: the FRESH store is ABSENT on all three screens and stays so after its first session; the boot default {profile:null} is never re-asked", function(a){
+  var born = { profile: null };                                   /* index.html's boot default for S.logMeta */
+  a.eq(P.profilePass(born, { bwCount: 1 }).changed, false, "a store born with the key is not asked, whatever is on disk");
+  var log = S37ALOG();
+  a.eq(P.profilePass(log, { bwCount: 1 }).changed, false, "after the first session (observed: profile still null on the second boot with a session and a weight present)");
+  var adv = P.calorieAdvice(S37ABW().entries, "2026-09-12", null, log.profile);
+  a.eq(adv.absent, true); a.deep(adv.absentLines, ["No diet protocol on this account.", "The app reports your weight and says nothing about what to eat."], "Weight: the two lines the tab showed, no kicker, no band, no hold controls");
+  a.eq(adv.rate, null); a.eq(adv.text, ""); a.eq(adv.subline, "");
+  var dt = P.dietTargets("2026-09-12", null, null, log.profile);
+  a.eq(dt.absent, true); a.eq(dt.kicker, "Diet"); a.eq(dt.kickerSub, "No targets");
+  a.deep(dt.absentLines, ["No diet targets on this account.", "The app cannot work them out from a training log, and it will not guess."], "Diet: `DIET / NO TARGETS` and the two lines");
+  a.eq(dt.kcal, null); a.eq(dt.text, null);
+  /* vHome's own gate for the strip, replayed: absent -> nothing */
+  var strip = !!(dt && dt.absent !== true && dt.label && dt.text && typeof dt.text.strip === "string" && dt.text.strip);
+  a.eq(strip, false, "Home renders no macro strip (observed: none on A's, B's, and the fresh phone)");
+});
+
+/* ------------------------------------------------------ 4. ATTACK 1: the stamp hazard, three ways, as observed */
+
+T("S37 - ATTACK 1 (a) OBSERVED, not accepted: a pre-W4 log store with NO session and ONE weight on disk is stamped the brief - Diana's diet becomes Chady's if her phone ever holds that shape", function(a){
+  /* The exact seed the browser booted: log {schemaVersion:5, includeCut:false, sessions:[]}, bw one entry, no owner stamp.
+     Observed: profile {diet:"phat-brief"}, Diet tab 3,200 / 2,500. Backend kept bodyweight as evidence deliberately
+     (decisions 2026-09-12); this pin records the consequence so a change either way is a deliberate edit here. */
+  var r = P.profilePass({ schemaVersion: 5, includeCut: false, sessions: [] }, { bwCount: 1 });
+  a.eq(r.stamped, true); a.deep(r.evidence, ["bodyweight"]);
+  a.deep(r.log.profile, { diet: "phat-brief" });
+  a.eq(P.dietTargets("2026-09-12", null, null, r.log.profile).kcal, 3200, "and the Diet tab would render his targets");
+});
+
+T("S37 - ATTACK 1 (b)+(c) OBSERVED: the path the live app actually produces is SAFE - a first run with the weight typed writes bw and prefs and NO log key; the pass over an absent log invents nothing; the first session is born profile:null", function(a){
+  /* 9ee456f first run, `Today's weight` 62.0, START WITH AN EMPTY LOG: keys were ["phat:v1:bw","phat:v1:prefs"]. Upgrade to 8c1cff7: log still absent. */
+  var r = P.profilePass(undefined, { bwCount: 1 });
+  a.eq(r.changed, false); a.eq(r.asked, false); a.eq(r.log, undefined, "an absent log store stays absent - nothing to stamp");
+  a.eq(P.profilePass(null, { bwCount: 1 }).changed, false);
+  /* the first save on that phone builds the log from index.html's boot default {profile:null} plus the session */
+  var first = { profile: null, sessions: [E3SESS(1, "2026-09-12", "d1", 50, 5)], includeCut: false };
+  a.eq(P.profilePass(first, { bwCount: 1 }).changed, false, "observed: `profile:null` after the first session, Diet still ABSENT");
+  a.eq(P.calorieAdvice([{ date: "2026-09-12", kg: 62 }], "2026-09-12", null, first.profile).absent, true);
+});
+
+/* ------------------------------------------------------ 5. the stamp travels with the ACCOUNT, not the device */
+
+T("S37 - the profile rides log_meta: a stamped store's push carries the stamp, a restore brings it down untouched, and the pass over the restored store changes nothing", function(a){
+  var c = S37CHADY(); var stamped = P.profilePass(c.log, { bwCount: 14 }).log;
+  var bp = P.backupPayload(stamped, c.bw, null);
+  a.eq(bp.problems.length, 0); a.deep(bp.logMeta.profile, { diet: "phat-brief" }, "user_state.log_meta.profile = the stamp");
+  var rp = P.restorePayload(ROWS(bp));
+  a.eq(rp.ok, true); a.deep(rp.log.profile, { diet: "phat-brief" }, "one Restore on a new phone brings his diet back (coach 16.8: the stamp lives on the account)");
+  a.eq(P.profilePass(rp.log, { bwCount: 0 }).changed, false, "never re-asked");
+  a.eq(rp.notes.some(function(n){ return /profile/.test(n); }), false, "no `set to null` note when the key came down");
+  /* and A's real account: null rides the same way */
+  var rpA = P.restorePayload(ROWS(P.backupPayload(S37ALOG(), S37ABW(), null)));
+  a.eq(rpA.log.profile, null); a.eq(P.dietTargets("2026-09-12", null, null, rpA.log.profile).absent, true, "Diet stays silent on A's restored phone (PR1 is about the profile, not ownership)");
+});
+
+/* ------------------------------------------------------ 6. D7, in the pure layer: nothing the app owns is touched by an auth change */
+
+T("S37 - D7: sign-out is sync.js's key alone - no PHAT export names phat:auth, and backupOwner/storeOwner read the stamp without needing a session", function(a){
+  var names = Object.keys(P), i, src = "";
+  for (i = 0; i < names.length; i++) if (typeof P[names[i]] === "function") src += String(P[names[i]]);
+  a.eq(src.indexOf("phat:auth"), -1, "no pure function knows the auth key (observed: sign-out removed phat:auth and left bw, log, prefs byte-identical)");
+  a.deep(P.backupOwner(S37STAMP({ id: S37A.id, email: S37A.email })), { id: S37A.id, email: S37A.email }, "the owner is readable signed out - H2 `test+a@example.com · signed out · last backup just now` rendered from it");
+});
+
+/* ------------------------------------------------------ 7. the meta-tripwire, restated for this section */
+
+T("W7 - up to the end of S37 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S37 or earlier wrote into his history");
+});
+
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -13933,8 +14142,24 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
      be: a mobile OS, a software keyboard, a screen reader, an eye in bright
      light. Those residues, merged, are the four items here.
      --------------------------------------------------------------------- */
+  document.getElementById("untestable").innerHTML +=
+    "<p><b>WO-008 W7 &mdash; the two-account run found two things that live entirely on the wire side, and one of them is a " +
+    "defect.</b> <b>(1) The false C3 on first-run sign-in.</b> <code>sync.js</code> subscribes to <code>client.auth.onAuthStateChange</code> " +
+    "and <code>emit()</code>s while <code>runAuth</code> still holds <code>st.busy = \"auth\"</code>; <code>onSync</code> &rarr; " +
+    "<code>paintBackup</code> &rarr; (<code>S.sub === \"onboard-signin\"</code> and a user) &rarr; <code>obToC()</code> &rarr; " +
+    "<code>Y.pull()</code> &rarr; refused <code>busy</code>. Screen C then reads <em>Could not read the backup. A backup is already " +
+    "running.</em> with <b>zero</b> REST reads, on a working network, four sign-ins out of four against the live project; " +
+    "<em>Try again</em> recovers every time. Frontend&rsquo;s stubbed module could not show it because the stub clears busy before it " +
+    "emits. Nothing is written and nothing is lost; it is the first sentence a second phone ever sees. Not reachable from " +
+    "<code>file://</code> (an ES module with a CDN import); the observation is item 32 (B). <b>(2) The R-a latch</b> " +
+    "(<code>S.sync.refused</code>) is <code>index.html</code> state: observed once per sign-in, silent on the next save, reset by " +
+    "sign-out and by the owner signing in &mdash; item 32 (D). <b>(3) The seven identity states</b> H1&ndash;H7 and the three " +
+    "session / Summary lines are view strings; every one was read off the screen (item 32) and the refusal sentences underneath " +
+    "them are pinned in S36/S37. <b>(4) <code>hasData</code> is read from disk</b> by the call sites (<code>storesOnDisk()</code>); " +
+    "the pure function trusts its argument, and S36 says so.</p>";
+
   document.getElementById("manual").innerHTML =
-    "<p><b>Seven items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Eight items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -14027,7 +14252,16 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "software keyboard against the typed field (<code>autocapitalize=\"characters\"</code> is a hint the OS may " +
     "ignore), and whether the blob download actually lands on this WebView (B-16) &mdash; the restore proceeds " +
     "either way, and the on-device recover copy is what actually protects you, so the export is a bonus and not " +
-    "the safety net.</span></li></ol>" +
+    "the safety net.</span></li>" +
+
+    "<li><b>Two phones, one look each (WO-008).</b> On your phone, Home, under the next-session block: the row must read " +
+    "<i>This log</i> and <b>your</b> email. On Diana's phone the same row must read <b>her</b> email &mdash; or <i>On this device " +
+    "only</i> if she has not signed in yet. Turn the radio off on both and reopen: the two rows must not change. Then on her phone " +
+    "open Diet: it must read <i>No targets</i> and two sentences, and no number.<br><span class=\"skipmsg\">Why a phone: " +
+    "every state of that row was read off headless Chromium against the live project with two throwaway accounts (item 32), " +
+    "and the refusals when the wrong account is signed in were observed byte for byte. What no rig can answer is whether the " +
+    "installed PWA on each of your two real phones boots the identity from disk with no signal, and whether Diana can tell at a " +
+    "glance whose log she is about to add a set to. One look each.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -14624,6 +14858,112 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "label switched from <i>Undo: put Bent-over row back</i> to <i>Undo: move Weighted pull-up back to &hellip;</i>; " +
     "undo restored the move only and the deleted row stayed deleted, recoverable by DISCARD CHANGES, as ruled. " +
     "<b><code>file://</code> boot at 400 px: zero console errors; <code>scripts/offline-check.mjs</code>: PASS.</b></span></li>" +
+    "<li><b>WO-008 W7 &mdash; two real accounts against the live project: D1 from outside, D2&ndash;D5 and D7 through the app on four " +
+    "phones and one shared device, the stamp hazard three ways, the false C3, the fold in pixels, esc() on a hostile email, 44 px at " +
+    "200 %, and 26 mutants.</b> <span class=\"msg\">Run 2026-09-12 against <code>8c1cff7</code> (W5) with <code>9ee456f</code> " +
+    "served beside it from a <code>git show</code> checkout. Rig: a Node static server on <code>http://127.0.0.1:8789</code> serving " +
+    "the working tree, Playwright headless Chromium at 400 &times; 850 (393 &times; 852 for the fold), <b>the real " +
+    "<code>sync.js</code> and the real CDN module against the live Supabase project</b>, two throwaway accounts created through " +
+    "<code>/auth/v1/signup</code> with the publishable key (<code>test+a@example.com</code> " +
+    "<code>00b80e16-8c42-4726-890e-5d2ac2590e18</code>, <code>test+b@example.com</code> <code>e38f351f-64a3-4749-8c4e-fe8396e53c52</code>), " +
+    "every <code>/rest/v1</code> and <code>/auth/v1</code> request logged per page, <code>Storage.prototype.setItem</code> spied from an " +
+    "init script, a <code>MutationObserver</code> on <code>#bs-live</code> recording every announcement with its <code>aria-live</code>, " +
+    "and disk read from a <b>second page in the same context</b> for every byte-identity claim. Not checked in. <b>Re-run whenever " +
+    "<code>runBackup</code>, <code>authTap</code>, <code>restoreStart</code>, <code>obPull</code>, <code>whoState</code> or " +
+    "<code>sync.js</code> change.</b> " +
+    "<b>(A) D1, from outside, positive control first.</b> Each JWT reads exactly its own <code>user_state</code> row (A: " +
+    "<code>[{user_id:00b80e16&hellip;}]</code>, B: <code>[{user_id:e38f351f&hellip;}]</code>); every table filtered " +
+    "<code>user_id=eq.&lt;other&gt;</code> &rarr; <code>200 []</code> &times; 5, both directions; unfiltered, every row visible is the " +
+    "caller&rsquo;s (A: 2 sessions, 1 weight, 1 state, 1 conflict; B: 4 sessions, 0, 1, 0); a valid <code>bodyweight</code> and a valid " +
+    "<code>sessions</code> document POSTed under the other&rsquo;s <code>user_id</code> &rarr; <code>403</code> / <code>42501</code> " +
+    "<em>new row violates row-level security policy</em> (never <code>23514</code>), both directions; the publishable key alone &rarr; " +
+    "five <code>[]</code>. Sign-ups are <b>still enabled</b> (the two accounts were created by this run; W3&rsquo;s lock has not been " +
+    "done). " +
+    "<b>(B) A&rsquo;s phone, fresh.</b> First run: zero keys; exactly two actions. START WITH AN EMPTY LOG: one key (<code>prefs</code>). " +
+    "H5 <i>On this device only. Not backed up.</i> at 48 px; Weight <i>No diet protocol on this account. The app reports your weight " +
+    "and says nothing about what to eat.</i> with no kicker, no band, no hold controls; Diet <i>DIET / NO TARGETS</i> + the two lines, " +
+    "no figure; Home: no strip. Sign in as A from Settings &rarr; <i>Backed up 0 sessions and 0 weights, just now</i> (only " +
+    "<code>user_state</code> was upserted), stamp <code>{id,email}</code> naming A, still no log key, H1 <i>test+a@example.com &middot; " +
+    "last backup just now</i>. One session (<code>100 &times; 5</code>): header <i>Log of test+a@example.com</i>, Summary <i>Saves to " +
+    "this device. Backs up to test+a@example.com.</i>; on disk the log is born <code>profile:null</code>; server: the session under A, " +
+    "<code>log_meta {profile:null, includeCut:false, schemaVersion:5}</code>; Diet stays ABSENT after the session and the weight. " +
+    "<b>A second boot with a session and a weight on disk wrote nothing and did not stamp.</b> Sign-out: <code>phat:auth</code> " +
+    "removed, <code>bw</code> / <code>log</code> / <code>prefs</code> byte-identical (D7); Settings <i>This one was last backed up just " +
+    "now by test+a@example.com.</i>; H2. <b>The false C3</b> (see &ldquo;Not testable&rdquo;): every first-run sign-in, on every phone in this " +
+    "run, landed on <i>Could not read the backup. A backup is already running.</i> with zero REST reads; <i>Try again</i> then showed " +
+    "the truth. " +
+    "<b>(C) B&rsquo;s phone, first run through Sign in.</b> A &rarr; B: no key; typed an email, <i>&lsaquo; Back</i>: no key, focus " +
+    "back on <i>Sign in</i>, the typed address gone. Sign in: only <code>phat:auth</code>. Radio off, <i>Try again</i>: <i>Could not " +
+    "read the backup. No connection.</i>, twice, still only <code>phat:auth</code>; radio on, <i>Try again</i>: C2 <i>Nothing is " +
+    "backed up under this account yet.</i> (first pass) / C1 <i>{n} sessions and 0 weights are backed up under this account.</i> with " +
+    "<b>no</b> empty-log button (later passes, the account already holding rows). <i>Sign out</i> from C: screen A, zero keys, " +
+    "announced. C2 &rarr; START WITH AN EMPTY LOG: <code>prefs</code> only, <b>no push</b>, H4 <i>On this device only. Backs up to " +
+    "test+b@example.com after the next save.</i>; header <i>On this device only</i>, Summary U4; the first save&rsquo;s push claimed " +
+    "the device: H1 naming B, stamp B. C1 &rarr; RESTORE: <code>log</code> + <code>bw</code> + <code>prefs</code> written, " +
+    "<code>onboarded</code> in the same prefs write as the stamp, no recover key, <i>Restored &hellip;</i>, H1 naming B. <b>D2:</b> " +
+    "server B holds only B&rsquo;s client_ids, A&rsquo;s id nowhere; B&rsquo;s localStorage carries no occurrence of A&rsquo;s session " +
+    "id; Home / Trend / Weight / Diet / Session (A&rsquo;s Upper power: <i>No prior set.</i>, header <i>Log of test+b@example.com</i>) " +
+    "/ Summary show no 100 kg and no 85.0 kg; Settings &rarr; Restore on B&rsquo;s own device: the typed sheet counts B&rsquo;s backup " +
+    "only (<i>This replaces {n} sessions and 0 weights on this device with {n} and 0</i>) while A held 2 and 1. " +
+    "<b>(D) The shared device (B-88).</b> A&rsquo;s stores seeded, signed out: boot wrote nothing, H2 <i>signed out &middot; last " +
+    "backup 15 min ago</i>. B signs in: <i>Signed in as test+b@example.com. This device&rsquo;s log belongs to test+a@example.com.</i>; " +
+    "<code>#bk-status</code> <code>.refuse</code> <code>role=alert</code> with R-a verbatim then <i>Last backup 15 min ago, by " +
+    "test+a@example.com.</i>; R-a announced <b>once</b>, assertive; <b>zero</b> REST requests after the token; disk byte-identical " +
+    "from a second page; stamp still A; Home H3 (48 px, <code>.refuse</code>, no <code>role=alert</code>). BACK UP NOW: R-b " +
+    "verbatim, once, nothing sent, byte-identical. Restore from backup: R-c verbatim, once, <b>0 REST reads</b>, no sheet, " +
+    "byte-identical, nothing under <code>recover:*</code> (D3, D4). <b>The latch:</b> a weight logged while B is signed in saved " +
+    "locally (<i>Weight logged.</i>), its push refused silently (no second R-a, nothing sent), Settings still showing R-a; sign out " +
+    "and in as B: R-a once again; A signs in: <i>Backed up 1 session and 1 weight, just now</i> (the 70.0 kg B typed on A&rsquo;s " +
+    "phone went to A&rsquo;s account &mdash; the phone is the person, by design), stamp refreshed, log byte-identical; B again: once " +
+    "again, nothing sent. Server: B&rsquo;s rows unchanged throughout. " +
+    "<b>(E) A&rsquo;s second phone.</b> First run &rarr; Sign in as A &rarr; C1 <i>2 sessions and 1 weight are backed up under this " +
+    "account.</i>, <i>RESTORE 2 SESSIONS</i> primary, no empty-log button; only <code>phat:auth</code> before; after: " +
+    "<code>log</code> / <code>bw</code> / <code>prefs</code>, no recover key, prefs written exactly once with <code>onboarded</code> " +
+    "and the A stamp, A&rsquo;s session <b>byte-identical</b> to what A&rsquo;s first phone wrote, every restored session one of " +
+    "A&rsquo;s rows, <code>profile:null</code> carried down, nothing pushed back, H1 naming A, Diet and Weight ABSENT, no 60 kg " +
+    "(B&rsquo;s) on Trend. Settings &rarr; Restore on A&rsquo;s own device proceeds to the typed sheet; <i>Keep this device&rsquo;s " +
+    "log</i> leaves the log unchanged. " +
+    "<b>(F) D5, Chady&rsquo;s stamped store on both commits, same bytes.</b> Seed: six sessions over eleven days, fourteen daily " +
+    "weights rising 0.25 kg/week, an E-3 <b>string</b> stamp, no profile key. <code>8c1cff7</code>: <b>one</b> log write at boot, " +
+    "<code>profile {diet:phat-brief}</code>, <code>sessions[]</code> byte-identical, every other key value-identical (store-level key " +
+    "order is the builder&rsquo;s, as on every save), <code>bw</code> and <code>prefs</code> untouched (the string stamp is not " +
+    "rewritten), H6 <i>Backed up 3 days ago by an account this phone has not seen sign in.</i>; second boot: zero writes. Home strip " +
+    "<i>Today &mdash; high-carb training day &middot; 3,200 &middot; 170 g &middot; 300 g &middot; 145 g</i>, the Diet tab (1,108 " +
+    "chars) and the Weight tab (<i>7-DAY AVERAGE (7 OF 7 DAYS) 85.4 kg &middot; Change vs last week +0.27 kg &middot; CALORIE " +
+    "DECISION +0.27 kg per week. On target. Change nothing. Target: +0.2 to +0.3 kg per week.</i>) <b>byte-identical to " +
+    "<code>9ee456f</code></b>. A fresh onboarded store with no log key: zero writes, ABSENT everywhere, a weight alone writes no log, " +
+    "the first session is born <code>profile:null</code>. " +
+    "<b>(G) ATTACK 1, the stamp hazard.</b> (a) a pre-W4 log store with <code>sessions:[]</code> and one weight on disk &rarr; " +
+    "<b>stamped</b>, Diet renders 3,200 &mdash; observed and pinned in S37 as backend&rsquo;s deliberate choice; (b) a weight with " +
+    "<b>no</b> log key, second boot &rarr; no log key invented, nothing stamped; (c) <b>the live app today (<code>9ee456f</code>)</b>: " +
+    "first run with 62.0 typed in <i>Today&rsquo;s weight</i> &rarr; keys <code>bw</code>, <code>prefs</code> and <b>no log</b>; " +
+    "upgrade to <code>8c1cff7</code> in the same context &rarr; still no log key, Diet ABSENT. So the shape (a) needs a log store " +
+    "written with no session in it, which the live first run does not produce; the runbook&rsquo;s <i>log nothing until W8</i> " +
+    "holds, and the weight field is safe too. " +
+    "<b>(H) ATTACK 3, the fold at 393 &times; 852</b>, populated log (the D5 seed and a 12-session four-week log, same result): dock " +
+    "top 788. <code>9ee456f</code>: owner row none, cycle block 247&ndash;368 (121 px: three sentences), day rows MON 418&ndash;499, " +
+    "TUE 507&ndash;588, THU 596&ndash;677, FRI 685&ndash;766, <b>SAT 774&ndash;855 &mdash; 67 px under the dock already</b>. " +
+    "<code>8c1cff7</code>: owner row 247&ndash;295 (48), cycle 295&ndash;416, MON 466&ndash;547, TUE 555&ndash;636, THU 644&ndash;725, " +
+    "<b>FRI 733&ndash;814 (26 px under), SAT 822&ndash;903 (115 px under)</b>. The W9 criterion was already failing by one row before " +
+    "W5; W5 adds a second. UX&rsquo;s arithmetic assumed a 50 px cycle line; the block is 121. " +
+    "<b>(I) ATTACK 5, esc().</b> Owner stamp <code>&lt;img src=x onerror=&hellip;&gt;@x</code>, signed-in " +
+    "<code>&lt;b&gt;bold&lt;/b&gt;&lt;img &hellip;&gt;@y</code> (stubbed module &mdash; Supabase would not issue the address): H1, " +
+    "H2, H3, the 18.6 H2 intro and H3 line, R-a in <code>#bk-status</code> and in the live region, R-b, R-c, the session header " +
+    "(S1, S2), Summary (U1, U3), screen C&rsquo;s heading &mdash; every one rendered the raw text; zero <code>&lt;img&gt;</code>, zero " +
+    "<code>&lt;b&gt;</code>, no <code>onerror</code> ran, Settings <code>innerHTML</code> carried only escaped forms. " +
+    "<b>(J) 44 px.</b> Screens A, B, C3, Home H3 and Settings H3: 0 controls under 44 &times; 44 at 400 px and at 200 %, no " +
+    "horizontal overflow; the owner row 48 px, 74 px at 200 %. " +
+    "<b>(K) 26 mutants, all killed</b>, each injection matched exactly once (CRLF normalised): storeOwner &times; 7 (no-user dropped, " +
+    "hasData inverted / dropped, null owner refused, equality inverted, foreign allowed, blank owner kept), backupOwner &times; 2, " +
+    "ownerRefusal &times; 2, profilePass &times; 8 (early return dropped, null re-asked, demo guard dropped, sessions at zero, " +
+    "bodyweight dropped, key left absent, argument mutated, stamped on schema age), PR1 &times; 6 (isPhatBrief inverted / any " +
+    "object / null-as-Chady, both gates dropped, ABSENT carrying a rate), C7c &times; 1. " +
+    "<b>(L) Two side findings.</b> An authenticated DELETE of the account&rsquo;s <b>own</b> <code>sessions</code> / " +
+    "<code>bodyweight</code> / <code>user_state</code> rows now fails <code>403 42501 permission denied for table users</code>: the " +
+    "<code>4d69225</code> archive-trigger guard reads <code>auth.users</code> as the invoking role. No client path deletes today; it " +
+    "is why this run could not wipe its own rows. And the auth endpoint rate-limited a burst of sign-ins (a <code>429</code> without " +
+    "CORS headers reads as <i>No connection.</i> in the app &mdash; honest, if terse). " +
+    "<b>scripts/offline-check.mjs: PASS. file:// suite 689 / 689 / 0.</b></span></li>" +
     "</ol>";
 })();
 </script>
