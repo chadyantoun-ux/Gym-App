@@ -1950,3 +1950,46 @@ wants WO-008 first, WO-007 W4 waits instead.
 reaffirms; a push or restore that crosses accounts on a device with data; diet or calorie advice to an
 account with no profile; building a diet editor inside a login item (B-93 is filed for that); and
 namespacing the stores on the PM's default rather than his answer.
+
+## 2026-09-12 — WO-007 W5: the re-split passes QA at `1b638bc`; one RI1 edge reported, not ruled; a third suite tripwire
+
+Verified against `1b638bc` (frontend W4) with backend's W3 at `9ea729f` underneath. Suite **653 / 653 / 0**, no
+skips, three tripwires. `scripts/offline-check.mjs` PASS. `file://` boot at 400 px: zero console errors.
+
+**W5 is a pass for release.** Every criterion in W3 (D1–D6) and W4 (D7–D11, B1–B5) observed, and the four attacks
+run as written; the evidence is `tests.html` "Already proven" item 31 (110 browser checks, 400 px, offline after
+the service worker took control, again at 200 % text, zero page errors, zero requests). No existing assertion was
+changed. Five tests were added (S35) and one meta-test.
+
+**Ruled, QA:**
+- **The suite now proves its own origin rule.** A `Storage.prototype` spy installed before the first test records
+  every `phat:*` write for the whole run and a third tripwire asserts the list is empty. On `file://` and on the
+  deployed `/tests.html` the harness origin *is* the app's, so a fixture that wrote `phat:v1:log` would write into
+  his history; "no fixture writes a `phat:v1:*` key" was a rule applied from memory and is now a test. Verified to
+  fire: a fixture that sets and removes `phat:v1:qa-selfcheck` turns it red.
+- **D6 re-run independently, not taken on report.** All nineteen of backend's mutants die against the shipped
+  `logic.js` with the red counts backend recorded (within one), plus five of QA's own (undo ignoring `from.index`,
+  last-day removal, a move writing `keyLifts`, a move writing `speedSource`, reconcile zeroing gone days). Each
+  injection is checked to have matched the source exactly once before it counts — `logic.js` is CRLF on disk and
+  a first pass silently no-op'd six mutants until the runner normalised line endings. A mutant that did not land
+  is a failed injection, never a kill.
+- **The browser attack is replayed in the pure suite, in the browser's order.** S35's headline is the exact
+  six-day PPL ×2 the phone-sized run built (six added days, 42 moves, PHAT's five deleted): engines
+  byte-identical, `reintroOrder` exactly as SAVE PLAN stored it (no key for a day holding no cut slot), PV1 false,
+  and the nine warn-once sentences in the order the sheet showed them. A change that would alter what the phone
+  showed goes red on `file://` first.
+- **One edge pinned as OBSERVED, not accepted (S29's precedent).** Rule RI1's four examples do not cover a plain
+  out-and-back in one SAVE: `reconcileReintro` sets the counter to the *size* of the intersection, and the counter
+  is an *index* into the new order. Move `d3d` (back, counter 1, order `[d3d, d3g]`) off Back & shoulders and back
+  with two plain moves, save once: order `[d3g, d3d]`, counter 1, **Upright row reads as back and was never
+  offered**; DB row, which was, does not. Saved one move at a time the answer is 0 both times; undone, DB row stays
+  back. Observed on screen: counter 1, reads-as-back = Upright row, offer = DB row. **Backend's, coach to confirm
+  the rule: reconcile by identity, not cardinality** — the ids that read as back after a save are the ones that read
+  as back before it and are still on the day. P2 (no set lost; needs a counted day and an out-and-back before one
+  save), not a W6 blocker. The S35 test inverts when it is ruled; the PM should file it against B-87.
+- **The fall-through is confirmed both ways.** At `9ea729f` a stray editor tap (day-name field, exercise-name field,
+  "No exercises yet.") fell through `planClick` to the Train handler's `[data-day]` match on `.peday` and opened a
+  session; at `1b638bc` it does not. DOM delegation order; listed under "not testable", not pinned.
+
+**Rules out:** closing the RI1 edge by editing the observed pin; a fixture that writes any `phat:*` key on the
+harness origin; citing backend's mutant count without re-running it.

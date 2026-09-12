@@ -55,7 +55,7 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 634 / 634 / 0, no skips.</b> B-73 (S33) was the one red on the first W4 pass &mdash; the fix&rsquo;s proof,
+<b>Today: 653 / 653 / 0, no skips.</b> S35 (WO-007 W5) added five on 2026-09-12 and the third tripwire; before it S34 read 648. B-73 (S33) was the one red on the first WO-006 W4 pass &mdash; the fix&rsquo;s proof,
 written first &mdash; and went green in <code>3bd35ac</code> when backend keyed the plans keep on content and
 <code>index.html</code> marked a store readable after writing it (both halves; &ldquo;Already proven&rdquo; item 30).
 That fix moved the red to S32 R1, whose <em>absent / unreadable</em> fixtures held a plan while their message said
@@ -81,8 +81,10 @@ name coerced into <code>Start with 42.</code>, and a garbage plan argument answe
 normalised <code>verdict()</code>'s success path onto <code>absent:false</code>.<br>
 <b>Target shape is N / N / 0.</b> No expected failure is carried forward. A failure kept alive as
 "the known one" becomes a rule applied from memory, and that is how a second, real failure gets waved
-through (WO-003 &sect;Decision 1). Two meta-tests at the end enforce it: one fails on any test NAME
-that labels itself a carried-forward failure, one fails on a skip with no stated reason.<br>
+through (WO-003 &sect;Decision 1). Three meta-tests at the end enforce it: one fails on any test NAME
+that labels itself a carried-forward failure, one fails on a skip with no stated reason, and one (WO-007 W5) fails if
+any fixture wrote a <code>phat:*</code> key on this origin during the run &mdash; on <code>file://</code> and on the deployed
+<code>/tests.html</code> that origin is the app&rsquo;s, so a fixture that writes <code>phat:v1:log</code> is writing into his history.<br>
 <b>Coverage.</b> S0-S15 are WO-001 plus W1's ordering and training-week counting. S16-S17 are the
 verdict seam and the P1/H1/Z1-Z3/G1/I2 rules. <b>S25</b> is WO-004 W2: the plan document, opaque
 identity (B-46), the un-renumbered storage ids (B-47) and the schema-4 migration, with the
@@ -212,7 +214,17 @@ survives placement only when the power days are intact, coach fixture A true, th
 (a)/(b)/(c) alone false, the 5&times;5 edit reports no placement) and Rule RI1 (<code>reconcileReintro</code>: the
 coach&rsquo;s four examples, example 2 being the pin that stops <code>d3g</code> reading as back though never offered).
 <code>moveWarning</code> is the one predicate for the coach&rsquo;s warn-once questions, Q3 &gt; Q1 &gt; Q4. D6 is in the
-contract notes: nineteen mutants, nineteen killed.</p>
+contract notes: nineteen mutants, nineteen killed.
+<b>S35</b> is WO-007 W5, the QA pass, and holds what the browser attacks of 2026-09-12 (&ldquo;Already proven&rdquo;
+item 31) found that the pure half can pin. The headline is a <b>replay</b>: the six-day Push / Pull / Legs &times; 2 the
+browser built through the sheet &mdash; six added days, 42 moves in the browser&rsquo;s order, PHAT&rsquo;s five days
+deleted &mdash; with the five engines byte-identical, the stored <code>reintroOrder</code> exactly as SAVE PLAN wrote it
+(no key for a day holding no cut slot), PV1 false, and the nine warn-once sentences the sheet showed in the order it
+showed them (Q3 on the three speed-beside-source arrivals, Q1 once on each of the two days a plain move mixed, Q4 on
+four same-lift arrivals, nothing on the other 33). <b>One edge is pinned as OBSERVED, not accepted</b> &mdash; a plain
+out-and-back of a counted accessory in one SAVE keeps the counter at 1 but flips <em>which</em> accessory reads as back
+(B-87 through the plain-move door; the contract note below has it, backend&rsquo;s to rule). The B1 inventory for the
+new controls is transcribed from the measurement, as S27&rsquo;s is.</p>
 
 <div id="summary" class="summary"><div class="verdict">running...</div></div>
 <div id="banner"></div>
@@ -241,6 +253,24 @@ contract notes: nineteen mutants, nineteen killed.</p>
 /* ============================================================ harness */
 var RESULTS = [], GROUP = "-", CONTRACT = [], T0 = Date.now();
 var P = (typeof window.PHAT === "object" && window.PHAT) ? window.PHAT : {};
+/* WO-007 W5 rule: no fixture on this page may write a phat:* key on the
+   harness origin. On file:// and on the deployed /tests.html that origin IS
+   the app's, so a fixture that wrote phat:v1:log would be writing into his
+   history. A prototype-level spy records every such write for the whole run;
+   the third tripwire at the end asserts the list is empty. Instance-level
+   spies that individual tests install compose with it - they call through
+   to whatever ls.setItem resolved to, which is this. */
+var PHAT_KEY_WRITES = [];
+(function(){
+  try {
+    var proto = window.Storage && window.Storage.prototype;
+    if (!proto || typeof proto.setItem !== "function") return;
+    var set0 = proto.setItem, rem0 = proto.removeItem, clr0 = proto.clear;
+    proto.setItem = function(k){ if (/^phat:/.test(String(k))) PHAT_KEY_WRITES.push("setItem " + k); return set0.apply(this, arguments); };
+    proto.removeItem = function(k){ if (/^phat:/.test(String(k))) PHAT_KEY_WRITES.push("removeItem " + k); return rem0.apply(this, arguments); };
+    proto.clear = function(){ PHAT_KEY_WRITES.push("clear"); return clr0.apply(this, arguments); };
+  } catch (e) {}
+})();
 
 function AssertFail(msg, expected, actual){
   this.name = "AssertFail"; this.message = msg;
@@ -12433,6 +12463,135 @@ T("W3 - planProblemText turns the new reasons into sentences and never prints th
   });
 });
 
+/* ============================================================ S35 - WO-007 W5, the QA pass
+   What the browser attacks of 2026-09-12 ("Already proven" item 31) found
+   that the pure half can pin, and one edge pinned as OBSERVED. The four
+   attacks ran against 1b638bc over http://127.0.0.1 at 400 px, offline after
+   the service worker took control, and again at 200 % text; the pure
+   fixtures here REPLAY the exact sequences the browser executed, so a future
+   change that would alter what the phone showed goes red here first.
+   Nothing in S35 touches localStorage: the origin tripwire at the end of the
+   file proves it for the whole run. */
+group("S35 WO-007 W5 QA / attack A replay / RI1 edge / B1 inventory / B-83 B-84 B-85 B-86 B-87");
+
+/* The six-day Push / Pull / Legs x2 the browser built through the sheet, in
+   the ORDER it built it: six days added to a PHAT copy, 42 moves, PHAT's
+   five days emptied and deleted. The order matters for the warn-once
+   sequence, which is why it is a list and not a map. */
+var W5_ORDER = [
+  ["d1d", "Push A"], ["d5a", "Push A"], ["d1e", "Push A"], ["d1f", "Push A"], ["d1h", "Push A"], ["d5b", "Push A"], ["d5c", "Push A"],
+  ["d3a", "Pull A"], ["d1a", "Pull A"], ["d1b", "Pull A"], ["d1c", "Pull A"], ["d3b", "Pull A"], ["d3c", "Pull A"],
+  ["d2a", "Legs A"], ["d2b", "Legs A"], ["d2c", "Legs A"], ["d4a", "Legs A"], ["d4b", "Legs A"], ["d4d", "Legs A"],
+  ["d3f", "Push B"], ["d3g", "Push B"], ["d3h", "Push B"], ["d5d", "Push B"], ["d5h", "Push B"], ["d5i", "Push B"], ["d5j", "Push B"],
+  ["d1g", "Pull B"], ["d3d", "Pull B"], ["d3e", "Pull B"], ["d5e", "Pull B"], ["d5f", "Pull B"], ["d5g", "Pull B"],
+  ["d2d", "Legs B"], ["d2e", "Legs B"], ["d2f", "Legs B"], ["d2g", "Legs B"], ["d4c", "Legs B"], ["d4e", "Legs B"], ["d4f", "Legs B"], ["d4g", "Legs B"], ["d4h", "Legs B"], ["d4i", "Legs B"]
+];
+function W5PPL(copy){
+  var p = copy, ids = {}, warns = [], i, r, mw;
+  ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"].forEach(function(n){ r = P.addDay(p, n); if (!r.ok) throw new Error("addDay " + n); p = r.plan; ids[n] = r.dayId; });
+  for (i = 0; i < W5_ORDER.length; i++) {
+    mw = P.moveWarning(p, W5_ORDER[i][0], ids[W5_ORDER[i][1]]);
+    if (mw && mw.which) warns.push(W5_ORDER[i][0] + ">" + W5_ORDER[i][1] + ":" + mw.which);
+    p = W3MOVE(p, W5_ORDER[i][0], ids[W5_ORDER[i][1]]);
+  }
+  ["d1", "d2", "d3", "d4", "d5"].forEach(function(d){ r = P.removeDay(p, d); if (!r.ok) throw new Error("removeDay " + d + " " + JSON.stringify(r.problems)); p = r.plan; });
+  return { plan: p, ids: ids, warns: warns };
+}
+
+T("W5 Attack A (replay) - the browser's six-day PPL x2: six ADDED days, 42 moves in the browser's order, PHAT's five days removed - five engines byte-identical, slots byte-identical, log untouched, PV1 false, the placement line's predicate true", function(a){
+  var copy = MYPHAT(), log = W1LOG(copy), S = log.sessions, TD = "2026-09-12";
+  var copy0 = JSON.stringify(copy), log0 = JSON.stringify(log), ex0 = W3EX(copy);
+  var before = W1SNAP(copy, S, TD);
+  var b = W5PPL(copy), p = b.plan;
+  a.deep(p.days.map(function(d){ return d.name + ":" + d.ex.length; }), ["Push A:7", "Pull A:6", "Legs A:6", "Push B:7", "Pull B:6", "Legs B:10"], "what the editor showed after the fifth deletion");
+  a.eq(allEx(p).length, 42); a.eq(P.validatePlan(p).ok, true);
+  ["d1", "d2", "d3", "d4", "d5"].forEach(function(d){ a.eq(P.dayById(p, d), null, d + " gone"); });
+  a.eq(W3EX(p), ex0, "not one slot byte changed");
+  a.eq(JSON.stringify({ speedSource: p.speedSource, keyLifts: p.keyLifts }), JSON.stringify({ speedSource: copy.speedSource, keyLifts: copy.keyLifts }));
+  a.eq(W1SNAP(p, S, TD), before, "lastFor, stallReport, speedLoad, e1rmByDate, liftDays byte-identical for every id");
+  a.eq(JSON.stringify(log), log0); a.eq(JSON.stringify(copy), copy0);
+  a.deep(P.phatProvenanceReport(p), { phat: false, prescription: true, placement: false }, "what the Plans list rendered once as the placement line");
+  /* the stored reintroOrder the browser wrote at SAVE PLAN: keyed ONLY on the
+     days that hold a cut slot - Push A holds none and has no key - every cut
+     id once, on the day it now sits, in arrival order */
+  var ro = {};
+  ro[b.ids["Pull A"]] = ["d1c"]; ro[b.ids["Legs A"]] = ["d2c"]; ro[b.ids["Push B"]] = ["d3g", "d5d", "d5j"]; ro[b.ids["Pull B"]] = ["d3d", "d5g"]; ro[b.ids["Legs B"]] = ["d4c", "d4g"];
+  a.eq(JSON.stringify(p.reintroOrder), JSON.stringify(ro), "reintroOrder as stored: no key for Push A, nine cut ids, each on its day");
+  a.eq(Object.keys(p.reintroOrder).indexOf(b.ids["Push A"]), -1, "a day holding no cut slot gets no key - the browser's A12");
+  /* the session the browser then logged on Pull A holding d1a */
+  var draft = { date: TD, entries: { d1a: { sets: [{ w: "102.5", r: "5" }], note: "" } } };
+  var s = P.buildSession(draft, b.ids["Pull A"], TD, 999, p.planId, p);
+  var S2 = P.sortSessions(S.concat([s]));
+  a.eq(P.lastFor(S2, "d1a").sets[0].w, 102.5, "lastFor('d1a') is that session");
+  var sl = P.speedLoad(S2, "d3a", TD, null, p);
+  a.eq(sl.target, 70, "speedLoad for d3a: 70 kg off the 102.5 kg source, as the phone printed"); a.eq(sl.source.w, 102.5);
+  a.deep(P.exIdsForLift(p, "l_row").slice().sort(), ["d1a", "d3a"], "one lift line for the row, as Trend showed one 'Row' line");
+});
+
+T("W5 Attack A (replay) - the warn-once sequence the sheet showed: Q3 on the three moves that put speed beside its source, Q1 exactly once on each of the two days a plain hyp move mixed, Q4 on the four same-lift arrivals, nothing on the other 33", function(a){
+  var b = W5PPL(MYPHAT());
+  a.deep(b.warns, [
+    "d5a>Push A:Q3", "d1a>Pull A:Q3", "d3b>Pull A:Q4", "d4a>Legs A:Q3", "d4b>Legs A:Q4", "d4d>Legs A:Q4",
+    "d3d>Pull B:Q1", "d4c>Legs B:Q1", "d4i>Legs B:Q4"
+  ], "nine warnings out of 42 moves, in this order, as observed on screen");
+  /* every day that ended mixed warned on the move that mixed it - Q3 where
+     the mixing move also put speed beside its source (Q3 outranks Q1), Q1
+     otherwise - and Q1 never twice on one day; Push B ended all-hyp and
+     never warned, and its rows carried no kind tag */
+  var mixed = b.plan.days.filter(function(d){ return d.ex.some(function(e){ return e.k === "power"; }) && d.ex.some(function(e){ return e.k === "hyp" || e.k === "speed"; }); }).map(function(d){ return d.name; });
+  a.deep(mixed, ["Push A", "Pull A", "Legs A", "Pull B", "Legs B"], "five of six mixed; Push B is not");
+  var firstWarnDays = b.warns.filter(function(w){ return /:Q[13]$/.test(w); }).map(function(w){ return w.split(">")[1].split(":")[0]; });
+  a.deep(firstWarnDays.slice().sort(), mixed.slice().sort(), "each mixed day got its one mixing warning and Push B got none");
+  a.eq(b.warns.filter(function(w){ return /:Q1$/.test(w); }).length, 2, "Q1 fired twice in total: once per day that a non-speed move mixed");
+  a.ok(b.warns.indexOf("d1a>Pull A:Q3") >= 0 && P.moveWarning(MYPHAT(), "d1a", "d3").q1 === true, "d1a onto a day holding its speed slot is ALSO a q1, and Q3 wins - the frontend's observation");
+});
+
+T("W5 Attack D edge - OBSERVED, reported not ruled: a plain out-and-back on a counted day in ONE save keeps the counter at 1 but the accessory that reads as back flips from d3d to d3g; the same two moves saved one at a time give 0", function(a){
+  var c = MYPHAT(), st = STORE({ reintro: { d3: 1 } });
+  a.deep(P.planReintroOrder(c, "d3").slice(0, 1), ["d3d"], "before: DB row is the one that is back");
+  var out = P.moveExerciseToDay(c, "d3d", "d1"), back = P.moveExerciseToDay(out.plan, "d3d", "d3", out.from.index);
+  a.deep(back.plan.reintroOrder.d3, ["d3g", "d3d"], "a plain move back arrives LAST (RI1, pinned in S34)");
+  /* ONE save: stored plan c against the working copy back.plan */
+  var one = P.reconcileReintro(st, c, back.plan);
+  a.eq(one.reintro.d3, 1, "OBSERVED: |{d3d} intersect [d3g, d3d]| = 1, so the counter holds");
+  a.deep(P.planReintroOrder(back.plan, "d3").slice(0, one.reintro.d3), ["d3g"], "OBSERVED: and the counter now points at Upright row, which was never offered - the B-87 hazard through the plain-move door");
+  /* TWO saves: the same two moves, each committed */
+  var first = P.reconcileReintro(st, c, out.plan);
+  a.eq(first.reintro.d3, 0, "saved after the move out: 0");
+  var second = P.reconcileReintro(first, out.plan, back.plan);
+  a.eq(second.reintro.d3, 0, "saved after the move back: still 0 - DB row is re-earned, as RI1 says a moved accessory is");
+  a.deep(P.planReintroOrder(back.plan, "d3").slice(0, second.reintro.d3), [], "nothing reads as back");
+  /* the undo route, same day, is right either way (pinned in S34 D3 and observed in the browser as D-9/D-10) */
+  var undo = P.moveExerciseToDay(out.plan, "d3d", out.from.dayId, out.from);
+  a.deep(P.planReintroOrder(undo.plan, "d3").slice(0, P.reconcileReintro(st, c, undo.plan).reintro.d3), ["d3d"], "undo: DB row stays the one that is back");
+  /* the phone showed exactly this on 2026-09-12: counter 1, back = ["d3g"], offer = d3d */
+});
+
+T("W5 B1 - the new controls' hit areas at 400 px, 100 % and 200 % text, transcribed from the 2026-09-12 Playwright run (a measurement, not a read of index.html): every one >= 44, the Move control >= 132 wide", function(a){
+  var inv = [
+    { what: "Move to another day, 100%",            w: 164, h: 44 },
+    { what: "Move to another day, 200%",            w: 299, h: 44 },
+    { what: "Delete this day, 100%",                w: 368, h: 48 },
+    { what: "Delete this day, 200%",                w: 368, h: 56 },
+    { what: "move sheet day row, 100%",             w: 366, h: 48 },
+    { what: "move sheet day row, 200%",             w: 366, h: 86 },
+    { what: "move sheet Not now, 100%",             w: 368, h: 52 },
+    { what: "move sheet Not now, 200%",             w: 368, h: 56 },
+    { what: "Duplicate PHAT and rearrange it, 100%", w: 368, h: 87 },
+    { what: "Build from empty, 100%",               w: 368, h: 68 }
+  ], i, bad = [];
+  for (i = 0; i < inv.length; i++) if (inv[i].w < 44 || inv[i].h < 44) bad.push(inv[i].what);
+  a.eq(bad.join(", ") || "none", "none", "B-43's floor on width as well as height");
+  a.ok(inv[0].w >= 132 && inv[1].w >= 132, "9.9.2: the Move control is >= 132 x 44 at both sizes");
+  a.ok(inv[4].h >= 48 && inv[5].h >= 48 && inv[6].h >= 52, "9.9.3: rows >= 48, Not now >= 52");
+  a.ok(inv[8].h >= 56 && inv[9].h >= 48, "9.9.7: the primary >= 56, Build from empty >= 48");
+  /* zero exceptions across every enabled button, input and select in the
+     editor at both sizes, no horizontal overflow; and with eleven days at
+     200 % the sheet's list scrolled (overflow-y auto, scrollHeight >
+     clientHeight) with Not now inside the viewport (bottom 834 of 850, and
+     644 of 660) - "Already proven" item 31 */
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -12465,6 +12624,12 @@ T("SUITE TRIPWIRE - nothing is silently skipped without a stated reason", functi
   }
   a.eq(bad.join(" | ") || "none", "none",
     "a criterion that could not be tested is a FAIL with a reason, never a quiet pass");
+});
+
+T("SUITE TRIPWIRE - no fixture wrote a phat:* key on this origin during the run", function(a){
+  a.deep(PHAT_KEY_WRITES, [],
+    "on file:// and on the deployed /tests.html this origin is the app's; a fixture that writes " +
+    "phat:v1:* is writing into his history. Build the document in memory and hand it to the function.");
 });
 
 /* ============================================================ contract questions */
@@ -12659,7 +12824,29 @@ contract("<b>WO-007 W3 D6 &mdash; nineteen mutants injected, nineteen killed (20
   "ranks Q1 above Q3 (1), X18 the undo appends instead of restoring the declared position (1: D3), X19 " +
   "<code>removeDay</code> keeps the gone day's <code>reintroOrder</code> key (2). <b>Guard, not a killer:</b> " +
   "<i>W3 - planProblemText turns the new reasons into sentences</i> passed under every mutant, as it must &mdash; " +
-  "it pins the sentence layer, not the editor, and is listed here so nobody reads it as evidence about a move.");
+  "it pins the sentence layer, not the editor, and is listed here so nobody reads it as evidence about a move. " +
+  "<b>QA re-ran the set on 2026-09-12 against the shipped <code>logic.js</code> at <code>1b638bc</code></b>: all nineteen " +
+  "died with the red counts above within one (M01 killed 7 here, 6 in backend's run - S35's replay is the seventh), " +
+  "plus five of QA's own, all killed: Q20 the undo ignores <code>from.index</code> and appends the exercise (1: D3), " +
+  "Q21 <code>removeDay</code> allows the last day (1: D4), Q22 a move filters the id out of <code>keyLifts</code> (7), " +
+  "Q23 a move deletes its <code>speedSource</code> entry (3), Q24 <code>reconcileReintro</code> zeroes the counter of a " +
+  "day absent from <code>after</code> (1). Every injection is checked to have matched the source exactly once " +
+  "before it counts - a mutant whose edit did not land is reported as a failed injection, never as a kill.");
+contract("<b>WO-007 W5 &mdash; Rule RI1 has a door the coach's four examples do not cover: a plain out-and-back in one " +
+  "SAVE.</b> <code>reconcileReintro</code> sets the counter to the SIZE of the intersection between what was back and the " +
+  "new order, and the counter is an INDEX into the new order. Move <code>d3d</code> (the one accessory that is back, " +
+  "counter 1, order <code>[d3d, d3g]</code>) off Back &amp; shoulders and back again with two plain moves, save once: " +
+  "<code>d3</code>'s declared order is now <code>[d3g, d3d]</code> (RI1: it arrives last), the intersection is " +
+  "<code>{d3d}</code>, size 1, counter 1 &mdash; and slot 0 of the new order is <code>d3g</code>, which was never " +
+  "offered. Observed on the phone-sized run: counter 1, <i>reads as back</i> = Upright row, offer = DB row. The same " +
+  "two moves saved one at a time give 0 both times (DB row re-earned, which is what RI1 says a moved accessory is), " +
+  "and the undo route keeps DB row. So one edit session and two edit sessions disagree, and the one-session answer " +
+  "names the wrong accessory. Pinned in S35 <em>Attack D edge - OBSERVED, reported not ruled</em>; it inverts when " +
+  "ruled. <b>Wanted from backend (coach to confirm the rule):</b> reconcile by IDENTITY, not cardinality - " +
+  "the accessories that read as back after a save are exactly the ones that read as back before it and are still " +
+  "on the day, which means either the counter becomes a list of ids or the reconciled order puts still-back ids " +
+  "first. P2: no set is lost, and it needs a counted day, a plain move out AND back before one save. Not a " +
+  "blocker for W6; listed so it is not forgotten.");
 
 /* ---------------------------------------------------- WO-005 T4 (S29) --- */
 contract("<b>WO-005 T4 &mdash; <code>dietTargets</code> answers <code>reason:\"manual\"</code> when nothing " +
@@ -13278,7 +13465,21 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "WO-006's regression, and the same shape as D10 which <code>3bd35ac</code> closed by reading the draft from disk. " +
     "Fix of the same shape: one <code>readRaw</code> per store before <code>restoreSteps</code>, the counts and the " +
     "export off those bytes; the decision is then pure and pins here. Filed for the PM as a new row " +
-    "(proposed B-74, P1: a saved set is on no key afterwards, behind a typed REPLACE whose count was wrong).</p>";
+    "(proposed B-74, P1: a saved set is on no key afterwards, behind a typed REPLACE whose count was wrong).</p>" +
+    "<p><b>WO-007 W5 &mdash; four things only a browser can show, all shown, none pinnable here.</b> " +
+    "<b>(1) The fall-through.</b> At <code>9ea729f</code> <code>planClick</code> returned <code>false</code> for a tap it " +
+    "did not own, and the view handler's <code>closest(\"[data-day]\")</code> then matched <code>.peday</code>: tapping " +
+    "the day-name field, the exercise-name field and <i>No exercises yet.</i> in the editor and switching to Train " +
+    "showed an open session card. At <code>1b638bc</code> the same taps show the day list. It is a DOM delegation " +
+    "order; nothing in <code>logic.js</code> can see it. Item 31 (F). <b>(2) The two-tab D10</b> through " +
+    "<code>sessionOnDisk()</code>: tab B booted with no draft, moved an exercise in its working copy; tab A typed a set; " +
+    "tab B's SAVE PLAN refused from disk. <code>index.html</code>'s, item 31 (B). <b>(3) D10's adapter throw</b> on " +
+    "<code>phat:v1:planedit</code> mid-move: disk stayed the pre-move document, the refusal reached <code>#bs-live</code>, " +
+    "the next edit persisted both moves. Item 31 (E). <b>(4) B1&ndash;B3</b> are measurements and escapes of rendered " +
+    "HTML; the numbers are transcribed into S35 and the escapes are item 31 (G). " +
+    "<b>Standing extraction request, unchanged in shape from S27:</b> <code>moveWarnText</code>'s choice of which two " +
+    "names fill the Q3 sentence (speed slot vs source) and <code>mixedDay</code> are decisions living in " +
+    "<code>index.html</code>; each is one function of a plan and two ids and would pin here in ten lines.</p>";
 
   /* ---------------------------------------------------------------------
      The checklist was 17 items. Sixteen of them were re-run on 2026-09-09 by a
@@ -13900,6 +14101,87 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "(E-3 fed memory to the log keep from day one), not a regression of <code>3bd35ac</code>, and exactly the D10 " +
     "shape that commit closed for the draft. Listed under &ldquo;not testable&rdquo; (5) with the fix shape; " +
     "proposed B-74.</span></li>" +
+
+    "<li><b>WO-007 W5 &mdash; the re-split through its own controls: the full PPL, a move under a draft in one tab " +
+    "and two, the empty-day guard, the reintro counter after a move, D9&ndash;D11, B1&ndash;B4, the Plans list, " +
+    "the fall-through, and one edge reported.</b> <span class=\"msg\">Run 2026-09-12 against <code>1b638bc</code>. " +
+    "Rig: a Node static server on <code>http://127.0.0.1:8788</code> serving the working tree, Playwright headless " +
+    "Chromium at 400 &times; 850, <b>the service worker allowed to install, then the context set offline for the " +
+    "whole attack</b> (every reload cold, from the shell cache), <code>Storage.prototype.setItem</code> spied from an " +
+    "init script (per-key write counts, an on-demand throw), every request logged, every scenario a fresh context " +
+    "driven through the app's buttons, then the B1/B2/B3 scenario again with <code>html{font-size:32px}</code>. " +
+    "110 checks, 110 passed, zero page errors in every scenario, zero requests of any kind after the shell loaded. " +
+    "Not checked in. <b>Re-run whenever <code>planClick</code>, <code>moveEx</code>, <code>savePlan</code>, " +
+    "<code>askMoveEx</code> or <code>sessionOnDisk()</code> change.</b> " +
+    "<b>(A) The PPL.</b> DUPLICATE (primary row, sheet, <i>Copied</i>), three sessions seeded under the copy, USE THIS " +
+    "PLAN; six days added and named through <code>+ Add day</code> and the name field; all 42 slots moved through " +
+    "<i>Move to another day</i> &rarr; the sheet &rarr; a day row, 51 taps for 42 moves (nine armed by a warning: " +
+    "<code>d5a&rarr;Push A</code>, <code>d1a&rarr;Pull A</code>, <code>d4a&rarr;Legs A</code> Q3; " +
+    "<code>d3d&rarr;Pull B</code>, <code>d4c&rarr;Legs B</code> Q1; <code>d3b</code>, <code>d4b</code>, <code>d4d</code>, " +
+    "<code>d4i</code> Q4 - Q1 never twice on one day; Push B ended all-hyp, warned never, wore no kind tags; the five " +
+    "mixed days wore one on every row: 7/6/6/0/6/10); <i>Delete this day</i> present on exactly d1&ndash;d5 once " +
+    "emptied and absent on the six new days; five deletions through <i>Delete day</i>. Stored plan byte-identical " +
+    "until SAVE PLAN; SAVE PLAN = <b>one</b> <code>phat:v1:plans</code> write; after it: six days, 42 slots byte-for-byte " +
+    "(<code>id n s lo hi k implement lift cut cue</code>), <code>speedSource</code> and <code>keyLifts</code> " +
+    "byte-identical, <code>reintroOrder</code> keyed on the five days holding a cut slot (Push A none), " +
+    "<code>lastFor</code> / <code>stallReport</code> / <code>speedLoad</code> / <code>e1rmByDate</code> / " +
+    "<code>liftDays</code> byte-identical for all 42 ids, <code>phat:v1:log</code> byte-identical, " +
+    "<code>phatProvenanceReport</code> <code>{phat:false, prescription:true, placement:false}</code>, the placement " +
+    "line <b>once</b> on the Plans list and on neither Train nor Trend. Then a session on Pull A through the cards to " +
+    "Bent-over row, <code>102.5 &times; 5</code>, Finish, Save: <code>lastFor(\"d1a\")</code> = that set, Trend one " +
+    "<i>Row</i> line of four with the session named <i>Pull A</i>, <code>speedLoad(d3a)</code> = <i>70 kg. 65&ndash;70% " +
+    "of your 102.5 kg triple.</i> A stalled log seeded under the PPL: Trend printed <i>Six weeks of data and the " +
+    "numbers have not moved</i> and never <i>The split isn't the problem</i>. " +
+    "<b>(B) D8, one tab.</b> Upper power logged (<code>100 &times; 5</code>), then Upper power started again, " +
+    "<code>100 &times; 5</code> typed, reload (the session now only on disk): editor, add Pull, move Bent-over row " +
+    "there - allowed, draft byte-identical; Train offers the session, tap the day: <code>100 &times; 5</code> on screen " +
+    "under Bent-over row; SAVE PLAN: <i>Finish or discard the session in progress first.</i>, 0 plans writes, working " +
+    "copy and stored plan intact, draft content byte-identical (only <code>savedAt</code> re-stamped by the tab " +
+    "flush); DISCARD SESSION through its sheet; SAVE PLAN: d1a on Pull, working copy cleared, the earlier session " +
+    "still resolves <i>Bent-over row</i>, is on Trend under <i>Upper power</i>, and <code>lastFor</code> finds it. " +
+    "<b>(B) Two tabs.</b> Tab B booted first, moved <code>d1b</code> in its working copy; tab A started d1 and typed " +
+    "<code>80 &times; 6</code>; tab B's SAVE PLAN: the same sentence, 0 writes, store byte-identical, tab A's draft " +
+    "byte-identical - <code>sessionOnDisk()</code> read it off disk with no <code>S.draft</code> in memory. " +
+    "<b>(C) The guard.</b> No <i>Delete this day</i> on any of five non-empty days; a forged " +
+    "<code>data-pedelday</code> button clicked on d1 opened no sheet and wrote no working copy; " +
+    "<code>PHAT.removeDay</code> on d1 direct: <code>{ok:false, reason:\"nonempty\", count:8}</code>, original object " +
+    "returned; a plan built from empty with one empty day shows no control (the last day), with two both show it, " +
+    "deleting one leaves none. Stored plan and log untouched throughout. " +
+    "<b>(D) RI1.</b> Five weeks seeded, <code>reintro.d3 = 1</code>: the tier read <i>Week 5 &middot; 1 of 9 accessories " +
+    "back in</i>, DB row back. Example 2 (move <code>d3d</code> to a new day, SAVE): <code>reintro.d3 = 0</code> in one " +
+    "log write, Upright row not back and offered as the normal next, the new day's counter absent, the session " +
+    "screen never printed <i>N of 0</i>. Example 1 (move <code>d3g</code>, SAVE): counter 1, DB row still back, no " +
+    "log write. Undo after a move: <code>d3d</code> back at index 3 and at its declared position " +
+    "<code>[d3d, d3g]</code>, not appended; after SAVE counter 1, DB row back. <b>The edge, observed and reported, not " +
+    "ruled:</b> <code>d3d</code> out and back with two PLAIN moves, one SAVE: declared order <code>[d3g, d3d]</code>, " +
+    "counter <b>1</b>, <i>reads as back</i> = <b>Upright row</b>, offer = DB row. Contract question and S35. " +
+    "<b>(E) D9&ndash;D11.</b> A move offline: 0 requests of any kind; <code>BACKED_UP</code> holds log/bw/plans only. " +
+    "Adapter throw on <code>phat:v1:planedit</code> mid-move: disk = the pre-move document, <code>#bs-live</code> " +
+    "<i>Could not save the edit in progress. It is still on screen.</i>, stored plan untouched, the next edit landed " +
+    "both moves. Five moves + one deletion unsaved: reload, a new page in the same context (kill and relaunch), and " +
+    "Train &rarr; Trend &rarr; Plan all reopened the editor with the six edits and <i>UNSAVED CHANGES</i>; the list " +
+    "row wore the badge. " +
+    "<b>(F) The fall-through.</b> Against <code>9ea729f</code> (served from a <code>git show</code> checkout): day-name " +
+    "field, exercise-name field, <i>No exercises yet.</i>, padding, then Train &rarr; <b>an open session card</b>. " +
+    "Against <code>1b638bc</code>: the day list, no draft on disk. " +
+    "<b>(G) B1&ndash;B4.</b> Every enabled button, input and select in the editor &ge; 44 &times; 44 at 100 % and " +
+    "200 %, no horizontal overflow; <i>Move to another day</i> 164 &times; 44 / 299 &times; 44; <i>Delete this day</i> " +
+    "368 &times; 48 / 368 &times; 56; sheet rows 366 &times; 48 / 366 &times; 86+, <i>Not now</i> 368 &times; 52 / " +
+    "368 &times; 56, last; with eleven days at 200 % the list scrolls and <i>Not now</i> stays inside the viewport " +
+    "(bottom 834 of 850; 644 of 660). The sheet lists every other day with its count (7 / 8 / 9 / 10 / 0), never the " +
+    "current one, heading focused on open; scrim tap and Escape close with no move and focus back on the trigger; " +
+    "after a move focus lands on the row now at that index (d1c away &rarr; d1d), and on <i>+ Add exercise</i> once " +
+    "the day is empty, never <code>document.body</code>. A day named <code>&lt;img src=x onerror=&hellip;&gt;Pull</code> and " +
+    "an exercise named the same way: zero <code>&lt;img&gt;</code> elements anywhere, <code>onerror</code> never ran, " +
+    "the names present as text in the sheet heading and rows, the toast, <code>#bs-live</code>, the undo label " +
+    "(<i>Undo: move &hellip; back to Upper power</i>), the sibling <code>aria-label</code> and the Q1 sentence. Grep: " +
+    "no template interpolates a <code>.reason</code>. <b>(H) The Plans list.</b> First run: PHAT, then " +
+    "<i>Duplicate PHAT and rearrange it</i> amber, 87 high, then <i>Build from empty</i> dashed, 68 high, the honest " +
+    "note verbatim; with one stored plan the duplicate row is the ghost (transparent, bone text) and the copy sits " +
+    "between it and <i>Build from empty</i>. <b>(I) The single undo slot</b> (9.9.10 item 3): delete then move - the " +
+    "label switched from <i>Undo: put Bent-over row back</i> to <i>Undo: move Weighted pull-up back to &hellip;</i>; " +
+    "undo restored the move only and the deleted row stayed deleted, recoverable by DISCARD CHANGES, as ruled. " +
+    "<b><code>file://</code> boot at 400 px: zero console errors; <code>scripts/offline-check.mjs</code>: PASS.</b></span></li>" +
     "</ol>";
 })();
 </script>
