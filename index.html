@@ -1936,7 +1936,8 @@ function vSettings(){
     <button class="ghostbtn" id="export">Export everything as JSON</button>`;
   if(S.exp&&S.exp.ok){
     h+=`<div class="advice"><span class="kick">Exported</span>
-      <p>Exported ${S.exp.n} session${S.exp.n===1?"":"s"} and ${S.exp.m} weight${S.exp.m===1?"":"s"}.</p></div>`;
+      <p>Exported ${S.exp.n} session${S.exp.n===1?"":"s"} and ${S.exp.m} weight${S.exp.m===1?"":"s"}.${
+      (S.exp.bad&&S.exp.bad.length)?" The saved "+esc(S.exp.bad.join(" and "))+" on this device could not be read; the copy in memory was used.":""}</p></div>`;
   }else if(S.exp&&!S.exp.ok){
     h+=`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>Could not export.
       Nothing changed on this device.</p></div>`;
@@ -5166,23 +5167,62 @@ async function finish(){
    detected from here and is still open. It belongs with the clipboard/share
    fallback in WO-002. Do not let the success line grow a claim this function
    cannot stand behind. */
-function exportAll(){
-  const n=S.sessions.length, m=S.bw.length;
+/* ---- B-74. THE THREE STORES AS THEY ARE ON DISK. sessionOnDisk (D10)
+   answers "is a session open" from the draft key because a second tab's
+   draft is not in this tab's S. This answers "what would a restore replace,
+   and what does an export carry" the same way, for the same reason: the
+   recover copies, the pre-restore export and the count the REPLACE sheet
+   printed were all built from logPayload()/bwPayload()/plansPayload() -
+   MEMORY - so a session another tab saved after this one booted was replaced
+   with no copy on any key, under a sheet that had counted it out.
+   One readRaw per store, nothing adopted into S: the point is the keep and
+   the sheet, not a reconcile. Per store, "ok" gives the parsed disk value;
+   "absent" falls back to the memory payload (at worst the empty default, at
+   best the only copy of a save that failed and said so); "error" is named in
+   `bad`. A restore refuses on `bad` - a copy cannot be promised of what
+   cannot be read - and an export says which store it had to take from
+   memory. `empty` is restoreLocalEmpty's answer on THESE bytes.
+   → { log, bw, plans, stores:{log,bw,plans}, bad:[label], n, m, p, empty } */
+async function storesOnDisk(){
+  const rl=await readRaw(LOG), rb=await readRaw(BWK), rpl=await readRaw(PLANS);
+  const pick=(r,mem)=>r.status==="ok"?r.value:mem();
+  const log=pick(rl,logPayload), bw=pick(rb,bwPayload), plans=pick(rpl,plansPayload);
+  const bad=[[rl,"log"],[rb,"bodyweight"],[rpl,"plans"]].filter(x=>x[0].status==="error").map(x=>x[1]);
+  const n=(log&&Array.isArray(log.sessions))?log.sessions.length:0;
+  const m=(bw&&Array.isArray(bw.entries))?bw.entries.length:0;
+  const p=(plans&&Array.isArray(plans.plans))?plans.plans.length:0;
+  const stores={log:rl.status,bw:rb.status,plans:rpl.status};
+  const empty=PHAT.restoreLocalEmpty({stores:stores,sessions:n,bw:m,plans:p,activePlanId:plans?plans.activePlanId:""});
+  return {log:log,bw:bw,plans:plans,stores:stores,bad:bad,n:n,m:m,p:p,empty:empty};
+}
+const diskRefusal=D=>"Nothing restored. The saved "+D.bad.join(" and ")+" on this device could not be read, so no copy of it could be kept. Reload first.";
+
+/* `disk` is a storesOnDisk() result when the caller already holds one (the
+   restore reads once and hands the same bytes to the keeps and the export);
+   otherwise the read happens here, so the Settings button exports what is
+   ON DISK and not what this tab last loaded. */
+async function exportAll(disk){
+  let n=S.sessions.length, m=S.bw.length;
   let url=null;
   try{
-    const payload=Object.assign({},S.logMeta,{schemaVersion:PHAT.SCHEMA_VERSION,dateBasis:"local",
-      exportedAt:PHAT.localDate(),sessions:S.sessions,bodyweight:S.bw,includeCut:S.includeCut,
+    const D=disk||await storesOnDisk();
+    n=D.n; m=D.m;
+    const log=(D.log&&typeof D.log==="object"&&!Array.isArray(D.log))?D.log:{};
+    const payload=Object.assign({},log,{schemaVersion:PHAT.SCHEMA_VERSION,dateBasis:"local",
+      exportedAt:PHAT.localDate(),sessions:Array.isArray(log.sessions)?log.sessions:[],
+      bodyweight:(D.bw&&Array.isArray(D.bw.entries))?D.bw.entries:[],includeCut:!!log.includeCut,
       /* WO-006: an edited plan is his data too. Additive key; the log and
          bodyweight halves are byte-for-byte what they were. */
-      plans:plansPayload()});
+      plans:D.plans});
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     const a=document.createElement("a");
     if(typeof a.download!=="string") throw new Error("no download attribute");
     url=URL.createObjectURL(blob);
     a.href=url; a.download="phat-log-"+PHAT.localDate()+".json"; a.click();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    S.exp={ok:true,n:n,m:m};
-    announce("Exported "+n+" session"+(n===1?"":"s")+" and "+m+" weight"+(m===1?"":"s")+".");
+    S.exp={ok:true,n:n,m:m,bad:D.bad};
+    announce("Exported "+n+" session"+(n===1?"":"s")+" and "+m+" weight"+(m===1?"":"s")+"."+
+      (D.bad.length?" The saved "+D.bad.join(" and ")+" on this device could not be read; the copy in memory was used.":""));
   }catch(err){
     if(url){ try{ URL.revokeObjectURL(url); }catch(e2){} }
     console.warn("[phat] export failed",err);
@@ -5513,9 +5553,13 @@ async function signOutTap(){
    only measured in a browser.
    "Empty" is judged on what was READ, not on the arrays: a store that failed
    to read is not empty, it is unknown, and unknown gets the typed path. A
-   stored plan, or a non-PHAT active plan, is not empty either. */
-const localEmpty=()=>PHAT.restoreLocalEmpty({stores:S.stores,sessions:S.sessions.length,bw:S.bw.length,
-  plans:S.plans.plans.length,activePlanId:S.plans.activePlanId});
+   stored plan, or a non-PHAT active plan, is not empty either.
+   B-74: READ means read FROM DISK, NOW - storesOnDisk(), once before the
+   sheet and once again before the keeps - never S. S is what this document
+   loaded at boot; the disk is what every document has saved since. The
+   sheet's count, the recover copies and the pre-restore export are all made
+   from the same disk read, and a store whose read fails refuses the restore
+   before any pull result reaches disk. */
 /* "3 sessions, 2 weights and 1 plan" - plans named only when there are any,
    because the shipped plan is code and is never a thing a restore moves. */
 const restoreCounts=(n,m,p)=>p?plural(n,"session")+", "+plural(m,"weight")+" and "+plural(p,"plan")
@@ -5540,14 +5584,20 @@ async function restoreStart(){
     S.sync.last={ok:false,phase:"restore",reason:"empty",message:"The backup is empty. Nothing to restore."};
     paintBackup(); return;
   }
+  /* B-74. The count the sheet prints and the empty-or-typed decision come
+     from DISK, read now, after the pull: he types REPLACE on the strength of
+     this number, and a second tab's saves are not in S. A store that cannot
+     be read refuses here - the keep it would need cannot be promised. */
+  const D=await storesOnDisk();
+  if(D.bad.length){ S.sync.last={ok:false,phase:"restore",reason:"local",message:diskRefusal(D)}; paintBackup(); return; }
   S.sync.pulled=rp; S.sync.last=null; paintBackup();
   const n=rp.counts.sessions, m=rp.counts.bodyweight, pn=rp.counts.plans;
-  const ln=S.sessions.length, lm=S.bw.length, lp=S.plans.plans.length;
-  if(localEmpty()){
+  const ln=D.n, lm=D.m, lp=D.p;
+  if(D.empty){
     askSheet({headline:"Restore from backup?",
       body:restoreCounts(n,m,pn)+" land on this device. It holds nothing now.",
       danger:"Restore "+plural(n,"session"), safe:"Not now", back:"bk-restore",
-      onDanger:()=>{ closeSheet(); restoreApply(false); },
+      onDanger:()=>{ closeSheet(); restoreApply(); },
       onSafe:()=>{ S.sync.pulled=null; }});
   }else{
     /* The plan sentence says which way the plans go, because R1 and R3 are
@@ -5559,19 +5609,26 @@ async function restoreStart(){
       body:"This replaces "+plural(ln,"session")+" and "+plural(lm,"weight")+" on this device with "+n+" and "+m+" from the backup."+
            planLine+" What is on this device is exported first, and a copy is kept here.",
       typed:"REPLACE", danger:"Replace "+plural(ln,"session"), safe:"Keep this device's log", back:"bk-restore",
-      onDanger:()=>{ closeSheet(); restoreApply(true); },
+      onDanger:()=>{ closeSheet(); restoreApply(); },
       onSafe:()=>{ S.sync.pulled=null; }});
   }
 }
-async function restoreApply(nonEmpty){
+async function restoreApply(){
   const rp=S.sync.pulled; S.sync.pulled=null;
   if(!rp||!rp.ok) return;
   const fail=(msg)=>{ S.sync.last={ok:false,phase:"restore",reason:"local",message:msg}; paintBackup(); announce(msg,true); };
+  /* B-74. Read AGAIN, now: the sheet sat open while REPLACE was typed and
+     another tab may have saved under it. The keeps, the export and the
+     empty-or-kept decision are all made on these bytes, never on S - the
+     sheet's one-tap path does not skip the keep if the disk has since
+     filled. A store that cannot be read refuses the whole restore. */
+  const D=await storesOnDisk();
+  if(D.bad.length){ fail(diskRefusal(D)); return; }
   const st=PHAT.restoreSteps(rp,
-    {empty:!nonEmpty,stores:S.stores,log:logPayload(),bw:bwPayload(),plans:plansPayload(),blocked:S.blockWrites},
+    {empty:D.empty,stores:D.stores,log:D.log,bw:D.bw,plans:D.plans,blocked:S.blockWrites},
     {log:LOG,bw:BWK,plans:PLANS},Date.now());
   if(!st.ok){ fail(st.message); return; }
-  if(nonEmpty) exportAll();
+  if(!D.empty) await exportAll(D);
   /* The keeps, all of them, before any write. One failure and nothing is
      replaced - named by which store's copy did not land. */
   for(const k of st.keeps){
