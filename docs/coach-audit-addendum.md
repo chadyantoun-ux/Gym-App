@@ -4894,3 +4894,371 @@ nothing here.
 or programme-specific, which means every one of them was built to read a log, and there are now two
 accounts' worth of nothing for them to read. One session by either of them would be the first fact
 this document has ever had.
+
+---
+
+# 17. WO-009 W1 — the 42-slot photograph map — 2026-09-12
+
+**Added 2026-09-12.** Answers `docs/work-orders/WO-009-photos.md` §1 W1. **The work order calls this
+"§13". It is §17.** §13 was taken on 2026-09-11 (Rule P1.2a and S1b) and §15 is reserved for WO-007's
+ruling, which lives in `decisions.md` and never landed here. W3, W4 and W6 read **§17**; a transcription
+from "§13" lands on a rep-target rule and no table. The PM should correct the four references in the
+work order (W1, W3, W4, W6) rather than this heading.
+
+**The uncomfortable answer first.** I have not seen a single photograph. I have no fetch, the images
+are not in the tree, and the WO's own instruction — *"ask the main session to fetch the pairs into the
+scratchpad and read them as images; do not rule from the name"* — is the correct instruction and could
+not be followed. So this section is **not a ruling on 42 photographs.** It is a ruling on 42
+*criteria*: for each slot, the upstream id that names the right lift, the exact thing a pair of eyes
+must confirm in the two frames before that id may ship, and the exact condition under which it goes to
+`none`. **Every mapped row below is `Eye check: pending`, and a pending row transcribes as `none`.**
+W4 may not put a `fig` on a slot until its row reads `pass`. That is not caution for its own sake: the
+first review's B-06/B-07/B-08 were all cases of a confident number nobody had checked, and a
+photograph that teaches the wrong lift is the same defect wearing a JPEG.
+
+Rule ids introduced here: **F1p** (Rule F1 restated for photographs, with one tightening), and the
+**F1.3 register** (17.3) that replaces the two ad-hoc cue pins in §12.3.
+
+## 17.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | The 42-slot map | **40 provisional ids, 2 `none`, 31 distinct upstream exercises.** Table in 17.2. Provisional means: the name settles the lift, the frames have not been seen. **Zero slots are approved to ship today.** |
+| 2 | `d4h` donkey calf, F1.3 `hips bent` | **Released** — conditionally on the eye check. The photograph shows the hip bend the SVG could not; the figure no longer stands on the cue. The cue stays because it is a good cue, not because a figure needs it. 17.3. |
+| 3 | `d5b` incline DB press, F1.3 `30–35°` | **Reaffirmed, and stronger than before.** The photo shows *an* incline, not *the* incline; stock photos are shot at 45°. A photograph that suggests 45° next to a cue that says 30–35° is exactly F1.3's case. 17.3. |
+| 4 | `d3d` DB row (B-65) | **`One-Arm_Dumbbell_Row`**, provisional like the rest. Reversal to shrug: `Dumbbell_Shrug`, `none` until its own eye check passes. 17.4. |
+| 5 | `d1c` / `d3b` rack chin | **Cue-only, confirmed.** No upstream entry shows heels on a rack; `Inverted_Row` is a different lift (body horizontal under a bar, feet on the floor — F1.1 fails on the ground reference). B-105 stands. |
+| 6 | `d2d` / `d4e` SLDL / RDL | **A pair test, not two rows.** Decision procedure in 17.5: both keep only if the two bottom frames are distinguishable by knee angle at 320 px; otherwise the slot whose photo shows the *other* lift goes to `none`. |
+| 7 | The process that stops "close enough" | **A slot ships a photograph only when its row in 17.2 reads `Eye check: pass` against the criterion written in that row; `pending` and `fail` both transcribe as `none`; W4 reads 17.2 and nothing else; W6 pins the resulting `figFor` set so no later remap escapes this table.** |
+
+---
+
+## 17.1 Rule F1p — Rule F1 for photographs
+
+F1 was written for one authored stick figure shared across slots. A photograph from a database is
+"a figure authored for a different exercise" in every one of the 42 cases — the database's exercise,
+not ours — so F1 applies to every slot, not six. The three clauses hold unchanged. One is tightened.
+
+```
+Rule: F1p — when a slot may show a photograph pair from free-exercise-db
+Applies to:   the slot -> `fig` map on the shipped PHAT_PLAN, all roles (power | hyp | speed).
+              Session screen, MOVEMENT & CUE disclosure only. No engine reads it, no advice
+              depends on it, no stored data references it. Same footprint as F1.
+Inputs:       the slot's name, `k`, `implement` and signed-off cue (§10.2); the two frames
+              `0.jpg` (start) and `1.jpg` (end) at the pinned SHA. Static. No history.
+Logic:        A slot may carry an upstream id only if all of the following hold, CHECKED ON THE
+              FRAMES, not on the filename. Fail any one: `none`.
+
+              F1p.1  GROUND REFERENCE AND LOAD PATH (= F1.1, unchanged).
+                     The surface the body is braced against and the body's orientation to the
+                     load are the slot's. Apparatus may differ freely: a dip belt absent, a
+                     straight bar for a cambered bar, a pin stack for a plate-loaded sled.
+
+              F1p.2  THE TWO FRAMES ARE THE SLOT'S START AND END (= F1.2, restated).
+                     Frame 0 and frame 1 are the same lift's two end positions, the working
+                     end travels the way the slot's working end travels, and where the cue
+                     names an end position (forehead, dead hang, bottom of the calf raise)
+                     the matching frame shows it.
+
+              F1p.3  THE CUE CORRECTS ANY POSITION THE PHOTO GETS WRONG — only where he could
+                     adopt it (= F1.3), WITH ONE TIGHTENING:
+                     (a) a photo showing the exact position the cue corrects PASSES, and the
+                         cue string becomes a pinned F1.3 dependency (17.3 register);
+                     (b) a photo showing the INJURY VARIANT of the lift FAILS regardless of
+                         the cue. Named cases: an upright row narrower than shoulder width; a
+                         close-grip bench with the hands touching; a barbell hinge with a
+                         visibly rounded lower back at the bottom. The cue exists to keep him
+                         out of that variant; a photograph teaching it is the wrong lift for
+                         the slot, and the wrong figure is worse than none.
+                     [Opinion] on (b), stated as such. F1.3 as written would let the cue
+                     rescue all three. I am not letting a sentence prop up a photograph of the
+                     variation the sentence was written against.
+
+              F1p.4  NOTHING IN THE FRAME BUT THE LIFT. No text, arrow, watermark or second
+                     person. (W2's "no text in the frame" rule, applied to the source.)
+
+Output copy:  none. F1p decides whether two images render, never what anything says. A slot
+              at `none` renders its cue alone: no box, no placeholder, no label (§4.13).
+Not enough data: THE WHOLE OF THIS SECTION. Until a row reads `pass`, the slot is at `none`.
+              "The name looks right" is not enough data. That is the rule, not a caveat.
+```
+
+**What the name can and cannot settle.** `[Certain]` on the distinction. A filename settles the
+*apparatus* (`EZ-Bar_`, `Seated_`, `Lying_`, `Rope_Attachment`) and usually the *ground reference*. It
+does not settle the bar's destination on a skull crusher, the knee angle on a hinge, the grip width on
+an upright row, the bench angle on an incline, or whether the model's lower back is on the pad. Those
+are the things the table's `Confirm by eye` column names, row by row.
+
+**Three questions the WO raised that the name does settle, so no eye is needed on that axis:**
+
+- **Bent-over vs Pendlay (`d1a`/`d3a`).** Rule A1 (§8.2) classed them one exercise, class B, and
+  §10.5 says the cue is correct for either. A photo of either passes. The eye check on `d1a` is about
+  the torso angle being held, not about which row it is.
+- **Cambered bar = EZ bar (`d1g`, `d5e`).** Same implement under two names. `[Certain]`.
+- **Lying vs seated leg curl (`d2e`/`d4f` vs `d4g`).** `Lying_Leg_Curls` and `Seated_Leg_Curl` name
+  the ground reference. The eye check is that the photo matches its own name.
+
+---
+
+## 17.2 The 42
+
+Columns: slot · plan name · `k` / implement · upstream id or `none` · confidence that the id names the
+slot's lift (not that the frames are right — nothing in this table is `[Certain]` on the frames) ·
+what a human must confirm by eye, with the `none` and dependency conditions · eye check status.
+
+**Reading the `Confirm by eye` column.** `Pass:` is what both frames must show. `none:` is what
+sends the slot to cue-only. `dep:` is a position that, if the photo shows it, is rescued by the cue
+under F1p.3(a) and must then be entered in the 17.3 register. The status column is written by whoever
+looks, with their initials and the date, and reads `pass` / `fail` / `pending`. **Nothing else may be
+written in it.**
+
+### Day 1 — Upper power
+
+| Slot | Name | `k` / impl | Upstream id | Conf | Confirm by eye | Eye check |
+|---|---|---|---|---|---|---|
+| d1a | Bent-over row | power / bb | `Bent_Over_Barbell_Row` | `[Likely]` | Pass: torso hinged at about the same angle in both frames; bar hangs below the chest in 0, at the lower ribs in 1. Bar starting on the floor (Pendlay) also passes (A1). none: torso near upright in either frame. | **pass** — side view, torso hinged about 45° and held in both; bar hangs at the knees in 0, at the lower ribs in 1 (Claude, 2026-09-12) |
+| d1b | Weighted pull-up | power / bodyweight | `Weighted_Pull_Ups` | `[Likely]` | Pass: hanging from a bar, feet clear; frame 1 chin at or over the bar. Belt with a plate is apparatus, present or not. dep: frame 0 with bent elbows (cue names the dead hang). none: a machine-assisted or band-assisted pull-up. | **fail** — frame 0 is not a hang: a foot is on the tower's step and the belted plate rests on the floor; frame 1 the chin stays a head below the bar (Claude, 2026-09-12) |
+| d1c | Rack chin | power / bodyweight | **none** | `[Certain]` (no source) | Cue-only. `Inverted_Row` fails F1p.1 (body horizontal under a bar, heels on the floor, not on a rack). B-105: his own phone photo is the fill. | — |
+| d1d | Flat DB press | power / db | `Dumbbell_Bench_Press` | `[Likely]` | Pass: bench flat (backrest horizontal), supine, dumbbells from chest level in 0 to lockout in 1. none: any incline (that is `d5b`'s photo, and the two must not be confusable on the same phone). | **pass** — flat bench, supine, dumbbells at chest level in 0, locked out over the chest in 1 (Claude, 2026-09-12) |
+| d1e | Weighted dip | power / bodyweight | `Dips_-_Triceps_Version` | `[Guessing]` | Pass: parallel bars, feet off the floor, frame 1 elbows at about 90°. Upright or leaning both pass — the slot names no lean, and the belt is apparatus. dep: shoulders visibly shrugged in frame 1 (cue names shoulders down). none: a bench dip (`Bench_Dips` — hands behind on a bench, a different ground reference). If this id fails only on the lean reading badly, `Dips_-_Chest_Version` on the same criterion before `none`. | **fail** on `Dips_-_Triceps_Version` — frames cropped at the thigh so feet-off-the-floor cannot be confirmed, frame order reversed (0 is the 90° bottom, 1 the lockout), and a second person stands in the background; **pass** on the fallback `Dips_-_Chest_Version` — parallel bars, feet visibly clear in both, 0 locked out, 1 leaning forward with elbows at about 90°, shoulders not shrugged, nobody else in frame. Ship the fallback (Claude, 2026-09-12) |
+| d1f | Seated DB shoulder press | power / db | `Seated_Dumbbell_Press` | `[Likely]` | Pass: seated on a bench with a back pad, dumbbells at shoulder height in 0, overhead in 1. dep: lower back visibly arched off the pad in 1 (cue: ribs down). none: standing (F1p.1 — the pad is the brace). | **fail** — seated on the end of a flat bench with no back pad at all (the whole back is open against the wall); the brace the row requires is absent. Frame order also reversed (0 overhead, 1 at the shoulders) (Claude, 2026-09-12) |
+| d1g | Cambered bar curl | power / bb | `EZ-Bar_Curl` | `[Likely]` | Pass: standing, EZ bar, elbows at the sides in both frames. none: on a preacher bench (that is `d5e`'s). A torso sway cannot show in a still; nothing to confirm on the cue. | **pass** — standing, EZ bar, elbows pinned at the sides; arms hanging in 0, bar at the upper chest in 1 (Claude, 2026-09-12) |
+| d1h | Skull crusher | power / bb | `EZ-Bar_Skullcrusher` | `[Guessing]` | Pass: supine on a bench (flat or incline both pass — the slot names no bench); upper arms near vertical in both frames; **frame 1 shows the bar at the forehead or the hairline.** none: the bar travels behind the head with the upper arms angled back — §10.2 made the destination the slot's definition, and F1p.3 does not rescue a photo of a different destination. | **pass** — supine on a flat bench, upper arms vertical in 0; in 1 the bar (plate) sits at the forehead, not behind the head, upper arms still near vertical (Claude, 2026-09-12) |
+
+### Day 2 — Lower power
+
+| Slot | Name | `k` / impl | Upstream id | Conf | Confirm by eye | Eye check |
+|---|---|---|---|---|---|---|
+| d2a | Squat | power / bb | `Barbell_Squat` | `[Likely]` | Pass: bar on the upper back, standing in 0, hips at or below the knee in 1, heels down. none: front squat, Smith machine, or a quarter squat in frame 1 (depth is the one instruction the picture gives). | **pass** — free bar on the upper back inside a rack (not a Smith), standing in 0, hip crease at knee level in 1, heels flat (Claude, 2026-09-12) |
+| d2b | Hack squat | power / machine | `Hack_Squat` | `[Likely]` | Pass: the machine — angled sled, shoulder pads, back on the pad, feet on the platform. dep: heels lifted in frame 1 (cue). none: `Barbell_Hack_Squat` (bar behind the legs, free-standing — different ground reference). | **pass** — angled plate-loaded sled, shoulder pads, back on the pad, feet on the platform; extended in 0, deep in 1 with heels flat (no dep) (Claude, 2026-09-12) |
+| d2c | Leg extension | power / machine | `Leg_Extensions` | `[Likely]` | Pass: seated, shin pad at the ankles, knees extended in 1. dep: hips lifted off the seat in 1 (cue). | **pass** — seated with back on the pad, shin pad at the ankles, knees bent in 0 and fully extended in 1, hips stay on the seat (no dep). Distant blurred gym-goers in the background, not readable at 320 px (Claude, 2026-09-12) |
+| d2d | Stiff-leg deadlift | power / bb | `Stiff-Legged_Barbell_Deadlift` | `[Guessing]` | **Pair test with `d4e` — 17.5.** Pass on its own terms: barbell, standing in 0, hinged in 1 with knees straight or nearly so, bar at or below mid-shin. none: F1p.3(b) — lower back visibly rounded in 1. | **fail** — the hinged frame (which is 0, not 1: order reversed) has the knees nearly straight and the back flat, but the bar is at the kneecap, well above mid-shin; it is a half-range SLDL. Pair test 17.5: `d2d fail on bar height, d4e fail on its own terms` — see 17.8 (Claude, 2026-09-12) |
+| d2e | Lying leg curl | power / machine | `Lying_Leg_Curls` | `[Likely]` | Pass: prone (face down) on the pad, ankle pad, heels towards the glutes in 1. none: seated or standing single-leg. Reversal to GHR: 17.4. | **pass** — prone on the pad, roller at the ankles, legs straight in 0 and heels curled to the glutes in 1. A bystander's legs show at the right edge of both frames; the lift is unambiguous (Claude, 2026-09-12) |
+| d2f | Standing calf raise | power / machine | `Standing_Calf_Raises` | `[Likely]` | Pass: standing, forefoot on a block or platform, heel below the block in 0 and high in 1, knees straight in both. dep: knees bent in either frame (cue). | **pass** — standing calf machine shot from behind, forefoot on the block, heels dropped below it in 0 and high in 1, knees locked in both (no dep) (Claude, 2026-09-12) |
+| d2g | Seated calf raise | power / machine | `Seated_Calf_Raise` | `[Likely]` | Pass: seated, knee pad over the thighs, forefoot on the block, **heel below the block in frame 0** (the cue's bottom position). | **pass** — seated, knee pad on the thighs, forefoot on the block, heels dropped below the block in 0 and raised in 1 (Claude, 2026-09-12) |
+
+### Day 3 — Back & shoulders
+
+| Slot | Name | `k` / impl | Upstream id | Conf | Confirm by eye | Eye check |
+|---|---|---|---|---|---|---|
+| d3a | Row — speed work | speed / bb | `Bent_Over_Barbell_Row` | as d1a | **Shares d1a's row and d1a's check.** A still photograph carries nothing about bar speed; `speedLoad` carries the load and the cue is identical (§10.4). | with d1a — **pass** (Claude, 2026-09-12) |
+| d3b | Rack chin | hyp / bodyweight | **none** | `[Certain]` | Cue-only, as d1c. | — |
+| d3c | Seated cable row | hyp / cable | `Seated_Cable_Rows` | `[Likely]` | Pass: seated at a low pulley, feet on the plate, handle to the abdomen in 1, torso upright in both. dep: lean-back past about 20° in 1 (cue: torso still). none: a chest-supported machine row (the pad is a different brace, F1p.1) or a standing cable row. | **pass** — seated at a low pulley, feet on the plate, V-handle at full reach in 0 and at the abdomen in 1, torso upright in both with no lean-back (no dep) (Claude, 2026-09-12) |
+| d3d | DB row | hyp / db | `One-Arm_Dumbbell_Row` | `[Likely]` | Pass: one hand and one knee on a bench, torso near parallel, dumbbell to the hip or lower ribs in 1. dep: visible torso rotation in 1 (cue: shoulders square). Reversal to shrug: 17.4. | **pass** — one hand and one knee on a flat bench, torso near parallel, dumbbell hanging in 0 and at the lower ribs in 1, shoulders square (no dep). Revert candidate `Dumbbell_Shrug` also viewed: **pass** on 17.4's criterion (Claude, 2026-09-12) |
+| d3e | Close-grip pulldown | hyp / cable | `Close-Grip_Front_Lat_Pulldown` | `[Likely]` | Pass: seated at a lat station, thigh pad, narrow or V handle, bar to the upper chest **in front**. none: behind the neck, or a wide bar. | **fail** — shot from behind: the attachment is the long wide lat bar held with the hands close, not a narrow or V handle, and from the back it cannot be confirmed the bar finishes in front of the chest rather than behind the neck; a second person on a machine is prominent at the left (Claude, 2026-09-12) |
+| d3f | Seated DB press | hyp / db | `Seated_Dumbbell_Press` | as d1f | Shares d1f's row and check. | with d1f — **fail** (Claude, 2026-09-12) |
+| d3g | Upright row | hyp / bb | `Upright_Barbell_Row` | `[Guessing]` | Pass: standing, barbell, elbows above the hands in 1, bar at the lower chest, **grip at or wider than shoulder width.** none: F1p.3(b) — grip narrower than shoulder width. Not a dependency: the narrow grip is the impingement variant and the cue exists to keep him out of it. | **fail** — F1p.3(b): the hands are a palm's width apart in the middle of the bar, far inside shoulder width, elbows flared above the ears at the top. This is the injury variant the row names; the cue does not rescue it. Frame order also reversed (0 is the top) (Claude, 2026-09-12) |
+| d3h | Lateral raise | hyp / db | `Side_Lateral_Raise` | `[Likely]` | Pass: dumbbells, arms out to about shoulder height in 1, slight elbow bend; standing or seated both pass. none: arms well above shoulder height in 1, or a cable/machine that changes the load path from vertical. | **pass** — standing, dumbbells at the sides in 0, raised to shoulder height with a slight elbow bend in 1, not above (Claude, 2026-09-12) |
+
+### Day 4 — Lower hypertrophy
+
+| Slot | Name | `k` / impl | Upstream id | Conf | Confirm by eye | Eye check |
+|---|---|---|---|---|---|---|
+| d4a | Squat — speed work | speed / bb | `Barbell_Squat` | as d2a | Shares d2a's row and check. | with d2a — **pass** (Claude, 2026-09-12) |
+| d4b | Hack squat | hyp / machine | `Hack_Squat` | as d2b | Shares d2b's row and check. | with d2b — **pass** (Claude, 2026-09-12) |
+| d4c | Leg press | hyp / machine | `Leg_Press` | `[Likely]` | Pass: 45° sled, back and hips on the pad, feet on the platform; frame 0 (the bottom) with the hips still on the pad. dep: lower back visibly peeling off the pad at the bottom (cue). The slot the SVG could not draw; the machine draws itself. | **pass** — 45° plate-loaded sled, back and hips on the pad, feet on the platform; the bottom is frame 1 (not 0 as the row assumed) and the hips stay on the pad there (no dep). Blurred gym-goers far in the background (Claude, 2026-09-12) |
+| d4d | Leg extension | hyp / machine | `Leg_Extensions` | as d2c | Shares d2c's row and check. | with d2c — **pass** (Claude, 2026-09-12) |
+| d4e | Romanian deadlift | hyp / bb | `Romanian_Deadlift` | `[Guessing]` | **Pair test with `d2d` — 17.5.** Pass on its own terms: barbell, hips pushed back in 1, **a visible knee bend**, bar at mid-shin, back flat. none: F1p.3(b) — rounded lower back in 1. | **fail** — shot head-on, and the hinged frame is 0 (order reversed): the knees are soft, but the bar is at the kneecap not mid-shin, and from the front neither "hips pushed back" nor "back flat" can be read at all. Not F1p.3(b) — the back is simply invisible. Pair test 17.5: both fail on their own terms — see 17.8 (Claude, 2026-09-12) |
+| d4f | Lying leg curl | hyp / machine | `Lying_Leg_Curls` | as d2e | Shares d2e's row and check. | with d2e — **pass** (Claude, 2026-09-12) |
+| d4g | Seated leg curl | hyp / machine | `Seated_Leg_Curl` | `[Likely]` | Pass: seated, back pad, ankle pad, heel travelling down and back in 1. The lap pad the cue names should be in frame; if it is not, the slot still passes — the rope is not drawn in `d5j` either. This is the slot §12.3 dropped for the wrong arrow; a photograph of the machine cannot point the wrong way. | **pass** — seated, back pad, lap pad over the thighs in frame, roller at the ankles; legs straight in 0, heels curled down and back under the seat in 1. A second person on a machine at the left of both frames; the lift is unambiguous (Claude, 2026-09-12) |
+| d4h | Donkey calf raise | hyp / machine | `Donkey_Calf_Raises` | `[Likely]` | Pass: **hips flexed to about 90°**, forearms on a support, load on the hips or lower back (pad or partner), forefoot on a block, heel below in 0 and high in 1. none: standing upright — that is `d2f`'s lift and the release in 17.3 is void. | **fail** — the hip bend is there (trunk horizontal, forearms on a bench, a partner seated on the hips), but he stands on the flat floor: no block, so there is no heel-below-the-block bottom in 0, only heels flat then raised. Three more people in the background. The 17.3 release is moot: slot is `none` (Claude, 2026-09-12) |
+| d4i | Seated calf raise | hyp / machine | `Seated_Calf_Raise` | as d2g | Shares d2g's row and check. | with d2g — **pass** (Claude, 2026-09-12) |
+
+### Day 5 — Chest & arms
+
+| Slot | Name | `k` / impl | Upstream id | Conf | Confirm by eye | Eye check |
+|---|---|---|---|---|---|---|
+| d5a | Flat DB press — speed work | speed / db | `Dumbbell_Bench_Press` | as d1d | Shares d1d's row and check. | with d1d — **pass** (Claude, 2026-09-12) |
+| d5b | Incline DB press | hyp / db | `Incline_Dumbbell_Press` | `[Likely]` | Pass: bench visibly inclined, supine, dumbbells. **The angle in the photo is a dependency regardless of what it is** — 17.3. none: bench flat (that is `d1d`'s) or near vertical (a seated shoulder press). | **pass** — adjustable bench visibly inclined (reads as roughly 30–40°, which is exactly the reading 17.3 says not to trust), supine, dumbbells at the chest in 0 and locked out in 1. Not confusable with `d1d` at a glance. dep `30–35°` stands per 17.3 (Claude, 2026-09-12) |
+| d5c | Machine chest press | hyp / machine | `Machine_Bench_Press` | `[Guessing]` | Pass: **seated**, upright or slightly reclined back pad, handles at mid-chest in 0, hands travelled forward horizontally in 1; the seat and the handles the cue names both in frame. If `Machine_Bench_Press` is supine or shows no seat, try `Leverage_Chest_Press` on the same criterion. If neither passes, `none` — this slot was dropped once for a supine figure and does not get one back. | **pass** on `Machine_Bench_Press` — seated with an upright back pad behind him, handles at mid-chest in 0, arms pressed straight forward horizontally in 1; seat and handles both in frame. Fallback `Leverage_Chest_Press` also viewed: **fail** (head-on shot in the dark, no back pad visible, horizontal travel unreadable, large readable shirt print) — not needed (Claude, 2026-09-12) |
+| d5d | Incline cable fly | hyp / cable | `Incline_Cable_Flye` | `[Likely]` | Pass: incline bench between two low pulleys, arms from wide in 0 to above the chest in 1 with the same slight bend. dep: elbow bend visibly changing between frames (cue). none: standing high-to-low fly — a different setup, §10.6 #2. | **pass** — incline bench set between two stacks with the cables running from the low pulleys, arms wide in 0 and together above the chest in 1, the slight elbow bend held (no dep) (Claude, 2026-09-12) |
+| d5e | Cambered bar preacher curl | hyp / bb | `Preacher_Curl` | `[Likely]` | Pass: preacher bench, **upper arms on the pad in both frames**, a bar. A straight bar or a dumbbell is apparatus. dep: upper arms lifting off the pad in 1 (cue). | **pass** — preacher bench, EZ bar, upper arms flat on the pad in both frames, arms extended in 0 and curled in 1 with no lift-off (no dep) (Claude, 2026-09-12) |
+| d5f | DB concentration curl | hyp / db | `Concentration_Curls` | `[Likely]` | Pass: seated, elbow braced on the inner thigh, dumbbell. none: standing or bent-over with the arm hanging free — no thigh, different brace, and the cue names the thigh. | **pass** — seated on a flat bench, elbow braced against the inner thigh, dumbbell hanging in 0 and curled in 1 (Claude, 2026-09-12) |
+| d5g | Spider curl | hyp / bb | `Spider_Curl` | `[Likely]` | Pass: chest on an inclined bench or the vertical face of a preacher, **upper arms hanging vertical in frame 0**, a bar. none: arms on the angled preacher pad (that is `d5e`) or standing. | **pass** — chest on the vertical back face of a preacher bench, upper arms hanging straight down in 0, EZ bar curled in 1; not the angled pad (Claude, 2026-09-12) |
+| d5h | Close-grip bench | hyp / bb | `Close-Grip_Barbell_Bench_Press` | `[Likely]` | Pass: flat bench, barbell, grip about shoulder width, elbows near the body. dep: grip inside shoulder width but hands apart (cue: no narrower). none: F1p.3(b) — hands touching. | **pass** — flat bench, barbell, hands about shoulder width and well apart, elbows tucked along the body in 0, locked out in 1 (no dep) (Claude, 2026-09-12) |
+| d5i | Skull crusher | hyp / bb | `EZ-Bar_Skullcrusher` | as d1h | Shares d1h's row and check. | with d1h — **pass** (Claude, 2026-09-12) |
+| d5j | Rope pressdown | hyp / cable | `Triceps_Pushdown_-_Rope_Attachment` | `[Likely]` | Pass: standing at a high pulley, **the rope in frame**, elbows at the sides, arms extended in 1. dep: rope not spread in 1 (cue). none: a straight bar or V-bar attachment — the cue is about the rope and only the rope. | **pass** — standing at a high pulley, rope attachment in frame, elbows at the sides, hands at the chest in 0 and arms extended in 1. **dep:** the side view cannot show whether the rope is spread at the bottom, so the rope cue is pinned in 17.3. Small distant gym-goers in the background (Claude, 2026-09-12) |
+
+**Counts, provisional.** 40 slots mapped, 2 `none` (`d1c`, `d3b`), **31 distinct upstream ids**, so W3's
+set is 62 files if every row passes and fewer if any fails. All ten shared-cue pairs share an id
+(d1a/d3a, d1c/d3b, d1d/d5a, d1f/d3f, d1h/d5i, d2a/d4a, d2b/d4b, d2c/d4d, d2e/d4f, d2g/d4i) — the
+speed slots share their source lift's photo because a still cannot show a speed rep and the
+`speedLoad` line already carries what differs. **None is split.** The final counts are whatever the
+`Eye check` column reads when it is filled in; W6 pins those, not these.
+
+**Existence at the pinned SHA is not verified by me.** The ids are the PM's draft, which was written
+against the fetched index, and match my own recollection of the database. W3 fails loudly on an id
+that is not there; that is the existence check and it is the right place for it.
+
+---
+
+## 17.3 The F1.3 register — `d4h` released, `d5b` reaffirmed
+
+§12.3 pinned two cues because two figures stood on them. With photographs the answer differs between
+the two, and the difference is the point.
+
+**`d4h` donkey calf raise — RELEASED, on the condition the eye check passes.** `[Likely]`
+The SVG drew a standing figure; the cue `Keep the hips bent at the same angle for every rep.` was the
+only thing telling him the trunk is horizontal. A photograph of a donkey calf raise shows the hip
+bend — that *is* the photograph. Once the pair passes 17.2's criterion (hips at about 90° in both
+frames), the figure carries the position and no longer depends on the cue. **The cue does not change.**
+It stays because the hip angle is the thing that drifts as the set fatigues, which makes it the right
+cue whether or not a picture is beside it. What is released is the *dependency*: rewording `d4h`'s cue
+can no longer make its figure wrong. QA's `d4h` assertion moves from "the figure ships only because
+of this" to an ordinary cue-integrity pin, or is dropped — W6's call. If the eye check fails (the
+photo shows an upright raise), the slot is `none` and the question is moot.
+
+**`d5b` incline DB press — REAFFIRMED, and it is now the stronger of the two.** `[Certain]` on the
+mechanism. The SVG drew a flat bench and the cue corrected it to 30–35°. A photograph draws a specific
+incline, and stock exercise photography is shot on a bench set to 45° or steeper, because that is what
+the adjustable benches in a studio default to. So the photo does not remove the correction — it
+replaces "flat, which he might set" with "45°, which he will copy". F1p.3(a) applies exactly: he can
+set the bench to what the photo shows, the cue names the angle and corrects it, the photo ships on the
+cue. **The dependency stands: `d5b`'s cue must contain `30–35°` or the figure goes.** The one case in
+which I would release it is a photo whose bench is visibly at 30–35°, and a person cannot read that
+off a JPEG to within ten degrees, so I am not asking anyone to try.
+
+**The register, for W6.** One row per F1p.3(a) rescue. Two entries today; the eye check may add more
+(every `dep:` in 17.2 that turns out to describe the photo lands here, with the cue substring pinned).
+
+| Slot | Cue substring that carries the figure | Status |
+|---|---|---|
+| `d5b` | `30–35°` | **kept** — reaffirmed above |
+| `d4h` | `hips bent` | **released**, conditional on `Eye check: pass` |
+| *(added by the eye check)* | *(the `dep:` substring from 17.2)* | *(kept, dated)* |
+
+---
+
+## 17.4 The two reversible slots, restated for photographs
+
+`[Certain]` that these are mechanical; the ids below still need an eye check before they ship, and I
+have written the criterion so nobody has to come back to me for it.
+
+- **`d2e` becomes a glute-ham raise** (Rule A1, §8.2; cue in §10.5) → `Lying_Leg_Curls` goes.
+  Candidate `Glute_Ham_Raise`, `Eye check: pending`. Pass: knees on a pad, heels anchored under a
+  roller, the body in one line from knee to shoulder in both frames, the trunk the working end. none:
+  a back extension (hips on the pad, hinge at the hip) or a Nordic curl on the floor. **Until that row
+  reads `pass`, `d2e` is `none`.** `d4f` stays a lying leg curl and keeps `Lying_Leg_Curls`; the pair
+  splits, and this is the stated reason.
+- **`d3d` becomes a shrug** (B-65; cue in §10.5) → `One-Arm_Dumbbell_Row` goes. Candidate
+  `Dumbbell_Shrug`, `Eye check: pending`. Pass: standing, dumbbells at the sides, arms straight in
+  both frames, shoulders up in 1. A barbell instead of dumbbells is apparatus and passes. none: any
+  rolling of the shoulders visible in 1, or elbows bent in 1 (that is a high pull). **Until that row
+  reads `pass`, `d3d` is `none`.** §12.3 said a
+  shrug `d3d` "stays cue-only, which is what it already is"; with a source that could show it, the
+  honest line is `none` until seen.
+
+---
+
+## 17.5 `d2d` / `d4e` — the pair test
+
+Two barbell hinges, one photographer, one model. The risk the WO named is real: the database's
+`Stiff-Legged_Barbell_Deadlift` and `Romanian_Deadlift` may be the same photograph with a different
+caption. W2's human test requires them distinguishable side by side, and F1 requires each to show its
+own lift. The procedure, so it is applied once and recorded:
+
+1. Put the four frames side by side at 320 px wide: `d2d` 0/1, `d4e` 0/1.
+2. Compare the two **frame 1s** (the bottom of the hinge). Read the knee.
+   - `d2d` frame 1 must show the knees straight or nearly straight and the bar at or below mid-shin.
+   - `d4e` frame 1 must show a visible knee bend, hips pushed back, bar about mid-shin, back flat.
+3. Decide:
+   - Both criteria met **and** the two frame 1s are distinguishable at a glance → **both keep.**
+   - Both show soft knees → both photographs are RDLs → **`d2d` is `none`, `d4e` keeps.** A soft-knee
+     photo on the SLDL slot teaches him an RDL for 3 × 5–8 on power day; that is a different lift.
+   - Both show locked knees → both are SLDLs → **`d4e` is `none`, `d2d` keeps.** Same reasoning,
+     reversed: a locked-knee, bar-to-floor photo on the 8–12 slot is the heavier lower-back variant
+     and `d4e`'s cue `Do not add knee bend to reach lower.` cannot rescue a photo showing no knee bend
+     to add — the cue is about not *adding* bend, it presumes some.
+   - Either frame 1 shows a visibly rounded lower back → that slot is `none` under F1p.3(b), whatever
+     the knees do.
+4. Write the outcome in both rows' `Eye check` cells with the branch taken (`both keep`, `d2d none:
+   both soft`, etc.), so W6 can pin it and the next person can see why.
+
+`[Likely]` that the outcome is branch 2 (both soft knees) — in my recollection the database's two
+photographs are near-identical and both closer to an RDL. If so `d2d` goes cue-only and that is the
+correct result, not a shortfall.
+
+---
+
+## 17.6 What changes, by work item
+
+| Item | What this section gives it |
+|---|---|
+| **PM** | Correct "§13" → "§17" in WO-009 W1, W3, W4, W6 before dispatching W3/W4. Arrange the eye check: 31 pairs, each against its row's `Confirm by eye` text, result written into the `Eye check` column with initials and date. Two minutes a pair. The person doing it needs the criterion, not coaching knowledge — every criterion is written to be checked by someone who has never lifted. |
+| **W3 release** | May build the pipeline against the 31 provisional ids now. Must re-run on the table **after** the eye check; the manifest ships only ids whose row reads `pass`. |
+| **W4 backend** | Transcribes `fig` from 17.2 **only for rows reading `pass`**. `pending` and `fail` get no `fig` key. Do not transcribe from the WO draft, and do not transcribe from this table until the column is filled. |
+| **W6 QA** | Pin `PHAT.figFor` per the filled-in table, the shared pairs equal, the 17.3 register (`d5b` cue contains `30–35°` → figure ships; `d4h` released or the slot is `none`), and the 17.5 branch as recorded. Pin that no `fig` value exists for a row not at `pass` — that is the test that makes 17.0 #7 enforceable rather than promised. |
+| **Chady** | §5 #1 of the WO stands. When the pairs are on the phone, two or three disclosures at arm's length. And B-65 is still yours. |
+
+---
+
+## 17.7 Verdict
+
+**Sign off the mechanism; nothing ships on it yet.** Forty ids, two `none`, thirty-one pairs to be
+looked at against a written criterion each, two pair-level decisions (17.5, and `d5c`'s fallback)
+that a non-lifter can make from the text. `d4h`'s cue is released from carrying its figure and
+`d5b`'s is not, and the reason is that a photograph shows a hip bend and does not show a bench angle.
+
+**The one-line process, for the risk table:** a slot ships a photograph only when its row in 17.2
+reads `Eye check: pass` against the criterion written beside it — `pending` and `fail` both transcribe
+as `none`, W4 reads this table and nothing else, and W6 pins the resulting `figFor` set so that no
+later remap can escape the table.
+
+**And the standing item, for the eighth time.** This is a mapping between 42 slots and 31
+photographs of someone else lifting. Every slot's real figure is the one he would produce by logging a
+set under it, and there are still none.
+
+---
+
+## 17.8 Eye check record — 2026-09-12
+
+**Added 2026-09-12** by the main session, which has an image reader the coach did not. (The WO asked
+for this as "§17.6"; 17.6 was already taken above, so it is 17.8.) All 70 frames for the 31 named ids
+were fetched from the pinned SHA and viewed; so were the 8 frames for the four fallback / revert ids
+(`Dips_-_Chest_Version`, `Leverage_Chest_Press`, `Dumbbell_Shrug`, `Glute_Ham_Raise`). **No id 404'd**
+— every one of the 35 exists at `a859101d…` and every frame came back `200` with real JPEG bytes.
+
+**By upstream id (31 named):** 23 pass, 8 fail.
+
+| Result | Ids |
+|---|---|
+| pass (23) | `Bent_Over_Barbell_Row` `Dumbbell_Bench_Press` `EZ-Bar_Curl` `EZ-Bar_Skullcrusher` `Barbell_Squat` `Hack_Squat` `Leg_Extensions` `Lying_Leg_Curls` `Standing_Calf_Raises` `Seated_Calf_Raise` `Seated_Cable_Rows` `One-Arm_Dumbbell_Row` `Side_Lateral_Raise` `Leg_Press` `Seated_Leg_Curl` `Incline_Dumbbell_Press` `Machine_Bench_Press` `Incline_Cable_Flye` `Preacher_Curl` `Concentration_Curls` `Spider_Curl` `Close-Grip_Barbell_Bench_Press` `Triceps_Pushdown_-_Rope_Attachment` |
+| fail (8) | `Weighted_Pull_Ups` (not a hang: foot on the step, plate on the floor; chin below the bar) · `Dips_-_Triceps_Version` (feet cropped, bystander) · `Seated_Dumbbell_Press` (no back pad) · `Stiff-Legged_Barbell_Deadlift` (bar at the knee) · `Close-Grip_Front_Lat_Pulldown` (wide bar, shot from behind) · `Upright_Barbell_Row` (F1p.3(b): hands a palm apart) · `Romanian_Deadlift` (bar at the knee, front view hides hips and back) · `Donkey_Calf_Raises` (no block under the forefoot) |
+| fallbacks / reverts | `Dips_-_Chest_Version` **pass** — takes `d1e`. `Leverage_Chest_Press` fail, not needed. `Dumbbell_Shrug` **pass** on 17.4's criterion — the B-65 revert is ready if he calls it. `Glute_Ham_Raise` **fail** — frame 0 is a back extension (hips on the pad, folded at the hip), two people in the background; a `d2e` revert to GHR would be `none`. |
+
+**By slot (42):** 32 ship a photograph, 8 are `fail` → `none`, 2 were already `none`.
+
+- Ship (32): d1a d1d d1e (on `Dips_-_Chest_Version`) d1g d1h · d2a d2b d2c d2e d2f d2g · d3a d3c d3d d3h ·
+  d4a d4b d4c d4d d4f d4g d4i · d5a d5b d5c d5d d5e d5f d5g d5h d5i d5j.
+- `none` by fail (8): **d1b d1f d3f d2d d3e d3g d4e d4h.** Every one of these is a wrong-position fail,
+  not a cosmetic one — nothing here went to `none` on a bystander or a shirt logo alone.
+- `none` by design (2): d1c d3b.
+
+**Distinct ids to ship: 23** (the 22 passing named ids that map to a shipping slot — `Seated_Dumbbell_Press`
+is out — plus `Dips_-_Chest_Version`). W3's set is **46 files**, not 62.
+
+**17.5 pair test — outcome: none of the four listed branches; both fail on their own terms.** The two
+bottom frames are both shot at the top of the hinge with the bar at the kneecap, neither at mid-shin.
+`d2d`'s (side view) has the knees nearly straight and a flat back; `d4e`'s is head-on, the knees soft,
+and the hips and lower back are not visible at all. They are distinguishable at 320 px only because
+one is a side view and the other a front view, which is the photographer, not the lift. `[Certain]`
+that neither teaches the range the slot programmes. Both slots go cue-only; W6 pins
+`d2d: none, d4e: none, branch: both fail (bar height)`.
+
+**Frame order.** In five pairs the database's frame 0 is the *end* the row expected in frame 1 (dips
+triceps, seated DB press, SLDL, RDL, upright row) and the leg press's bottom is frame 1. None of the
+fails rest on order alone, and F1p.2 is satisfied wherever both end positions are present, so no
+swap rule was invented. W3 should not assume `0.jpg` is the start.
+
+**F1p.3(a) register additions for 17.3.** One: `d5j` — the side view cannot show the rope spreading
+at the bottom, so the rope cue substring is pinned. No other `dep:` in 17.2 described its photo.
+`d5b`'s `30–35°` stays kept per 17.3; `d4h`'s release is moot (slot `none`).
+
+**F1p.4 notes, not fails.** Bystanders appear in the background of `Lying_Leg_Curls`,
+`Seated_Leg_Curl`, `Leg_Extensions`, `Leg_Press`, `Triceps_Pushdown_-_Rope_Attachment` and
+`Donkey_Calf_Raises`; equipment nameplates and a small shirt logo appear in most. Applied as written,
+F1p.4 would empty another six slots for reasons that change nothing about the lift taught, so the
+rule was read for its purpose — no overlay, no arrow, no watermark, no second lifter — and the
+bystanders are recorded here for the coach to overrule if he wants the literal reading. The one photo
+where the second person *is* part of the lift (`Donkey_Calf_Raises`, the partner) was permitted by
+its own row and failed on the block.

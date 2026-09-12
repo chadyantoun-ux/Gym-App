@@ -160,7 +160,7 @@ ghost/solid/arrow convention, the stroke and occupancy rules, §11.6's SVG-only 
 - §11 reads as one standard with no reference to strokes, arrows, ghost or solid poses, or inline SVG.
 - The a11y ruling is stated with its reason and the `alt` value is literal.
 - Every state is specified: both / cue-only / image missing offline / 200 % / 400 px.
-- §11 names the F1 rule and the addendum §13 table as the only source of the map.
+- §11 names the F1 rule and the addendum §17 table as the only source of the map.
 
 **Depends on:** — (parallel with W1)
 
@@ -211,7 +211,7 @@ the PM's draft map and re-run on the coach's table.
 ### W4 · `fig` on the plan document — owner: `backend-engineer`
 
 **Scope.** Add `fig: "<upstream id>"` to each mapped slot in `PHAT_PLAN` (`logic.js`), transcribed
-from addendum §13 — from the coach's table, not from this work order (the B-55 lesson). Unmapped
+from addendum §17 — from the coach's table, not from this work order (the B-55 lesson). Unmapped
 slots carry no `fig` key. `validatePlan`: `fig`, if present, must be a non-empty string matching
 `/^[A-Za-z0-9_\-]+$/`; anything else is a `type` problem. Export `PHAT.figFor(id)` → the shipped
 plan's `fig` for that id or `""`, reading `PHAT_PLAN` only (never a stored copy), pure. Write

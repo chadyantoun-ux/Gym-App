@@ -792,6 +792,10 @@
     min-height:var(--key); font-family:var(--sans)}
   .setsec button[disabled]{opacity:.5; cursor:default}
   .sheet .bklbl{margin-top:var(--s3)}
+  /* WO-009 W9. The password block sits inside #bk-body (it exists only while
+     signed in, and repaints with it) but reads as a peer section: the same
+     rule as "Backup", one section's worth of air above it. */
+  .bkpw{margin-top:20px}
 
   /* ---- W12: DIET (spec 8, coach addendum 8.6) ---------------------------
      EVERY NUMBER AND EVERY SENTENCE ON THIS SCREEN COMES OUT OF
@@ -1300,7 +1304,13 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
             device: one alert per condition, not one per saved set (spec
             §18.5 rule 2). Cleared when the account changes. The manual
             button ignores it - BACK UP NOW re-tries and re-refuses. */
-         refused:null}};
+         refused:null,
+         /* WO-009 W9 (B-102). The password change's own outcome, so it never
+            shares `last` with the backup status line: a changed password is
+            not a backup event, and the stamp under the identity line must
+            not move when it succeeds. null | {busy:true} | {ok:true} |
+            {ok:false,message}. Session-only, never stored. */
+         pw:null}};
 const logPayload=()=>Object.assign({},S.logMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,sessions:S.sessions,includeCut:S.includeCut});
 /* WO-008 W4. The one read of the diet profile, handed to every gated engine
@@ -4515,6 +4525,7 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#bk-signin")){ await authTap("in"); return; }
   if(e.target.closest("#bk-signup")){ await authTap("up"); return; }
   if(e.target.closest("#bk-signout")){ await signOutTap(); return; }
+  if(e.target.closest("#bk-pw")){ await pwTap(); return; }
   if(e.target.closest("#bk-push")){ clearTimeout(bkTimer); await runBackup(true,"manual"); return; }
   if(e.target.closest("#bk-restore")){ await restoreStart(); return; }
   if(e.target.closest("#settings-back")){ S.sub=""; S.exp=null; render(); return; }
@@ -4734,6 +4745,11 @@ document.getElementById("view").addEventListener("focusout",e=>{
 document.getElementById("view").addEventListener("keydown",e=>{
   if(e.key!=="Enter") return;
   if(e.target.id==="bk-pass"||e.target.id==="bk-email"){ e.preventDefault(); authTap("in"); }
+  /* WO-009 W9. Enter in the second new-password field is CHANGE PASSWORD;
+     Enter in the first is "next field", not a submit - a commit from a
+     half-filled pair would only ever be a mismatch refusal. */
+  if(e.target.id==="bk-new2"){ e.preventDefault(); pwTap(); }
+  if(e.target.id==="bk-new"){ e.preventDefault(); const n=document.getElementById("bk-new2"); if(n) n.focus(); }
   /* WO-006: Enter in an editor name field is "done with this field" - it
      blurs, which commits. Enter in the add form's name is not ADD: ADD is
      refused while a required field is empty, and a keyboard commit into a
@@ -6091,7 +6107,7 @@ function onSync(snap){
   const was=S.sync.user?S.sync.user.id:null;
   S.sync.user=snap&&snap.user?snap.user:null;
   S.sync.busy=snap?snap.busy:null;
-  if((S.sync.user?S.sync.user.id:null)!==was){ S.sync.last=null; S.sync.refused=null; }
+  if((S.sync.user?S.sync.user.id:null)!==was){ S.sync.last=null; S.sync.refused=null; S.sync.pw=null; }
   paintBackup();
 }
 window.addEventListener("online",()=>{
@@ -6194,7 +6210,7 @@ async function authTap(kind){
   catch(err){ r={ok:false,reason:"auth",message:"Could not sign in."}; }
   finally{ authBusy=false; }
   if(r.ok){
-    S.sync.user=r.user; S.sync.last=null; S.sync.refused=null;
+    S.sync.user=r.user; S.sync.last=null; S.sync.refused=null; S.sync.pw=null;
     /* WO-008 W5 (spec 18.4). On first-run screen B a successful sign-in goes
        to screen C - the one pull, then restore or empty log - and schedules
        NOTHING. The gate below on `onboarded` already stops the push; this
@@ -6217,9 +6233,46 @@ async function authTap(kind){
 async function signOutTap(){
   const Y=window.PHAT_SYNC; if(!signedIn()) return;
   const r=await Y.signOut();
-  if(r.ok){ S.sync.user=null; S.sync.last=null; announce("Signed out. Your log is still on this device."); }
+  if(r.ok){ S.sync.user=null; S.sync.last=null; S.sync.pw=null; announce("Signed out. Your log is still on this device."); }
   else S.sync.last={ok:false,phase:"auth",message:"Could not sign out. "+(r.message||"")};
   paintBackup();
+}
+/* WO-009 W9 (B-102). Change password, from the signed-in Settings block.
+   The two fields are read at the tap and never stored by this file. Every
+   refusal that can be decided on the phone is decided here with NO call:
+   both fields blank is not a tap (nothing happens), unequal fields, and the
+   server's six-character floor in the module's own sentence. pwBusy is this
+   function's re-entrancy guard for the span of one attempt - NOT authBusy,
+   which is onboarding's and gates paintBackup's route to screen C. The
+   module flips its busy flag from inside the call, so paintBackup runs
+   mid-attempt and carries the fields; the outcome is painted by this
+   function alone. Success clears both fields and says so in the advice
+   enclosure; a failure keeps them and shows the module's sentence verbatim
+   in the refusal shape. Both are announced through #bs-live. Nothing here
+   touches S.sync.last, S.sync.user, the stamp, or any store. */
+let pwBusy=false;
+async function pwTap(){
+  const Y=window.PHAT_SYNC; if(!signedIn()||pwBusy) return;
+  const a=document.getElementById("bk-new"), b=document.getElementById("bk-new2");
+  const p1=a?String(a.value||""):"", p2=b?String(b.value||""):"";
+  if(!p1&&!p2) return;
+  const refuseWith=m=>{ S.sync.pw={ok:false,message:m}; paintBackup(); announce(m,true); };
+  if(p1!==p2){ refuseWith("The two passwords do not match."); return; }
+  if(p1.length<6){ refuseWith("Password needs at least 6 characters."); return; }
+  S.sync.pw={busy:true}; paintBackup();
+  pwBusy=true;
+  let r;
+  try{ r=await Y.changePassword(p1); }
+  catch(err){ r={ok:false,message:"Could not change the password."}; }
+  finally{ pwBusy=false; }
+  if(r&&r.ok){
+    const a2=document.getElementById("bk-new"), b2=document.getElementById("bk-new2");
+    if(a2) a2.value=""; if(b2) b2.value="";
+    S.sync.pw={ok:true}; paintBackup();
+    announce("Password changed.");
+  }else{
+    refuseWith((r&&r.message)||"Could not change the password.");
+  }
 }
 
 /* ---- RESTORE. The dangerous path, and the rules (work order E-3, extended
@@ -6480,7 +6533,28 @@ function vBackupBody(){
     <button class="ghostbtn" id="bk-push"${busy?" disabled":""}>Back up now</button>
     <button class="ghostbtn" id="bk-restore"${busy?" disabled":""}>Restore from backup</button>
     <button class="ghostbtn" id="bk-signout"${busy?" disabled":""}>Sign out</button>
-    <p class="tiny">Restore replaces what is on this device with the backup. It asks first, and never touches an unfinished session.</p>`;
+    <p class="tiny">Restore replaces what is on this device with the backup. It asks first, and never touches an unfinished session.</p>
+    ${vPwBlock(busy)}`;
+}
+/* WO-009 W9 (B-102). Change password, signed-in branch ONLY - the caller
+   above is the gate, so the block is never in the DOM signed out or while
+   the module is not ready. Its status node is its own (#bk-pw-status), never
+   #bk-status: a password change is not a backup event and must not move the
+   stamp line. The two outcomes do not share a shape (B-16): success is the
+   advice enclosure, a refusal is the four-sided .refuse with the literal "!".
+   The fields' values are never read here - paintBackup carries them across
+   every repaint, and pwTap clears them on success only. */
+function vPwBlock(busy){
+  const P=S.sync.pw, wait=!!(P&&P.busy)||busy;
+  return `<span class="lbl secrule bkpw" id="bk-pw-h">Password</span>
+    <label class="bklbl" for="bk-new">New password</label>
+    <input class="bkin" id="bk-new" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+    <label class="bklbl" for="bk-new2">New password again</label>
+    <input class="bkin" id="bk-new2" type="password" autocomplete="new-password" autocapitalize="none" spellcheck="false">
+    ${P&&P.busy?`<p class="tiny" id="bk-pw-status">Changing the password.</p>`
+      :(P&&P.ok===true)?`<div class="advice" id="bk-pw-status"><p>Password changed.</p></div>`
+      :(P&&P.ok===false)?`<div class="refuse" role="alert" id="bk-pw-status"><p><span aria-hidden="true">! </span>${esc(P.message)}</p></div>`:""}
+    <button class="ghostbtn" id="bk-pw"${wait?" disabled":""}>Change password</button>`;
 }
 function paintBackup(){
   /* WO-008 W5. The Home owner row rides every backup-state repaint: the
@@ -6508,11 +6582,20 @@ function paintBackup(){
      screen over). Focus is put back where it was. */
   const em=document.getElementById("bk-email"), pw=document.getElementById("bk-pass");
   const vals={e:em?em.value:"",p:pw?pw.value:"",f:document.activeElement===pw?"p":document.activeElement===em?"e":""};
+  /* WO-009 W9. The two new-password fields ride the same carry: the module
+     flips busy from INSIDE changePassword, and a failed attempt keeps what
+     he typed so the retry is one tap. pwTap clears them itself on success. */
+  const n1=document.getElementById("bk-new"), n2=document.getElementById("bk-new2");
+  vals.n1=n1?n1.value:""; vals.n2=n2?n2.value:"";
+  if(document.activeElement===n1) vals.f="n1"; else if(document.activeElement===n2) vals.f="n2";
   box.innerHTML=vBackupBody();
   {
     const em2=document.getElementById("bk-email"), pw2=document.getElementById("bk-pass");
+    const n1b=document.getElementById("bk-new"), n2b=document.getElementById("bk-new2");
     if(em2) em2.value=vals.e; if(pw2) pw2.value=vals.p;
+    if(n1b) n1b.value=vals.n1; if(n2b) n2b.value=vals.n2;
     if(vals.f==="p"&&pw2) pw2.focus(); else if(vals.f==="e"&&em2) em2.focus();
+    else if(vals.f==="n1"&&n1b) n1b.focus(); else if(vals.f==="n2"&&n2b) n2b.focus();
   }
   reserveDock();
 }

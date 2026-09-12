@@ -22,7 +22,7 @@ one Backup section. What was decided and why is in §6 and `docs/decisions.md`.
 | `restorePayload(rows)` | `logic.js`, pure | Rebuilds the three stores from pulled rows. **Refuses whole** on one bad document and names it. Restores the builder's key order (JSONB sorts keys) so a restored session is byte-identical to the one the device wrote |
 | `validateSessionDoc` / `validateBwDoc` | `logic.js`, pure | Mirror `phat_validate_session_doc` / `phat_validate_bw_doc` line for line |
 | `backupSig(payload)` | `logic.js`, pure | Key-order-independent signature; equal to the one stored at the last successful push means nothing has changed |
-| `sync.js` | ES module, `window.PHAT_SYNC` | `createClient` on the pinned CDN build, `signIn` / `signUp` / `signOut`, `push(payload)` (upserts, chunked), `pull()` (every live row). No store key is named in this file |
+| `sync.js` | ES module, `window.PHAT_SYNC` | `createClient` on the pinned CDN build, `signIn` / `signUp` / `signOut`, `changePassword(newPassword)` (signed-in only, §4.1), `push(payload)` (upserts, chunked), `pull()` (every live row). No store key is named in this file |
 | `loadSync` / `backupSoon` / `runBackup` / `restoreStart` / `restoreApply` | `index.html` | The app side. `save()` schedules a push **after** its write has returned; a 2 s debounce coalesces bursts; a manual `BACK UP NOW` ignores the signature |
 
 **Triggers for a push:** a successful write to `phat:v1:log`, `phat:v1:bw` or `phat:v1:plans`
@@ -145,7 +145,9 @@ Diana's phone:
    get signal and reopen Settings. If it reads `Backup could not load` — close the app fully and open
    it again.
 5. Type **her own** email and a password of at least 6 characters (the client refuses shorter with
-   `Password needs at least 6 characters.`). Use a password manager; there is no in-app reset.
+   `Password needs at least 6 characters.`). Use a password manager; there is no in-app reset for a
+   forgotten password. A password you can still sign in with can be changed from Settings once
+   WO-009 W9 ships (the module side, `changePassword`, is §4.1).
 6. Tap `Create account`. **Not** `Sign in` — sign-in with an unknown email says
    `Wrong email or password.` and creates nothing.
 
@@ -415,6 +417,55 @@ bodyweight row, one `conflicts` row from a deliberate hard delete), and whicheve
 `test+a@example.com`, `test+b@example.com` and `test+d@example.com` (WO-008 W7, all test data) still
 exist. Delete each in Authentication → Users once both real accounts exist; `on delete cascade`
 removes every row it owns.
+
+### 4.1 Secure password change — WO-009 W8 (B-102), written 2026-09-12, setting not yet read
+
+**What the setting does.** `changePassword(newPassword)` in `sync.js` calls
+`auth.updateUser({ password })` on the signed-in session. The project has one switch that changes
+what that call demands. Dashboard: **Authentication → Sign In / Up** (older layouts: **Providers**)
+→ **Email** → toggle labelled **Secure password change** ("Users will need to be recently logged in
+to change their password"). Management API: `GET /v1/projects/nkebsoqjtkcdiswrmely/config/auth`,
+field **`security_update_password_require_reauthentication`** (boolean; GoTrue's
+`GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION`).
+
+- **Off** (GoTrue's default, `[Likely]` this project's current value — the switch has never been
+  touched): a signed-in session sets a new password in one call. The app says `Password changed.`
+- **On**: the server accepts the call only if the current session was **created within the last
+  24 hours**; otherwise it answers `422 reauthentication_needed` / `Password update requires
+  reauthentication.` The library's designed remedy is an emailed one-time code
+  (`auth.reauthenticate()` then `updateUser({ password, nonce })`), which this app does not offer —
+  it has no email flow at all (magic links were rejected for the same reason, §0). A fresh sign-in
+  is also a new session, so the app maps the error to `Sign out and sign in again, then retry.`,
+  which is true but is a sign-out round trip on a phone, and on a session that
+  `autoRefreshToken` has kept alive for weeks it will fire every time.
+
+**Which value we want: off.** One user per phone, no shared device, and the threat the switch
+answers — someone at an unlocked phone changing the password — already holds the session and the
+log; the switch stops the password change and nothing else. The cost side is real: the person this
+control exists for (a generated password she wants to replace) would hit a refusal that tells her to
+sign out of the app that is backing up her log, on the day she is least sure what she is doing.
+
+**Not verified.** The Management API call was made from this repo on 2026-09-12 and returned
+`401 Unauthorized`: no personal access token is on this machine and none belongs in it (§3). Chady
+reads the toggle in the dashboard, or runs
+`curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" https://api.supabase.com/v1/projects/nkebsoqjtkcdiswrmely/config/auth`
+from a shell with his own token in the environment, and records the value below. If it reads **on**,
+switch it off before W6 tests the control; the app's copy for the on case exists so that a later
+flip degrades honestly rather than silently.
+
+| Item | Date | Method | Observed | Pass |
+|---|---|---|---|---|
+| `security_update_password_require_reauthentication` | | dashboard toggle or Management API | expect `false` / off | |
+
+**What the module does, so W6 can pin it against the live project.** Signed out → `Sign in first.`
+with no request. `navigator.onLine === false` → `No connection.` with no request. Under 6
+characters → `Password needs at least 6 characters.` with no request (the server's floor, refused on
+the phone). Busy → `Wait for the current backup to finish.` Then one `PUT /auth/v1/user`. Same as the
+old password → `That is already your password.` Reauthentication demanded → the sentence above. Any
+other server text is shown verbatim, and an error with no words is `Could not change the password.`
+Success is `{ ok:true }` and **nothing else moves**: the library's `USER_UPDATED` event is swallowed
+by name when the user id matches, so `S.sync.last`, the owner row and the push schedule are exactly
+what they were. `push` and `pull` are not involved.
 
 ---
 

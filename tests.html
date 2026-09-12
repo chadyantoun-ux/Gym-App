@@ -55,7 +55,12 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 689 / 689 / 0, no skips.</b> <b>S37</b> (WO-008 W7, 2026-09-12) added 11: the two-account browser run replayed
+<b>Today: 689 / 689 / 0, no skips.</b> <b>WO-009 Lane B</b> (the change-password control, QA pass 2026-09-12) added <b>no</b> test:
+every line of it is either <code>sync.js</code> (an ES module with a CDN import, which never loads from <code>file://</code>) or
+<code>pwTap</code> in <code>index.html</code> (reads two fields by id, calls the module, paints). The evidence is the browser run
+against the live project under &ldquo;Already proven&rdquo; item 34 &mdash; the eight-step path, the mid-call carry, the cut wire,
+the simulated lock, 44 px at 400 and 200 % &mdash; and the account it used is back on its original password, proven by a
+same-password refusal as the last step. <b>S37</b> (WO-008 W7, 2026-09-12) added 11: the two-account browser run replayed
 (&ldquo;Already proven&rdquo; item 32) &mdash; the shared device&rsquo;s three refusals byte for byte, the second phone&rsquo;s
 restore with <code>profile:null</code> riding <code>log_meta</code>, D2 on B&rsquo;s rows, D5 on the seed both commits rendered
 (strip, Diet figures, the <code>+0.27 kg per week</code> band), and <b>the stamp hazard pinned as OBSERVED three ways</b>: a
@@ -14168,7 +14173,25 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "sign-out and by the owner signing in &mdash; item 32 (D). <b>(3) The seven identity states</b> H1&ndash;H7 and the three " +
     "session / Summary lines are view strings; every one was read off the screen (item 32) and the refusal sentences underneath " +
     "them are pinned in S36/S37. <b>(4) <code>hasData</code> is read from disk</b> by the call sites (<code>storesOnDisk()</code>); " +
-    "the pure function trusts its argument, and S36 says so.</p>";
+    "the pure function trusts its argument, and S36 says so.</p>" +
+    "<p><b>WO-009 Lane B &mdash; the change-password control has no pure half, and this page says so rather than " +
+    "faking one.</b> <b>(1) <code>changePassword</code>, <code>authMessage</code> and the <code>USER_UPDATED</code> gate</b> live in " +
+    "<code>sync.js</code>, an ES module importing <code>@supabase/supabase-js</code> from a CDN; nothing in it loads on a " +
+    "<code>file://</code> opaque origin, and <code>authMessage</code> is not exported. The W8 criteria (signed out &rarr; " +
+    "<i>Sign in first.</i> with no request; offline &rarr; <i>No connection.</i>; <code>USER_UPDATED</code> moves neither the user " +
+    "id nor <code>S.sync.last</code> nor the push schedule) were observed against the live project with the real module " +
+    "(item 34) and are not asserted here. <b>(2) The client-side order</b> &mdash; both blank is not a tap; unequal before short; " +
+    "<i>The two passwords do not match.</i> then <i>Password needs at least 6 characters.</i> &mdash; is three <code>if</code>s in " +
+    "<code>pwTap</code> that read <code>#bk-new</code> / <code>#bk-new2</code> directly and are not extractable without " +
+    "moving them. Observed (item 34): <code>abc</code>/<code>abd</code> reads as a mismatch, not as short; a filled first field " +
+    "and a blank second is a mismatch; a leading space on one side is a mismatch (no trim, which is right for a password); " +
+    "zero requests on every one. <b>If the sentences or the order ever need pinning on <code>file://</code></b>, a " +
+    "<code>PHAT.pwCheck(p1, p2) &rarr; {ok:true} | {ok:false, message}</code> in <code>logic.js</code> is a three-line move " +
+    "and <code>pwTap</code> becomes its caller; it is not asked for today because the rig is the test and an extraction " +
+    "would pin the extraction. <b>(3) The mid-call carry</b> (the module flips <code>busy</code> inside the call, " +
+    "<code>paintBackup</code> repaints the block, the typed values must survive) is <code>index.html</code> DOM state and was " +
+    "observed on a held request, not asserted. Re-run item 34&rsquo;s rig when <code>pwTap</code>, <code>vPwBlock</code>, " +
+    "<code>paintBackup</code>&rsquo;s carry, <code>changePassword</code> or <code>authMessage</code> change.</p>";
 
   document.getElementById("manual").innerHTML =
     "<p><b>Eight items. Two minutes. Everything else on this page is already covered by " +
@@ -14273,7 +14296,13 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "every state of that row was read off headless Chromium against the live project with two throwaway accounts (item 32), " +
     "and the refusals when the wrong account is signed in were observed byte for byte. What no rig can answer is whether the " +
     "installed PWA on each of your two real phones boots the identity from disk with no signal, and whether Diana can tell at a " +
-    "glance whose log she is about to add a set to. One look each.</span></li></ol>" +
+    "glance whose log she is about to add a set to. One look each. <b>Then, on her phone only (WO-009 Lane B):</b> Settings, " +
+    "signed in, the <i>Password</i> block under the Restore note. Type a new password in both fields, tap <i>Change password</i>, " +
+    "and <b>lock the phone before it answers</b>. Unlock: it must read <i>Password changed.</i> (green) or a red refusal &mdash; " +
+    "never <i>Changing the password.</i> for good. If iOS or GBoard offers a generated password, let it fill the first field and " +
+    "see whether it fills the second; a mismatch is refused with no call, so nothing is lost either way. Sign out, sign in with " +
+    "the new one. Every step of this is proven on desktop (item 34); what only her phone can answer is the lock and the " +
+    "keyboard&rsquo;s autofill.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -15040,6 +15069,85 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "A&rsquo;s uid &rarr; <code>403 42501</code>. (D1&rsquo;s two-account, both-directions form is item 32; the SQL has not changed " +
     "since.) <b>scripts/offline-check.mjs: PASS. file:// suite 689 / 689 / 0, three tripwires.</b> The account is test data " +
     "holding one session and one state row and is to be deleted from the dashboard by uid.</span></li>" +
+    "<li><b>WO-009 Lane B &mdash; the change-password control against the real <code>sync.js</code> and the live project: " +
+    "the eight-step path, the mid-call carry on a held request, the wire cut mid-call, a simulated lock mid-call, and the " +
+    "account left on its original password &mdash; proven by a same-password refusal as the last step.</b> <span class=\"msg\">" +
+    "Run 2026-09-12 against <code>wo-009-password @ 5ce6466</code> (<code>changePassword</code> and the <code>USER_UPDATED</code> " +
+    "gate from <code>97d6cee</code>; <code>vPwBlock</code> / <code>pwTap</code> from <code>5ce6466</code>). Rig as items 32&ndash;33: " +
+    "Playwright, headless Chromium, 400 &times; 850, a static server on 127.0.0.1 serving the branch, the real module and CDN " +
+    "import, service workers blocked in the context (the two <i>reading &lsquo;scope&rsquo;</i> page errors in the log are that: " +
+    "Playwright resolves <code>register()</code> to <code>undefined</code>, so line 6818&rsquo;s <code>reg.scope</code> throws in a " +
+    "<code>.then</code>; not the app). Account: <code>diana@saba.com</code> &mdash; sign-ups are locked and " +
+    "<code>security_update_password_require_reauthentication</code> is confirmed <b>false</b> by the PM, so no throwaway. " +
+    "<b>Every <code>/rest/v1/*</code> request was aborted at the network layer</b> (four attempts over the run, all " +
+    "<code>POST user_state</code> or <code>POST sessions</code>, all aborted, none reached the server): WO-008&rsquo;s sign-in " +
+    "and open-time pushes from an empty rig would otherwise have stamped her server row. Only <code>/auth/v1/*</code> went out: " +
+    "in the main run <code>token 200, user 422, user 200, logout 204, token 400, token 200, user 200, logout 204, token 200, " +
+    "user 422</code>. A <code>MutationObserver</code> inside the page timestamped every change to <code>#bk-pw-status</code> and to " +
+    "<code>#bs-live</code>, so a state that lived one frame is on the record. " +
+    "<b>(1) Signed out</b>: the email / password form, no <code>#bk-new</code>, <code>#bk-new2</code>, <code>#bk-pw</code> or " +
+    "<code>#bk-pw-h</code> in the DOM, no disabled button. " +
+    "<b>(2) Signed in</b>: the block under the Restore note; identity line <i>Signed in as diana@saba.com. Backs up after every saved " +
+    "session and weight.</i>; <code>#bk-status</code> the red <i>Backup failed: No connection. Your log is unchanged on this " +
+    "device.</i> + <i>Never backed up.</i> (the aborted sign-in push, honest); both fields <code>type=password " +
+    "autocomplete=new-password</code>; Home <code>#who</code> <i>This log On this device only. Backs up to diana@saba.com after " +
+    "the next save.</i> " +
+    "<b>(3) Client side, zero requests each</b>: both blank &rarr; nothing at all (no status node, no announcement, no " +
+    "mutation); <code>abcdefg</code>/<code>abcdefh</code> &rarr; <code>.refuse role=alert</code> <i>! The two passwords do not " +
+    "match.</i>, announced assertive, both fields kept; <code>abc</code>/<code>abc</code> &rarr; <i>! Password needs at least 6 " +
+    "characters.</i>, assertive, kept; <code>abc</code>/<code>abd</code> &rarr; mismatch (unequal is checked before short); " +
+    "first filled, second blank &rarr; mismatch; 72 vs 71 characters &rarr; mismatch; a leading space on one side &rarr; " +
+    "mismatch (no trim). " +
+    "<b>(4) Enter</b> in the second field &rarr; the same path (mismatch announced, zero requests); Enter in the first &rarr; " +
+    "focus moves to <code>#bk-new2</code>, nothing else. " +
+    "<b>(5) The current password twice</b> &rarr; <b>one</b> <code>PUT /auth/v1/user 422</code>; timeline <code>+0 tiny " +
+    "Changing the password. &rarr; +352 refuse ! That is already your password.</code>; assertive once; both fields kept; button " +
+    "enabled again; identity line and <code>#bk-status</code> unchanged. " +
+    "<b>(6) A new password twice, two clicks dispatched in one task, then a third click while busy, the PUT held 1.5 s at the " +
+    "rig</b> &rarr; <b>one</b> <code>PUT 200</code>. Mid-hold: <code>#bk-pw-status</code> <i>Changing the password.</i>, " +
+    "<code>#bk-pw</code> disabled, <b>both typed values still in the fields</b> (the module flipped <code>busy</code> and " +
+    "<code>paintBackup</code> repainted the block under them &mdash; the carry held), identity and <code>#bk-status</code> " +
+    "unchanged mid-call. Resolved: <code>.advice</code> <i>Password changed.</i>, announced polite once, both fields empty, " +
+    "button enabled; the identity line, <code>#bk-status</code>, every <code>phat:v1:*</code> value and the key list " +
+    "(<code>phat:auth</code>, <code>phat:v1:prefs</code>) <b>byte-identical</b> to before the tap; Home <code>#who</code> " +
+    "byte-identical; <b>zero</b> <code>/rest/v1</code> attempts in the 4.5 s after (no push scheduled &mdash; the " +
+    "<code>USER_UPDATED</code> gate held: <code>S.sync.last</code> was not wiped, or the red line would have gone). Leaving " +
+    "Settings and coming back still shows <i>Password changed.</i> (<code>S.sync.pw</code> rides <code>S</code> until the next " +
+    "attempt, a sign-out or a user change; true, so not a defect). " +
+    "<b>(7) Sign out</b> &rarr; the signed-out form, no block, <code>phat:auth</code> gone, <code>phat:v1:prefs</code> alone. " +
+    "Sign in with the <b>original</b> (now old) &rarr; <i>! Wrong email or password.</i>, <code>token 400</code>, still signed " +
+    "out. Sign in with the new &rarr; <i>Signed in.</i>, block back, <code>S.sync.pw</code> cleared. Change back to the " +
+    "original &rarr; one <code>PUT 200</code>, <i>Password changed.</i>. Sign out, sign in with the original &rarr; " +
+    "<i>Signed in.</i>, <code>token 200</code>. " +
+    "<b>(8) Offline</b> (<code>navigator.onLine === false</code>) &rarr; <i>! No connection.</i> in the refusal shape, " +
+    "assertive, both fields kept, button enabled, <b>zero</b> requests; the only trace of <i>Changing the password.</i> is a " +
+    "1 ms entry before the refusal, the paint before the module&rsquo;s synchronous refusal. Radio back &rarr; WO-008&rsquo;s " +
+    "<code>online</code> push, aborted, as designed. " +
+    "<b>(9) The last step: the original twice</b> &rarr; <code>PUT 422</code>, <i>! That is already your password.</i> " +
+    "<b>That is the proof the account is on <code>Rs9K-&hellip;</code> as handed over.</b> " +
+    "<b>(A) The wire cut mid-call</b> (the PUT aborted <code>ERR_CONNECTION_RESET</code> at the rig, same password so the " +
+    "server could not have moved) &rarr; <i>! No connection.</i> in 274 ms, fields kept, all four buttons enabled, identity / " +
+    "<code>#bk-status</code> / disk unchanged; the next PUT after a reset lands normally (twice). " +
+    "<b>(B) A simulated lock mid-call</b>: the PUT held 2.5 s while <code>visibilitychange</code> hidden &rarr; visible, " +
+    "<code>pagehide</code> / <code>pageshow</code>, or hidden-and-stay was fired during the hold, plus a 6 s hold with no " +
+    "events &rarr; every one resolved to the refusal in hold + ~700 ms, fields kept, never a spinner. (One run of the same pair " +
+    "resolved to <i>No connection.</i> with no response on the record &mdash; a transient on the wire; the app&rsquo;s answer " +
+    "was honest, the fields were kept, and the state was clean. Not reproducible in six replays.) While busy: " +
+    "<code>#bk-pw</code>, <i>Back up now</i>, <i>Restore</i> and <i>Sign out</i> all disabled; a click forced through the " +
+    "disabled <i>Sign out</i> &rarr; <i>Could not sign out. Wait for the current backup to finish.</i> in <code>#bk-status</code>, " +
+    "still signed in, the change resolves on its own. " +
+    "<b>(C) With a real session on disk</b> (schema 5, three sets, a note, one weight) the log, bodyweight and prefs stores " +
+    "were byte-identical after boot, after sign-in, after the cut, after the held call and at the end; the Home row moved only " +
+    "from <i>Not backed up.</i> to <i>Backs up to diana@saba.com after the next save.</i> on sign-in, which is WO-008&rsquo;s. " +
+    "<b>(D) 44 px</b>: at 400 px the two inputs and the button are each <b>368 &times; 48</b>, left 16, the full content " +
+    "width, tops at 513 / 589 / 711 (nowhere near a corner), <code>scrollWidth</code> 400; at 200 % text <b>63 / 63 / 56</b> " +
+    "tall, still 368 wide, still no horizontal overflow. " +
+    "<b>(E) Two side observations, neither this lane&rsquo;s.</b> <code>signOut</code> issues <code>POST /auth/v1/logout</code> " +
+    "twice, the second abandoned <code>ERR_ABORTED</code> 5 ms after the first&rsquo;s 204 &mdash; unchanged since E-3, invisible " +
+    "to item 33&rsquo;s response-only log, harmless (scope local, same token), on the record for the PM. And one sign-in in a " +
+    "burst of replays failed once and passed on the next run &mdash; the auth rate limit item 32 met, not the control. " +
+    "<b>file:// suite 689 / 689 / 0, three tripwires; no test added &mdash; the reasons are under &ldquo;Not testable&rdquo;.</b>" +
+    "</span></li>" +
     "</ol>";
 })();
 </script>
