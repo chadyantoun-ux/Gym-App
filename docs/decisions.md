@@ -2523,3 +2523,90 @@ someone has to look at rather than remember.
 meant to run from is a skip carried forward — the S38 ruling stands); a fixture that writes a `phat:*` key (the tripwire
 held through S39); retiring manual item 9 on this run's evidence — UX §11.11 #1 and #5 (sharpness on a 3× screen, the
 white ground under gym light) are the two questions only his phone answers, and the item says so.
+
+## 2026-09-12 — WO-009 closed: photographs on `main` @ `b74a725`, N = 48; photos are gap-filled never re-fetched, so a re-shoot is a VERSION bump; agents never `git checkout` in the shared tree
+
+**Closed on `main` @ `b74a725`**, deployed from merge `bab4316`. Lane B (`Change password`) shipped first from merge
+`8cd750f` and was verified on its own. Production evidence for Lane A, all observed against the live origin and not
+inferred from a build status: **59 files byte-verified** (11 shell + 48 photographs), every photo served as `image/jpeg`,
+live `sw.js` at `v5`; on a phone-shaped client against production `phat-shell-v5` holds **57 entries** (2 core + 7
+optional + 48 photos) with all 48 photographs present, and a cold **offline** reload of Bent-over row's disclosure
+renders both photographs from the cache with zero console errors. Suite **718 / 718 / 0**. The chain and the commit for
+each item are on the WO-009 row in `docs/backlog.md` and in the closure record in `docs/work-orders/WO-009-photos.md`.
+
+**What shipped, in one line each.** 32 of 42 PHAT slots carry `fig` on the shipped plan document and render two `<img>`
+(start, end) from `assets/ex/`, 24 distinct upstream ids, 48 files, 740,232 bytes; 10 slots render the cue alone;
+`POSES`, `PAT`, `diagram()`, `limb()`, `figSeq` — 263 lines of SVG — are deleted. No store key touched, no schema move,
+a draft with three sets survives an offline reload with every value. The coach approved no pair sight-unseen: §17
+wrote 42 criteria, a general-purpose agent with an image reader viewed all 70 frames against them (§17.8), and 8 of 31
+candidate ids failed **on position** — bar at the knee, no hang, no back pad, narrow grip — never on a bystander or a
+logo. The eye check corrected its own count once (`b74a725`: 24 ids / 48 files, not 23 / 46).
+
+**Decision 1 — photographs are gap-filled, never re-fetched; a photo that changes under the same path ships only by
+a `sw.js` VERSION bump.** `sw.js` refreshes the core shell whole on every launch and re-fetches the small OPTIONAL set;
+PHOTOS are different footing: `fillPhotos()` fetches only a photo the cache does not hold and leaves one it does. The
+reason is mobile data — 48 downloads on every open is the wrong price for files that change only when the coach changes
+the map — and the gain is that a photo dropped by a dead connection at install reaches the phone on a later launch for
+the cost of that one file. The consequence is stated in `sw.js`'s own header and is now a rule here: **a re-shot photo
+under an existing path, a swapped frame order, a re-crop — anything that changes bytes at a path already cached — is
+invisible to an installed app until VERSION moves.** New paths (a slot mapped for the first time) do not need the bump
+for the photo itself but do need it because the file list changed, which the header rule already required. So in
+practice: **a new photo set = a bump, always.** QA's S39 pins `manifest.json` as a literal (sizes, count, SHA) so a
+regenerated set goes red in the suite and someone has to look at the bump rather than remember it. B-105 and B-106
+both ship this way.
+
+**Decision 2 — the injury-variant rule stands as written, and the ten cue-only slots are closed by better photographs,
+not looser criteria.** F1p.3(b) (a variant chosen for an injury history is not "the same lift with a different grip")
+took `d3g` to cue-only over a palm's width of grip; the two deadlifts went cue-only because neither source frame
+reaches mid-shin; the two seated presses because there is no back pad. Each is a position the cue exists to teach, and
+a photograph that teaches the wrong one is the wrong-figure case Rule F1 was written for. Filed once as **B-106** (P3)
+with the eight slots named and why, next to **B-105** (Rack chin, the one pair with no candidate at all). A pair Chady
+shoots himself — bar at mid-shin, side view, cropped to the 320 px frame — is the cheapest close for the two key-lift
+slots and needs no licence. **Rules out:** relaxing a criterion to let a near-miss through; "the photo is close enough
+for a hypertrophy day"; re-running the eye check against the same 31 ids hoping for a different answer.
+
+**Decision 3 — a malformed `fig` on a backup copy refuses the whole restore. Kept.** `validatePlan` types `fig` (W4)
+and `restorePayload` refuses a plan it cannot open (R4), so a hand-edited backup carrying `fig: "../x"` on a copy is
+refused whole with the row and the field named, and nothing is written. QA put it up as a contract question with the
+recommendation to keep; the PM's reading is the same by both rulings: one rule, no exception list (WO-006 W2), and a
+display-only field that the app never reads off a copy is still a field the app validates, because a restore that
+accepted "some malformed keys" would be a restore with a list of which keys are allowed to be wrong. No backup in
+existence carries a `fig`. Not a defect; a consequence, recorded.
+
+**Decision 4 — the QA test for the map derives from the coach's columns, not from the backend's table.** S38 pins the
+transcription of §17.2 into `PHAT_PLAN`; S39 re-derives the expected map from the *columns* of §17.2 and §17.8 (named
+id, fallback, eye-check cell) and compares. Two transcriptions from one column share one reading error; two from two
+columns do not. This is the B-55 lesson made structural and it is how future map changes are checked: the coach edits
+the table, S39 goes red, backend edits `PHAT_PLAN`, S38 and S39 go green together.
+
+**Decision 5 — agents never `git checkout` a branch in the shared working tree; the main session sets the branch
+before dispatch, and the brief names it.** What happened: WO-009 ran two lanes on two branches in one tree. The Lane B
+`qa-engineer` ran `git checkout wo-009-password` to verify its lane; Lane A's next commits then landed on
+`wo-009-password` until the main session noticed and repointed `wo-009-photos` at `main` (the trees were identical and
+uncommitted work carried across; nothing lost, history correct after the repoint). Same class as CLAUDE.md §4b's
+`git add -A` incident of 2026-09-10 — one tree, many writers, one agent acting as if it were alone. The rule: **an
+agent commits named paths on whatever branch it finds checked out and never changes it**; if the branch is wrong, it
+says so and stops. Two lanes that must run at once on different branches are the main session's to serialise or to
+give separate worktrees (`git worktree add`), never the agents' to switch between. Filed as **B-107** with the ask that
+the main session add the rule to CLAUDE.md §4b next to the `add -A` rule — the PM does not edit CLAUDE.md.
+
+**Minor, recorded so nobody re-opens them.** `d1e` ships on the chest-dip fallback (`Dips_-_Chest_Version`) because
+the triceps version failed on cropping and the fallback passes F1p on the slot's own cue; `Hack_Squat` is the one
+320 × 320 pair and `FIG_DIM` in `index.html` carries it, with S39 pinning the odd-pair count at one so a second odd pair
+names the table; `figFor` returns `null` for cue-only, not `""`; W2's white-ground worry (§11.4) was moot — the
+source's photographs are dark-ground gym shots and the pairs read on `--bg` without treatment. `wo-004-screens.md`
+§11.3 / §11.5 now cite addendum §17 (they said §13), and §11.7's "d2e and d3d carry no cue" is corrected — both carry
+a cue and a photograph. Lane B's two side observations: the double logout `POST` is filed as **B-108** (P3, harmless);
+`supabase/README.md` §4.1 still reads "setting not yet read" and is not on this close's file list — a one-cell edit for
+whoever is next in that file, the value is `false`.
+
+**Not proven by this close, and said so:** UX §11.11 #1 and #5 — sharpness on a 3× screen and legibility under gym
+light — are what only Chady's phone answers, and manual item 9 stays open until he looks. A phone on `sw.js` `v4`
+gets the photographs on its **second** launch, not its first: the first launch finds the new `sw.js`, installs `v5` —
+photographs included — in the background while the page still runs under the `v4` worker, and because there is no
+`skipWaiting()` the new worker takes over only when that page is gone. If the `v4` per-launch refresh has already pulled
+the new `index.html`, the first launch shows the new disclosures with the cue alone and no glyph; the second shows the
+pairs. That is the designed order (a shell never activates under a page running the old `logic.js`), not a fault.
+
+**Standing diagnosis.** Eighth tool, zero logged sessions. The photographs were built because he asked three times
+and photographs were the right answer to what he asked; they do not add a rep to anything.

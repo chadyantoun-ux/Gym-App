@@ -1926,7 +1926,7 @@ The cue is the only place words appear.
 |---|---|
 | Frames per slot | Exactly two: `assets/ex/<fig>-0.jpg` then `<fig>-1.jpg` — the source's `0` and `1` |
 | Order | Start on the left, end on the right, at every width; start **above** end when the pair wraps (§11.4). Never reversed, never one frame |
-| Which is which | The source's `0.jpg` is taken to be the start of the rep and `1.jpg` its end. **`strength-coach` confirms this per mapped pair** as part of the §13 review. A pair the source ships the other way round is reported there; this spec has no per-slot swap (§11.11) |
+| Which is which | The source's `0.jpg` is taken to be the start of the rep and `1.jpg` its end. **`strength-coach` confirms this per mapped pair** as part of the §17 review (addendum §17 — this row said §13 until WO-009 closed; 13–16 were already taken). A pair the source ships the other way round is reported there and normalised on disk by W3, so `-0` is the start; this spec has no per-slot swap (§11.11) |
 | Same person, apparatus, camera | Required. Two frames from two shoots are two exercises. The source pairs satisfy this by construction |
 | One frame only | Not a state that ships. A slot is a pair or it is `none` |
 
@@ -2011,9 +2011,9 @@ because the phone has a greyscale accessibility mode and he may use it.
 
 | | |
 |---|---|
-| The source | `docs/coach-audit-addendum.md` **§13** is the only source of slot → photo id. W4 transcribes it into `PHAT_PLAN`'s `fig`; W3's `assets/ex/map.json` is written from the same table; W6 pins the two equal. The draft table in WO-009 §1 W1 is a draft and is never transcribed |
+| The source | `docs/coach-audit-addendum.md` **§17** (§17.2 the rows, §17.8 the eye check that decides each) is the only source of slot → photo id. W4 transcribes it into `PHAT_PLAN`'s `fig`; W3's `assets/ex/map.json` is written from the same table; W6 pins the two equal. The draft table in WO-009 §1 W1 is a draft and is never transcribed |
 | Rule F1 | Governs unchanged. A photograph of a different variation, a different apparatus or a different range is a **wrong figure, and a wrong figure is a bigger loss than none.** F1.1 ground reference and load path; F1.2 direction of travel — now, the two frames are the two ends the cue describes; F1.3 the cue corrects only what he could adopt from the photograph. A slot the coach cannot see a pair for is `none`. No "close enough" |
-| Shared cues | The ten shared-cue pairs (§10.2) share a photo id or are split with a stated reason, in §13 |
+| Shared cues | The ten shared-cue pairs (§10.2) share a photo id or are split with a stated reason, in §17 |
 | Gating | A mapped slot shows its pair only while it still carries the shipped name (`shippedName`, WO-006). A renamed shipped slot shows no photograph and no cue — unchanged |
 | A photo needs a cue | A mapped slot **must** carry a non-empty cue. A pair without a cue would be a picture with no instruction and no accessible equivalent (§11.9); it does not ship. W4 or W6 pins: every slot with `fig` has a `cue` |
 | Fallback | An unmapped slot renders the **cue alone** — no box, no border, no placeholder, no `FIG 3`. §4.13 |
@@ -2045,7 +2045,7 @@ off (addendum §10.2). One row is reworded for the medium; every other row is as
 | Content | The single positional non-negotiable, or the single most common error. `Elbows pinned at the sides.` `Hips down, curl to the glutes.` |
 | Forbidden | A rep range, a load, a tempo prescription, a safety claim, "if it hurts", a substitute exercise, an assessment |
 | Relationship to the pair | The cue says what the photograph cannot show — the pad tension, the grip width, the thing to hold still. It never describes the photograph and never names a frame |
-| Missing | Two slots deliberately carry no cue — `d2e` and `d3d`, whose alternates the design dropped (B-28 / W1). They render no cue and no figure disclosure until W1 rules |
+| Missing | None. Every one of the 42 slots carries a cue. (This row once said `d2e` and `d3d` carried none, pending W1 on their alternates; W1 ruled, both carry a cue, and on WO-009 both carry a photograph — `Lying_Leg_Curls` and `One-Arm_Dumbbell_Row`. Corrected at WO-009 close, 2026-09-12.) A slot that lost its cue would lose its photograph with it under §11.5 |
 | Ownership | The 42 cues are **`strength-coach`'s to approve** — they are coaching instructions. The design's drafts are transcribed into `PHAT_PLAN` and are explicitly not signed off |
 
 ## 11.8 The acceptance test for the photographs

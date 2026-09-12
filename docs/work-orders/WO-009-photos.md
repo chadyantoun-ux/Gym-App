@@ -1,6 +1,7 @@
 # WO-009 — Exercise photographs replace the stick figures, plus `Change password`
 
 Written 2026-09-12 by `project-manager` against `main @ 6e3aa82`. Two lanes, two branches, one order.
+**Status: CLOSED 2026-09-12** — `main` @ `b74a725`, deployed from `bab4316`; Lane B from `8cd750f`. N = 48. Closure record in §7.
 
 ---
 
@@ -434,3 +435,65 @@ W1 coach (map)  ∥  W2 ux (§11 rewrite)  ∥  W8 backend (changePassword)
 | B-105 | `d1c`/`d3b` Rack chin has no source photograph; cue-only until one exists. A phone photo of his own rack chin, cropped to the same frame, is the cheapest fill and needs no licence | P3, open |
 
 B-60 and B-64 close as **superseded** on W5's merge; B-15 closes as **moot** (no SVG rendered).
+
+## 7. Closure record (2026-09-12)
+
+**Closed on `main` @ `b74a725`**, deployed from merge `bab4316`. **N = 48** (24 distinct upstream ids × 2 frames,
+740,232 bytes; the order's estimate of ~62 was before the eye check). Production, observed not inferred: **59 files
+byte-verified** on the origin, 48 photographs served as `image/jpeg`, live `sw.js` `v5`; against production
+`phat-shell-v5` holds **57 entries** with all 48 photos, and a cold **offline** reload of Bent-over row's disclosure
+renders both photographs from the cache with zero errors. Lane B shipped first from merge `8cd750f` and was verified on
+its own. Suite **718 / 718 / 0**. The corresponding decisions entry is "WO-009 closed" of 2026-09-12.
+
+### What happened against the dispatch list
+
+| # | Item | Owner | Commit | Outcome |
+|---|---|---|---|---|
+| 1 | W1 | `strength-coach` | `97fa50b` | `coach-audit-addendum.md` §17 — not §13 as this order said; 13–16 were taken. **42 criteria, zero approvals sight-unseen**: every row is a checkable position statement, not a yes. Rule F1p (F1 for photographs); **F1p.3(b)**, the injury-variant rule — a variant chosen for an injury history is not the same lift with a different grip. `d4h` released from the F1.3 register; `d5b`'s `30–35°` reaffirmed stronger. §17.5 pair test for `d2d`/`d4e` written with four branches |
+| 1a | eye check | general-purpose agent (image reader) | `eac0081` | §17.8. All 70 frames for 31 named ids viewed against §17's criteria, plus 8 frames for the fallbacks. **23 of 31 ids pass, 8 fail on position** (bar at the knee, no hang, no back pad, wide bar, hands a palm apart, no block); `d1e` ships on the chest-dip fallback; the §17.5 pair test lands on none of its four branches — both fail on bar height. F1p.4 read for its purpose (no overlay, no second lifter), bystanders recorded not failed. **By slot: 32 ship, 8 fail → none, 2 none by design.** Frame order is not `0 = start` in five pairs; W3 told |
+| 1b | count fix | main session | `b74a725` | §17.8 said 23 ids / 46 files; it is **24 / 48** (23 passing named ids plus the `d1e` fallback; `Seated_Dumbbell_Press` was never in the pass list so nothing is subtracted). QA had caught it at W6 |
+| 2 | W2 | `ux-designer` | `af26863` | `wo-004-screens.md` §11 rewritten for photographs. Ruled: **`auto-fill` is load-bearing** (a missing frame collapses the track, the survivor keeps its width); `alt=""`, the cue is the accessible carrier; **no treatment** on the photograph (no border, filter, radius, opacity); a photo that does not load → **remove the node**, never a glyph; **a mapped slot must have a cue**; the card moves once, at the tap (§11.10). §11.6's inline-SVG rule struck as this order said. §11.11 leaves sharpness on a 3× screen and legibility under gym light to the phone |
+| 3 | W3 | `release-engineer` | `14ece0f` | 48 JPEGs, 740,232 B, ≤ 320 px, from the pinned SHA via `scripts/make-photos.mjs` reading `map.json`; `assets/ex/manifest.json` (path, bytes, sha256, dimensions) is **the single source** — the `sw.js` PHOTOS array is generated from it and says so; `sw.js` → `v5` with photographs on their own footing: **gap-filled, never re-fetched**, so a photo changed under the same path reaches a phone only via VERSION (header rule, decision recorded); `usable()` gains `.jpg` (B-103); `verify-deploy.sh` reads the manifest and **refuses to run on set disagreement** (B-104); `offline-check.mjs` gains 7a/7b. Frame order normalised on disk so `-0` is the start. `LICENSE.md` verbatim, `SOURCES.md` per file |
+| 4 | W4 | `backend-engineer` | `13f782e` | `fig` on 32 `PHAT_PLAN` slots transcribed from §17.2's pass rows; `PHAT.figFor(id)` from the shipped plan only, **`null` for cue-only** (not `""`, reason at the function); `validatePlan` types `fig`; fig-needs-cue asserted on the **shipped** plan only — a restore refused over a decorative key on a copy would open a data path, so the copy is not gated on it, kept. S38. 706 / 706 / 0. No schema move, no store touched, `map.json` written from the same table |
+| 5 | W5 | `frontend-engineer` | `11fe0ab` | `figBody()` renders two `<img>` (`loading=lazy`, `decoding=async`, `alt=""`, width/height from `FIG_DIM` — `Hack_Squat` 320 × 320, everything else 320 × 213); `onerror` removes the node. **263 lines of SVG deleted** (`POSES`, `PAT`, `diagram()`, `limb()`, `figSeq`, `svg.mv`), reason at the site. The photographs are dark-ground gym shots, so §11.4's white-ground worry was moot |
+| 6 | W6 | `qa-engineer` | `12f1c9f` | **Pass.** 718 / 718 / 0; S39 (12 tests) **derives the expected map from §17.2's columns** rather than copying S38's table. 833 browser checks: cold offline, worker active, `phat-shell-v5` 57 entries, **zero 404s in 70 install requests**, all 32 mapped slots at `naturalWidth > 0` from cache, the 10 cue-only render exactly `figcue`; no reflow above an input on any of 42 slots; a store with a plan copy boots with zero writes; three sets typed → disclosure opened → offline reload → Resume → all six values back; twenty path-shaped `fig` values refused; `verify-deploy.sh` PASS 59/59 and both refusal exits observed. **Contract question**: a malformed `fig` on a backup copy refuses the whole restore — PM ruled keep (decisions). Two document errors reported to the PM (17.8's count; the spec's stale §13 and d2e/d3d lines), both fixed at close |
+| 7 | W7 | `release-engineer` + main session | `bab4316`, `d55bcdb`, `b74a725` | Merge; `.gitattributes` `*.jpg binary` (the belt-and-braces W3 flagged); the count fix. Upload of all 59 files by the main session; byte verification and the offline cache check against production as above |
+| L-B | W8 | `backend-engineer` | `97d6cee` | `PHAT_SYNC.changePassword` (`updateUser({password})`); `USER_UPDATED` gated so it never reads as a user change — `S.sync.last` untouched, no push scheduled. `security_update_password_require_reauthentication` confirmed **`false`** on the project |
+| L-B | W9 | `frontend-engineer` | `5ce6466` | `Change password` block in the signed-in Settings branch only; two fields, one button, status in `#bk-pw-status` (not `#bk-status` — a password change is not a backup event and must not move the stamp line); `The two passwords do not match.` / `Password needs at least 6 characters.` / `Changing the password.` / `Password changed.` / `That is already your password.` / `No connection.`; 368 × 48 at 400 px |
+| L-B | QA | `qa-engineer` | `1405cb4` | **Pass** against the live project on Diana's account with every `/rest/v1` request aborted at the network layer; one `PUT` per change; every `phat:v1:*` value byte-identical before and after; offline, lock mid-call, double-tap, socket cut all correct; account returned to the original password and proven so (`422`). No `file://` test — nothing in the lane has a pure half; item 34. Merged `8cd750f`, deployed, verified |
+
+### §5's four "needs from Chady", as they resolved
+
+1. **Look at the pairs once before close.** **Still his.** Manual item 9 — three disclosures at arm's length; see the
+   hand-back.
+2. **QA account for the password test.** Supplied (`diana@saba.com`, sign-ups locked); QA left the account on its
+   original password and proved it.
+3. **Secure password change.** Read as `false` by the PM before W8; nothing to turn off.
+4. **B-65 (`d3d` DB row or shrug).** Not answered; the default stands and ships `One-Arm_Dumbbell_Row`.
+   `Dumbbell_Shrug` passed the eye check on 17.4's criterion, so the revert is one map edit plus a VERSION bump if he
+   calls it.
+
+### Incident recorded
+
+The Lane B `qa-engineer` ran `git checkout wo-009-password` in the shared working tree; Lane A's next commits landed
+on that branch until the main session repointed `wo-009-photos` to `main` (identical trees, uncommitted work carried).
+Nothing lost. Rule in decisions (2026-09-12, WO-009 closed, Decision 5) and B-107: **agents never `git checkout` a
+branch in the shared tree; the main session sets the branch before dispatch.** The CLAUDE.md §4b line is the main
+session's to add.
+
+### Backlog
+
+Closed: B-101, B-102, B-103, B-104 (done, evidence on the rows). Closed superseded: B-60, B-64. Closed moot: B-15.
+Still open: B-105 (Rack chin, no candidate). Filed at close: **B-106** (the ten cue-only slots on one row, P3 — better
+source photographs close it, not looser criteria), **B-107** (the shared-worktree checkout hazard, P3, a CLAUDE.md §4b
+rule), **B-108** (the double logout `POST` Lane B QA saw, P3, harmless). `supabase/README.md` §4.1's "setting not yet
+read" is still stale and was not on this close's file list.
+
+### Hand-back
+
+Open the app on your phone twice — the first launch installs `v5` behind the `v4` shell, the second shows the
+photographs. Then, at arm's length in the gym light, open three disclosures: **Squat** (`d2a`, the standard 3:2 pair),
+**Hack squat** (`d4b`, the one square pair, dark-ground), **Bent-over row** (`d1a`, the pair the offline check was run
+on). The question is one word per pair: does it read. If any does not, say which and what you saw — sharpness or the
+light — that is manual item 9 and the only thing about this order a phone can still answer. Diana's password is in
+the transcript of this session; she can change it from Settings now. Eighth tool, zero sessions. Log Upper Power.
