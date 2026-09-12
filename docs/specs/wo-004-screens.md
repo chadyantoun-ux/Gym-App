@@ -1882,153 +1882,160 @@ When WO-002 lands, this line is replaced by the design's and an `IMPORT` control
 
 ---
 
-# 11. Brief — the movement figures
+# 11. Brief — the movement photographs
 
-Chady has ruled the design's placeholders and the current diagrams both out: *"diagrams are very bad,
-we need better ones."* This is the brief someone can produce artwork against. **It does not design the
-artwork.**
+**Rewritten 2026-09-12 (WO-009 W2).** The stick figures are retired, not iterated. Three rounds —
+B-60/B-64, WO-005's occupancy rebuild, and *"the movement and cue visuals sucks … it's not clear at
+all"* — is the ceiling of a ≤ 12-stroke drawing at 64 px: it cannot show a seat, a pad or a handle,
+and that is where every F1 drop happened. Each mapped slot now shows **two photographs**, the start
+and the end of the rep, from `free-exercise-db` (public domain; pinned SHA in WO-009 §0.3).
+Everything this section used to say about strokes, arrows, ghost and solid poses, occupancy,
+viewBoxes and inline SVG is **deleted, not amended**. This section does not choose a photograph; the
+choosing is `strength-coach`'s and lives in one place (§11.5).
 
 ## 11.1 What a figure is for
 
-One question, asked between sets by someone who is tired: **"what does this movement look like at the
-top and at the bottom, and which way am I pushing?"** It is not an instruction manual, not a safety
-notice and not a muscle diagram. If the figure cannot answer that in about one second at 64 px, it
-has failed and the cue is doing all the work.
+One question, asked between sets by someone who is tired: **"what does this movement look like at
+each end, and which way am I moving?"** It is not an instruction manual, not a safety notice and not
+a muscle diagram. If the pair cannot answer that in about one second at arm's length, it has failed
+and the cue is doing all the work — which the cue is written to be able to do (§11.7).
 
-## 11.2 What every figure must communicate
+## 11.2 What the pair must communicate
 
-Four things, in this order of importance:
+Four things, in this order of importance. A photograph of the right apparatus gets the first, second
+and fourth for free — that is the whole reason for photographs — and carries the third by order alone.
 
-1. **The body's position relative to a ground reference** — floor, bench, seat, bar, dip bars, prone
-   pad, calf block. The ground reference is what makes a hinge legible as a hinge and not a squat.
-2. **Which joints move.** A hinge shows a closed hip and a near-fixed knee; a squat shows both
-   closing. This is the single most common thing a bad diagram loses.
-3. **The direction of travel**, as one arrow drawn along the path of the working end — the bar, the
-   handle, the dumbbell, or the body itself. It runs **ghost → solid** and points at the position he
-   has to reach. **It is not a claim about which phase is the concentric** (§11.3, ruled WO-005): a
-   64 px drawing should not be making that claim, and for five of the fifteen patterns it would put
-   the emphasis on the pose nobody gets wrong.
-4. **The implement and where it is held.** A bar across the back, a bar at arm's length, two
-   dumbbells, a handle, nothing.
+1. **The body's position relative to a ground reference** — floor, bench, seat, pad, block, bars. The
+   ground reference is what makes a hinge legible as a hinge and a leg press as a leg press. Every
+   slot §12.3 dropped from the drawings was dropped for this item.
+2. **Which joints move** — visible as the difference between the two frames.
+3. **The direction of travel**, carried by **reading order only**: left frame first, right frame
+   second, the order the rep is performed. No arrow, no caption, no `start` / `end` label. The words
+   stay out of the frame and out of the disclosure label, as ruled in WO-005 and for the same reason:
+   a before-and-after needs no legend, and a legend on a 44 px control is text for the audience that
+   is deliberately not shown the picture (§11.9).
+4. **The implement and where it is held.**
 
-**What a figure must never carry:** text inside the frame, a rep count, a load, an arrow implying
-speed, a face, muscle shading, or anything that reads as a safety claim. The cue is the only place
-words appear.
+**What the app never adds to a photograph:** a caption, a label, a rep count, a load, an overlay, a
+crop, a mirror, a filter. The photograph is shown as the source shows it, resized and nothing else.
+The cue is the only place words appear.
 
-## 11.3 The two poses — one convention, all fifteen
-
-**Ruled 2026-09-11 (WO-005). The shipped convention is right; this section was wrong and is
-rewritten. No figure is redrawn.**
-
-What it used to say — START is "the lengthened / loaded position", FINISH is "the end of the
-concentric", the FINISH pose is solid — contradicted §11.5, which gives `squat`, `hinge`, `hpush`,
-`fly` and `dip` the descent. It also contradicted **itself in a single sentence**: the lengthened
-position of a squat *is* the bottom, and the same clause called standing the start. An engineer
-could not obey both halves, and the rebuild (`615c4e5`) correctly obeyed the one that was drawn
-fifteen times.
-
-**The start/finish vocabulary is deleted from this brief.** It described a rep phase, which is not
-something a 64 px two-pose drawing can assert and not something this app needs to assert. What
-replaces it is what the artwork already does:
+## 11.3 The two frames
 
 | | |
 |---|---|
-| Two poses per figure | **SOLID** and **GHOST** |
-| SOLID | **The pose the arrow points at** — the position he has to reach, the end the movement is judged on, and the one people get wrong. Named per pattern in §11.5 so nobody has to infer it |
-| GHOST | The other end of the same rep |
-| Which is solid | The arrowhead pose, always. All fifteen, without exception, so he learns it once |
-| The arrow | Exactly one, ghost → solid, along the path of the **working end**, not the joint |
-| Overlap | The two poses share a frame and a ground reference. They are the same figure at two moments, never two figures side by side |
+| Frames per slot | Exactly two: `assets/ex/<fig>-0.jpg` then `<fig>-1.jpg` — the source's `0` and `1` |
+| Order | Start on the left, end on the right, at every width; start **above** end when the pair wraps (§11.4). Never reversed, never one frame |
+| Which is which | The source's `0.jpg` is taken to be the start of the rep and `1.jpg` its end. **`strength-coach` confirms this per mapped pair** as part of the §13 review. A pair the source ships the other way round is reported there; this spec has no per-slot swap (§11.11) |
+| Same person, apparatus, camera | Required. Two frames from two shoots are two exercises. The source pairs satisfy this by construction |
+| One frame only | Not a state that ships. A slot is a pair or it is `none` |
 
-**Why the arrowhead pose and not the end of the concentric.** The figure's job (§11.1, §11.8 test 2)
-is *what does this look like where it matters*. On a squat, a hinge, a press, a fly and a dip that is
-the bottom — depth, shin angle, elbow path, stretch, dip depth. Drawing the concentric end solid
-would make those five resolve to a person standing still holding a bar, which is the least
-informative pose in the pattern and makes the `squat`/`hinge` pair — the one §11.5 says must not look
-alike — nearly indistinguishable, since everything that separates them lives in the bottom position.
-The cost of the alternative is also real and concrete: re-authoring five of fifteen patterns and
-re-running §11.8 against all of them, to end up with weaker figures.
+## 11.4 Layout and rendering
 
-**The per-pattern choice of which end is solid is coach-adjacent** where it is not obvious. The
-fifteen already drawn are ruled as shipped. **A sixteenth pattern's solid end goes to
-`strength-coach`** with the slot's cue, because "the one people get wrong" is a coaching judgement.
+The disclosure sits between the prescription line and the set card, **on `--bg`** (it is a sibling of
+`.card`, not inside it). Open, it holds the pair and then the cue. `.showfig` is unchanged: full width
+× 44 px, the disclosure control measured in WO-004 W6 after B-43.
 
-**The words `start` and `finish` stay out of the frame, and out of the disclosure label too —
-ruled.** §11.2 forbids text inside the frame and the rebuild removed them correctly. The question
-raised was whether `› MOVEMENT & CUE` should grow to carry the convention instead. It should not:
+```
+ › MOVEMENT & CUE                                      .showfig  full width × 44, unchanged
+                                                       .fig.on   padding 0 16, on --bg
+ ┌·················┐  ┌·················┐
+ :                 :  :                 :
+ :   start frame   :  :    end frame    :             178 × 119 each, 12 px of --bg between
+ :                 :  :                 :             (dotted edge is this diagram's, not the
+ └·················┘  └·················┘              app's: the photo has no border)
+ Cue. Keep the lower back flat for the whole rep.     .figcue, spans the row, --dim, "Cue." --bone
+ ┌─ .card ────────────────────────────────────────┐
+ │ 1   [ − ] 100 [ + ] kg    [ − ]  5  [ + ] reps  │   set rows, untouched
+```
 
-1. **The arrow already carries the whole relationship.** Two poses joined by one arrow read as one
-   movement, and the arrow says which end is being pointed at. Faint-then-solid is not a convention
-   he has to be taught; it is how a before/after is drawn.
-2. **The label serves the audience that cannot see the figure.** The figure is `aria-hidden` (§11.6)
-   and the cue is its accessible carrier. Adding a legend about ghost and solid poses to a 44 px
-   control makes a screen reader announce a description of artwork it is deliberately not being
-   shown.
-3. **The words are what caused this contradiction.** Naming the poses re-imports the rep-phase claim
-   §11.5 disagreed with for five patterns. Deleting the vocabulary removes the conflict rather than
-   relocating it into a label.
+**Dimensions.** The source is 850 × 567, landscape 3:2. W3 resizes to **320 × 213**, aspect preserved,
+no crop; `320 / 213 = 1.502`.
 
-This is a claim about legibility, so it is **verified, not asserted**: §11.8 test 7 exists to fail if
-the convention is not self-evident without text.
+| | 400 px viewport, 100 % text | 520 column, 100 % | 400 px, 200 % text |
+|---|---|---|---|
+| Content width (`.fig` padding 16 + 16) | 368 | 488 | 368 |
+| Frames per row | 2 | 2 | **1** — start above end |
+| Each frame | **178 × 119** | 238 × 158 | 368 × 245 |
+| Gap (`--s3`) | 12 | 12 | 12 |
+| Pair height | 119 | 158 | 502 |
+| Scale of the 320 px file | 0.56× CSS px | 0.74× | 1.15× upscale (§11.11) |
 
-## 11.4 Rendering — how it reads at 64 px on a dark ground
-
-| Constraint | Value |
-|---|---|
-| Render size | Legible at **64 × 64 CSS px**, and again at 200 % text (128 px). Authored on one viewBox, scaled |
-| Stroke | Effective **≥ 2.5 px at a 64 px render**. Round caps and joins. No fills, no hatching, no gradients |
-| Complexity | **≤ 12 strokes** in the solid pose. If it needs more, the pattern is being over-described |
-| Occupancy | The figure fills **≥ 80 %** of the frame's height. A small figure in a big box is unreadable at arm's length |
-| Contrast | Solid pose `--bone` (12.7 : 1 on `--surface`). Ghost pose ≥ `.45` (3.8 : 1 — the 3 : 1 non-text floor, since the ghost carries meaning). Arrow `--amber` (7.9 : 1) |
-| Greyscale | Solid and ghost must remain distinguishable in greyscale by **value and stroke weight**, not by hue |
-| Ground reference | One rule or one simple form. It is scenery; it may sit at the non-text floor |
-
-## 11.5 The fifteen patterns, and what each must show
-
-Mapped across all 42 slots today by `PAT` (`index.html:374`). ~~The map is correct and is kept~~ —
-**struck: B-64 found three wrong mappings and they are resolved there, not here.** Only the artwork
-changes.
-
-**Column headers renamed by the WO-005 ruling (§11.3); every cell below is unchanged and no figure is
-redrawn.** `START (ghost)` → `GHOST`, `FINISH (solid)` → `SOLID`. Read `SOLID` as *the position to
-reach*, and note that in every row it is already the pose the arrow points at — which is the whole
-evidence that the shipped convention, not the old §11.3, is the one the table was written against.
-
-| Pattern | Slots it serves | Ground | GHOST (the other end) | SOLID (the position to reach) | Arrow along |
-|---|---|---|---|---|---|
-| `squat` | d2a d2b d4a d4b d4c | floor | Standing, bar on the back | Bottom, hips below knee height, both joints closed | the bar, downward |
-| `hinge` | d2d d4e | floor | Standing, bar at arm's length | Hips pushed back, shins near-vertical, bar against the legs | the bar, downward and back |
-| `hpull` | d1a d3a d3c d3d | floor | Torso hinged, arms straight | Same torso angle, bar at the lower ribs | the bar, toward the body |
-| `vpull` | d1b d1c d3b d3e | overhead bar | Full dead hang, arms straight | Chest toward the bar | the body, upward |
-| `hpush` | d1d d5a d5b d5c d5h | bench | Arms extended over the chest | Elbows at ~45°, weight at chest level | the weight, downward |
-| `fly` | d5d | bench | Arms extended over the chest | Wide, elbow angle unchanged, stretch | the weight, outward |
-| `dip` | d1e | dip bars | Arms locked, slight forward lean | Upper arm at parallel | the body, downward |
-| `vpush` | d1f d3f | seat with back | Weight at shoulder height | Arms extended overhead, ribs down | the weight, upward |
-| `lat` | d3h | floor | Arms at the sides | Arms at shoulder height, elbows leading | one hand, outward and up |
-| `uprow` | d3g | floor | Bar at arm's length | Bar at lower chest, elbows above the hands | the bar, upward |
-| `curl` | d1g d5e d5f d5g | floor | Arms straight, elbows at the sides | Forearm vertical, **upper arm unmoved** | the hands, upward |
-| `tri` | d1h d5i d5j | bench or standing | Forearm folded | Arm extended, **upper arm unmoved** | the hands, along the arc |
-| `legext` | d2c d4d | seat | Knees bent, shin vertical | Knee extended, shin horizontal | the foot, forward |
-| `legcurl` | d2e d4f d4g | prone pad | Legs straight, hips flat | Heels toward the glutes, **hips still flat** | the foot, upward |
-| `calf` | d2f d2g d4h d4i | block | Heel below the block, full stretch | Full plantarflexion, heel high | the heel, upward |
-
-**The pairs that must not look alike**, because these are the confusions a bad figure creates:
-`squat`/`hinge` · `hpull`/`uprow` · `curl`/`tri` (identical geometry, opposite arrow — the *fixed
-upper arm* is the shared point and must be visibly fixed in both) · `legext`/`legcurl`.
-
-## 11.6 The build constraint — no CDN, no icon library, no build step
+**Rules.**
 
 | Rule | |
 |---|---|
-| Format | **Inline SVG in the document.** Authored as coordinate data in a table, exactly as `POSES` is today, and rendered by a function |
-| Forbidden | An icon library, a CDN font or sprite, an external `.svg` file, an `<img>`, a base64 raster, a webfont glyph |
-| Why | The app is one file a phone opens directly from `file://` and from static hosting, offline, with nothing between the source and the screen (CLAUDE.md §3.1, §3.2) |
-| Ids | Every `marker` / `defs` id is **unique per rendered instance** (B-15). Two open figures of the same pattern must not collide |
-| Colour | Tokens only. No hex outside `:root` (CLAUDE.md §4) |
-| A11y | The figure is **`aria-hidden="true"`** and the cue is the accessible carrier. A stick figure's honest text alternative *is* the cue, and two descriptions of one thing is noise |
-| Fallback | A pattern with no artwork renders **nothing** — no box, no label, no `FIG 3`. §4.13 |
+| Aspect | Always preserved: `height:auto`, never a fixed height, never `object-fit:cover`. A crop takes the ground reference, and the ground reference is §11.2 item 1 |
+| Reserved box | Each `<img>` carries `width="320" height="213"` — the file's real pixels — so the browser reserves the box before the bytes land. Opening the disclosure moves the set card exactly once, at the tap; nothing on the card moves when the image paints, and nothing moves when one fails to (§11.10). This is the "nothing resizes above an input" ruling applied to a photograph |
+| Width | Each frame is `calc(50% − 6px)` of the content width while two fit on a row, and the full content width when they do not. Never wider than the content width; no horizontal scroll at any width or text size |
+| Wrap threshold | A **text-size** threshold, not a viewport one: the pair wraps when `8em` exceeds half the content width. At 368 that is a base size above ≈ 22 px — one row at 125 %, two rows from ≈ 140 % and at 200 %. At 520 the row holds to ≈ 185 % |
+| Order when wrapped | Start above end; the cue below both. DOM order is start, end, cue and the layout never reorders it |
+| Cue | Spans the full row below the pair, `--dim`, `Cue.` lead in `--bone`, wraps freely. Its length budget is §11.7's |
+| Sizing unit | The frames are sized by the **column**, not by the text. Text zoom does not scale them by itself; it triggers the wrap, which is what makes them larger. Pinch-zoom is available for a closer look (B-13 removed `maximum-scale=1`) |
+
+Reference rules that satisfy the table — W5 may do otherwise if it measures the same:
+
+```css
+.fig.on{display:grid; gap:var(--s3);
+  grid-template-columns:repeat(auto-fill, minmax(max(8em, calc(50% - 6px)), 1fr))}
+.fig img{display:block; width:100%; height:auto; max-width:100%}
+.figcue{grid-column:1 / -1}
+```
+
+`auto-fill`, not `auto-fit`, is load-bearing. When one image is removed (§11.10) `auto-fill` keeps the
+empty track and the survivor keeps its 178 px; `auto-fit` would collapse the track and stretch the
+survivor to 368 × 245, moving the set card 126 px under his thumb. The empty track is `--bg` on `--bg`
+— nothing is drawn, so it is not the box the F1 fallback forbids.
+
+**Dark ground.** The photographs are white-ground studio shots; `--bg` is near-black. Ruled, in tokens
+only:
+
+| | Ruling | Why |
+|---|---|---|
+| Border | **None** | A 1 px `--line` (bone at .45) against a white edge is invisible on the white side and a grey hairline on the dark side. The photograph's own edge already draws itself at ≈ 16 : 1; a border adds a second, fainter edge beside it |
+| Radius | `--r`, which is 0 | Square, like every other rectangle in the app |
+| Opacity, `filter`, blend, scrim | **Forbidden** | The complaint is clarity. Each of these buys a calmer card by making the image less legible — the opposite trade to the one he asked for |
+| Shadow, outline, plate | None | A `--surface` plate behind the pair would be the placeholder box §4.13 forbids, and it would show when a photo is missing |
+| Gap | `--s3` of `--bg` between the frames | So two white rectangles read as two moments, not one panorama. This is the only treatment, and it is layout, not colour |
+
+Why this does not blow out the card: the pair is 368 × 119 of white on a ≈ 400 × 750 screen, collapsed
+by default, opened by his own tap, and the set card under it is unchanged. The brightest thing on the
+screen while the disclosure is open is the thing he opened it to look at. If it is still too bright
+on the gym floor, that is a finding from §11.8 test 1 for the PM — not a runtime filter I
+pre-authorise, and not a change to the source files without a decision.
+
+**Greyscale.** A photograph on a white ground survives greyscale by construction. §11.8 test 4 stays
+because the phone has a greyscale accessibility mode and he may use it.
+
+## 11.5 The map — one source, one rule
+
+| | |
+|---|---|
+| The source | `docs/coach-audit-addendum.md` **§13** is the only source of slot → photo id. W4 transcribes it into `PHAT_PLAN`'s `fig`; W3's `assets/ex/map.json` is written from the same table; W6 pins the two equal. The draft table in WO-009 §1 W1 is a draft and is never transcribed |
+| Rule F1 | Governs unchanged. A photograph of a different variation, a different apparatus or a different range is a **wrong figure, and a wrong figure is a bigger loss than none.** F1.1 ground reference and load path; F1.2 direction of travel — now, the two frames are the two ends the cue describes; F1.3 the cue corrects only what he could adopt from the photograph. A slot the coach cannot see a pair for is `none`. No "close enough" |
+| Shared cues | The ten shared-cue pairs (§10.2) share a photo id or are split with a stated reason, in §13 |
+| Gating | A mapped slot shows its pair only while it still carries the shipped name (`shippedName`, WO-006). A renamed shipped slot shows no photograph and no cue — unchanged |
+| A photo needs a cue | A mapped slot **must** carry a non-empty cue. A pair without a cue would be a picture with no instruction and no accessible equivalent (§11.9); it does not ship. W4 or W6 pins: every slot with `fig` has a `cue` |
+| Fallback | An unmapped slot renders the **cue alone** — no box, no border, no placeholder, no `FIG 3`. §4.13 |
+| Neither | No disclosure control at all. §4.13, unchanged |
+
+## 11.6 Delivery — files, cache, no build step
+
+| Rule | |
+|---|---|
+| Format | JPEG. `assets/ex/<fig>-0.jpg` and `<fig>-1.jpg`, 320 px wide, produced once by W3's developer tool and committed. Not a build step: the app references files by relative path and runs from `file://` and from static hosting with nothing between the source and the screen (CLAUDE.md §3.1) |
+| Element | `<img>`. **This section's former rule — inline SVG only, no `<img>`, no external file, no raster — is struck.** It was a UX rule for the drawing approach, written so a hand-authored figure could not drift into an icon library. It was never a §3 constraint. Photographs are files |
+| Still forbidden | A CDN, an icon library, a webfont glyph, a runtime fetch from any origin but the app's own, and a base64 raster inlined into `index.html` — a megabyte in the document is a page that cannot open on a dead connection |
+| Offline | Every photograph is precached by `sw.js` as OPTIONAL (W3). The cache is the only source at runtime. There is **no** network fallback to the upstream repository, ever |
+| Attributes | `alt=""` (§11.9) · `width="320" height="213"` (§11.4) · `loading="lazy"` · `decoding="async"` · an error handler that removes the node (§11.10). `loading="lazy"` inside `display:none` defers the request until the disclosure opens — intended; it also means W6's `naturalWidth` check must open the disclosure before it asserts |
+| Colour | Tokens only; no hex outside `:root` (CLAUDE.md §4). The photograph is content, not a colour |
+| Ids | None. No `defs`, no `marker`, nothing per instance; B-15 is moot |
+| Dimensions | W3 guarantees every file is 320 × 213, or names the one that is not so W5 writes that file's real attributes (§11.11) |
 
 ## 11.7 The cue text beside it
+
+Unchanged by WO-009 — the cues were never the complaint, Q1 is closed and the 42 strings are signed
+off (addendum §10.2). One row is reworded for the medium; every other row is as before.
 
 | Rule | |
 |---|---|
@@ -2037,25 +2044,119 @@ upper arm* is the shared point and must be visibly fixed in both) · `legext`/`l
 | Voice | Imperative, second person, no hype, no emoji, no exclamation mark |
 | Content | The single positional non-negotiable, or the single most common error. `Elbows pinned at the sides.` `Hips down, curl to the glutes.` |
 | Forbidden | A rep range, a load, a tempo prescription, a safety claim, "if it hurts", a substitute exercise, an assessment |
-| Relationship to the figure | The cue says what the figure cannot draw. It never restates the arrow |
+| Relationship to the pair | The cue says what the photograph cannot show — the pad tension, the grip width, the thing to hold still. It never describes the photograph and never names a frame |
 | Missing | Two slots deliberately carry no cue — `d2e` and `d3d`, whose alternates the design dropped (B-28 / W1). They render no cue and no figure disclosure until W1 rules |
 | Ownership | The 42 cues are **`strength-coach`'s to approve** — they are coaching instructions. The design's drafts are transcribed into `PHAT_PLAN` and are explicitly not signed off |
 
-## 11.8 The acceptance test for the artwork
+## 11.8 The acceptance test for the photographs
 
-1. At **64 px**, in **greyscale**, at arm's length: a person who knows the movement names it.
-2. Same conditions: a person who does not know it can copy the finish position.
-3. Cover the cue: the figure still answers "which way am I pushing".
-4. Cover the figure: the cue is still a complete, correct instruction.
-5. Put `squat` and `hinge` side by side: nobody confuses them. Same for the other three pairs.
-6. At 200 % text the figure and the cue both grow and neither clips.
-7. **With no text anywhere — frame, label or cue — a person can say which of the two poses they are
-   being told to reach.** Added by the WO-005 ruling (§11.3). It is the test that makes "the
-   convention is self-evident after one exposure" a checkable claim instead of an assumption, and it
-   is what would have to fail before the words `start` and `finish` come back anywhere near a figure.
+On the phone, on the gym floor, at arm's length. Tests 1–3 are run with the cue covered.
 
-If (1) and (2) fail, the figure does not ship. **A missing figure is a smaller loss than a wrong
-one** — the cue survives alone, and §4.13 already specifies that state.
+1. A person who knows the lift names it from the pair alone.
+2. A person who does not know it can copy the **end frame** — feet, hands, depth.
+3. Which way am I moving — answered from the order of the two frames, with no arrow and no words.
+4. In greyscale (the phone's own mode), 1–3 still hold.
+5. Cover the pair: the cue is a complete, correct instruction on its own.
+6. At 200 % text: start above end, nothing clips, no horizontal scroll, the cue wraps and is fully
+   readable.
+7. `d2d` beside `d4e` (stiff-leg deadlift, Romanian deadlift) and `d2e` beside `d4g` (lying, seated
+   leg curl): two different lifts, each nameable. The other three drawn pairs are gone — a photograph
+   does not confuse a squat with a hinge, and `curl` / `tri` was a stroke problem, not a photo one.
+
+The old test 7 — the ghost/solid convention without text — is deleted; it tested a stroke convention
+that no longer exists. Old 1, 2, 3, 4, 6 map to new 1, 2, 3, 5, 6; old 5 becomes new 7.
+
+If 1 and 2 fail, the pair does not ship: `none` in §13. **A missing figure is a smaller loss than a
+wrong one** — the cue survives alone, and §4.13 already specifies that state. WO-009 §5.1 asks Chady
+to run 1–3 on two or three slots before close; the result goes on the `tests.html` checklist with what
+was observed, per the checklist's own rule.
+
+## 11.9 Accessibility — ruled
+
+**The photographs are decorative. `alt=""` on both. The cue is the accessible content.**
+
+The literal, per image:
+
+```html
+<img src="assets/ex/Barbell_Squat-0.jpg" alt="" width="320" height="213" loading="lazy" decoding="async">
+```
+
+| | |
+|---|---|
+| `alt` | `""` — empty, present. Not omitted (an omitted `alt` makes some readers announce the file name: "Barbell underscore Squat dash zero dot jpg"), not `role="presentation"` (`alt=""` is the standard and needs no ARIA) |
+| `aria-hidden` | **Not** on `.fig`: it holds the cue and is the `aria-controls` target of `.showfig`. No wrapper is required by the layout; if W5 adds one it may carry `aria-hidden="true"`, which is redundant with `alt=""` and not wrong |
+| Focus order | Unchanged: `.showfig` → the set inputs. Images are not focusable; no new tab stop |
+| Live region | None. Opening a disclosure is the user's own act; nothing to announce |
+| Contrast | Not applicable to a photograph. The cue stays `--dim` (7.8 : 1 on `--bg`) with `Cue.` in `--bone` |
+| Motion | Nothing animates |
+
+**Why decorative, and not `alt="Barbell squat, bottom position"`:**
+
+1. The cue is the instruction, and it was signed off as the accessible carrier (addendum §10.2; the
+   previous §11.6). The exercise name is already the screen's heading. A third description of one
+   thing, read aloud between the heading and the cue, is noise for the one audience that gets nothing
+   from the picture anyway — a screen-reader user cannot copy a frame.
+2. WCAG 1.1.1 is satisfied when the equivalent is in adjacent text. It is: heading plus cue.
+3. Two hand-authored strings per slot is 62 strings transcribed by hand — the B-55 failure class —
+   and a wrong `alt` is a wrong figure for the only audience that cannot check it against the picture.
+
+**What would reverse it:** a mapped slot without a cue. §11.5 forbids that combination so the ruling
+holds.
+
+## 11.10 States
+
+| State | What renders | Movement on screen |
+|---|---|---|
+| Both cached | Start left, end right, cue below. §11.4 | The card moves once, at the tap |
+| Both missing (offline, never cached) | Each `<img>` fires `error`; each node is **removed from the DOM**. The cue alone, spanning the row. **No broken-image glyph, no alt box, no empty frame, no border, no message** — a missing photo is not an error to him, it is the cue-only state | The row collapses to the cue at the moment of opening, before the eye is on an input. Accepted |
+| One missing | The survivor in its own track at its own width; the other track empty (`--bg`, nothing drawn); cue below | None: the row height is the survivor's |
+| Loading (online, first open before the cache holds it) | The box reserved at 178 × 119 by the attributes, nothing drawn inside; the cue already visible; the photo paints in place | None |
+| Offline, cached | Identical to online. The cache is the only source either way | — |
+| Unmapped slot, cue present | Cue alone. No box, no placeholder. §4.13 | — |
+| Mapped slot, shipped name changed | No photograph, no cue (`shippedName` false). Unchanged | — |
+| Neither photo nor cue | No disclosure control. Unchanged | — |
+| 400 px, 100 % | One row, 178 × 119 each | — |
+| 200 % text | Stacked, start above end, 368 × 245 each; nothing clips; no horizontal scroll | — |
+| `figBody` throws | Per §0.7: the slot's catch, the disclosure body empty, the set rows untouched and paint regardless | — |
+
+The removal is required, not optional. `alt=""` alone leaves a browser free to draw its broken-image
+icon inside a box that has explicit dimensions, and one browser does. The handler is W5's — an inline
+`onerror` survives `innerHTML` insertion; a listener attached after insertion must be attached in the
+same task as the insertion — but the observable rule is the row above: nothing, ever, where a photo
+failed to arrive.
+
+**Copy.** No new string. There is nothing to say to him that the cue does not already say, and a
+missing photograph is not an event.
+
+## 11.11 Not settled — for the PM
+
+1. **Sharpness on his phone.** A 320 px file in a 178 px slot is 1.11× upscaled on device pixels at
+   DPR 2 and 1.67× at DPR 3 — `[Likely]` visibly soft on a 3× phone, and it is the sharpness of a
+   *photograph* that is the whole point. If §11.8 test 1 says soft, W3's cap moves to **360** (2× of
+   178) and the byte budget rises ≈ 27 % — inside the 1.5 MB ceiling on the PM's own estimate. I would
+   rather he look at 320 first than spend the bytes on a guess.
+2. **Upscale when stacked.** At 200 % on a 400 px phone each frame is 368 wide from a 320 px file
+   (1.15×); at 520 it is 488 (1.5×). Accepted over a ragged 320 px column with 48–168 px of dark to its
+   right. Item 1 mostly absorbs it.
+3. **Cue line count at 200 %.** W5's acceptance criterion says "the cue is ≤ 2 lines" at 200 %.
+   `[Likely]` false: `.figcue` at 200 % is 25 px, ≈ 29 characters per 368 px line, so a 90-character
+   cue is three lines. The requirement here is "nothing clips, wraps freely"; the two-line claim is
+   §11.7's, measured against the old side-by-side layout, and QA should measure rather than inherit
+   it.
+4. **`0.jpg` is the start** — assumed from the sample; confirmed per pair by the coach in §13. If any
+   pair is reversed at source there is no per-slot swap in this spec, and the PM decides whether one
+   is worth a field or the slot goes `none`.
+5. **The white ground on the gym floor.** Only the phone test answers whether 368 × 119 of white is
+   too much under gym light. I have ruled out every runtime treatment; if it fails, the options are a
+   levels curve applied identically to every file at generation and recorded in the manifest, or
+   living with it. Neither is pre-authorised.
+6. **Dimensions attribute source.** The spec assumes every file is 320 × 213. W3 either guarantees it
+   or emits `w`/`h` in `manifest.json` for W5 to read. One line at dispatch.
+7. **`d2e` and `d3d`** are listed in §11.7 as cue-less pending a WO-004 ruling, and both are in the
+   draft map. §11.5 says a mapped slot must have a cue. Whichever way §13 goes, the two must agree;
+   QA pins it.
+8. **This file's preamble** (line 5) still describes §11 as "the figures' pose convention". Outside
+   this brief; one line for whoever edits the preamble next.
 
 ---
 
