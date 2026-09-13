@@ -191,7 +191,7 @@
      zero-width squeeze that made it invisible at 400px is structurally
      impossible. It shares the row with Rule X1's EXTRA badge, right-aligned,
      and the badge changes no height - so a row becoming EXTRA moves nothing. */
-  .ghost{color:var(--faint); font-size:.78125rem; flex:1 1 100%;
+  .ghost{color:var(--faint); font-size:.78125rem; flex:1 1 100%; min-width:0;
     min-height:1.25rem; padding-left:22px; display:flex; align-items:baseline;
     justify-content:space-between; gap:var(--s2)}
   /* WO-010 (spec 4.4a rules 2-3). The ghost row's line box is FIXED at the
@@ -199,7 +199,13 @@
      measures the same whether or not a total is on it, and the row NEVER
      wraps: the ghost text ellipsises, the total and EXTRA never truncate.
      The total is --bone, 800, .875rem, tabular, in a 5.5em slot so three
-     sets read as one column - that column is the "per set" he asked for. */
+     sets read as one column - that column is the "per set" he asked for.
+     WO-012 W5 P3: .ghost itself needs min-width:0. It is a flex ITEM of the
+     row, and a flex item's automatic minimum is its min-content - which for
+     a nowrap flex container is the whole ghost string plus the total, so at
+     200 % text the row overflowed the viewport and .gtxt's ellipsis never
+     got a chance (QA: 429 px with `Last 44 lb total × 12`; MEASURED here
+     407 with `Last 68.5 lb × 15` before this line, 400 after). */
   .gtxt{min-width:0; flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .gtot{color:var(--bone); font-size:.875rem; font-weight:800; font-variant-numeric:tabular-nums;
     min-width:5.5em; flex:none; white-space:nowrap}
@@ -207,7 +213,7 @@
   /* WO-010 (spec 4.4b.1). The load chip: full width, 44 px, above the card,
      present from first paint. Text is the fact; the chevron is the one amber
      mark, as on the day rows - it is a control and it opens something. */
-  .ldchip{width:100%; min-height:var(--ldchip); display:flex; align-items:center; justify-content:space-between;
+  .ldchip{width:100%; min-height:max(var(--ldchip),calc(6.5rem - 48px)); display:flex; align-items:center; justify-content:space-between;
     gap:var(--s2); padding:0 var(--s4); background:transparent; color:var(--bone); text-align:left;
     font-size:1rem; font-weight:800; margin-bottom:var(--s1)}
   .ldchip .ct{min-width:0; overflow-wrap:anywhere}
@@ -216,7 +222,19 @@
      this exercise`, `From last time`. The height is fixed at 56 in CSS for
      EVERY chip, including a device that has never chosen a unit (whose chip
      DOM is main's, byte for byte - D6), so the rows never move when line 2
-     first appears. Line 2 is text inside the button: one target, one name. */
+     first appears. Line 2 is text inside the button: one target, one name.
+     WO-012 W5 P3: THE SAME RESERVATION AT 200 % TEXT. 56 px is a px token,
+     so at 200 % the chip was content-sized and a tier change that took
+     line 2 from two lines to one moved the rows 32 px. The min-height is
+     now max(56px, 6.5rem - 48px): exactly 56 at a 16 px root (the spec's
+     chip, nothing changes at 100 %), 160 at 32 px - two lines of each,
+     MEASURED 152 in Archivo at 400 px, plus 8 spare. Linear between, and
+     checked at every 10 % from 100 to 200 at 400 and 393 px against the
+     tallest line-1 / line-2 pair: never under the content, 2.8 px spare at
+     the tightest (120 %). Not a fixed height: it never clips. Known limit:
+     at 360 px and 160 % the content is 122 against 118 - a 4 px move on
+     one tier change, on a phone narrower than this app's floor. A change
+     to the chip's font sizes re-measures this line. */
   .ldchip .l1,.ldchip .l2{display:block}
   .ldchip .l2{font-size:.75rem; font-weight:400; color:var(--faint); margin-top:2px}
   .ldchip .chv{color:var(--amber); font-size:1.375rem; line-height:1; flex:none}
@@ -2177,12 +2195,12 @@ function vGym(){
      kg pressed. Unreadable (prefs, or the profile refused whole) -> neither
      pressed and a refusal above; a tap still attempts the write. The
      refusal under it is the write's. */
-  const u=gymUnit(), unreadable=S.prefsBad||S.gymBad;
+  const u=gymUnit(), unreadable=S.prefsBad||S.gymBad, sh=gymShown();
   h+=`<span class="lbl" id="gym-unit-l">I lift in</span>`;
   if(unreadable) h+=`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>Could not read your unit. Pick one to set it again.</p></div>`;
   h+=`<div class="seg" role="group" aria-labelledby="gym-unit-l">
-      <button data-gymunit="kg" aria-pressed="${u==="kg"?"true":"false"}"><span class="mk" aria-hidden="true"></span>kg</button>
-      <button data-gymunit="lb" aria-pressed="${u==="lb"?"true":"false"}"><span class="mk" aria-hidden="true"></span>lb</button></div>
+      <button data-gymunit="kg" aria-pressed="${sh==="kg"?"true":"false"}"><span class="mk" aria-hidden="true"></span>kg</button>
+      <button data-gymunit="lb" aria-pressed="${sh==="lb"?"true":"false"}"><span class="mk" aria-hidden="true"></span>lb</button></div>
     <div id="gym-unit-err">${S.gymUnitErr?`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>${esc(S.gymUnitErr)}</p></div>`:""}</div>
     <p class="tiny">Every exercise starts in this. Pick another unit on an exercise's card and it keeps that one.
       Bodyweight stays in kg.</p>
@@ -2273,6 +2291,13 @@ async function gymWrite(bars,okMsg,undoFn){
    it never touches an override (level 2, prefs.gym.ex) - that is what
    "it keeps that one" in the helper means. Bodyweight is not touched. */
 const gymUnit=()=>(!S.prefsBad&&!S.gymBad&&S.prefs.gym&&(S.prefs.gym.unit==="kg"||S.prefs.gym.unit==="lb"))?S.prefs.gym.unit:null;
+/* WO-012 W5 P2: what the SEGMENT shows. gymUnit() is the stored fact and
+   stays null for absent - defaultKnown(), the chip's second line and D6 all
+   read that null. The segment reads THIS: absent -> kg pressed (spec 21.1),
+   unreadable -> neither. A tap on kg while absent is a real write (cur is
+   null, not "kg"), so the WO-010 device leaves the history tier by choosing
+   - once written, the tap on the pressed option does nothing, as before. */
+const gymShown=()=>{ const u=gymUnit(); return u!==null?u:((S.prefsBad||S.gymBad)?null:"kg"); };
 async function setGymUnit(u){
   u=u==="lb"?"lb":"kg";
   const cur=gymUnit();
@@ -2294,7 +2319,7 @@ async function setGymUnit(u){
 /* The segment and its refusal, in place: no render on a failure, so a bar
    form with a caret in it is not repainted for a write that changed nothing. */
 function paintGymUnit(){
-  const cur=gymUnit();
+  const cur=gymShown();
   document.querySelectorAll("[data-gymunit]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.gymunit===cur?"true":"false"));
   const el=document.getElementById("gym-unit-err");
   if(el) el.innerHTML=S.gymUnitErr?`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>${esc(S.gymUnitErr)}</p></div>`:"";
@@ -2462,6 +2487,20 @@ function ghostText(e,prev,k,changed,mode){
        The row's `= {w} kg` total is the conversion's marker (coach 21.4).
        A kg-direct card is the line below, byte for byte (D6). */
     let g=""; try{ g=PHAT.priorGhost(pv,mode,e.implement); }catch(err){ g=""; }
+    /* WO-012 W5, QA's ruling on his d1a: `Last 44 lb total × 12` over
+       `Last 44 lb × 12` did not separate the bare bar from 20 kg added -
+       both rows read 44. DISPLAY RULE, IN THE VIEW, PENDING UX'S WORD
+       (`bar only` / `empty bar`; checklist item 12): on a bar card, a prior
+       whose added weight on THIS bar is zero reads `Last bar only × 12`; a
+       prior UNDER the bar keeps the engine's `total` line. "Zero" is Rule
+       EQ1's zero, |added| <= LOAD_EQ: 20 kg on a 44 lb bar is 0.04 kg of
+       plates, the same 0.1 kg drift the four EQ1 sites already read as one
+       load. Seeding is untouched (priorInUnit / seedInUnit, not this string).
+       Backend can fold this into priorGhost once UX picks the word. */
+    if(g&&mode.bar!==undefined){
+      let add=NaN; try{ add=pw.value-PHAT.toKg(Number(mode.bar),mode.bu); }catch(err){ add=NaN; }
+      if(isFinite(add)&&Math.abs(add)<=PHAT.LOAD_EQ) return "Last bar only × "+pr.value;
+    }
     return g||"No prior set.";
   }
   const w=pw.value>0?String(r1(pw.value)):PHAT.loadWord(0,e.implement);
