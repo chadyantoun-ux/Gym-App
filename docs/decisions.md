@@ -2610,3 +2610,49 @@ pairs. That is the designed order (a shell never activates under a page running 
 
 **Standing diagnosis.** Eighth tool, zero logged sessions. The photographs were built because he asked three times
 and photographs were the right answer to what he asked; they do not add a rep to anything.
+
+### 2026-09-12 — The first session is logged. The standing diagnosis moved
+After nine work orders, a repo, a team, a deploy and a database, Chady logged a session. Recorded so
+the next session does not open with "zero logged sessions" — it is one, and the number it is judged
+against is now the next one. Every ask from here on is measured against a store that holds real
+numbers, which is why WO-010 pins that session by id before it moves a byte.
+
+### 2026-09-12 — WO-010: `w` stays the kg total; the components live beside it, and a set without them was entered in kg
+Chady's gym: a 20 kg bar, plates and dumbbells in lb, cable stacks in kg. Ruled by the PM in WO-010 §1
+for three owners to build the same thing; the coaching half (the increment ladder) is the coach's and
+is not ruled here.
+- **`w` is always the kg total.** Every engine reads `w` in kg and none is touched. The components
+  are one optional object on the set, `ld: {bar, bu, add, au}` — one key, so presence is atomic: the
+  whole breakdown is there and valid, or it is absent. **Absent means entered in kg**, which is exactly
+  true of every set logged before schema 6, including the one logged today.
+- **Rounded to 0.1 kg, once, at the total, never per component.** Every load token already renders
+  through `r1`, so the number stored is the number he saw (criterion D2); 0.05 would store what the
+  screen rounds away. The smallest lb step (2.5 lb = 1.13 kg) cannot collide at 0.1 kg. Two sets built
+  from the same plates always store the same `w`, so P1's `mixed`/`repeatLoad` compare exactly.
+- **`w` and `ld` must agree** (0.05 kg); a disagreement is `malformed` and blocks the save — never a
+  silent rewrite in either direction. The SQL validator applies the same test with the same message.
+- **Schema 6 on `V_LD`.** The pass stamps the version and moves zero bytes, the v4/v5 shape. The
+  importer owes 2–6.
+- **The unit and the bar are properties of how the load was built, not of the exercise.** Chady's two
+  settled points — added weight is a **total**, and **no split by exercise type** because he
+  substitutes freely — mean the app never reads `implement` to decide what the row offers. Unit and bar
+  are chosen per card (all sets of an exercise share them), stamped on every set, and remembered per
+  exercise id from the last logged session. First time on a card: kg direct, no bar — today's row.
+- **The gym profile is bars only, per device, in `phat:v1:prefs`.** Not the plate/machine/dumbbell
+  unit defaults the ask floated: their only use would be an `implement`-keyed default, the split he
+  refused; history memory buys the same tap saving from session two without inventing a bar he did not
+  lift. Per device because WO-008 made two phones two people, the gym is where the phone goes, and the
+  log is self-describing so nothing depends on the profile existing. Cost accepted as B-113.
+- **The stepper never snaps.** `+` on an off-lattice kg value steps 2.5 from where it is; in `ld` mode
+  it steps `add` in its own unit, 5 lb or 2.5 kg. Snapping changes a number he typed.
+- **Substitution is not marked in this order** (B-111). The coach states the trade-off; Chady
+  decides. B-05 is the general remedy and is still open.
+- **CLAUDE.md §3.5 conflicts literally** ("Units are kg, steps of 2.5 kg"). Resolved as: *stored*
+  units are kg, one number per set; *entry* may be in lb, converted once at the total; the stepper
+  steps in the entry unit. His decision on the substance; the wording change waits for his
+  reaffirmation (WO-010 §5 #4).
+**Found while writing it, and filed as B-112 rather than left implicit:** any key beside `w` on a set is
+dropped twice today — `validateEntry` emits `{w, r}` and `hydrateDraft` rebuilds `{w, r}`. Harmless with
+no third key; a P0 the moment `ld` exists. Closed inside WO-010 before the row can produce a component.
+**Rules out:** storing the entry-unit number as `w`; converting per component; a per-implement entry
+form; a unit setting that changes what an engine reads; any migration that touches a logged set.
