@@ -38,7 +38,9 @@
         } else if(k==="phat:v1:draft"){
           note = "  day=" + j.dayId + " date=" + j.date + " entries=" + (j.entries?Object.keys(j.entries).length:"?") + " savedAt=" + (j.savedAt?new Date(j.savedAt).toISOString():"-");
         } else if(k==="phat:v1:prefs"){
-          note = "  onboarded=" + j.onboarded + " backup=" + JSON.stringify(j.backup) + " profileless=" + (j.profile===undefined);
+          note = "  onboarded=" + j.onboarded + " backup=" + JSON.stringify(j.backup) + "
+      gym=" + JSON.stringify(j.gym) + "
+      merge=" + JSON.stringify(j.merge);
         } else if(/^phat:v1:recover:/.test(k)){
           var inner=null; try{ inner = j.value && typeof j.value==="object" ? j.value : (typeof j.raw==="string" ? JSON.parse(j.raw) : null); }catch(e){}
           note = "  reason=" + j.reason + " savedAt=" + (j.savedAt?new Date(j.savedAt).toISOString():"-") + (inner&&inner.sessions ? " sessions=" + inner.sessions.length : "") + (j.raw?" raw=" + String(j.raw).slice(0,80):"");
