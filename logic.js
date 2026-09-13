@@ -38,9 +38,17 @@
           prescription", and that reading is exactly true of every entry logged
           before this version, because no plan had been edited yet. The v5 pass
           writes the version and nothing else.
+       6  WO-010 W3 — the load's components. A SET written from here on may
+          carry `ld: {bar?, bu?, add, au}`, the bar and the added weight the kg
+          total `w` was built from, in the units he built it in. `w` stays
+          the kg total every engine reads; `ld` sits beside it, additive, and
+          an ABSENT ld MEANS "entered in kg, no bar" — which is exactly true of
+          every set logged before this version, including the first real one
+          (2026-09-12, client_id 1789264514484). The v6 pass writes the
+          version and nothing else: no set gains a key, no w moves.
      A store written by any earlier version must still load, forever.
-     WO-002's importer therefore owes schema 2, 3, 4 AND 5. */
-  var SCHEMA_VERSION = 5;
+     WO-002's importer therefore owes schema 2, 3, 4, 5 AND 6. */
+  var SCHEMA_VERSION = 6;
   /* EVERY migration pass gates on its OWN constant, never on SCHEMA_VERSION.
      The near-miss on record (decisions.md, "Schema 3, and what it obliges"):
      the dateBasis pass was gated on `logVer < SCHEMA_VERSION`, so bumping the
@@ -52,6 +60,7 @@
   var V_STATEKEYS = 3;   /* the four V1/D1/W1 keys — was `logVer < SCHEMA_VERSION` */
   var V_PLAN = 4;        /* the plan document */
   var V_RX = 5;          /* Rule PE1 — entries may carry `rx` */
+  var V_LD = 6;          /* WO-010 — sets may carry `ld`, the load's components */
   /* The keys schema 3 adds to the log store, and their defaults. Built fresh
      on every call — a shared {} default would be handed to two stores. */
   var V3_KEYS = ["reintro", "lastReintroDate", "calChangedAt", "deload"];
@@ -104,6 +113,26 @@
      and unweighted dips are real sets (B-21). */
   var W_MIN = 0, W_MAX = 500;
   var R_MIN = 1, R_MAX = 100;
+
+  /* ---- the load's components (WO-010 §1) ----
+     ONE TABLE. supabase/schema.sql's phat_validate_session_doc COPIES these
+     numbers (WO-010 W5); change one here and the SQL mirror moves with it, or
+     a set the app saved is refused on push. Exported as PHAT.LIMITS.
+
+     1 lb = 0.45359237 kg, exactly (the international pound). Never 0.45,
+     never 0.4536: 90 lb is 40.823 kg and rounds to 40.8, and a shortened
+     factor drifts the total at 200+ lb.
+
+     `add` is bounded in ITS OWN unit (0..500 kg / 0..1100 lb); `bar` is
+     0 < bar <= 50 kg / 110 lb. The composed total `w` is still bounded by
+     W_MIN..W_MAX. LD_TOL is how far a typed `w` may sit from the total its
+     own components compose to before it is a refusal (never a correction). */
+  var LB_KG = 0.45359237;
+  var LOAD_UNITS = ["kg", "lb"];
+  var ADD_MAX = { kg: 500, lb: 1100 };
+  var BAR_MAX = { kg: 50, lb: 110 };
+  var LD_TOL = 0.05;
+  var LD_KEYS = ["bar", "bu", "add", "au"];
 
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -235,6 +264,173 @@
     return { ok: true, value: n };
   }
 
+  /* ------------------------------------------- the load's components (WO-010)
+
+     A set's weight may be BUILT: a bar in kg or lb plus added weight in kg or
+     lb, with the kg total in `w` — the one number every engine reads — and
+     the build beside it in `ld`. §1 of the work order fixes the shape:
+
+       {w: 60.8, r: 5, ld: {bar: 20, bu: "kg", add: 90, au: "lb"}}
+
+     `add` and `au` required; `bar` and `bu` both present or both absent;
+     nothing else. Strings while drafting, numbers once saved, exactly as w
+     and r are. An ABSENT ld means entered in kg with no bar, which is what
+     every set logged before schema 6 was. */
+
+  function isUnit(u) { return u === "kg" || u === "lb"; }
+
+  /* toKg(v, unit) -> kg as a raw number (unrounded), or NaN for anything it
+     cannot convert. Rounding happens ONCE, at the total, in composeLoad. */
+  function toKg(v, unit) {
+    if (typeof v !== "number" || !isFinite(v)) return NaN;
+    if (unit === "kg") return v;
+    if (unit === "lb") return v * LB_KG;
+    return NaN;
+  }
+
+  /* One component, in its own unit: the same text rule as parseWeight (NUM_W:
+     digits, at most one dot; "-5" and "1e3" are malformed, never coerced) with
+     its own range. A number is checked as its string, so a saved -5 is
+     refused the same way a typed "-5" is. `value` is the trimmed text as
+     typed; `raw` the same, kept on the ok branch for a sentence to quote. */
+  function parsePart(v, lo, hi) {
+    var s = str(v).trim();
+    if (s === "") return { ok: false, reason: "empty", value: s };
+    if (!NUM_W.test(s)) return { ok: false, reason: "malformed", value: s };
+    var n = Number(s);
+    if (!isFinite(n)) return { ok: false, reason: "malformed", value: s };
+    if (n < lo || n > hi) return { ok: false, reason: "range", value: s };
+    return { ok: true, value: n, raw: s };
+  }
+
+  /* composeLoad(ld) -> { ok:true, w }  |  { ok:false, reason, field, value }
+
+     The kg total of a build, ROUNDED TO 0.1 kg ONCE AT THE TOTAL — never per
+     component. Every load token the app prints goes through r1, so the
+     number stored is the number on the screen (criterion D2), and two sets
+     built from the same plates always compose to the same w. Per-component
+     rounding would compound: r1(20) + r1(40.823) happens to agree with
+     r1(60.823) here and does NOT in general (a mutant W7 pins).
+
+     Refuses, naming the FIRST bad field in shape order, on:
+       reason "malformed"  ld is not an object, or carries a key outside
+                           {bar, bu, add, au} (field = that key), or add/bar
+                           is not a number in NUM_W's sense
+       reason "empty"      add absent or blank; or bu given with no bar
+       reason "unit"       au or bu not "kg"/"lb" (absent counts); bar given
+                           with no bu is field "bu"
+       reason "range"      add outside 0..ADD_MAX[au], bar outside
+                           0 < bar <= BAR_MAX[bu], or the composed total
+                           outside W_MIN..W_MAX (field "w")
+     `value` is the offending text verbatim when there is one. */
+  function composeLoad(ld) {
+    if (!isObj(ld)) return { ok: false, reason: "malformed", field: null, value: "" };
+    var k;
+    for (k in ld) {
+      if (Object.prototype.hasOwnProperty.call(ld, k) && LD_KEYS.indexOf(k) < 0) {
+        return { ok: false, reason: "malformed", field: k, value: str(ld[k]) };
+      }
+    }
+    var hasBar = ld.bar !== undefined, hasBu = ld.bu !== undefined;
+    var pa = parsePart(ld.add, 0, isUnit(ld.au) ? ADD_MAX[ld.au] : Infinity);
+    if (!pa.ok && pa.reason !== "range") return { ok: false, reason: pa.reason, field: "add", value: pa.value };
+    if (!isUnit(ld.au)) return { ok: false, reason: "unit", field: "au", value: str(ld.au) };
+    if (!pa.ok) return { ok: false, reason: "range", field: "add", value: pa.value };
+    var kgBar = 0;
+    if (hasBar || hasBu) {
+      if (!hasBar) return { ok: false, reason: "empty", field: "bar", value: "" };
+      var pb = parsePart(ld.bar, 0, isUnit(ld.bu) ? BAR_MAX[ld.bu] : Infinity);
+      if (!pb.ok && pb.reason !== "range") return { ok: false, reason: pb.reason, field: "bar", value: pb.value };
+      if (!isUnit(ld.bu)) return { ok: false, reason: "unit", field: "bu", value: str(ld.bu) };
+      if (!pb.ok) return { ok: false, reason: "range", field: "bar", value: pb.value };
+      if (pb.value <= 0) return { ok: false, reason: "range", field: "bar", value: pb.raw };
+      kgBar = toKg(pb.value, ld.bu);
+    }
+    var w = r1(kgBar + toKg(pa.value, ld.au));
+    if (!isFinite(w)) return { ok: false, reason: "malformed", field: "add", value: pa.raw };
+    if (w < W_MIN || w > W_MAX) return { ok: false, reason: "range", field: "w", value: String(w) };
+    return { ok: true, w: w };
+  }
+
+  /* The saved form of a build: numbers, keys in §1's order, bar/bu only when
+     the build has one. Only ever called on an ld composeLoad accepted. */
+  function ldNumbers(ld) {
+    var out = {};
+    if (ld.bar !== undefined) { out.bar = Number(str(ld.bar).trim()); out.bu = ld.bu; }
+    out.add = Number(str(ld.add).trim());
+    out.au = ld.au;
+    return out;
+  }
+
+  /* buildWord(ld) -> "20 kg bar + 90 lb" | "45 lb" | "" when the build does
+     not compose. The build in HIS units, for the ghost line and — if the
+     coach's §18 says so (W4) — the verdict. Numbers print as typed-and-parsed,
+     never rounded: he typed 90, the word says 90. No "bodyweight" here: what a
+     0-add or a no-bar build MEANS on a bodyweight slot is Rule Z2's, and Z2
+     is W4's. */
+  function buildWord(ld) {
+    var c = composeLoad(ld);
+    if (!c.ok) return "";
+    var n = ldNumbers(ld);
+    var s = String(n.add) + " " + n.au;
+    if (n.bar !== undefined) s = String(n.bar) + " " + n.bu + " bar + " + s;
+    return s;
+  }
+
+  /* loadModeFor(prevEntry) -> { au, bar?, bu? }
+
+     The card's default: how the load was built the LAST time this exercise
+     was logged, read from the last logged entry's first set that carries an
+     ld. No ld on any set — or no entry at all — is {au: "kg"}: kg direct, no
+     bar, today's row. Always an object, never null, so a caller reads
+     mode.au without a guard; `bar`/`bu` are present only when the build
+     had one. Nothing here is a default keyed by `implement` (his ruling: no
+     split by type) and nothing is remembered that he did not lift.
+
+     Also accepts (sessions, exId) or (exId, sessions) and resolves the entry
+     through lastFor — the dispatch named that form; the work order §1 named
+     this one. One function, one answer. */
+  function loadModeFor(a, b) {
+    var e = a;
+    if (Array.isArray(a) && typeof b === "string") e = lastFor(a, b);
+    else if (typeof a === "string" && Array.isArray(b)) e = lastFor(b, a);
+    var mode = { au: "kg" };
+    if (!isObj(e) || !Array.isArray(e.sets)) return mode;
+    for (var i = 0; i < e.sets.length; i++) {
+      var s = e.sets[i];
+      if (!isObj(s) || s.ld === undefined) continue;
+      if (!composeLoad(s.ld).ok) continue;
+      var n = ldNumbers(s.ld);
+      mode = { au: n.au };
+      if (n.bar !== undefined) { mode.bar = n.bar; mode.bu = n.bu; }
+      return mode;
+    }
+    return mode;
+  }
+
+  /* validateGymProfile(gym) -> { ok, problems:[{i, field, reason, value}] }
+     The Settings -> Gym list: { bars: [{n, w, u}] }. A bar needs a non-empty
+     name, a unit in {kg, lb} and a weight in (0, BAR_MAX[u]]. Per device, in
+     phat:v1:prefs, never pushed — the log is self-describing, so nothing
+     here is history and nothing reads it but the card's sheet. */
+  function validateGymProfile(gym) {
+    var out = { ok: false, problems: [] };
+    if (!isObj(gym)) { out.problems.push({ i: -1, field: null, reason: "malformed", value: "" }); return out; }
+    if (gym.bars !== undefined && !Array.isArray(gym.bars)) {
+      out.problems.push({ i: -1, field: "bars", reason: "malformed", value: "" }); return out;
+    }
+    (gym.bars || []).forEach(function (b, i) {
+      if (!isObj(b)) { out.problems.push({ i: i, field: null, reason: "malformed", value: "" }); return; }
+      if (typeof b.n !== "string" || b.n.trim() === "") out.problems.push({ i: i, field: "n", reason: "empty", value: str(b.n) });
+      if (!isUnit(b.u)) out.problems.push({ i: i, field: "u", reason: "unit", value: str(b.u) });
+      var pw = parsePart(b.w, 0, isUnit(b.u) ? BAR_MAX[b.u] : Infinity);
+      if (!pw.ok) out.problems.push({ i: i, field: "w", reason: pw.reason, value: pw.value });
+      else if (pw.value <= 0) out.problems.push({ i: i, field: "w", reason: "range", value: pw.raw });
+    });
+    out.ok = out.problems.length === 0;
+    return out;
+  }
+
   /* ------------------------------------------------------- classification */
 
   /* "blank"      both fields empty            → skipped on save, silently
@@ -272,15 +468,34 @@
      the `7.5.0` token). `value` is the trimmed raw string as typed — never a
      coerced number, so nothing here can leak a silently-fixed value.
      A row can be bad in the weight, in the reps, or in both; `problems` holds
-     one item per bad field, in w-then-r order, INCLUDING the merely-empty one
-     on a row that is also malformed. The status names the worst thing wrong
-     with the row; `problems` names everything wrong with it, so the user is
-     not sent back twice for the same row. */
+     one item per bad field, in w-then-r-then-ld order, INCLUDING the
+     merely-empty one on a row that is also malformed. The status names the
+     worst thing wrong with the row; `problems` names everything wrong with
+     it, so the user is not sent back twice for the same row.
+
+     THE BUILD (WO-010 §1, B-112). A set may carry `ld`; `out.ld` reports it:
+     null when the key is absent, else {ok, reason, sub, value, w} where `w`
+     is the kg total the components compose to. An ld problem is one item on
+     `problems` with field "ld", the SUB-field that is wrong (`sub`: "add",
+     "au", "bar", "bu", an unknown key, or null) and the token he typed. It is
+     always BLOCKING (status "malformed"): a set with a build the app cannot
+     read is not a set it may save half of.
+       - w and ld must agree: |w - composeLoad(ld).w| <= LD_TOL, else one
+         problem {field:"ld", reason:"mismatch", sub:null, value:<add as
+         typed>, kg:<composed>}. NEVER corrected in either direction — a
+         typed 61 stays 61 and the row is refused by name.
+       - a blank row (w and r empty) that carries an ld whose add is empty is
+         BLANK, skipped silently like any empty row (D6). An ld with add
+         typed on a row with nothing else is not blank: the number he typed
+         must not vanish, so it is "incomplete" naming w and r.
+       - ld: null is not absent. The key is present and it is not a build;
+         the frontend deletes the key to mean "kg direct". */
   function describeSet(s) {
     var out = {
       status: "malformed",
       w: { ok: false, reason: "malformed", value: "" },
       r: { ok: false, reason: "malformed", value: "" },
+      ld: null,
       problems: []
     };
     if (!isObj(s)) {
@@ -294,14 +509,31 @@
     out.w = { ok: pw.ok, reason: pw.ok ? null : pw.reason, value: w };
     out.r = { ok: pr.ok, reason: pr.ok ? null : pr.reason, value: r };
 
-    if (w === "" && r === "") { out.status = "blank"; return out; }
+    var hasLd = s.ld !== undefined;
+    var c = hasLd ? composeLoad(s.ld) : null;
+    var addTok = (hasLd && isObj(s.ld)) ? str(s.ld.add).trim() : "";
+    if (hasLd) out.ld = { ok: c.ok, reason: c.ok ? null : c.reason, sub: c.ok ? null : c.field,
+                          value: c.ok ? addTok : c.value, w: c.ok ? c.w : null };
+
+    if (w === "" && r === "" && (!hasLd || (isObj(s.ld) && addTok === ""))) { out.status = "blank"; return out; }
 
     if (!pw.ok) out.problems.push({ field: "w", reason: pw.reason, value: w });
     if (!pr.ok) out.problems.push({ field: "r", reason: pr.reason, value: r });
+    var ldBad = false;
+    if (hasLd) {
+      if (!c.ok) {
+        ldBad = true;
+        out.problems.push({ field: "ld", reason: c.reason, value: c.value, sub: c.field });
+      } else if (pw.ok && Math.abs(pw.value - c.w) > LD_TOL + 1e-9) {
+        ldBad = true;
+        out.ld.ok = false; out.ld.reason = "mismatch";
+        out.problems.push({ field: "ld", reason: "mismatch", value: addTok, sub: null, kg: c.w });
+      }
+    }
 
     /* Parseability first, completeness second. "empty" is not a parse failure —
        it is absence, and absence is what "incomplete" is for. */
-    var bad = (!pw.ok && pw.reason !== "empty") || (!pr.ok && pr.reason !== "empty");
+    var bad = (!pw.ok && pw.reason !== "empty") || (!pr.ok && pr.reason !== "empty") || ldBad;
     if (bad) out.status = "malformed";
     else if (w === "" || r === "") out.status = "incomplete";
     else out.status = "complete";
@@ -331,13 +563,24 @@
   /* --------------------------------------------------------- validation */
 
   /* validateEntry(sets)
-       → { sets:[{w:Number, r:Number}], problems:[{i, field, reason, value, status}] }
+       → { sets:[{w:Number, r:Number, ld?}], problems:[{i, field, reason, value, status}] }
      `sets` holds only complete sets, already coerced to numbers — never NaN,
      never a string. `problems` is non-empty when the caller must refuse to
      save. Nothing is ever dropped without appearing in one of the two.
      `value` (the offending text, verbatim) and `status` (the row's class, so
      the copy can differ between a malformed row and an unfinished one) are
-     additive — the {i, field, reason} contract is unchanged. */
+     additive — the {i, field, reason} contract is unchanged.
+
+     B-112 (WO-010 W3). A complete set that carries a valid `ld` is emitted as
+     {w, r, ld} with ld's numbers in §1's key order — bar, bu, add, au — and
+     a set without one is emitted as {w, r}, the byte-identical string this
+     function has always produced. Before this, the line below built {w, r}
+     from scratch and every other key on the set died here, silently, on
+     save; the moment a set had a third key that was a P0 loss path. An ld
+     problem is a problem like any other, carrying `sub` (the sub-field) and,
+     for a mismatch, `kg` (what the components compose to) — both only on
+     ld problems, so the {i, field, reason, value, status} rows for w and r
+     are what they were. */
   function validateEntry(sets) {
     var out = { sets: [], problems: [] };
     if (!Array.isArray(sets)) {
@@ -350,14 +593,18 @@
       var d = describeSet(sets[i]);
       if (d.status === "blank") continue;
       if (d.status === "complete") {
-        out.sets.push({ w: parseWeight(d.w.value).value, r: parseReps(d.r.value).value });
+        var set = { w: parseWeight(d.w.value).value, r: parseReps(d.r.value).value };
+        if (d.ld) set.ld = ldNumbers(sets[i].ld);
+        out.sets.push(set);
         continue;
       }
       /* Closure over i is safe: `var i` is function-scoped but the push happens
          synchronously in this iteration. */
       for (var j = 0; j < d.problems.length; j++) {
         var p = d.problems[j];
-        out.problems.push({ i: i, field: p.field, reason: p.reason, value: p.value, status: d.status });
+        var q = { i: i, field: p.field, reason: p.reason, value: p.value, status: d.status };
+        if (p.field === "ld") { q.sub = p.sub; if (p.reason === "mismatch") q.kg = p.kg; }
+        out.problems.push(q);
       }
     }
     return out;
@@ -379,10 +626,12 @@
       var e = draft.entries[exId];
       var v = validateEntry(isObj(e) ? e.sets : null);
       v.problems.forEach(function (p) {
-        res.problems.push({
+        var q = {
           exId: exId, setIndex: p.i, field: p.field, reason: p.reason,
           value: p.value, status: p.status
-        });
+        };
+        if (p.field === "ld") { q.sub = p.sub; if (p.reason === "mismatch") q.kg = p.kg; }
+        res.problems.push(q);
       });
       var note = isObj(e) ? str(e.note) : "";
       if (v.sets.length || note.trim() !== "") {
@@ -475,7 +724,11 @@
      mid-session the draft's copy is the true one.
 
      The plan's prescription, never a deloaded one: pass the PLAN document, not
-     a deloadEx()'d day. A deload is a week, not an epoch (Rule PE1). */
+     a deloadEx()'d day. A deload is a week, not an epoch (Rule PE1).
+
+     A SET'S `ld` (schema 6, WO-010) rides through untouched: the sets come
+     from validateDraft, which emits {w, r, ld} for a built set and {w, r} for
+     a kg-direct one, and nothing below re-reads or rebuilds a set. */
   function buildSession(draft, dayId, dateStr, id, planId, plan) {
     var v = validateDraft(draft);
     if (!v.ok) return null;
@@ -2611,6 +2864,34 @@
         }
       }
 
+      /* ---- schema 6: a set may carry ld (WO-010 W3) ----
+         The first shape change since the store held real data — his session
+         of 2026-09-12 (client_id 1789264514484), six entries, every set
+         {w, r} in kg. This pass does not touch it, or any set: an ABSENT ld
+         MEANS "entered in kg, no bar", which is exactly what every set logged
+         before schema 6 was, so stamping one would be inventing a build he
+         did not record. Every session, entry, set, note and rx comes out
+         byte-identical (the suite pins that session by id through v5 -> 6).
+         All it writes is the version, so the store stops understating its
+         shape to WO-002's importer (which now owes 2-6) and to sync.
+
+         Gated on V_LD, never on SCHEMA_VERSION; reports unconditionally, the
+         v5 idiom, not v4's. */
+      var v6Bumped = false;
+      if (logVer < V_LD && (nlog || logIsObj)) {
+        if (!nlog) {
+          nlog = {};
+          Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
+        }
+        v6Bumped = true;
+        nlog.schemaVersion = SCHEMA_VERSION;
+        notes.push({
+          level: "info", key: "log",
+          msg: "Schema " + V_LD + ": sets may now carry ld, the bar and added weight " +
+               "the kg total was built from. No set was touched and no key was added."
+        });
+      }
+
       /* ---- the plan store, if the caller has one ----
          Absent (undefined) is the normal case today and does nothing: an empty
          install still boots with zero writes. Repairs are additive only. */
@@ -2638,7 +2919,7 @@
          The bodyweight store carries no schema-3 key, so a v2 bw store is not
          rewritten just to restamp its version — bwPayload() stamps it on the
          next real bodyweight entry. One less boot write, no content at stake. */
-      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped || v5Bumped;
+      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped || v5Bumped || v6Bumped;
       out.bwChanged = markedBw > 0 || dropped.length > 0;
       out.plansChanged = pres.changed === true;
       out.changed = out.logChanged || out.bwChanged || out.plansChanged;
@@ -2781,12 +3062,67 @@
   function isDemo(v) { return isObj(v) && v.demo === true; }
   var DEMO_MSG = "marked demo:true; demo data is never backed up as history";
 
+  /* The ld half of validateSessionDoc. Pushes every problem it finds onto
+     `p` with the sentences tabled below, and returns the composed kg total
+     when the build is whole (so the caller can test it against w), else
+     null. Every fault is collected, not just the first: a document with a
+     bad unit AND a bad bar names both. */
+  function ldDocProblems(ld, who, p) {
+    if (!isObj(ld)) { p.push(who + "ld must be an object"); return null; }
+    var whole = true, k;
+    for (k in ld) if (Object.prototype.hasOwnProperty.call(ld, k) && LD_KEYS.indexOf(k) < 0) {
+      p.push(who + "ld has an unknown key: " + k); whole = false;
+    }
+    var gotAu = ld.au === undefined ? "(absent)" : str(ld.au);
+    if (!isUnit(ld.au)) { p.push(who + "ld.au must be kg or lb, got: " + gotAu); whole = false; }
+    var pa = parsePart(ld.add, 0, isUnit(ld.au) ? ADD_MAX[ld.au] : Infinity);
+    if (!pa.ok && pa.reason === "range") { p.push(who + "ld.add out of range (0..500 kg, 0..1100 lb): " + str(ld.add)); whole = false; }
+    else if (!pa.ok) { p.push(who + "has an unreadable ld.add: \"" + str(ld.add) + "\""); whole = false; }
+    var hasBar = ld.bar !== undefined, hasBu = ld.bu !== undefined;
+    if (hasBar && !hasBu) { p.push(who + "ld.bar without ld.bu"); whole = false; }
+    if (hasBu && !hasBar) { p.push(who + "ld.bu without ld.bar"); whole = false; }
+    if (hasBu && !isUnit(ld.bu)) { p.push(who + "ld.bu must be kg or lb, got: " + str(ld.bu)); whole = false; }
+    var pb = null;
+    if (hasBar) {
+      pb = parsePart(ld.bar, 0, isUnit(ld.bu) ? BAR_MAX[ld.bu] : Infinity);
+      if (pb.ok && pb.value <= 0) pb = { ok: false, reason: "range" };
+      if (!pb.ok && pb.reason === "range") { p.push(who + "ld.bar out of range (above 0, up to 50 kg or 110 lb): " + str(ld.bar)); whole = false; }
+      else if (!pb.ok) { p.push(who + "has an unreadable ld.bar: \"" + str(ld.bar) + "\""); whole = false; }
+    }
+    if (!whole) return null;
+    var c = composeLoad(ld);
+    return c.ok ? c.w : null;
+  }
+
   /* validateSessionDoc(doc) → { ok, problems:[string] }
      Mirrors schema.sql phat_validate_session_doc: id present (number or
      non-empty string), dayId a non-empty string, date YYYY-MM-DD and a real
      day, planId (when present) a non-empty string, entries an object whose
      sets carry w in 0..500 and whole r in 1..100, each as a number or a
-     numeric string. Every problem is collected, not just the first. */
+     numeric string. Every problem is collected, not just the first.
+
+     THE ld RULES (WO-010 §1) AND THEIR MESSAGES. The block below is the
+     message table; supabase/schema.sql copies it verbatim (W5) so the app
+     and the server refuse the same fault with the same sentence. {ex} is the
+     entry's exercise id, {n} the set's 1-based position, {v} the value as
+     stored (str()), {w}/{kg} the typed total and the composed one.
+
+       entry {ex} set {n} ld must be an object
+       entry {ex} set {n} ld has an unknown key: {k}
+       entry {ex} set {n} ld.au must be kg or lb, got: {v}
+       entry {ex} set {n} ld.bu must be kg or lb, got: {v}
+       entry {ex} set {n} ld.bar without ld.bu
+       entry {ex} set {n} ld.bu without ld.bar
+       entry {ex} set {n} has an unreadable ld.add: "{v}"
+       entry {ex} set {n} ld.add out of range (0..500 kg, 0..1100 lb): {v}
+       entry {ex} set {n} has an unreadable ld.bar: "{v}"
+       entry {ex} set {n} ld.bar out of range (above 0, up to 50 kg or 110 lb): {v}
+       entry {ex} set {n} w {w} disagrees with ld ({kg})
+
+     "unreadable" is NUM_W's refusal: not digits with at most one dot, so
+     -5, 1e3, "7.5.0" and a non-number all land there. An absent au/bu
+     prints got: (absent). The disagreement test is |w - kg| > 0.05, the
+     same LD_TOL the save path uses, and it is a refusal, never a rewrite. */
   function validateSessionDoc(doc) {
     var p = [];
     if (!isObj(doc)) return { ok: false, problems: ["session doc must be a JSON object"] };
@@ -2810,18 +3146,25 @@
         if (!isObj(e)) { p.push("entry " + exId + " must be an object"); return; }
         if (e.sets === undefined) return;
         if (!Array.isArray(e.sets)) { p.push("entry " + exId + ".sets must be an array"); return; }
-        e.sets.forEach(function (s) {
+        e.sets.forEach(function (s, si) {
           if (!isObj(s)) { p.push("entry " + exId + " has a set that is not an object"); return; }
           if (s.w === undefined || s.w === null || s.r === undefined || s.r === null) {
             p.push("entry " + exId + " has a set missing w or r"); return;
           }
           var tw = typeof s.w, tr = typeof s.r;
+          var pw = null;
           if (tw !== "number" && tw !== "string")
             p.push("entry " + exId + " has a weight that is neither a number nor a numeric string");
           else {
-            var pw = parseWeight(s.w);
+            pw = parseWeight(s.w);
             if (!pw.ok && pw.reason === "range") p.push("entry " + exId + " weight out of range (0..500): " + str(s.w));
             else if (!pw.ok) p.push("entry " + exId + " has an unreadable weight: \"" + str(s.w) + "\"");
+          }
+          if (s.ld !== undefined) {
+            var who = "entry " + exId + " set " + (si + 1) + " ";
+            var kg = ldDocProblems(s.ld, who, p);
+            if (kg !== null && pw && pw.ok && Math.abs(pw.value - kg) > LD_TOL + 1e-9)
+              p.push(who + "w " + str(s.w) + " disagrees with ld (" + String(kg) + ")");
           }
           if (tr !== "number" && tr !== "string")
             p.push("entry " + exId + " has reps that are neither a number nor a numeric string");
@@ -3061,7 +3404,11 @@
       var ents = {};
       Object.keys(s.entries).forEach(function (exId) {
         var e = orderKeys(s.entries[exId], ["sets", "note", "rx"]);
-        if (Array.isArray(e.sets)) e.sets = e.sets.map(function (x) { return orderKeys(x, ["w", "r"]); });
+        if (Array.isArray(e.sets)) e.sets = e.sets.map(function (x) {
+          var y = orderKeys(x, ["w", "r", "ld"]);
+          if (isObj(y.ld)) y.ld = orderKeys(y.ld, LD_KEYS);   /* §1's order: bar, bu, add, au */
+          return y;
+        });
         if (isObj(e.rx)) e.rx = orderKeys(e.rx, ["s", "lo", "hi", "k"]);
         ents[exId] = e;
       });
@@ -8226,7 +8573,25 @@
 
   window.PHAT = {
     SCHEMA_VERSION: SCHEMA_VERSION,
-    LIMITS: { wMin: W_MIN, wMax: W_MAX, rMin: R_MIN, rMax: R_MAX },
+    /* ONE TABLE (WO-010 §1): the SQL validator copies these. add/bar are
+       bounded in their own unit; ldTol is the w-vs-components tolerance. */
+    LIMITS: { wMin: W_MIN, wMax: W_MAX, rMin: R_MIN, rMax: R_MAX,
+              addMax: { kg: ADD_MAX.kg, lb: ADD_MAX.lb },
+              barMax: { kg: BAR_MAX.kg, lb: BAR_MAX.lb },
+              ldTol: LD_TOL, lbKg: LB_KG },
+    /* WO-010 W3 — the load's components. composeLoad is the ONE place a kg
+       total is built from a bar and added weight (rounded once, at the
+       total); loadModeFor is the card's remembered mode; buildWord the build
+       in his units for the ghost line. validateGymProfile guards
+       phat:v1:prefs.gym. No verdict reads any of these yet — that is W4,
+       after the coach's §18. */
+    LB_KG: LB_KG,
+    LOAD_UNITS: LOAD_UNITS.slice(0),
+    toKg: toKg,
+    composeLoad: composeLoad,
+    buildWord: buildWord,
+    loadModeFor: loadModeFor,
+    validateGymProfile: validateGymProfile,
     localDate: localDate,
     draftAge: draftAge,
     parseWeight: parseWeight,
