@@ -1,8 +1,18 @@
 # WO-011 — The session that vanished from the phone, and pull-and-merge on every open
 
 **Filed:** 2026-09-13, morning. **Severity:** P0 (data loss on the device — the only P0 class).
-**Status:** open. **Stop condition: no deploy of `index.html` / `logic.js` / `sync.js` / `sw.js` until the
-cause of the loss is known** (§4). Chady is waiting; this order is written to be executed in hours, not days.
+**Status:** **closed 2026-09-13** — `main @ bbcdac3`, deployed and verified; closure record in §7. The stop
+condition below was honoured: the cause was confirmed by `diag.html` on his phone (§7) before W4 shipped.
+~~**Stop condition: no deploy of `index.html` / `logic.js` / `sync.js` / `sw.js` until the
+cause of the loss is known** (§4). Chady is waiting; this order is written to be executed in hours, not days.~~
+
+> **Correction (2026-09-13, at close).** The main session's §0 reading of his first screenshot — the working note
+> this order was dispatched from, not the table below — inferred that, because `phat:v1:prefs` was present in the
+> view he was looking at, the log had been in that same context and was gone. That inference was wrong. Both
+> contexts had signed in, so both held `phat:auth` and `phat:v1:prefs`; only one had ever held the log. The diag proved it: the empty context's own backup stamp
+> (`n:0, m:0, at:1789247236968`) was minted 4.8 hours *before* the session id `1789264514484`. Prefs surviving
+> says nothing about which context a session was logged in. H1 was correct; the reasoning that ranked it was not
+> sufficient on its own, which is why W1 existed.
 
 ## Ask
 
@@ -338,3 +348,77 @@ W6 wait on the cause. If W0 answers "H1" in the first reply, W1 is skipped and t
 10. **release-engineer → W6** (after 9). Brief: merge `wo-011-merge` to `main`, deploy all, verify every
     file, rule on `sw.js` version by the file-list rule and write why, then F1 from Chady's phone in both
     launch contexts, recorded on B-119.
+
+## 7. Closure record — 2026-09-13
+
+**Closed on `main @ bbcdac3`.** Deployed by the main session: **60 files byte-verified** on production (the 59-file
+enumeration plus `diag.html`), live `sw.js` `v6`, `mergeOnOpen` and `phat-idle` live. Live first run as
+`diana@saba.com`: sign in → four REST reads → Home *last backup just now* → Settings *Checked the backup just now and
+restored 5 plans.* (five QA-leftover plans on her account, since removed — the merge did exactly what it should with
+them). Server after the close: Chady 1 session, Diana 0 rows. Suite **842 / 842 / 0** at `bbcdac3`.
+
+### The cause — observed, not inferred (B-119)
+
+`diag.html` (`d27e7cd`, deployed alone as a 60th file under the stop condition's one exception) on his iPhone,
+iOS 18.7, `standalone: no`, in the in-app Safari view that opens from a tapped link:
+
+- Keys present: `phat:auth`, `phat:v1:prefs`. **No log key at all.** No `recover:*`, no unreadable-store notice.
+- Backup stamp in that context: `n:0, m:0, at:1789247236968` — **4.8 hours before session id `1789264514484` was
+  minted.** That context pushed an empty log before the session existed and never held it.
+
+He logged in Safari proper; he was looking at the in-app browser view, which has separate storage. **H1. Nothing was
+wiped.** The session was on the server throughout and was never written to by an agent. The main session's §0 inference "prefs
+survived, so the log was in this context and is gone" was wrong: both contexts had signed in, so both had prefs. That
+error is corrected at the top of this file.
+
+### The second finding — the P1 the incident was hiding (B-122)
+
+Same diag: `caches: phat-shell-v4 (9), phat-shell-v5 (57)`, `sw: active`, and a `cache:'no-store'` fetch through the
+worker returned the **old** shell — `SCHEMA_VERSION 5`, no load chip. `sw.js` v2–v5 refreshed the shell once per
+*worker* lifetime (`var refreshed = false`), documented as once per launch; on iOS a worker outlives launches by days,
+so after one refresh it served its cache forever, and the newer worker that did install waited forever behind a page
+that never closed (no `skipWaiting`, by the 2026-09-10 ruling). **This is "I can't see it, did you publish."** The
+WO-010 build was on production and never reached his phone.
+
+Fixed in `c41ed85` (`sw.js` v6): refresh on every navigation, throttled by a timestamp **in the cache**; a waiting
+worker activates on `phat-idle`, posted by `render()` (`5827df1`) only at a paint where `mayPaint()` holds, with a
+zero-clients fallback; the pair gate keeps `index.html` and `logic.js` one unit. `offline-check.mjs` §9: v5 fails 4 of
+5 update checks, v6 passes 5. VERSION bumped on a same-list deploy because the v5 cache held a shell its own refresh
+could never replace — the file-list rule now has that second clause (`docs/deploy.md` §5.2).
+
+**One-time cost, Chady's:** a worker older than v6 activates the new one only when the page is closed once. Kill the
+in-app view or Safari, reopen. Then the v6 worker owns the update path and this never needs doing again.
+
+### What shipped
+
+| Item | Commit | Note |
+|---|---|---|
+| W0 / W1 `diag.html` | `d27e7cd` | Read-only; zero writes proven byte-for-byte; **stays deployed** as a standing aid. Not in the SW shell list. Ships without the COPY ALL button (W1 #7) — *Screenshot it and send it* instead; accepted, the screenshot was what answered the question |
+| W2 UX §20 | `a77a1eb` | Announcement lines, Settings → Backup wording (M-a…M-f), R-d, the paint rule P1–P14 |
+| W3 `PHAT.mergeStores` / `mergeSteps` | `ccad6a4` | Pure, union / local wins / nothing removed; S43, 831, 12 mutants killed |
+| W4 boot wiring | `a80ea09` | `mergeOnOpen` on open / sign-in / `online` / first run / manual; `mayPaint`; `#bk-check`; **Check the backup now**; Replace demoted; C1 deleted. P14 honoured for the data stores, not prefs — accepted (decisions 2026-09-13 W5) |
+| P1 `sw.js` v6 | `c41ed85` | Above |
+| P1 `phat-idle` post | `5827df1` | In `render()`, only where `mayPaint()` holds |
+| W5 QA | `1c3399f` | **Not a pass**: three reds (R-d verbatim ×2, `mergeCounts` unreachable from `file://`). F1–F10, P1–P14, six attacks observed live: lost-phone restores with one toast, draft byte-identical and still offered, **B-76 reproduced** (1 over 10, merge restored all 10), the two-tab stale-adopt, the prefs-stamp regression |
+| W5 fix | `f133d8e` | R-d verbatim in `ownerRefusal("merge")`; `mergeCounts` moved to `logic.js`; 842 / 842 / 0 |
+| W6 merge | `bbcdac3` | Upload and verification by the main session |
+
+### Backlog disposition
+
+- **B-119 closed** — cause: two storage contexts + a stuck update path; nothing lost.
+- **B-122 filed done** (P1) — the `sw.js` update path, v6.
+- **B-76 open** — reproduced exactly; the merge is mitigation, not a fix; residual hole: a session logged offline and
+  overwritten before its push is on no row anywhere.
+- **B-123 filed** (P3) — the two-tab race leaves one tab stale; adopt disk when it differs from memory.
+- **B-124 filed** (P3) — the merge's prefs write is from memory and can restore an older backup stamp.
+- **B-120 closed** — resolved by his ruling; the build he was judging was the stale v5 shell.
+- **B-121 open** — local-wins cost, accepted as the stated price of the ruling; not before a second device.
+- **E-3's "never pull"** — superseded by his decision, recorded in `docs/decisions.md` and on the epic row.
+
+### Not done, on purpose
+
+- W6's "F1 from Chady's phone in both launch contexts" was not run by an agent: the live first run was Diana's account
+  on the desk. His phone's own confirmation is the page-close-once step above, then History in Safari proper. Owed by
+  him, not by a work order.
+- `diag.html`'s COPY ALL, the `standalone` matchMedia read and the `unparseable (1 byte)` wording (W5 document note
+  ii) — cosmetic on a diagnostic page; not filed.

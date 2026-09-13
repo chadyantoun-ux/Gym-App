@@ -2939,3 +2939,71 @@ changed on disk and the next merge succeeded. Not a defect; it is the offline-fi
 and it says the merge on `online` must never be assumed to have landed.
 
 **Diana's password is exactly what it was** — a fresh password sign-in through REST succeeded after the run.
+
+## 2026-09-13 — WO-011 closed: nothing was lost — two storage contexts, observed; E-3's "never pull" is superseded on Chady's word; a worker refreshes once per lifetime, not once per launch; `diag.html` stays; the page on his phone must be closed once
+
+**Closed on `main @ bbcdac3`.** 60 files byte-verified on production (59 + `diag.html`), live `sw.js` `v6`, `mergeOnOpen`
+and `phat-idle` live, suite 842 / 842 / 0. Live first run as Diana: four REST reads, *last backup just now*, *Checked the
+backup just now and restored 5 plans.* — five QA-leftover plans on her account, since removed; the merge did exactly what
+it should with them. Server: Chady 1 session, Diana 0 rows.
+
+**The cause of B-119, by observation (`diag.html` on his iPhone, iOS 18.7, `standalone: no`): two storage contexts.
+Nothing was wiped.** The view he screenshotted was the in-app Safari view a tapped link opens. It held `phat:auth` and
+`phat:v1:prefs` and **no log key at all**, and its backup stamp — `n:0, m:0, at:1789247236968` — was minted **4.8 hours
+before** session id `1789264514484`. That context pushed an empty log before the session existed and never held it. He
+logged in Safari proper. The server row was never touched by an agent. **The inference in the main session's §0 note —
+"prefs survived, so the log was in this context and is gone" — was wrong**: both contexts had signed in, so both had
+prefs; prefs prove nothing about where a session was logged. H1 was the right hypothesis; the stop condition was right to
+demand an observation anyway, because the same symptom under H2 or H1′ would have been a real loss the merge would then
+have hidden. Corrected at the top of the work order.
+
+**Ruled: E-3's "the server never writes to the device except on an explicit Restore tap" is superseded, on Chady's word,
+verbatim: *"it needs to pull from the db"* / *"otherwise how can I track"*.** Reaffirmed after the E-3 rationale was put
+to him. The rule that ships: on every open (and first run, sign-in, `online`, and a manual **Check the backup now**), signed
+in and online, the app pulls the account's rows and merges — **union by id (sessions), by local date (bodyweight), by
+plan id (plans); the local document wins byte-for-byte on a collision; nothing is ever removed by a pull; the merged set
+is pushed.** A demo store, a signed-out device, `file://`, a foreign owner (B-88) and a blocked store never merge. One
+verbatim keep per device under `recover:*` before the first merge that changes a non-empty store. Announced once when it
+adds; silent when it does not. Never repaints under a thumb: one predicate, `mayPaint()` — no sheet, Train home, no draft,
+nothing focused. Pinned as M1–M12 and a 200-pair fuzz in S43, F1–F10 and P1–P14 observed in S44 / W5. The E-3 guarantee
+that mattered — a pull never shrinks or rewrites a local store — is now a data criterion, not a ban. The cost of
+local-wins is B-121, accepted as stated: a second device's edit is undone by the first device's next open, the server's
+copy lands in `conflicts`, nothing is destroyed; revisit when a second device is real.
+
+**Ruled: the service worker rule, after the P1 the incident was hiding (B-122).** *Once per worker lifetime is not once
+per launch on iOS.* `sw.js` v2–v5 gated the shell refresh on a module variable, documented as once per launch; an iOS
+worker outlives launches by days, so after one refresh a worker served its cache forever, and the WO-010 build never
+reached his phone under `v5` — that was "I can't see it, did you publish". The diag showed it: two caches
+(`phat-shell-v4`, `phat-shell-v5`), and a `no-store` fetch through the worker returning `SCHEMA_VERSION 5`. From v6:
+
+1. **The refresh runs on every navigation**, throttled to one per five minutes by a timestamp **in the cache**, never in
+   worker memory. Worst-case staleness is one launch plus five minutes, and there is no path to "already done" for the
+   life of a worker.
+2. **A waiting worker activates on `phat-idle`**, a message the page posts from `render()` only at a paint where
+   `mayPaint()` holds, with a zero-clients fallback. No `skipWaiting`, no reload — the 2026-09-10 atomic ruling stands;
+   this is the missing half of it: the page tells the worker when nothing is in flight.
+3. **VERSION bumps on a same-list deploy when the cache holds a shell the refresh cannot replace.** The file-list rule
+   from WO-006/WO-008 gains that second clause; v5 → v6 was the first use of it, because a v5 cache would never have
+   refreshed itself. `docs/deploy.md` §5.2 carries the rule; `offline-check.mjs` §9 proves it on every run (v5 fails 4
+   of 5, v6 passes 5).
+
+**Ruled: `diag.html` is a standing read-only aid, deployed alongside the app and not in the SW shell list.** It writes
+nothing (proven byte-for-byte), needs signal, and answered in one screenshot what four questions and a hypothesis table
+could not. It is the first thing to open the next time the phone and the server disagree. It ships without COPY ALL;
+a screenshot is what worked.
+
+**The first-transition caveat, Chady's to do once.** A worker older than v6 never refreshes and only yields to a new
+worker when the page it controls is closed. On his phone: **kill the in-app view or Safari once, reopen.** After that the
+v6 worker owns the update path and every later deploy reaches him on the launch after the first one past the throttle.
+Until he does it, the phone is on the v5 shell and nothing in this close is visible there.
+
+**B-76 is reproduced and not fixed.** QA wrote one session over ten from a stale tab; the merge restored all ten. That is
+the merge as mitigation. The residual hole is on the record in S44: a session logged offline and overwritten before its
+push is on no row anywhere. B-123 (the merge can itself produce the stale tab) and B-124 (the merge's prefs write is
+from memory) are the same class, filed P3, to be done with B-76 — the first backend item on the store layer, still.
+
+**B-120 closed on his ruling.** The build he was judging was the stale v5 shell in the in-app view. No part of the design
+was named and no UX work is owed; a complaint about the v6 shell is a new row.
+
+**Not a coach item.** No verdict, stall, deload or `PROGRAM` path moved. Logged sessions: one, now on the phone in every
+context that signs in as him — once the page has been closed.

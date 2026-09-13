@@ -23,12 +23,25 @@ one Backup section. What was decided and why is in §6 and `docs/decisions.md`.
 | `validateSessionDoc` / `validateBwDoc` | `logic.js`, pure | Mirror `phat_validate_session_doc` / `phat_validate_bw_doc` line for line |
 | `backupSig(payload)` | `logic.js`, pure | Key-order-independent signature; equal to the one stored at the last successful push means nothing has changed |
 | `sync.js` | ES module, `window.PHAT_SYNC` | `createClient` on the pinned CDN build, `signIn` / `signUp` / `signOut`, `changePassword(newPassword)` (signed-in only, §4.1), `push(payload)` (upserts, chunked), `pull()` (every live row). No store key is named in this file |
-| `loadSync` / `backupSoon` / `runBackup` / `restoreStart` / `restoreApply` | `index.html` | The app side. `save()` schedules a push **after** its write has returned; a 2 s debounce coalesces bursts; a manual `BACK UP NOW` ignores the signature |
+| `mergeStores(local, remote)` / `mergeSteps` / `mergeCounts` | `logic.js`, pure | **WO-011 (2026-09-13).** Union by session `id`, bodyweight local date and plan id; a document on both sides keeps the **local** bytes; a document only on the server is added; **nothing is ever removed by a pull**; a server document that fails the validator is refused and named, never merged, and never blocks the rest. `mergeSteps` orders the one-per-device `recover:*` keep before the first write. Pinned as M1–M12 and a 200-pair fuzz (S43) |
+| `loadSync` / `backupSoon` / `runBackup` / `mergeOnOpen` / `restoreStart` / `restoreApply` | `index.html` | The app side. `save()` schedules a push **after** its write has returned; a 2 s debounce coalesces bursts; a manual `BACK UP NOW` ignores the signature. `mergeOnOpen` pulls, validates and migrates like a Restore, merges through `mergeStores`, writes through `save()`, then pushes the merged set |
 
 **Triggers for a push:** a successful write to `phat:v1:log`, `phat:v1:bw` or `phat:v1:plans`
 (inside `save()`, after the write); `BACK UP NOW`; once on open when signed in and online (skipped
 when the signature matches the last successful push); the `online` event. Never a keystroke, never
 the draft.
+
+**Triggers for a pull-and-merge (WO-011, Chady's ruling of 2026-09-13):** once on open, once after
+first run, once after a successful sign-in, once on `online`, and Settings → **Check the backup now**.
+Signed in and online only. Never on `file://`, never on a demo store, never while a store is
+write-blocked, never for an account that does not own a non-empty device's log (`storeOwner`, B-88 —
+the owner refusal, nothing written). The merge is sequenced **before** the open push, so a session
+logged offline is never pushed and then re-pulled into a conflict. A merge that adds something is
+announced once (*Restored 1 session from your backup.*) and never repaints a screen with an open
+sheet, a draft, or a focused input; a merge that adds nothing is silent and writes nothing to the
+three data stores (it stamps `prefs.merge.at` so Settings can say when it last checked). A pull that
+fails changes nothing and is named in Settings, not toasted. **This replaced E-3's "the server never
+writes to the device except on a Restore tap"** — see §6.
 
 **Module loading is deliberately not a `<script type="module">` in the markup.** `loadSync()`
 injects the tag after the first render, only on `http(s)` and only when `navigator.onLine` is not
@@ -41,7 +54,8 @@ CDN URL is pinned to `@supabase/supabase-js@2.116.0` and is **not** precached by
 `phat:auth` (not a `phat:v1:*` key). Sign-out clears that key only. Magic links are rejected: a link
 from an email opens in the browser, not the installed PWA.
 
-**Restore** is the dangerous path. Onto an empty log: one confirmation. Onto a non-empty log: the
+**Restore** is the replace-all path, kept for the case the merge cannot serve (you want the server's
+copy *instead of* the phone's). Onto an empty log: one confirmation. Onto a non-empty log: the
 word `REPLACE` typed (WO-004 C-14), the local log **exported first**, and a verbatim copy kept under
 `phat:v1:recover:log:<ts>` / `phat:v1:recover:bw:<ts>` — if that copy cannot be written, nothing is
 replaced. Refused while an unfinished session is on disk. Every write goes through `save()`.
@@ -530,16 +544,28 @@ between a visible problem and a silent one.
 ## 6. Sync — the proposal, and the decision taken
 
 **Decided 2026-09-11 (work order E-3): §6.1 is adopted.** Backup and restore shipped; two-way sync
-did not. The draft and the preferences do not back up. Everything below §6.1 is kept as the record
-of what two-way sync would have to answer before it is built, and none of it is answered.
+did not. The draft and the preferences do not back up.
 
-### 6.1 The recommendation, first
+**Superseded in part 2026-09-13 (WO-011), on Chady's ruling — verbatim, *"it needs to pull from the
+db"* / *"otherwise how can I track"*.** The "never writes back" half of §6.1 is gone: the app now
+pulls on every open and merges (§0). What replaced it is **not** the two-way sync §6.3 asks about.
+It is a union: sessions by `id`, bodyweight by local date, plans by plan id; a document on both sides
+keeps the phone's bytes; a document only on the server is added; nothing is ever removed by a pull;
+the merged set is pushed. None of §6.3's questions is answered by it, and none needed to be —
+there is no resolution rule that discards a document, so §6.4 holds exactly. The one cost is B-121:
+a same-id edit on a second device is undone by the first device's next open (the server's copy lands
+in `conflicts`, nothing destroyed); revisit as newer-`client_updated_at`-wins only when a second
+device is real, and §6.3 #9 (no `updatedAt` on the session) must land before that. Everything below
+§6.1 is kept as the record of what two-way sync would have to answer before it is built.
+
+### 6.1 The recommendation, first — as made on 2026-09-11; the pull half is superseded above
 
 **Ship backup and restore. Do not ship two-way sync.**
 
 Push-only: the device writes to Supabase, the server never writes back except when Chady explicitly
-taps Restore. One device, one user, one writer — and every conflict case in §6.3 disappears except
-the one the unique key already handles. It is a fraction of the work, it delivers the entire value
+taps Restore. *(Superseded 2026-09-13: the server's rows are pulled and merged on every open; the
+phone's document still wins and nothing is removed.)* One device, one user, one writer — and every
+conflict case in §6.3 disappears except the one the unique key already handles. It is a fraction of the work, it delivers the entire value
 (a wiped or stolen phone does not cost six weeks of training), and it cannot corrupt history because
 nothing remote ever overwrites anything local.
 

@@ -52,15 +52,15 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 
 ---
 
-## 2. Current state — 2026-09-12, after WO-010 (`main @ 11c44ff`)
+## 2. Current state — 2026-09-13, after WO-011 (`main @ bbcdac3`)
 
 **The app is live, offline-capable, backed up, and holds one real session.** `https://gym-app-psi-eight.vercel.app`
 
-- **Files that ship — 59.** Eleven shell files: `index.html` (~7,300 lines, every screen), `logic.js` (~9,200 lines,
+- **Files that ship — 60.** Twelve shell files: `index.html` (~7,300 lines, every screen), `logic.js` (~9,200 lines,
   every rule engine and pure function behind `window.PHAT`, a classic script so `tests.html` runs from `file://`),
   `sync.js` (the backup client, an ES module, injected after first render and only on `http(s)` when online),
-  `tests.html`, `sw.js`, `manifest.webmanifest`, `assets/archivo-inline.css`, four PNG icons — plus **48 exercise
-  photographs** under `assets/ex/` from one generated manifest. **A deploy is all 59 or nothing** — a Vercel deployment
+  `tests.html`, `diag.html` (read-only, not precached), `sw.js`, `manifest.webmanifest`, `assets/archivo-inline.css`, four PNG icons — plus **48 exercise
+  photographs** under `assets/ex/` from one generated manifest. **A deploy is all 60 or nothing** — a Vercel deployment
   is an immutable snapshot, not a patch; a file left out ceases to exist at that deployment. `docs/deploy.md` is the
   procedure; `scripts/verify-deploy.sh` fetches the bytes and compares them to the tree.
 - **Screens built:** Train/Home (onboarding, Settings — Backup, Account with `Change password`, Gym), Session, Summary,
@@ -75,14 +75,20 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
   `phat:auth`; `phat:v1:recover:*` written before any restore replaces a log. `SCHEMA_VERSION` is **6**. Migrations
   are gated on their own version constants (`V_DATEBASIS`, `V_STATEKEYS`, `V_PLAN`, `V_RX`, `V_LD`), never on
   `SCHEMA_VERSION`; the v6 pass stamps the version and moves zero bytes. The importer owes 2–6.
-- **Tests:** `tests.html` from `file://`, no Node. **Read the file for the count** — on `main` at `11c44ff` it is
-  `802 / 802 / 0`. Three meta-tripwires forbid any named or expected failure, any skip without a reason, and any
+- **Tests:** `tests.html` from `file://`, no Node. **Read the file for the count** — on `main` at `bbcdac3` it is
+  `842 / 842 / 0`. Three meta-tripwires forbid any named or expected failure, any skip without a reason, and any
   fixture writing a `phat:*` key. Every rule change since WO-005 was pinned by running the new tests against the
   *pre-fix* `logic.js` and confirming they go red. Chady's first logged session is a fixture, by id, on his real export.
-- **Backup (E-3):** Supabase project `nkebsoqjtkcdiswrmely`, `us-west-2`, Postgres 17. **Backup and restore, not
-  two-way sync** — push-only; the server never writes to the device except on an explicit Restore tap, which on a
-  non-empty log requires typing `REPLACE`, exports first, and writes the `recover` copy before replacing anything. RLS
-  on all five tables, verified from outside. Demo data (`demo:true`) is refused on push and refused whole on restore
+- **Backup (E-3, amended by WO-011):** Supabase project `nkebsoqjtkcdiswrmely`, `us-west-2`, Postgres 17. **Push after
+  every save, and pull-and-merge on every open** — Chady's ruling of 2026-09-13 (*"it needs to pull from the db"*),
+  which superseded E-3's "the server never writes to the device except on Restore". `mergeOnOpen` (open, first run,
+  sign-in, `online`, and Settings → **Check the backup now**) pulls the account's rows through the Restore validators
+  and `PHAT.mergeStores`: **union by id, the local document wins byte-for-byte on a collision, nothing is ever removed
+  by a pull**, then the merged set is pushed. One `recover:*` keep per device before the first merge that changes a
+  non-empty store; announced once when it adds; never repaints under a thumb (`mayPaint()`). The manual Restore with
+  typed `REPLACE`, export-first and `recover` copy still exists as the replace-all path. `diag.html` is a deployed
+  **read-only** storage report (keys, schema, session ids, `recover:*`, SW caches, live build) — open it first when the
+  phone and the server disagree; it is not in the SW shell list. RLS on all five tables, verified from outside. Demo data (`demo:true`) is refused on push and refused whole on restore
   (C-14). The draft and preferences do not back up. Schema in `supabase/`; the SQL validator mirrors
   `validateSessionDoc` sentence for sentence (`migrate-006-ld.sql` applied). **The Management API runs a submission
   as one transaction**, so `rls-selftest.sql` is separate — its trailing `rollback` once discarded all the policies.
@@ -94,8 +100,14 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
   installed; installing it on `chadyantoun-ux/Gym-App` makes a push to `main` deploy itself and retires the manual
   upload. **Bytes come from `git cat-file blob`, never the working tree** — `core.autocrlf` is on here. Verify a deploy
   by fetching `/logic.js` and requiring the current version constant in the body, never a build status. `sw.js` is
-  `v5`; its VERSION moves only when the shell file list changes or a cached entry must be discarded, and photographs
-  are gap-filled, never re-fetched — **a re-shot photo under an existing path ships only by a VERSION bump.**
+  **`v6`** (WO-011 P1, B-122). **The rule, learned on the phone: once per worker lifetime is not once per launch on
+  iOS** — v2–v5 refreshed the shell once per worker and then served their cache forever, so a content deploy under an
+  unchanged VERSION never reached him. v6 refreshes on every navigation, throttled by a timestamp *in the cache*, never
+  in worker memory; a waiting worker activates when the page posts `phat-idle` (from `render()`, only where `mayPaint()`
+  holds) — still no `skipWaiting`, still no reload. VERSION moves when the shell file list changes, when a cached entry
+  must be discarded, **or when the cache holds a shell the refresh cannot replace** (why v5 → v6 on a same-list deploy);
+  photographs are gap-filled, never re-fetched — **a re-shot photo under an existing path ships only by a VERSION
+  bump.** A phone still on a worker older than v6 takes the new one only when its page is closed once.
 - **Live wrong-advice bugs closed, worth knowing because each shipped for a while:** Rule P1.2 fired on `!equal`
   (`100/100/120` earned a worse verdict than `100/100/100`); the diet screen had no day type, a 700 kcal error on rest
   days; `index.html` carried a duplicate `PROGRAM` that had drifted from the plan document — **there is one programme
@@ -103,9 +115,14 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 - **Open, on the record:** **B-116 — warm-up sets**: his first session logged a five-set ramp (20 → 70 kg) on a
   3 × 3–5 slot and every engine read it as prescribed work; logged, marked, or omitted is the PM's first question for
   the next planning pass, unanswered. B-111 (`Swapped` mark — coach recommends it, Chady's yes/no owed), B-117 (his
-  bars by name; does the gym have 2.5 lb plates), B-05 (no edit or delete of a saved session), B-04 (file importer,
-  owes schema 2–6), B-98 (an account cannot hard-delete its own server row — P1 the day a delete syncs), B-97 (Home
-  fold at 393 × 852), B-114 (`+ 0 lb` drop phrase), B-11, B-19, B-36, B-45. `docs/backlog.md` is the list.
+  bars by name; does the gym have 2.5 lb plates), **B-76** (a stale tab's `finish()` writes memory over disk — QA wrote
+  one session over ten in WO-011; the merge restored them from the server, which is mitigation not fix, and a session
+  never pushed before the overwrite is on no row anywhere; B-123 and B-124 are the same class, filed with it — the
+  first backend item on the store layer), B-121 (local-wins on a same-id collision, accepted until a second device),
+  B-05 (no edit or delete of a saved session), B-04 (file importer, owes schema 2–6), B-98 (an account cannot
+  hard-delete its own server row — P1 the day a delete syncs), B-97 (Home fold at 393 × 852), B-114 (`+ 0 lb` drop
+  phrase), B-11, B-19, B-36, B-45. **Chady's, once:** close the page on his phone so the v6 worker activates (B-122).
+  `docs/backlog.md` is the list.
 
 ### Stack — built
 
