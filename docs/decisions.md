@@ -2656,3 +2656,80 @@ dropped twice today — `validateEntry` emits `{w, r}` and `hydrateDraft` rebuil
 no third key; a P0 the moment `ld` exists. Closed inside WO-010 before the row can produce a component.
 **Rules out:** storing the entry-unit number as `w`; converting per component; a per-implement entry
 form; a unit setting that changes what an engine reads; any migration that touches a logged set.
+
+## 2026-09-12 — WO-010 W7: the mixed-unit gym passes for release at `5a64064`; 802 / 802 / 0; his session is byte-identical on screen and on disk; one server finding outside the order
+
+Verified `wo-010-units @ 5a64064` — W3 `c0714d8` (shape, `V_LD`, schema 6, B-112 save side), W6 `48b88a4` (row, chip,
+sheet, Settings → Gym, B-112 reload side), W4/W5 `5a64064` (the L1–L4 ladder, the SQL mirror; `migrate-006-ld.sql` applied
+to the live project). Suite **802 / 802 / 0**, three tripwires, no fixture writes a `phat:*` key; S42 adds 17. The browser
+run is `tests.html` "Already proven" item 36; the phone item is manual item 10; the three `index.html` pieces that are
+observed rather than asserted are under "Not testable".
+
+**Pass for release.** D1–D9 one by one, with the evidence:
+
+- **D1, his session untouched — pass, on his bytes.** The fixture is the export (hash 1528318698 over 950 chars; d1a opens
+  `20 × 12`, not S40's placeholder `60 × 5`). v5 → 6 in the harness: the sessions array byte-identical, the only store change
+  `schemaVersion`. In the browser, booted on the v5 store: schema 6, the same bytes `main` holds after its own boot, Trend
+  text identical to `main`, and on all seven Day 1 cards the ghosts, the chip (`Weight in kg · no bar`), `#excard`'s
+  `outerHTML` and the verdict identical to `main` — before and after his own sets were typed back in. His six verdicts were
+  also computed under `main @ 5d9525c`, `c0714d8` and `5a64064` in a Node vm: identical strings, no phrase, no pound.
+- **D2 — pass.** `bar 20 kg + 90 lb` shows `= 60.8 kg`; the saved set is exactly
+  `{"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"lb"}}`; the draft carries `w` as `"60.8"` (the composed total, never
+  60.823) and the card's `mode`, which never reaches the log.
+- **D3 — pass, bar `savedAt`.** 90 lb / 5 on set 1, `1` alone on set 2, reload: the draft offered, `phat:v1:draft` identical
+  before and after Resume except `savedAt` (every draft write stamps one — pre-existing, stated in the work order's dispatch),
+  set 1 `90` / `= 60.8 kg` / 5, set 2 `1` in lb `= 20.5 kg`, chip restored; declining discards. Two tabs: B resumes A's draft
+  with `ld`. The offer counts the half-typed row as a logged set (`2 sets logged`) — the pre-existing "w OR r non-empty" rule,
+  not new.
+- **D4 — pass, against the live project** as `diana@saba.com` by REST from Node (a password sign-in only; no app running, so
+  nothing else could reach `/rest/v1/*`). The good doc landed (201); `au: "kilo"`, `bar` without `bu`, `add: -5`, `w: 61`,
+  `w: 60.9`, `ld: null`, `w: 60.86`, `w: 60.5` each refused 400 with `phat: ` + the JS sentence (S42 pins all eight literals;
+  `sync.js` strips the tag); `w: 60.85` landed. **The SQL tolerance-0.5 mutant is dead by observation:** 60.5 against a 60.8
+  build was refused live.
+- **D5 — pass.** `7.5.0` pasted in lb (a real `InputEvent`, `insertFromPaste`) stays on the row, `w` mirrors it, Save is refused
+  naming `Bent-over row · set 1 7.5.0`, the row marked `! 7.5.0`, `phat:v1:log` untouched; `1200` lb reads `over 1100`.
+- **D6 — pass.** Blank lb rows (with and without a bar) are skipped; a card in lb mode with nothing typed produces no entry.
+- **D7 — pass, on the server's real bytes.** The doc the project handed back (`{"r":5,"w":60.8,"ld":{"au":"lb","bu":"kg",
+  "add":90,"bar":20}}`) restores through `restorePayload` to the builder's bytes; the literal is in S42; `backupSig` signs
+  the server's and the builder's bytes the same, so a restore does not trigger a re-push.
+- **D8 — pass.** Typing `100` on a kg-direct card stores `{"w":100,"r":5}`, no `ld`; the row DOM is `main`'s byte for byte.
+- **D9 — pass.** kg → lb with 60 typed asks (`Set 1 holds kg weights. Switching to lb clears them. Reps stay.`); Keep leaves the
+  draft byte-identical (`w: "60"`, no `ld`); Switch clears the weight, keeps reps, offers `Undo — put the kg weights back`; Undo
+  restores the draft byte-identically. The bar switch names both totals per set (`90 lb is 60.8 kg on Barbell 20 kg, 40.8 kg
+  with no bar.`); Keep is byte-identical; Use re-values only through the components.
+
+**The ladder.** Re-derived by hand from §18.1–§18.4's rules on numbers S41 does not use — a 45 lb bar + 140 lb (P1.4 → 86.2
+/ 145 lb; P1.3 → 88.5 / 150 lb; P1.1 → 79.4 / 130 lb), kg plates on a 20 kg bar (P1.1 → 95 / 75 kg; P1.3 → 105 / 85 kg;
+H1.4d stays `2.5 kg`), a 25 lb belt (13.6 / 30 lb; the guard → 9.1 / 20 lb), a 70 lb dumbbell (H1.2 → 34 / 75 lb per DB; H1.1
+→ 29.5 / 65 lb per DB), SP1 from a lb-bar source (56.7 / 45 lb bar + 80 lb, in band) — every one matched the code, every phrase
+recomposes. **The differential, independently:** 580,608 kg-direct verdicts (7 slots × 81 loads × 256 rep pairs × 2 patterns
+× 2 prevs) between `c0714d8` and `5a64064` differ only on P1.1 / H1.1 at 2.5–22.5 kg (the §18.6 #1 drop); `speedLoad`,
+`g1Step`, `incrementLine` zero diffs. Backend's report stands.
+
+**Mutants.** Eleven `logic.js` mutants killed by the suite (per-component rounding, `bu` optional, `LD_TOL` 0.5, the doc
+tolerance alone, `LB_BAR_STEP` 10 — 13 reds and every one a bar-built assertion, belt and dumbbell green, the same way
+backend killed it — `validateEntry` dropping `ld`, `ld: null` read as absent, `canonSession` not ordering `ld`, the mismatch
+accepted, the guard off on a build, off on kg-direct). `hydrateDraft` dropping `ld` is `index.html`'s and died in the browser
+rig: after the reload `60.8` sat in the **lb** field with no total — the silent re-value D3 exists to stop.
+
+**Two things pinned as observed, for their owners, not changed:**
+- **Coach (backend's least-sure):** 20 kg bar + 5 lb missed prints `Drop to 20 kg next session — 20 kg bar + 0 lb.` L1's guard
+  produces it (one step below 5 lb is 0, not below zero). Whether `+ 0 lb` should print is copy §18 does not rule on. Contract
+  note in S42.
+- **UX (frontend's least-sure):** a hand-edited draft row with `ld.add` typed and `w` empty is `incomplete` naming w and r in the
+  engine; the blocked-save token for it reads `no weight` beside a visible lb number. No app path writes that row (`writeW`
+  fills `w` on every keystroke). P2, hand-edit only. Contract note in S42.
+
+**One finding outside the order, for the PM to file (P2, latent):** a client can never hard-delete its own `sessions` row.
+`phat_archive_session` runs as the invoker and reads `auth.users`; `authenticated` has no select on it, so every `DELETE`
+fails `42501 permission denied for table users` although `sessions_delete` is granted. Pre-existing (schema.sql, E-3), not
+WO-010's; the app soft-deletes only today, so nothing is broken on the phone — but B-05's delete-that-syncs will hit it, and
+it means the probe row could not be removed by the account that wrote it.
+
+**Server state after the probe, stated plainly:** Diana's password is exactly `Rs9K-qTZt-m8Ya-6yke` (a fresh sign-in succeeded
+last). Her live rows are as found: `[]` under `deleted_at is null`, so a restore on her phone sees nothing. What remains and
+needs the dashboard (service role) to remove: one soft-deleted `sessions` row, `client_id 991009120001`, and two append-only
+`conflicts` rows for it (`superseded_by_update`). Nothing of hers was touched.
+
+**Not done here, on purpose:** `docs/backlog.md` (the PM's), CLAUDE.md's count sentence (it already says to read the file),
+and any product code.

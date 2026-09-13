@@ -55,7 +55,25 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 785 / 785 / 0, no skips.</b> <b>S41</b> (WO-010 W4 + W5, backend, 2026-09-12) added 45: the ladder in a
+<b>Today: 802 / 802 / 0, no skips.</b> <b>S42</b> (WO-010 W7, the QA pass, 2026-09-12) added 17: D1 as <b>his</b> bytes (the
+export hashed, <code>20 &times; 12</code> where the placeholder had <code>60 &times; 5</code>, the v5 &rarr; 6 pin on the whole store);
+his six verdicts pinned as <code>main @ 5d9525c</code>, <code>c0714d8</code> and <code>5a64064</code> all print them (a three-version Node
+run; identical); a hand-edited <code>ld</code> with <code>w</code> off by 0.1 refused at every gate by name &mdash; save, push, restore whole
+&mdash; with the <b>live</b> SQL&rsquo;s sentence pinned from the REST response (D4 against the project as <code>diana@saba.com</code>: the
+four work-order refusals, <code>ld: null</code>, 60.86 and 60.5 refused, 60.85 and the good doc landed, the document the server handed back in
+JSONB order restored byte-identically, her password untouched); <code>ld: null</code> at every gate; a row with <code>add</code> typed and
+<code>w</code>/<code>r</code> empty as the engine classifies it (contract note for the frontend&rsquo;s token); the empty-bar drop
+<b>pinned as observed for the coach</b>; <b>the ladder re-derived by hand from &sect;18&rsquo;s rules on numbers S41 does not use</b> (a 45 lb bar,
+kg plates on a bar, a 25 lb belt, a 70 lb dumbbell, SP1 from a lb-bar source), every phrase recomposed; the differential restated as a sample
+(580,608 kg-direct verdicts between <code>c0714d8</code> and <code>5a64064</code>: every diff P1.1 / H1.1 at 2.5&ndash;22.5 kg, zero in
+<code>speedLoad</code>, <code>g1Step</code>, <code>incrementLine</code>); D2 / D6 on the shapes <code>index.html</code> writes to disk. Eleven
+<code>logic.js</code> mutants killed against the suite as it stood (per-component rounding, <code>bu</code> optional, <code>LD_TOL</code> 0.5, the doc
+tolerance alone, <code>LB_BAR_STEP</code> 10 &mdash; 13 reds, all bar-built, belt and dumbbell green &mdash; <code>validateEntry</code> dropping
+<code>ld</code>, <code>ld: null</code> read as absent, <code>canonSession</code> not ordering <code>ld</code>, the mismatch accepted, the guard off
+on a build, the guard off on kg-direct); the twelfth, <code>hydrateDraft</code> dropping <code>ld</code>, died in the browser (item 36); the SQL
+tolerance mutant died against the live project. The browser half &mdash; D2, D3, D5, D6, D7 (the kg-direct <code>#excard</code> byte-identical
+to <code>main</code> on all seven d1 cards, before and after typing), D8, D9, the bar confirmation, undo, two tabs, Settings &rarr; Gym &mdash;
+is item 36. Before S42 the count read 785. <b>S41</b> (WO-010 W4 + W5, backend, 2026-09-12) added 45: the ladder in a
 mixed-unit gym, strength-coach addendum &sect;18 transcribed. <b>Every numbered worked example in &sect;18.1 (L1, eleven),
 &sect;18.2 (L2, six) and &sect;18.4 (L4, eight) as an exact string, every &ldquo;must not print&rdquo; as its own assertion</b>
 (<code>83.7 kg</code>, <code>86.2 kg</code>, <code>77.5 kg</code>, <code>27.4 kg</code>, <code>22.9 kg</code>, <code>If 5 lb per DB</code> under a bar,
@@ -15084,6 +15102,371 @@ T("W4 - up to the end of S41 no fixture wrote a phat:* key (the suite tripwire, 
 });
 
 
+/* ============================================================ S42 - WO-010 W7
+   The QA pass on the mixed-unit gym. What the attack pass of 2026-09-12
+   found that the pure half can pin:
+
+   - D1 as HIS bytes: the export's hash, the numbers a placeholder never
+     had, and the v5 -> 6 pin on the whole store.
+   - Attack 1, the engine half: his six verdicts pinned as computed by
+     main @ 5d9525c AND c0714d8 AND 5a64064 (a Node vm ran all three;
+     the strings are identical), plus incrementLine / loadModeFor /
+     buildOf / speedLoad on his data.
+   - Attack 2: a hand-edited ld with w off by 0.1 refused at every gate by
+     name - save, push, restore whole - and the live SQL's sentence, bar
+     the `phat: ` tag sync.js strips, pinned as observed against the
+     project on 2026-09-12 (item 36).
+   - Attack 3: `ld: null` refused at every gate; buildOf reads it as
+     kg-direct; loadModeFor ignores it.
+   - Attack 5: a row with add typed and w/r empty is `incomplete` naming
+     w and r - the engine's classification; the frontend's token for it
+     is a contract note.
+   - Attack 6: the empty-bar drop, pinned as OBSERVED for the coach.
+   - The ladder re-derived by hand from §18.1-§18.4's rules on numbers
+     S41 does not use (a 45 lb bar, a 25 lb belt, a 70 lb dumbbell, kg
+     plates on a bar), each figure also recomposed from its own phrase.
+   - The differential, restated as a sample: 580,608 kg-direct verdicts
+     (7 slots x 81 loads x 256 rep pairs x 2 patterns x 2 prevs) between
+     c0714d8 and 5a64064 differed ONLY on P1.1 / H1.1 at 2.5..22.5 kg;
+     speedLoad (80 sources), g1Step (7,857 triples) and incrementLine
+     had zero diffs. The sample below is that finding on an H1 slot.
+   - D2 / D6 pure halves on the exact shapes the frontend writes to disk
+     (bar a number, add a string, `mode` on the entry).
+   - D5 / D7 on the server's real bytes: the doc the project handed back
+     on 2026-09-12 (JSONB order, ld as {au, bu, add, bar}) restored to
+     the builder's bytes.
+
+   Mutants, run outside this file on 2026-09-12 (scratch runner, one
+   copy of logic.js per mutant, the suite as it stood at 785): rounding
+   per component (2 red), bu optional when bar is present (6), LD_TOL
+   0.5 (10), the doc validator's tolerance 0.5 alone (3), LB_BAR_STEP 10
+   (13, every one a bar-built assertion; belt and dumbbell stayed green),
+   validateEntry dropping ld (2), ld:null read as absent (1), canonSession
+   not ordering ld (1), the w/ld mismatch silently accepted (3), the
+   strictly-below guard off on a build (4), off on kg-direct (6). Eleven
+   of eleven killed. The twelfth - hydrateDraft dropping ld - is
+   index.html's and died in the browser rig (item 36): the reload brought
+   `60.8` back into the lb field with no ld, exactly the re-value D3
+   exists to stop. The SQL tolerance mutant was killed against the LIVE
+   project: w 60.5 against a 60.8 build refused (a 0.5 tolerance would
+   have landed it).
+   ========================================================================== */
+group("S42 WO-010 W7 / the QA pass: D1 as his bytes, the attack list, the ladder re-derived, the live SQL sentences");
+
+/* his six verdicts, as main @ 5d9525c, c0714d8 and 5a64064 all print them
+   (Node vm, 2026-09-12): kg-direct is the baseline and his session is
+   kg-direct on every set */
+var HIS_VERDICTS = {
+  d1a: ["down", "Sets not matched: 20 / 40 / 51 kg. Repeat 40 kg until all 3 sets reach 5 reps.", "", "P1.2"],
+  d1b: ["down", "Sets not matched: 68 / 77 kg. Repeat 77 kg until all 2 sets reach 10 reps.", "", "P1.2"],
+  d1d: ["down", "Sets not matched: 63 / 77 / 77 kg. Repeat 77 kg until all 3 sets reach 5 reps.", "", "P1.2"],
+  d1e: ["up", "Top of range on all 2 sets at bodyweight. Add 2.5 kg next session.", "If 2.5 kg is not available, add reps up to 12 first, then jump.", "P1.4"],
+  d1f: ["down", "Sets not matched: 42 / 51 / 60 kg. Repeat 51 kg until all 3 sets reach 10 reps.", "", "P1.2"],
+  d1g: ["down", "Sets not matched: 27.5 / 32.5 / 35 kg. Repeat 32.5 kg until all 3 sets reach 10 reps.", "", "P1.2"]
+};
+var HIS_INCLINE = { d1a: "", d1b: "If 2.5 kg is not available, add reps up to 12 first, then jump.",
+  d1d: "If 2.5 kg per DB is not available, add reps up to 7 first, then jump.", d1e: "If 2.5 kg is not available, add reps up to 12 first, then jump.",
+  d1f: "If 2.5 kg per DB is not available, add reps up to 12 first, then jump.", d1g: "" };
+/* the live project's sentences, verbatim, as the REST response carried them on 2026-09-12 (D4, item 36) */
+var LIVE_SQL = {
+  kilo:   "phat: entry d1a set 1 ld.au must be kg or lb, got: kilo",
+  noBu:   "phat: entry d1a set 1 ld.bar without ld.bu",
+  neg:    "phat: entry d1a set 1 has an unreadable ld.add: \"-5\"",
+  w61:    "phat: entry d1a set 1 w 61 disagrees with ld (60.8)",
+  w609:   "phat: entry d1a set 1 w 60.9 disagrees with ld (60.8)",
+  isNull: "phat: entry d1a set 1 ld must be an object",
+  w6086:  "phat: entry d1a set 1 w 60.86 disagrees with ld (60.8)",
+  w605:   "phat: entry d1a set 1 w 60.5 disagrees with ld (60.8)"
+};
+/* the probe document exactly as the server handed it back (JSONB key order) */
+var LIVE_SERVER_DOC = {"id":991009120001,"date":"2026-09-12","dayId":"d1","planId":"phat","entries":{"d1a":{"rx":{"k":"power","s":3,"hi":5,"lo":3},"note":"W7 probe - delete me","sets":[{"r":5,"w":60.8,"ld":{"au":"lb","bu":"kg","add":90,"bar":20}},{"r":5,"w":100}]}}};
+function D42(sets){ return { id: 1, date: "2026-09-12", dayId: "d1", planId: "phat", entries: { d1a: { sets: sets, note: "" } } }; }
+function ROWS42(doc){ return { sessions: [{ client_id: String(doc.id), local_date: doc.date, doc: doc }], bodyweight: [], plans: [], user_state: null }; }
+function BB45N(add, r){ return S41_SET({ bar: 45, bu: "lb", add: add, au: "lb" }, r); }
+var META42 = [];   /* every phrase-carrying sentence this group pins, recomputed at the end */
+function pin42(a, v, x, x2, rule, msg){ pinS41(a, v, x, x2, rule, msg); META42.push(v.x); }
+
+/* ------------------------------------------------------ 1. D1: his bytes */
+
+T("W7 / D1 - the fixture is HIS bytes, not S40's placeholders: the server export hashes to 1528318698 over 950 chars, d1a opens 20 x 12 (the placeholder was 60 x 5), the notes are his, and the v5 -> 6 pin holds on the whole store", function(a){
+  var server = JSON.stringify(CHADY_EXPORT);
+  a.eq(server.length, 950); a.eq(hash40(server), 1528318698, "the export as pulled from the project on 2026-09-12");
+  var his = CHADY_SESSION();
+  a.eq(hash40(JSON.stringify(his)), 588696318, "the same session in the builder's key order");
+  a.eq(JSON.stringify(his.entries.d1a.sets[0]), '{"w":20,"r":12}', "not the placeholder's {w:60,r:5}");
+  a.eq(JSON.stringify(his.entries.d1g.sets), '[{"w":27.5,"r":15},{"w":32.5,"r":10},{"w":35,"r":8}]');
+  a.eq(his.entries.d1e.sets.length, 3, "three bodyweight sets on a 2-set slot");
+  a.eq(his.id, 1789264514484); a.eq(his.date, "2026-09-12"); a.eq(his.dayId, "d1"); a.eq(his.planId, "phat");
+  var store = CHADY_STORE(), before = JSON.stringify(store);
+  var r = P.migrateStore(clone(store), null);
+  a.eq(JSON.stringify(r.log.sessions), JSON.stringify(store.sessions), "sessions array byte-identical");
+  var after = clone(r.log); delete after.schemaVersion; var b2 = clone(store); delete b2.schemaVersion;
+  a.eq(JSON.stringify(after), JSON.stringify(b2), "the ONLY store change is schemaVersion");
+  a.eq(r.log.schemaVersion, 6);
+  a.eq(before, JSON.stringify(store), "the input was not mutated");
+});
+
+/* ------------------------------------------------------ 2. attack 1, the engine half */
+
+T("W7 / attack 1 - his six verdicts are what main @ 5d9525c and c0714d8 printed (pinned from a three-version Node run): kg-direct on every set, no phrase, no pound, prev null or prev himself", function(a){
+  var his = CHADY_SESSION(), ids = Object.keys(HIS_VERDICTS), i, v, v2;
+  a.deep(Object.keys(his.entries), ids, "the six entries");
+  for (i = 0; i < ids.length; i++) {
+    v = P.verdict({ ex: EX41(ids[i]), sets: his.entries[ids[i]].sets, prev: null });
+    a.deep([v.t, v.x, v.x2, v.rule], HIS_VERDICTS[ids[i]], ids[i] + " (prev null)");
+    v2 = P.verdict({ ex: EX41(ids[i]), sets: his.entries[ids[i]].sets, prev: his.entries[ids[i]] });
+    a.deep([v2.t, v2.x, v2.x2, v2.rule], HIS_VERDICTS[ids[i]], ids[i] + " (prev = his own entry, the resumed-session case)");
+    a.eq(P.incrementLine(EX41(ids[i])), HIS_INCLINE[ids[i]], ids[i] + " incrementLine, no ld");
+    a.eq(P.incrementLine(EX41(ids[i]), undefined), HIS_INCLINE[ids[i]], ids[i] + " incrementLine, ld undefined");
+    a.deep(P.loadModeFor([his], ids[i]), { au: "kg" }, ids[i] + " next card opens kg-direct");
+    a.eq(P.workingBuild(his.entries[ids[i]].sets, EX41(ids[i]).s, P.workingLoad(his.entries[ids[i]].sets, EX41(ids[i]).s)), null, ids[i] + " no build on the working set");
+  }
+  var sl = P.speedLoad([his], "d3a", "2026-09-14", "Bent-over row", P.PHAT_PLAN);
+  a.eq(sl.target, null, "no 3-5 rep set on d1a yet, so no speed number");
+  a.match(sl.text, /^Log a heavy triple on /, "the fallback sentence, unchanged");
+});
+
+/* ------------------------------------------------------ 3. attack 2, a hand-edited ld off by 0.1 */
+
+T("W7 / attack 2 - a hand-edited ld with w off by 0.1 (60.9 against 20 kg + 90 lb): the save refuses naming the set (validateEntry, validateDraft), the push refuses with the same sentence (validateSessionDoc, backupPayload), the restore refuses WHOLE - and the live SQL said the same words", function(a){
+  var typed = { w: "60.9", r: "5", ld: { bar: 20, bu: "kg", add: "90", au: "lb" } };
+  var ve = P.validateEntry([typed]);
+  a.deep(ve.sets, [], "nothing emitted");
+  a.deep(ve.problems, [{ i: 0, field: "ld", reason: "mismatch", value: "90", status: "malformed", sub: null, kg: 60.8 }], "one problem, the token he typed, the total it should be");
+  var vd = P.validateDraft({ entries: { d1a: { sets: [typed], note: "", mode: { au: "lb", bar: 20, bu: "kg" } } } });
+  a.eq(vd.ok, false); a.deep(vd.entries, {}, "no entry survives");
+  a.deep(vd.problems, [{ exId: "d1a", setIndex: 0, field: "ld", reason: "mismatch", value: "90", status: "malformed", sub: null, kg: 60.8 }]);
+  var saved = { w: 60.9, r: 5, ld: { bar: 20, bu: "kg", add: 90, au: "lb" } };
+  var doc = D42([saved]);
+  var js = P.validateSessionDoc(doc);
+  a.deep(js.problems, ["entry d1a set 1 w 60.9 disagrees with ld (60.8)"]);
+  a.eq("phat: " + js.problems[0], LIVE_SQL.w609, "the live SQL's sentence is the JS sentence behind the `phat: ` tag sync.js strips");
+  var bp = P.backupPayload({ schemaVersion: 6, sessions: [doc] }, { schemaVersion: 6, entries: [] }, null);
+  a.eq(bp.sessions.length, 0, "not in the rows"); a.eq(bp.counts.refused, 1);
+  a.deep(bp.problems, [{ kind: "session", key: "12 Sep (d1)", msg: "entry d1a set 1 w 60.9 disagrees with ld (60.8)" }]);
+  var rp = P.restorePayload(ROWS42(doc));
+  a.eq(rp.ok, false); a.eq(rp.log, null, "refused WHOLE - nothing to write");
+  a.deep(rp.problems, ["session 12 Sep (d1) (row 0): entry d1a set 1 w 60.9 disagrees with ld (60.8)"]);
+  /* and 0.05 is the edge: 60.85 passes every gate, 60.86 none */
+  a.eq(P.validateEntry([{ w: "60.85", r: "5", ld: typed.ld }]).problems.length, 0, "60.85 saves");
+  a.eq(P.validateEntry([{ w: "60.86", r: "5", ld: typed.ld }]).problems.length, 1, "60.86 does not");
+  a.eq("phat: " + P.validateSessionDoc(D42([{ w: 60.86, r: 5, ld: saved.ld }])).problems[0], LIVE_SQL.w6086, "and the live SQL refused 60.86 with the same words");
+  a.eq("phat: " + P.validateSessionDoc(D42([{ w: 60.5, r: 5, ld: saved.ld }])).problems[0], LIVE_SQL.w605, "w 60.5: refused live - the 0.5-tolerance SQL mutant would have landed it");
+  a.eq(P.buildOf(saved.ld, 60.9), null, "the defence for one that got past every gate: read as kg-direct, no phrase (L1 not-enough-data)");
+  var v = P.verdict({ ex: EX41("d1a"), sets: [saved, saved, saved], prev: null });
+  a.eq(v.x, "Top of range on all 3 sets. Go to 63.4 kg next session.", "kg-direct ladder on 60.9 (never snapped: 60.9 + 2.5), silence over a wrong plate count");
+});
+
+T("W7 / D4 - the four work-order refusals: JS sentence == live SQL sentence (bar the `phat: ` tag), pinned from the REST responses of 2026-09-12", function(a){
+  var LD = { bar: 20, bu: "kg", add: 90, au: "lb" };
+  a.eq("phat: " + P.validateSessionDoc(D42([{ w: 60.8, r: 5, ld: { bar: 20, bu: "kg", add: 90, au: "kilo" } }])).problems[0], LIVE_SQL.kilo);
+  a.eq("phat: " + P.validateSessionDoc(D42([{ w: 60.8, r: 5, ld: { bar: 20, add: 90, au: "lb" } }])).problems[0], LIVE_SQL.noBu);
+  a.eq("phat: " + P.validateSessionDoc(D42([{ w: 60.8, r: 5, ld: { bar: 20, bu: "kg", add: -5, au: "lb" } }])).problems[0], LIVE_SQL.neg);
+  a.eq("phat: " + P.validateSessionDoc(D42([{ w: 61, r: 5, ld: LD }])).problems[0], LIVE_SQL.w61);
+  a.eq("phat: " + P.validateSessionDoc(D42([{ w: 60.8, r: 5, ld: null }])).problems[0], LIVE_SQL.isNull);
+  a.eq(P.validateSessionDoc(D42([{ w: 60.8, r: 5, ld: LD }, { w: 100, r: 5 }])).ok, true, "the good doc: accepted here and landed live (201)");
+  a.eq(P.validateSessionDoc(D42([{ w: 60.85, r: 5, ld: LD }])).ok, true, "60.85: accepted here and landed live (200)");
+});
+
+/* ------------------------------------------------------ 4. attack 3, ld: null */
+
+T("W7 / attack 3 - `ld: null` is not absent: describeSet malformed on field ld (sub null), validateEntry emits nothing, a blank row carrying it is NOT blank, the doc validator and the restore refuse by name; buildOf and loadModeFor read it as kg-direct", function(a){
+  var d = P.describeSet({ w: "60.8", r: "5", ld: null });
+  a.eq(d.status, "malformed");
+  a.deep(d.ld, { ok: false, reason: "malformed", sub: null, value: "", w: null });
+  a.deep(d.problems, [{ field: "ld", reason: "malformed", value: "", sub: null }]);
+  a.deep(P.validateEntry([{ w: "60.8", r: "5", ld: null }]), { sets: [], problems: [{ i: 0, field: "ld", reason: "malformed", value: "", status: "malformed", sub: null }] });
+  var blank = P.describeSet({ w: "", r: "", ld: null });
+  a.eq(blank.status, "malformed", "a blank row with a stray null blocks the save rather than vanishing - the frontend deletes the key to mean kg, so this is a hand edit");
+  a.deep(P.validateSessionDoc(D42([{ w: 60.8, r: 5, ld: null }])).problems, ["entry d1a set 1 ld must be an object"]);
+  var rp = P.restorePayload(ROWS42(D42([{ w: 60.8, r: 5, ld: null }])));
+  a.eq(rp.ok, false); a.eq(rp.log, null);
+  a.deep(rp.problems, ["session 12 Sep (d1) (row 0): entry d1a set 1 ld must be an object"]);
+  a.eq(P.buildOf(null), null); a.eq(P.buildOf(null, 60.8), null);
+  a.deep(P.loadModeFor({ sets: [{ w: 60.8, r: 5, ld: null }] }), { au: "kg" }, "a null ld is skipped, never a mode");
+  a.deep(P.composeLoad(null), { ok: false, reason: "malformed", field: null, value: "" });
+  a.eq(P.buildWord(null), "");
+  var v = P.verdict({ ex: EX41("d1a"), sets: [{ w: 60.8, r: 5, ld: null }, { w: 60.8, r: 5, ld: null }, { w: 60.8, r: 5, ld: null }], prev: null });
+  a.eq(v.x, "Top of range on all 3 sets. Go to 63.3 kg next session.", "and a verdict on such a set is the kg-direct one (60.8 + 2.5, never snapped)");
+  /* canonSession leaves a null where it found it: restore refuses it, never rewrites it */
+  var c = P.restorePayload(ROWS42(D42([{ r: 5, w: 60.8, ld: null }])));
+  a.eq(c.ok, false, "still refused after re-ordering");
+});
+
+/* ------------------------------------------------------ 5. attack 5, add typed with w and r empty */
+
+T("W7 / attack 5 - a row with `add` typed and w/r empty (a hand-edited draft: the app never writes it, writeW fills w on every keystroke) is `incomplete` naming w and r, ld ok at 40.8; nothing emitted, nothing vanishes", function(a){
+  var d = P.describeSet({ w: "", r: "", ld: { add: "90", au: "lb" } });
+  a.eq(d.status, "incomplete");
+  a.deep(d.ld, { ok: true, reason: null, sub: null, value: "90", w: 40.8 });
+  a.deep(d.problems, [{ field: "w", reason: "empty", value: "" }, { field: "r", reason: "empty", value: "" }]);
+  a.deep(P.validateEntry([{ w: "", r: "", ld: { add: "90", au: "lb" } }]), { sets: [], problems: [
+    { i: 0, field: "w", reason: "empty", value: "", status: "incomplete" },
+    { i: 0, field: "r", reason: "empty", value: "", status: "incomplete" }] });
+  /* the reps-only sibling on an lb card, which the app DOES write: w "" mirrors the empty add */
+  var d2 = P.describeSet({ w: "", r: "5", ld: { bar: 20, bu: "kg", add: "", au: "lb" } });
+  a.eq(d2.status, "malformed", "reps typed, add empty: blocking (the ld problem is `empty` on add)");
+  a.deep(d2.problems, [{ field: "w", reason: "empty", value: "" }, { field: "ld", reason: "empty", value: "", sub: "add" }]);
+  contract("WO-010 W7, attack 5 (frontend's least-sure, P2, hand-edit only): a draft row with `ld.add` typed and `w` empty " +
+    "is `incomplete` here, naming w and r. The blocked-save token index.html prints for it is `no weight` (badRows: no ld problem, " +
+    "no non-empty reason, so ps[0] = w empty) while the lb field visibly holds the number. No app path writes that row - " +
+    "writeW sets `w` on every keystroke - so it is reachable only by editing phat:v1:draft by hand. If ux-designer wants " +
+    "the token to read the lb number instead, badRows needs one more branch; not changed here.");
+});
+
+/* ------------------------------------------------------ 6. attack 6, the empty bar, pinned as observed */
+
+T("W7 / attack 6 - the empty-bar drop, PINNED AS OBSERVED for the coach: 20 kg bar + 5 lb missed -> `Drop to 20 kg next session — 20 kg bar + 0 lb.`; the empty bar itself missed -> the hold; a 20 lb bar + 0 lb missed -> the hold at 9.1 kg; and the empty bar at top of range -> `Go to 22.3 kg — 20 kg bar + 5 lb.`", function(a){
+  var v = V41("d1d", [BB20(5, 2), BB20(5, 4), BB20(5, 5)]);
+  pin42(a, v, "2 reps at 22.3 kg. Below the range. Drop to 20 kg next session — 20 kg bar + 0 lb.", "", "P1.1", "5 lb on the bar missed");
+  var v0 = V41("d1d", [BB20(0, 2), BB20(0, 4), BB20(0, 5)]);
+  pinS41(a, v0, "2 reps at 20 kg. Below the range. Hold here until all 3 sets reach 3 reps.", "", "P1.1z", "the bare bar missed: nothing to remove");
+  var lb = S41_SET({ bar: 20, bu: "lb", add: 0, au: "lb" }, 2), lb4 = S41_SET({ bar: 20, bu: "lb", add: 0, au: "lb" }, 4);
+  var v1 = V41("d1d", [lb, lb4, lb4]);
+  pinS41(a, v1, "2 reps at 9.1 kg. Below the range. Hold here until all 3 sets reach 3 reps.", "", "P1.1z", "a 20 lb bar, bare, missed");
+  var v2 = V41("d1d", [BB20(0, 5), BB20(0, 5), BB20(0, 5)]);
+  pin42(a, v2, "Top of range on all 3 sets. Go to 22.3 kg next session — 20 kg bar + 5 lb.", "", "P1.4", "the bare bar at top of range");
+  a.eq(ALL41(v).indexOf("Hold here"), -1, "5 lb on: there IS a plate to remove, so it is a drop");
+  a.eq(/(^|[^0-9.])0 kg/.test(ALL41(v)), false, "never `0 kg`");
+  contract("WO-010 W7, attack 6 (backend's least-sure; strength-coach to rule): the too-heavy drop from 20 kg bar + 5 lb prints " +
+    "`Drop to 20 kg next session — 20 kg bar + 0 lb.` - a real load (the bar) with a build phrase naming zero added weight. " +
+    "L1's guard produces it (one step below 5 lb is 0 lb, not below zero, so it is a drop and not the hold). Whether `+ 0 lb` " +
+    "should print, or the phrase should be omitted at add 0 (`Drop to 20 kg next session.`), is copy the coach's §18 does not " +
+    "rule on. Pinned as observed; a ruling moves one branch in tooHeavy and this pin.");
+});
+
+/* ------------------------------------------------------ 7. the ladder, re-derived by hand */
+
+T("W7 / L1 re-derived - a 45 lb BAR + 140 lb (185 lb = 83.9 kg) on d1a, worked from §18.1's rules by hand, not from S41: P1.4 -> 145 lb = 86.2; P1.3 x7 -> L 185 lb, 9.25 -> 10, cap 35 -> 150 lb = 88.5; P1.1 x2 -> 79.705 kg = 175.72 lb - 45 = 130.72 -> 130 lb = 79.4", function(a){
+  a.eq(P.composeLoad({ bar: 45, bu: "lb", add: 140, au: "lb" }).w, 83.9, "185 lb = 83.915");
+  pin42(a, V41("d1a", [BB45N(140, 5), BB45N(140, 5), BB45N(140, 5)]), "Top of range on all 3 sets. Go to 86.2 kg next session — 45 lb bar + 145 lb.", "", "P1.4", "P1.4");
+  pin42(a, V41("d1a", [BB45N(140, 7), BB45N(140, 7), BB45N(140, 7)]), "7 reps at 83.9 kg on every set. Too light. Go to 88.5 kg — 45 lb bar + 150 lb.", "", "P1.3", "P1.3 (G1 in lb, bar included)");
+  pin42(a, V41("d1a", [BB45N(140, 2), BB45N(140, 4), BB45N(140, 5)]), "2 reps at 83.9 kg. Below the range. Drop to 79.4 kg next session — 45 lb bar + 130 lb.", "", "P1.1", "P1.1");
+  a.eq(P.g1Step(185, 7, 5, 5), 10, "G1 on the 5 lb grid: max(5, min(round5(9.25), round5(37))) = 10");
+  a.eq(P.roundGrid(130.72, 5), 130); a.eq(P.roundGrid(9.25, 5), 10); a.eq(P.roundGrid(37, 5), 35);
+  a.eq(P.roundGrid(7.5, 5), 5, "ties DOWN on the 5 grid"); a.eq(P.roundGrid(12.5, 5), 10);
+  a.eq(P.roundGrid(2.5, 5), 0, "2.5 lb rounds down to nothing"); a.eq(1 / P.roundGrid(2.5, 5), Infinity, "and it is +0, never -0");
+});
+
+T("W7 / L1 re-derived - KG PLATES ON A 20 kg BAR (100 kg): P1.1 x2 -> 95 kg = 20 + 75 -> `Drop to 95 kg next session — 20 kg bar + 75 kg.`; P1.3 x7 -> step 5 -> `Go to 105 kg — 20 kg bar + 85 kg.`; H1.4d on a kg bar stays `2.5 kg`", function(a){
+  pin42(a, V41("d1a", [KGB(80, 2), KGB(80, 4), KGB(80, 5)]), "2 reps at 100 kg. Below the range. Drop to 95 kg next session — 20 kg bar + 75 kg.", "", "P1.1", "kg-on-bar drop");
+  pin42(a, V41("d1a", [KGB(80, 7), KGB(80, 7), KGB(80, 7)]), "7 reps at 100 kg on every set. Too light. Go to 105 kg — 20 kg bar + 85 kg.", "", "P1.3", "kg-on-bar G1");
+  var d2x = { id: "d2x", n: "Squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb" };
+  var vb = P.verdict({ ex: d2x, sets: [KGB(60, 9), KGB(60, 9), KGB(60, 9)], prev: { sets: [KGB(60, 10), KGB(60, 10), KGB(60, 10)] } });
+  a.eq(vb.x, "Volume down 10%. Add a rep or 2.5 kg next time.", "H1.4d: the kg step, because the plates are kg");
+  var vlb = P.verdict({ ex: d2x, sets: [BB45N(140, 9), BB45N(140, 9), BB45N(140, 9)], prev: { sets: [BB45N(140, 10), BB45N(140, 10), BB45N(140, 10)] } });
+  a.eq(vlb.x, "Volume down 10%. Add a rep or 5 lb next time.", "H1.4d: the lb step on a lb bar");
+});
+
+T("W7 / L4 re-derived - a 25 lb BELT on d1c (11.3 kg): x10/10 -> `Go to 13.6 kg next session — bodyweight + 30 lb.` + the I2 line; x4/6 -> 10.735 kg = 23.67 lb rounds back to 25, the guard steps to 20 -> `Drop to 9.1 kg next session — bodyweight + 20 lb.`", function(a){
+  a.eq(P.composeLoad({ add: 25, au: "lb" }).w, 11.3);
+  pin42(a, V41("d1c", [LBN(25, 10), LBN(25, 10)]), "Top of range on all 2 sets. Go to 13.6 kg next session — bodyweight + 30 lb.", "If 5 lb is not available, add reps up to 12 first, then jump.", "P1.4", "belt, case 4");
+  pin42(a, V41("d1c", [LBN(25, 4), LBN(25, 6)]), "4 reps at 11.3 kg. Below the range. Drop to 9.1 kg next session — bodyweight + 20 lb.", "", "P1.1", "belt, the guard");
+  a.eq(P.roundGrid((11.3 * 0.95) / P.LB_KG, 5), 25, "plain nearest rounds back to the load he failed at - the guard is what makes it a drop");
+});
+
+T("W7 / H1 re-derived - a 70 lb DUMBBELL on d5b (31.8 kg): H1.2 x13 -> G1 raw 1.75 -> 0, floor 5 -> 75 lb = 34.0 -> `Go to 34 kg next session — 75 lb per DB.` + the per-DB I2 line; H1.1 x6 -> 30.21 kg = 66.6 lb -> 65 -> `Drop to 29.5 kg — 65 lb per DB.`", function(a){
+  a.eq(P.composeLoad({ add: 70, au: "lb" }).w, 31.8, "31.751 -> 31.8");
+  var prev = { sets: [LBN(70, 12), LBN(70, 12), LBN(70, 12)] };
+  var up = P.verdict({ ex: EX41("d5b"), sets: [LBN(70, 13), LBN(70, 13), LBN(70, 13)], prev: prev });
+  a.eq(up.x, "All sets above 12. Go to 34 kg next session — 75 lb per DB."); META42.push(up.x);
+  a.eq(up.x2, "If 5 lb per DB is not available, add reps first, then jump.");
+  var dn = P.verdict({ ex: EX41("d5b"), sets: [LBN(70, 6), LBN(70, 12), LBN(70, 12)], prev: prev });
+  a.eq(dn.x, "6 reps at 31.8 kg. Below the 8–12 range. Drop to 29.5 kg — 65 lb per DB."); META42.push(dn.x);
+  a.eq(P.g1Step(70, 13, 12, 5), 5, "G1: 70 x 0.025 x 1 = 1.75 -> 0 on the 5 grid; floor one step");
+});
+
+T("W7 / L3 re-derived - SP1 from a 45 lb BAR source (83.9 kg triple): 0.675 x 83.9 = 56.63 kg = 124.85 lb - 45 = 79.85 -> 80 lb -> 125 lb = 56.7; band r1(54.535) = 54.5 .. r1(58.73) = 58.7, in band -> `56.7 kg — 45 lb bar + 80 lb. 65–70% of your 83.9 kg triple. …`", function(a){
+  var o = SP41("d1a", BB45N(140, 3), "d3a");
+  a.eq(o.text, "56.7 kg — 45 lb bar + 80 lb. 65–70% of your 83.9 kg triple. Rest 60–90 s. Fast, never grinding.");
+  a.eq(o.target, 56.7); a.eq(o.lo, 54.5); a.eq(o.hi, 58.7);
+  META42.push(o.text);
+  a.eq(P.composeLoad({ bar: 45, bu: "lb", add: 80, au: "lb" }).w, 56.7, "the figure is the plates' own total");
+});
+
+T("W7 / Decision 4 - every phrase this group pins recomposes: the kg figure in each `Go to` / `Drop to` / speed sentence equals composeLoad of the components in the same sentence", function(a){
+  var n = 0;
+  META42.forEach(function(s){
+    var m = s.match(/(?:Go to|Drop to|^)\s*([\d.]+) kg(?: next session)?\s*— (?:(\d+(?:\.\d+)?) (kg|lb) bar \+ )?(?:bodyweight \+ )?(\d+(?:\.\d+)?) (kg|lb)/);
+    if (!m) return;
+    var ld = { add: Number(m[4]), au: m[5] };
+    if (m[2] !== undefined) { ld.bar = Number(m[2]); ld.bu = m[3]; }
+    var c = P.composeLoad(ld);
+    a.eq(c.ok, true, s); a.eq(c.w, Number(m[1]), "recomposes: " + s);
+    n++;
+  });
+  a.ok(n >= 12, "at least twelve sentences carried a phrase (" + n + ")");
+});
+
+/* ------------------------------------------------------ 8. the differential, as a sample */
+
+T("W7 / differential - the ONLY kg-direct movement between c0714d8 and 5a64064 is the too-heavy drop at 2.5..22.5 kg (580,608 verdicts compared in Node: every diff P1.1 or H1.1 in that band; speedLoad, g1Step, incrementLine zero diffs). Sample on an H1 slot: 20 kg -> `Drop to 17.5 kg.`, 25 kg -> `Drop to 22.5 kg.` (unchanged), 2.5 kg on a machine -> `Drop to zero load.`", function(a){
+  var d5b = EX41("d5b"), prev = { sets: [KGD(20, 10), KGD(20, 10), KGD(20, 10)] };
+  a.eq(P.verdict({ ex: d5b, sets: [KGD(20, 6), KGD(20, 10), KGD(20, 10)], prev: prev }).x, "6 reps at 20 kg. Below the 8–12 range. Drop to 17.5 kg.", "before 5a64064 this read `Drop to 20 kg.` - a hold in a drop's clothes");
+  a.eq(P.verdict({ ex: d5b, sets: [KGD(25, 6), KGD(25, 10), KGD(25, 10)], prev: prev }).x, "6 reps at 25 kg. Below the 8–12 range. Drop to 22.5 kg.", "25 kg: round2p5(23.75) = 22.5, unchanged");
+  a.eq(P.verdict({ ex: d5b, sets: [KGD(22.5, 6), KGD(22.5, 10), KGD(22.5, 10)], prev: prev }).x, "6 reps at 22.5 kg. Below the 8–12 range. Drop to 20 kg.", "22.5: nearest is 22.5 (21.375 -> 22.5), guard -> 20");
+  var mach = { id: "d4x", n: "Leg press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine" };
+  a.eq(P.verdict({ ex: mach, sets: [KGD(2.5, 6), KGD(2.5, 10), KGD(2.5, 10)], prev: prev }).x, "6 reps at 2.5 kg. Below the 8–12 range. Drop to zero load.", "2.5 -> 0 through Z2's word");
+  a.eq(P.verdict({ ex: EX41("d1a"), sets: [KGD(2.5, 1), KGD(2.5, 1), KGD(2.5, 1)], prev: null }).x, "1 rep at 2.5 kg. Below the range. Drop to zero load next session.", "the first diff the run found, verbatim");
+  /* and the cases the run found unchanged: a sample of each rule */
+  a.eq(P.verdict({ ex: EX41("d1a"), sets: [KGD(100, 5), KGD(100, 5), KGD(100, 5)], prev: null }).x, "Top of range on all 3 sets. Go to 102.5 kg next session.");
+  a.eq(P.verdict({ ex: EX41("d1a"), sets: [KGD(20, 7), KGD(20, 7), KGD(20, 7)], prev: null }).x, "7 reps at 20 kg on every set. Too light. Go to 22.5 kg.", "too light at 20 kg did not move");
+  a.eq(P.verdict({ ex: EX41("d1a"), sets: [KGD(20, 5), KGD(20, 5), KGD(20, 4)], prev: null }).x, "Stay at 20 kg until all 3 sets reach 5 reps.", "the hold at 20 kg did not move");
+});
+
+/* ------------------------------------------------------ 9. D2 / D6 pure halves on the frontend's on-disk shapes */
+
+T("W7 / D2 D6 - the shapes index.html actually writes to phat:v1:draft (bar a number, add a string, `mode` on the entry, a blank lb row with an empty add): the saved set is the §1 literal, the blank row is skipped, `mode` never reaches the log", function(a){
+  var draft = { date: "2026-09-12", entries: {
+    d1a: { sets: [{ w: "60.8", r: "5", ld: { bar: 20, bu: "kg", add: "90", au: "lb" } }, { w: "", r: "", ld: { bar: 20, bu: "kg", add: "", au: "lb" } }, { w: "", r: "", ld: { bar: 20, bu: "kg", add: "", au: "lb" } }], note: "", mode: { au: "lb", bar: 20, bu: "kg" } },
+    d1b: { sets: [{ w: "", r: "", ld: { add: "", au: "lb" } }, { w: "", r: "", ld: { add: "", au: "lb" } }], note: "", mode: { au: "lb" } },
+    d1d: { sets: [{ w: "100", r: "5" }, { w: "", r: "" }, { w: "", r: "" }], note: "" }
+  } };
+  var vd = P.validateDraft(draft);
+  a.eq(vd.ok, true); a.eq(vd.setCount, 2);
+  a.eq(JSON.stringify(vd.entries), '{"d1a":{"sets":[{"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"lb"}}],"note":""},"d1d":{"sets":[{"w":100,"r":5}],"note":""}}',
+    "d1a one set as the literal; d1b (lb mode, nothing typed) absent; d1d kg-direct; no `mode` anywhere");
+  var s = P.buildSession(draft, "d1", "2026-09-12", 1789264600000, "phat", P.PHAT_PLAN);
+  a.eq(JSON.stringify(s.entries.d1a.sets[0]), '{"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"lb"}}');
+  a.eq(hasKeyDeep40(s, "mode"), false, "mode is the draft's, not the log's");
+  a.eq(P.validateSessionDoc(s).ok, true);
+  /* the lb-with-bar blank row and the no-bar blank row are both blank */
+  a.eq(P.describeSet({ w: "", r: "", ld: { bar: 20, bu: "kg", add: "", au: "lb" } }).status, "blank");
+  a.eq(P.describeSet({ w: "", r: "", ld: { add: "", au: "lb" } }).status, "blank");
+  /* the malformed paste as the app stores it: w mirrors the token */
+  var ve = P.validateEntry([{ w: "7.5.0", r: "5", ld: { bar: 20, bu: "kg", add: "7.5.0", au: "lb" } }]);
+  a.deep(ve.sets, []);
+  a.eq(ve.problems.length, 2, "w malformed AND ld malformed - both name 7.5.0; the frontend prints the ld one");
+  a.eq(ve.problems[1].field, "ld"); a.eq(ve.problems[1].value, "7.5.0"); a.eq(ve.problems[1].sub, "add");
+  var over = P.validateEntry([{ w: "1200", r: "5", ld: { bar: 20, bu: "kg", add: "1200", au: "lb" } }]);
+  a.deep(over.problems.filter(function(p){ return p.field === "ld"; }), [{ i: 0, field: "ld", reason: "range", value: "1200", status: "malformed", sub: "add" }], "over the lb ceiling names add in lb (the row's token is `over 1100`)");
+});
+
+/* ------------------------------------------------------ 10. D5 / D7 on the server's real bytes */
+
+T("W7 / D5 D7 - the document the LIVE project handed back on 2026-09-12 (JSONB order: r before w, ld as {au, bu, add, bar}) restores to the builder's bytes; the ld set is the §1 literal; and the same doc round-trips push -> pull -> restore as a fixed point", function(a){
+  var server = JSON.stringify(LIVE_SERVER_DOC);
+  a.match(server, /"ld":\{"au":"lb","bu":"kg","add":90,"bar":20\}/, "the server's order");
+  var rp = P.restorePayload({ sessions: [{ client_id: "991009120001", local_date: "2026-09-12", doc: clone(LIVE_SERVER_DOC) }], bodyweight: [], plans: [], user_state: null });
+  a.eq(rp.ok, true, JSON.stringify(rp.problems));
+  var built = P.buildSession({ date: "2026-09-12", entries: { d1a: { sets: [{ w: "60.8", r: "5", ld: { bar: "20", bu: "kg", add: "90", au: "lb" } }, { w: "100", r: "5" }], note: "W7 probe - delete me" } } }, "d1", "2026-09-12", 991009120001, "phat", P.PHAT_PLAN);
+  a.eq(JSON.stringify(rp.log.sessions[0]), JSON.stringify(built), "byte-identical to what buildSession would have written");
+  a.eq(JSON.stringify(rp.log.sessions[0].entries.d1a.sets[0]), '{"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"lb"}}');
+  a.eq(JSON.stringify(rp.log.sessions[0].entries.d1a.sets[1]), '{"w":100,"r":5}');
+  a.eq(P.validateSessionDoc(rp.log.sessions[0]).ok, true);
+  var bp = P.backupPayload(rp.log, { schemaVersion: 6, entries: [] }, null);
+  a.eq(bp.sessions[0], rp.log.sessions[0], "goes back up by reference");
+  var asServer = clone(rp.log); asServer.sessions = [clone(LIVE_SERVER_DOC)];
+  a.eq(P.backupSig(bp), P.backupSig(P.backupPayload(asServer, { schemaVersion: 6, entries: [] }, null)), "the signature is key-order-blind: the server's bytes and the builder's sign the same, so a restore does not trigger a re-push");
+});
+
+/* ------------------------------------------------------ 11. the tripwire, restated for this section */
+
+T("W7 - up to the end of S42 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S42 or earlier wrote into his history");
+});
+
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -15994,6 +16377,12 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
      light. Those residues, merged, are the four items here.
      --------------------------------------------------------------------- */
   document.getElementById("untestable").innerHTML +=
+    "<p><b>WO-010 W7 &mdash; three things are <code>index.html</code>&rsquo;s and are observed (item 36), not asserted here.</b> " +
+    "<b>(1)</b> <code>hydrateDraft</code> carrying <code>ld</code> and <code>mode</code> across a reload (D3, B-112&rsquo;s read side): the mutant that drops " +
+    "the line dies in the browser rig, not in this file. <b>(2)</b> The two confirmations (unit switch, bar switch) and the undo (D9): copy, focus and the " +
+    "byte-identity of the draft on Keep are read off the DOM. <b>(3)</b> <code>writeW</code> mirroring a malformed token into <code>w</code> so the refusal " +
+    "names <code>7.5.0</code> (D5): the engine half (S40, S42) proves the token survives; that the row PRINTS it is the rig&rsquo;s. " +
+    "Nothing to extract: each is a thin caller of <code>PHAT.composeLoad</code> / <code>describeSet</code>, which are tabled here.</p>" +
     "<p><b>WO-008 W7 &mdash; the two-account run found two things that live entirely on the wire side, and one of them is a " +
     "defect.</b> <b>(1) The false C3 on first-run sign-in.</b> <code>sync.js</code> subscribes to <code>client.auth.onAuthStateChange</code> " +
     "and <code>emit()</code>s while <code>runAuth</code> still holds <code>st.busy = \"auth\"</code>; <code>onSync</code> &rarr; " +
@@ -16056,7 +16445,7 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "fixed by hand; pinned as-is in S39 and named in the contract questions for the PM.</p>";
 
   document.getElementById("manual").innerHTML =
-    "<p><b>Nine items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Ten items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -16178,7 +16567,20 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "What no rig can answer is UX &sect;11.11 #1 and #5: whether a 320 px file in a 178 px slot is <b>sharp enough on your " +
     "3&times; screen</b> to name the lift from, and whether 368 &times; 119 of white-ground photograph is <b>too bright under gym " +
     "light</b>. If either fails, say which slot: the fix is W3&rsquo;s cap moving to 360 px (a byte budget question) or a " +
-    "treatment the UX spec has deliberately not pre-authorised &mdash; not a runtime change QA can make.</span></li></ol>" +
+    "treatment the UX spec has deliberately not pre-authorised &mdash; not a runtime change QA can make.</span></li>" +
+
+    "<li><b>Load a bar in pounds, one-handed, with chalk on (WO-010).</b> Settings &rarr; Gym: add <i>Barbell</i>, 20, kg. Start Day 1, " +
+    "<i>Bent-over row</i>: tap the chip above the rows (<i>Weight in kg &middot; no bar</i>), tap <b>lb</b>, tap <b>Barbell 20 kg</b> &mdash; the " +
+    "sheet closes on the bar. Type <code>90</code> and <code>5</code>. Read the ghost line from arm&rsquo;s length under the gym light: " +
+    "<b>= 60.8 kg</b> must be the first thing you see on the row, without a tap. Lock the phone, unlock, kill the app, reopen, <b>Resume</b>: " +
+    "<code>90</code> still in the lb field, <code>= 60.8 kg</code> still on the row, the chip still <i>Weight in lb + Barbell 20 kg</i>. Then tap " +
+    "the chip and tap <b>kg</b> with the 90 typed: it must ASK (<i>Set 1 holds lb weights.</i>) and <b>Keep lb</b> must leave the 90 alone.<br>" +
+    "<span class=\"skipmsg\">Why a phone: everything measurable is measured (item 36) &mdash; the saved set is exactly " +
+    "<code>{\"w\":60.8,\"r\":5,\"ld\":{\"bar\":20,\"bu\":\"kg\",\"add\":90,\"au\":\"lb\"}}</code>, the draft carries both halves across a " +
+    "reload and across a second tab, the kg-direct row is <code>main</code>&rsquo;s row byte for byte, the switch never re-values a number. " +
+    "What no rig can answer: whether the chip and the sheet&rsquo;s bar rows land under one thumb with chalk on, whether <code>= 60.8 kg</code> in " +
+    "<code>--bone</code> at 0.875 rem is legible at arm&rsquo;s length under gym light, and whether the OS keyboard covers the total when the lb " +
+    "field has focus. If the total is too small or too dim, say so: it is one token in <code>.gtot</code> and a UX call, not an engine change.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -17102,6 +17504,57 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<code>index.html</code> holds <code>POSES</code> / <code>PAT</code> / <code>diagram(</code> / <code>limb(</code> only in " +
     "the three-line retirement comment; no hex literal in the CSS outside <code>:root</code>. " +
     "<b>file:// suite 718 / 718 / 0, three tripwires.</b></span></li>" +
+
+    "<li><b>WO-010 W7 &mdash; the mixed-unit gym, 2026-09-12, on <code>wo-010-units @ 5a64064</code>.</b> " +
+    "<span class=\"skipmsg\">Rig: Playwright, headless Chromium 400 &times; 850, a static server on 127.0.0.1 serving the working tree " +
+    "(and, for the diff, <code>main @ 5d9525c</code>) with <code>sync.js</code> stubbed so nothing left the machine; every store seeded with " +
+    "HIS session (the export, schema 5), the app driven through its own buttons; 65 checks green. Not checked in. " +
+    "<b>(A) His session after the upgrade.</b> Boot on the v5 store: <code>schemaVersion</code> 6, the sessions array byte-identical, " +
+    "and the same bytes <code>main</code> holds after its own boot. Trend text identical to <code>main</code>. Day 1 opened: on every card " +
+    "(d1a, d1b, d1d, d1e, d1f, d1g, d1h) the ghosts identical to <code>main</code> (<i>Last 20 &times; 12</i> &hellip; <i>Last bodyweight " +
+    "&times; 12</i>), the chip <i>Weight in kg &middot; no bar</i>, <code>#excard</code>&rsquo;s <code>outerHTML</code> <b>byte-identical to " +
+    "<code>main</code></b> before typing AND after his own sets were typed back in (D7 / D8), and every verdict identical to <code>main</code>: " +
+    "the six strings S42 pins, no pound, no em dash. The draft on disk held <code>{\"w\":\"20\",\"r\":\"12\"}</code>, no <code>ld</code> anywhere. " +
+    "<b>(B) D2.</b> Chip &rarr; lb &rarr; <i>Barbell 20 kg</i> (the bar row closed the sheet); caption <code>+ lb</code>, the input named " +
+    "<i>Added weight in lb on Barbell 20 kg, Bent-over row set 1</i>, the stepper <i>Weight up 5 lb</i>; typed 90 / 5 &rarr; <code>= 60.8 kg</code>; " +
+    "the draft set <code>{\"w\":\"60.8\",\"r\":\"5\",\"ld\":{\"bar\":20,\"bu\":\"kg\",\"add\":\"90\",\"au\":\"lb\"}}</code> with " +
+    "<code>mode</code> on the entry; saved &rarr; the log&rsquo;s set is exactly <code>{\"w\":60.8,\"r\":5,\"ld\":{\"bar\":20,\"bu\":\"kg\",\"add\":90,\"au\":\"lb\"}}</code>, " +
+    "the kg-direct d1b set <code>{\"w\":100,\"r\":5}</code>, no <code>mode</code> in the log, his session untouched, the draft cleared. Next session on d1a: " +
+    "the card opened <i>Weight in lb + Barbell 20 kg</i>, ghost <i>Last 90 lb &times; 5</i>, the sheet <i>Last time: lb + Barbell 20 kg.</i>; " +
+    "<code>+</code> on the empty field adopted 90 (live region <i>Weight now 90 lb, 60.8 kg.</i>), a second tap 95 = 63.1 kg. Trend: <i>Row 70.9 kg on 12 Sep</i> " +
+    "(the e1RM of 60.8 &times; 5), no pound. <b>(C) D3.</b> 90 lb / 5 on set 1, <code>1</code> alone on set 2, reload: the draft offered (<i>2 sets logged</i> " +
+    "&mdash; the half-typed row counts as filled, the pre-existing rule), <code>phat:v1:draft</code> byte-identical bar <code>savedAt</code> before and after " +
+    "Resume, chip restored, set 1 <code>90</code> / <code>= 60.8 kg</code> / 5, set 2 <code>1</code> in lb <code>= 20.5 kg</code>; declining: " +
+    "<i>Discard 2 logged sets</i>, draft gone. <b>Two tabs:</b> B opened onto A&rsquo;s draft, Resume, 90 lb / 60.8 kg / the chip, <code>ld</code> on disk. " +
+    "<b>(D) D5.</b> <code>7.5.0</code> pasted (a real <code>InputEvent</code> with <code>insertFromPaste</code>; keystrokes are refused at the second dot): " +
+    "stayed on the row, no total, draft <code>w</code> and <code>ld.add</code> both <code>7.5.0</code>; Save &rarr; <i>Not saved. 1 set needs a fix.</i>, the list " +
+    "<i>Bent-over row &middot; set 1 7.5.0</i>, the row marked <code>! 7.5.0</code> with <code>aria-invalid</code>, value intact, <code>phat:v1:log</code> " +
+    "untouched; <code>1200</code> lb &rarr; token <i>over 1100</i>. <b>(E) D6.</b> Rows 2&ndash;3 blank in lb-with-bar, d1b in lb-no-bar with nothing typed: " +
+    "saved without a refusal, one set on d1a, no d1b entry. <b>(F) D9.</b> 60 kg / 5 typed, chip &rarr; lb: <i>Set 1 holds kg weights. Switching to lb " +
+    "clears them. Reps stay.</i> / <i>Switch to lb and clear</i> / <i>Keep kg</i>; Keep &rarr; back on the sheet, draft byte-identical, row still 60 kg; " +
+    "Switch &rarr; weight empty, reps 5, caption lb, draft <code>{\"w\":\"\",\"r\":\"5\",\"ld\":{\"add\":\"\",\"au\":\"lb\"}}</code>, toast " +
+    "<i>Switched to lb. Weights cleared.</i>, the standing <i>Undo &mdash; put the kg weights back</i>; Undo &rarr; 60 kg / 5 and the draft byte-identical " +
+    "to before the switch. <b>Bar switch</b> with 90 lb typed, Barbell &rarr; No bar: <i>The bar changes the totals. Set 1: 90 lb is 60.8 kg on Barbell 20 kg, " +
+    "40.8 kg with no bar.</i> / <i>Use no bar</i> / <i>Keep Barbell 20 kg</i>; Keep &rarr; byte-identical; Use &rarr; 90 kept, <code>= 40.8 kg</code>, " +
+    "draft <code>w</code> 40.8 with <code>ld</code> sans bar; EZ bar 25 lb &rarr; <code>= 52.2 kg</code>, chip <i>Weight in lb + EZ bar 25 lb</i>. " +
+    "<b>(G) Settings &rarr; Gym.</b> <i>+ Add a bar</i>, Trap bar 25 kg, Save: <code>log</code>, <code>bw</code>, <code>draft</code> byte-identical; " +
+    "<code>prefs.gym</code> = <code>{\"bars\":[{\"n\":\"Trap bar\",\"w\":25,\"u\":\"kg\"}]}</code>. " +
+    "<b>(H) The hydrateDraft mutant</b> (the <code>o.ld = ldCopy(&hellip;)</code> line removed from a copy of <code>index.html</code>): the same rig went " +
+    "red in exactly three places &mdash; after the reload set 1 showed <code>60.8</code> in the <b>lb</b> field with no total, set 2 <code>20.5</code>, " +
+    "tab B the same &mdash; which is the silent re-value D3 exists to stop. Killed. " +
+    "<b>(I) D4 live</b>, by REST from Node as <code>diana@saba.com</code> (a password sign-in only; no <code>updateUser</code>; no app running, so " +
+    "nothing else could reach <code>/rest/v1/*</code>): her sessions before <code>[]</code>; the good doc <b>201</b>; <code>au: kilo</code>, bar without " +
+    "<code>bu</code>, <code>add: -5</code>, <code>w 61</code>, <code>w 60.9</code>, <code>ld: null</code>, <code>w 60.86</code> and <code>w 60.5</code> each " +
+    "<b>400</b> with <code>phat: </code> + the JS sentence (S42 pins all eight; <code>sync.js</code> strips the tag); <code>w 60.85</code> <b>200</b>; the " +
+    "pulled doc came back <code>{\"r\":5,\"w\":60.8,\"ld\":{\"au\":\"lb\",\"bu\":\"kg\",\"add\":90,\"bar\":20}}</code> and " +
+    "<code>restorePayload</code> returned the builder&rsquo;s bytes (S42 holds the server&rsquo;s literal). <b>Cleanup, and a finding:</b> the hard " +
+    "<code>DELETE</code> on the probe row was refused <b>403 / 42501 <i>permission denied for table users</i></b> &mdash; <code>phat_archive_session</code> " +
+    "reads <code>auth.users</code> as the invoker and <code>authenticated</code> cannot; the <code>sessions_delete</code> policy is granted but no " +
+    "client can ever exercise it (pre-existing, not WO-010&rsquo;s; B-05&rsquo;s delete will hit it). The row was soft-deleted instead " +
+    "(<code>deleted_at</code> set, 200): <code>pull()</code>&rsquo;s <code>deleted_at is null</code> reads <code>[]</code>, so a restore on her phone " +
+    "sees nothing; two append-only <code>conflicts</code> rows (<code>superseded_by_update</code>, from the boundary re-push) and the soft-deleted " +
+    "row remain and need the dashboard to remove. A fresh password sign-in succeeded at the end: her password is exactly what it was. " +
+    "<b>file:// suite 802 / 802 / 0, three tripwires.</b></span></li>" +
     "</ol>";
 })();
 </script>
