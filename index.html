@@ -187,10 +187,47 @@
      impossible. It shares the row with Rule X1's EXTRA badge, right-aligned,
      and the badge changes no height - so a row becoming EXTRA moves nothing. */
   .ghost{color:var(--faint); font-size:.78125rem; flex:1 1 100%;
-    min-height:1.15rem; padding-left:22px; display:flex; align-items:baseline;
+    min-height:1.25rem; padding-left:22px; display:flex; align-items:baseline;
     justify-content:space-between; gap:var(--s2)}
-  .gtxt{min-width:0}
+  /* WO-010 (spec 4.4a rules 2-3). The ghost row's line box is FIXED at the
+     taller token's height in BOTH modes (1.25rem, up from 1.15), so a card
+     measures the same whether or not a total is on it, and the row NEVER
+     wraps: the ghost text ellipsises, the total and EXTRA never truncate.
+     The total is --bone, 800, .875rem, tabular, in a 5.5em slot so three
+     sets read as one column - that column is the "per set" he asked for. */
+  .gtxt{min-width:0; flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .gtot{color:var(--bone); font-size:.875rem; font-weight:800; font-variant-numeric:tabular-nums;
+    min-width:5.5em; flex:none; white-space:nowrap}
   .xtra{color:var(--bone); font-size:.6875rem; font-weight:800; letter-spacing:.1em; flex:none}
+  /* WO-010 (spec 4.4b.1). The load chip: full width, 44 px, above the card,
+     present from first paint. Text is the fact; the chevron is the one amber
+     mark, as on the day rows - it is a control and it opens something. */
+  .ldchip{width:100%; min-height:var(--tap); display:flex; align-items:center; justify-content:space-between;
+    gap:var(--s2); padding:0 var(--s4); background:transparent; color:var(--bone); text-align:left;
+    font-size:1rem; font-weight:800; margin-bottom:var(--s1)}
+  .ldchip .ct{min-width:0; overflow-wrap:anywhere}
+  .ldchip .chv{color:var(--amber); font-size:1.375rem; line-height:1; flex:none}
+  /* The load sheet (4.4b.2) and Settings -> Gym (10.6) share the list row:
+     a radio with a two-form mark (outline / fill), never a fill of the row. */
+  .mvlist.ldlist{max-height:none; overflow:visible}
+  .ldrow .mk{width:14px; height:14px; flex:none; border:2px solid var(--line); border-radius:var(--r); display:block}
+  .ldrow[aria-checked="true"]{border-left-color:var(--amber)}
+  .ldrow[aria-checked="true"] .mk{background:var(--amber); border-color:var(--amber)}
+  .ldrow .nm,.gymrow .nm{flex:1 1 auto}
+  .ldlbl{display:block; margin-top:var(--s3)}
+  .ldform{margin-top:var(--s3)}
+  .ldbw{gap:var(--s2); align-items:flex-start; flex-wrap:wrap; margin-top:var(--s1)}
+  .ldbw .stepper{flex:1 1 8.5rem; min-width:8.5rem}
+  .ldbw .seg{flex:1 1 16rem; margin-top:0}
+  .ldfull{margin-top:var(--s3)}
+  .ldform .tiny{margin-top:var(--s2)}
+  .sheet .ldwarn{margin-top:var(--s3)}
+  .gymrow .ct{color:var(--dim); font-variant-numeric:tabular-nums; font-size:.875rem; flex:none}
+  .gymrow .chv{color:var(--amber); font-size:1.375rem; line-height:1; flex:none}
+  .gymform{padding:var(--s2) var(--s3) var(--s3); border-top:1px solid var(--rule)}
+  .gymform .primary{margin-top:var(--s3); min-height:var(--key)}
+  .gymform .ghostbtn{margin-top:var(--s2)}
+  .gymform .refuse{margin-top:var(--s3); margin-bottom:0}
 
   /* ---- WO-001 W6: a set row marked by a blocked save (W4 2.4) ----
      Nothing here depends on hue: the rule is a rule, the "!" is an "!", the
@@ -1289,7 +1326,11 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
          planBroken:false,edits:{},planView:"",pe:null,plErr:null,
          problems:[],logMeta:{profile:null},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
          exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,dietView:null,
-         stores:{log:"absent",bw:"absent",plans:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null},
+         stores:{log:"absent",bw:"absent",plans:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null,gym:null},
+         /* WO-010 W6. gymBad: the stored profile did not validate - the card
+            and Settings say so and still work (spec 4.4b.5, 10.6). gymUi: the
+            Settings form, IN MEMORY: {open:"add"|index, form:{n,w,u}, init}. */
+         gymBad:false, gymUi:null,
          prefsMeta:{},exp:null,
          /* E-3. The backup client's state, IN MEMORY. `mod` is whether sync.js
             loaded: "off" (never attempted - file://, or offline at boot),
@@ -1332,6 +1373,10 @@ const editsPayload=()=>({schemaVersion:PHAT.SCHEMA_VERSION,edits:S.edits});
 const prefsPayload=()=>Object.assign({},S.prefsMeta,
   {schemaVersion:PHAT.SCHEMA_VERSION,restAuto:!!S.prefs.restAuto,onboarded:!!S.prefs.onboarded,
    proteinDate:String(S.prefs.proteinDate||"")},
+  /* WO-010 W6. The gym profile - bars only, {bars:[{n, w, u}]} - per device,
+     never pushed, never in the backup (B-113). Written only from Settings ->
+     Gym, through validateGymProfile. Absent until the first bar is saved. */
+  S.prefs.gym?{gym:S.prefs.gym}:{},
   /* E-3. The last successful backup: {at, sig, user, n, m, x}. Device state,
      so it lives here and not in the log; absent until the first push lands.
      WO-008 W4: `user` is {id, email} - the OWNER of this device's stores
@@ -2034,6 +2079,8 @@ function vSettings(){
     <p class="tiny">Auto-start begins the countdown when a set's reps are entered.
       On manual the countdown does not run.</p></div>`;
 
+  h+=vGym();
+
   /* EXPORT. Its two outcomes are both VISIBLE and they do not share a shape:
      success is the advice enclosure, failure is the four-sided refusal with a
      literal "!" (B-16, spec §2.1). A failure can never be mistaken for a
@@ -2061,6 +2108,117 @@ function vSettings(){
      (the form), signed in (status + BACK UP NOW / RESTORE / SIGN OUT). */
   h+=vBackup();
   return h;
+}
+
+/* ============================================================ WO-010 W6:
+   SETTINGS -> GYM (spec 10.6). Bars only: name, weight, unit. No unit
+   default, no per-implement anything, no default bar. Every write goes
+   through PHAT.validateGymProfile and lands in phat:v1:prefs and nowhere
+   else; the log is self-describing (every set stores its own bar), so
+   editing this list never changes a logged number. The form's typed values
+   live in S.gymUi so a render can never discard them. */
+function vGym(){
+  const bars=(S.prefs.gym&&Array.isArray(S.prefs.gym.bars))?S.prefs.gym.bars:[];
+  const ui=S.gymUi;
+  let h=`<div class="setsec"><span class="lbl secrule">Gym</span>
+    <p class="tiny" style="margin-top:0">Bars in your gym. Pick one per exercise from the card.
+      Each set records its own bar, so editing this list never changes your log.</p>`;
+  if(S.gymBad) h+=`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>Could not read your bars.</p></div>`;
+  const form=(ix)=>{
+    const f=ui.form, step=LD_STEP[f.u], edit=typeof ix==="number";
+    return `<div class="gymform" id="gymform">
+      <label class="bklbl" for="gym-n">Name</label>
+      <input class="bkin" id="gym-n" maxlength="16" autocomplete="off" value="${esc(f.n)}">
+      <label class="bklbl" for="gym-w">Weight</label>
+      <div class="row ldbw"><span class="stepper"><button data-gymact="-" aria-label="Bar weight down ${step} ${esc(f.u)}">&minus;</button>
+        <input id="gym-w" inputmode="decimal" placeholder="0" aria-label="Bar weight in ${esc(f.u)}" value="${esc(f.w)}">
+        <button data-gymact="+" aria-label="Bar weight up ${step} ${esc(f.u)}">+</button></span>
+      <div class="seg" role="group" aria-label="Bar weight unit">
+        <button data-gymu="kg" aria-pressed="${f.u==="kg"?"true":"false"}"><span class="mk" aria-hidden="true"></span>kg</button>
+        <button data-gymu="lb" aria-pressed="${f.u==="lb"?"true":"false"}"><span class="mk" aria-hidden="true"></span>lb</button></div></div>
+      ${ui.err?`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>${esc(ui.err)}</p></div>`:""}
+      <button class="primary" id="gym-save">Save bar</button>
+      ${edit?`<button class="ghostbtn danger" id="gym-remove" data-i="${ix}">Remove bar</button>`:""}
+      <button class="ghostbtn" id="gym-cancel">Cancel</button></div>`;
+  };
+  if(!bars.length&&!S.gymBad) h+=`<p class="tiny">No bars yet. Add the ones you load and they appear on every session card.</p>`;
+  if(bars.length){
+    h+=`<div class="mvlist ldlist">`;
+    bars.forEach((b,i)=>{
+      h+=`<button class="mvrow gymrow" data-gymrow="${i}" aria-expanded="${ui&&ui.open===i?"true":"false"}" aria-label="${esc(b.n)}, ${esc(b.w+" "+b.u)}. Edit.">
+        <span class="nm">${esc(b.n)}</span><span class="ct">${esc(b.w+" "+b.u)}</span><span class="chv" aria-hidden="true">&rsaquo;</span></button>`;
+      if(ui&&ui.open===i) h+=form(i);
+    });
+    h+=`</div>`;
+  }
+  h+=`<button class="ghostbtn" id="gym-add" aria-expanded="${ui&&ui.open==="add"?"true":"false"}">+ Add a bar</button>`;
+  if(ui&&ui.open==="add") h+=form("add");
+  return h+`</div>`;
+}
+const gymDirty=()=>!!(S.gymUi&&S.gymUi.form&&(S.gymUi.form.n!==S.gymUi.init.n||S.gymUi.form.w!==S.gymUi.init.w||S.gymUi.form.u!==S.gymUi.init.u));
+/* Open the form for a row (index) or for a new bar ("add"). One form at a
+   time: a typed-but-unsaved form is confirmed before it is dropped. */
+function gymOpen(which){
+  if(S.gymUi&&S.gymUi.open===which){ S.gymUi=null; render(true); return; }
+  if(gymDirty()){
+    askSheet({headline:"Discard the bar you were editing?", body:"", danger:"Discard it", safe:"Keep editing",
+      back:which==="add"?"gym-add":null,
+      onDanger:()=>{ closeSheet(); S.gymUi=null; gymOpen(which); }});
+    return;
+  }
+  const bars=(S.prefs.gym&&S.prefs.gym.bars)||[];
+  const f=(which==="add")?{n:"",w:"20",u:"kg"}:{n:String(bars[which].n),w:String(bars[which].w),u:bars[which].u};
+  S.gymUi={open:which,form:f,init:Object.assign({},f),err:null};
+  render(true);
+  const n=document.getElementById("gym-n"); if(n) n.focus();
+}
+async function gymWrite(bars,okMsg,undoFn){
+  const before=S.prefs.gym;
+  S.prefs.gym={bars:bars};
+  const ok=await save(PREFS,prefsPayload());
+  if(!ok){ S.prefs.gym=before; return false; }
+  S.gymBad=false;
+  if(undoFn) toastUndo(okMsg,undoFn); else toast(okMsg);
+  return true;
+}
+async function gymSave(){
+  const ui=S.gymUi; if(!ui||!ui.form) return;
+  const f=ui.form, n=String(f.n).trim();
+  ui.err=null;
+  if(n===""){ ui.err="Name the bar."; }
+  else if(n.length>16){ ui.err="Name too long. Up to 16 characters."; }
+  else{
+    const v=PHAT.validateGymProfile({bars:[{n:n,w:String(f.w).trim(),u:f.u}]});
+    if(!v.ok) ui.err="Bar weight must be over 0 and at most "+PHAT.LIMITS.barMax[f.u]+" "+f.u+".";
+  }
+  if(ui.err){ render(true); const el=document.getElementById(ui.err.indexOf("Name")===0?"gym-n":"gym-w"); if(el) el.focus(); return; }
+  const bar={n:n,w:Number(String(f.w).trim()),u:f.u};
+  const bars=((S.prefs.gym&&S.prefs.gym.bars)||[]).slice();
+  if(ui.open==="add") bars.push(bar); else bars[ui.open]=bar;
+  /* The WHOLE list is validated before the write, not just the row: a
+     stored list that has gone wrong is caught here, not on the next boot. */
+  const all=PHAT.validateGymProfile({bars:bars});
+  if(!all.ok){ ui.err="Could not save the bar. Nothing changed."; render(true); return; }
+  const ok=await gymWrite(bars,n+" saved.");
+  if(!ok){ ui.err="Could not save the bar. Nothing changed."; render(true); return; }
+  S.gymUi=null; render(true);
+  const back=document.getElementById("gym-add"); if(back) back.focus();
+}
+async function gymRemove(i){
+  const bars=((S.prefs.gym&&S.prefs.gym.bars)||[]).slice();
+  const gone=bars[i]; if(!gone) return;
+  bars.splice(i,1);
+  const ok=await gymWrite(bars,gone.n+" removed.",async()=>{
+    const cur=((S.prefs.gym&&S.prefs.gym.bars)||[]).slice();
+    cur.splice(Math.min(i,cur.length),0,gone);
+    hideToast();
+    const back=await gymWrite(cur,gone.n+" restored.");
+    if(!back){ toast("Could not restore the bar. Nothing changed.",false,4200); return; }
+    if(S.sub==="settings") render(true);
+  });
+  if(!ok){ if(S.gymUi) S.gymUi.err="Could not save the bar. Nothing changed."; render(true); return; }
+  S.gymUi=null; render(true);
+  const back=document.getElementById("gym-add"); if(back) back.focus();
 }
 
 /* ============================================================ W7: session
@@ -2134,7 +2292,7 @@ function removeTarget(sets){
    choose can never reach the log. ACROSS A PRESCRIPTION CHANGE the per-row
    hint is DELETED, not captioned - prescriptionEpoch reports prefill:false and
    seed:false, and the provenance line renders in its place. */
-function ghostText(e,prev,k,changed){
+function ghostText(e,prev,k,changed,mode){
   if(changed) return "";
   const pv=prev&&prev.sets&&prev.sets[k];
   if(!pv) return "No prior set.";
@@ -2142,8 +2300,189 @@ function ghostText(e,prev,k,changed){
   if(!pw.ok||!pr.ok) return "No prior set.";
   /* Rule Z2: a rack chin reads `Last bodyweight x 10`. No rule and no view in
      this app produces the string `0 kg`. */
+  if(mode&&!isKgDirect(mode)&&pw.value>0){
+    /* WO-010 spec 4.4a rule 4, on an `ld` card only - a kg-direct card is
+       the line below, byte for byte (D8). The number he will LOAD prints only
+       when last time was the SAME BUILD - same unit, same bar or both no bar;
+       anything else prints the stored kg total WITH its unit, so the row
+       never shows a number that looks loadable and is not. The build itself
+       (which bar) is not repeated per row: the chip above the rows names it,
+       and the sheet's "Last time:" line carries the prior build. */
+    const pm=PHAT.loadModeFor({sets:[pv]});
+    if(pv.ld&&modeEq(pm,mode)) return "Last "+String(pv.ld.add)+" "+pv.ld.au+" × "+pr.value;
+    return "Last "+PHAT.loadWord(pw.value,e.implement)+" × "+pr.value;
+  }
   const w=pw.value>0?String(r1(pw.value)):PHAT.loadWord(0,e.implement);
   return "Last "+w+" × "+pr.value;
+}
+
+/* ============================================================ WO-010 W6:
+   THE LOAD'S BUILD - unit and bar per card, kg total per set.
+   The shape is the order's §1 and is not re-decided here: `w` is ALWAYS the
+   kg total every engine reads; `ld` = {bar?, bu?, add, au} sits beside it,
+   strings while drafting, and its ABSENCE means kg direct - which is every
+   set logged before this shipped. A card's mode is {au, bar?, bu?}; kg with
+   no bar is "kg direct" and renders today's row byte for byte (D8).
+   Nothing here reads `implement` to decide what the row offers - his
+   ruling: no split by type. */
+const LD_STEP={kg:2.5,lb:5};          /* the stepper's tap, in the ENTRY unit; W1 may move it */
+const isKgDirect=m=>!m||(m.au==="kg"&&m.bar===undefined);
+const modeEq=(a,b)=>!!a&&!!b&&a.au===b.au&&a.bar===b.bar&&a.bu===b.bu;
+/* Copies with the key order §1 fixes (bar, bu, add, au) so a draft written
+   and read back is the same bytes. `add` is kept as the typed string; the
+   bar is the profile's number. */
+function ldCopy(ld){
+  const o={};
+  if(ld.bar!==undefined){ o.bar=(typeof ld.bar==="number")?ld.bar:String(ld.bar); o.bu=ld.bu; }
+  o.add=ld.add==null?"":String(ld.add); o.au=ld.au;
+  return o;
+}
+function modeCopy(m){
+  const o={au:m.au==="lb"?"lb":"kg"};
+  if(m.bar!==undefined&&m.bar!==null){ o.bar=(typeof m.bar==="number")?m.bar:Number(m.bar); o.bu=m.bu==="lb"?"lb":"kg"; }
+  return o;
+}
+/* The card's mode, in precedence: the mode he CHOSE on the chip this session
+   (entry.mode) > the build already on the draft's own sets > sets typed in
+   kg direct before any mode existed > how the load was built LAST TIME
+   (PHAT.loadModeFor) > kg direct. The draft's own ld wins while a draft is
+   open (WO-010 §1). Never throws: a throw here is a kg-direct card (§0.7). */
+function cardMode(id,prev){
+  try{
+    const en=S.draft&&S.draft.entries[id];
+    if(en&&en.mode&&typeof en.mode==="object") return modeCopy(en.mode);
+    const sets=(en&&Array.isArray(en.sets))?en.sets:[];
+    for(let i=0;i<sets.length;i++){ const l=sets[i]&&sets[i].ld; if(l&&typeof l==="object") return modeCopy(l); }
+    if(sets.some(x=>String((x&&x.w)==null?"":x.w).trim()!=="")) return {au:"kg"};
+    return modeCopy(PHAT.loadModeFor(prev===undefined?PHAT.lastFor(S.sessions,id):prev));
+  }catch(err){ return {au:"kg"}; }
+}
+/* The bar's name for a mode: the profile's when a bar matches on weight and
+   unit, else the unnamed form. null for no bar. */
+function barLabel(m,cap){
+  if(!m||m.bar===undefined) return null;
+  const bars=(S.prefs.gym&&Array.isArray(S.prefs.gym.bars))?S.prefs.gym.bars:[];
+  const hit=bars.find(b=>b&&Number(b.w)===Number(m.bar)&&b.u===m.bu);
+  if(hit) return String(hit.n)+" "+m.bar+" "+m.bu;
+  return (cap?"Bar ":"bar ")+m.bar+" "+m.bu;
+}
+/* Spec 4.4b.1, the chip's text: `Weight in kg · no bar` / `Weight in lb + Barbell 20 kg`. */
+function chipText(m){
+  const b=barLabel(m);
+  return "Weight in "+m.au+(b?" + "+b:" · no bar");
+}
+/* What he typed into the weight field: `add` on an ld set, `w` on a kg-direct one. */
+const typedW=st=>(st&&st.ld&&typeof st.ld==="object")?String(st.ld.add==null?"":st.ld.add):String((st&&st.w)==null?"":st.w);
+/* THE ONE WRITE PATH for the weight field. Kg direct: `w` is the typed text
+   and the set carries no `ld` (delete the key - `ld: null` is refused by
+   the validator, by design). Otherwise `ld` holds the components and `w`
+   is composeLoad's kg total, recomputed on EVERY write; on a component the
+   engine cannot read, `w` mirrors the typed token so the refusal names what
+   he typed (`! 7.5.0`, never `! 3.4`). Nothing here rounds, snaps or
+   converts a typed number. */
+function writeW(st,val,mode){
+  const v=val==null?"":String(val);
+  if(isKgDirect(mode)){ st.w=v; delete st.ld; return; }
+  const ld={};
+  if(mode.bar!==undefined){ ld.bar=mode.bar; ld.bu=mode.bu; }
+  ld.add=v; ld.au=mode.au;
+  st.ld=ld;
+  let c=null; try{ c=PHAT.composeLoad(ld); }catch(err){ c=null; }
+  st.w=(c&&c.ok)?String(c.w):v;
+}
+/* The total token (spec 4.4a rule 2): `= 60.8 kg`, the engine's load word
+   for w (Rule Z2 - `= bodyweight` for a zero total, never `0 kg`). Empty
+   while the field is empty, malformed or out of range: a blank row says
+   nothing, and a refusal owns the line. */
+function totalWord(st,e){
+  if(!st||!st.ld||typeof st.ld!=="object") return "";
+  if(String(st.ld.add==null?"":st.ld.add).trim()==="") return "";
+  let c=null; try{ c=PHAT.composeLoad(st.ld); }catch(err){ return ""; }
+  if(!c||!c.ok) return "";
+  return "= "+PHAT.loadWord(c.w,e?e.implement:undefined);
+}
+/* The live-region sentence after a weight commit on an ld card (spec 19.3):
+   the typed number in his unit AND the kg total, because the total is the
+   ask and the tap size is the fact a screen-reader user cannot see. */
+function ldAnnounce(st,e){
+  const t=typedW(st); if(t==="") return "";
+  const tot=totalWord(st,e);
+  return "Weight now "+t+" "+st.ld.au+(tot?", "+tot.slice(2):"")+".";
+}
+/* Apply a mode to every set on the card. Each set is re-derived from what he
+   TYPED (typedW) - never from the stored kg total - so a bar change keeps
+   the plates and moves only the total, and a unit change arrives here only
+   after the confirmation that clears the fields (spec 4.4b.3). */
+function applyMode(id,mode,clearW){
+  const en=S.draft&&S.draft.entries[id]; if(!en) return;
+  en.mode=modeCopy(mode);
+  (en.sets||[]).forEach(st=>{ writeW(st,clearW?"":typedW(st),en.mode); });
+  flushDraft();
+}
+/* Repaint the card's mode-dependent nodes IN PLACE. Never render(): the
+   sheet may still be open and the caret may be in a reps field. Touches the
+   chip, the captions, the three aria-labels per row, the total slot and the
+   ghost - and nothing that is a control's box, so the row's geometry holds. */
+function paintMode(id){
+  const card=document.getElementById("excard");
+  if(!card||card.dataset.ex!==id||!S.draft) return;
+  const en=S.draft.entries[id]; if(!en) return;
+  const C=sessionCtx(); const e=C.list.find(x=>x.id===id)||exAnywhere(id);
+  const prev=PHAT.lastFor(S.sessions,id);
+  let changed=false;
+  try{ const ep=PHAT.prescriptionEpoch({ex:e,prev:prev,plan:sp(),exId:id}); changed=!!(ep&&ep.changed); }catch(err){}
+  const mode=cardMode(id,prev), kgd=isKgDirect(mode);
+  const chip=document.getElementById("ldchip");
+  if(chip){ const t=chipText(mode); chip.querySelector(".ct").textContent=t; chip.setAttribute("aria-label",t+". Change."); }
+  const step=LD_STEP[mode.au], bl=barLabel(mode);
+  card.querySelectorAll(".setrow").forEach(row=>{
+    const k=+row.dataset.i, st=en.sets[k]; if(!st) return;
+    const at=" "+e.n+" set "+(k+1);
+    const cap=row.querySelector(".unit"), inp=row.querySelector("input.w");
+    const dn=row.querySelector('button[data-act="-"][data-f="w"]'), up=row.querySelector('button[data-act="+"][data-f="w"]');
+    if(cap) cap.textContent=kgd?"kg":((mode.bar!==undefined?"+ ":"")+mode.au);
+    if(inp){
+      inp.value=typedW(st);
+      inp.setAttribute("aria-label",kgd?"Weight in kg,"+at
+        :(bl?"Added weight in "+mode.au+" on "+bl+","+at:"Weight in "+mode.au+","+at));
+    }
+    if(dn) dn.setAttribute("aria-label",kgd?"Weight down 2.5,"+at:"Weight down "+step+" "+mode.au+","+at);
+    if(up) up.setAttribute("aria-label",kgd?"Weight up 2.5,"+at:"Weight up "+step+" "+mode.au+","+at);
+    const gh=row.querySelector(".ghost"), gt=row.querySelector(".gtxt");
+    let tot=row.querySelector(".gtot");
+    if(kgd){ if(tot) tot.remove(); }
+    else{
+      if(!tot){ tot=document.createElement("span"); tot.className="gtot"; gh.insertBefore(tot,gt); }
+      tot.textContent=totalWord(st,e);
+    }
+    if(gt){
+      const g=ghostText(e,prev,k,changed,mode);
+      gt.dataset.ghost=g;
+      if(!row.classList.contains("bad")) gt.textContent=g;   // a refusal keeps the line
+    }
+  });
+}
+/* Repaint one row's total after a keystroke or a tap. Text only. */
+function paintTotal(row,st,e){
+  const tot=row&&row.querySelector(".gtot"); if(!tot) return;
+  const t=totalWord(st,e); if(tot.textContent!==t) tot.textContent=t;
+}
+/* The persistent undo control in the bottom stack, kept in step with S.undo
+   without a render (C-12 rule 5's control, now shared by the removed-set undo
+   and the unit-switch undo - one slot, latest action wins). */
+function undoLabel(u){
+  if(!u) return "";
+  if(u.kind==="unit") return "Undo — put the "+u.fromAu+" weights back";
+  return "Undo — put set "+(u.i+1)+" back";
+}
+function paintUndo(exId){
+  const stack=document.querySelector("#excard")&&document.querySelector(".stack"); if(!stack) return;
+  let b=document.getElementById("undoset");
+  const want=!!(S.undo&&S.undo.exId===exId);
+  if(!want){ if(b) b.remove(); return; }
+  if(!b){ b=document.createElement("button"); b.className="ghostbtn mb12"; b.id="undoset";
+    const v=document.getElementById("slot-verdict"); if(v&&v.nextSibling) stack.insertBefore(b,v.nextSibling); else stack.appendChild(b); }
+  b.textContent=undoLabel(S.undo);
 }
 
 function vSession(){
@@ -2236,12 +2575,46 @@ function vSession(){
       aria-controls="fig-${esc(e.id)}"><span class="chv" aria-hidden="true">&rsaquo;</span> movement &amp; cue</button>
       <div class="fig" id="fig-${esc(e.id)}" data-figbox="${esc(e.id)}"></div>`;
 
+  /* ---- WO-010 W6: THE LOAD CHIP (spec 4.4b.1). Between the disclosure and
+     the card, OUTSIDE #excard so the row DOM is untouched (D8). A control
+     above inputs, allowed because it is present from first paint at a fixed
+     44 px and its text changes only on a tap inside a modal he opened. */
+  const mode=cardMode(e.id,prev), kgd=isKgDirect(mode);
+  { const ct=chipText(mode);
+    h+=`<button class="ldchip" id="ldchip" aria-haspopup="dialog" aria-label="${esc(ct)}. Change."><span class="ct">${esc(ct)}</span><span class="chv" aria-hidden="true">&rsaquo;</span></button>`; }
+
   /* ---- THE INPUTS. Built BEFORE and OUTSIDE every try block above, so no
      advice rule can prevent a set row painting (§0.7). */
   h+=`<div class="card" id="excard" data-ex="${esc(e.id)}"><div class="sets">`;
   for(let k=0;k<st.sets.length;k++){
-    const g=ghostText(e,prev,k,changed);
+    const g=ghostText(e,prev,k,changed,mode);
     const at=` ${esc(e.n)} set ${k+1}`;
+    /* THE `ld` ROW (spec 4.4a). Same children, same order, same classes as
+       the kg row below: the caption reads the unit (`+ LB` on a bar), the
+       input binds to `add`, the steppers name their tap in the entry unit,
+       and the ghost line gains ONE token - the kg total, in a fixed slot so
+       three sets read as a column. The kg-direct row below is `main`'s row
+       byte for byte and must stay so (D8). */
+    if(!kgd){
+      const step=LD_STEP[mode.au], bl=barLabel(mode);
+      const cap=(mode.bar!==undefined?"+ ":"")+mode.au;
+      const il=bl?`Added weight in ${esc(mode.au)} on ${esc(bl)},${at}`:`Weight in ${esc(mode.au)},${at}`;
+      h+=`<div class="setrow" data-i="${k}">
+      <span class="idx" aria-hidden="true">${k+1}</span>
+      <span class="grp"><span class="unit" aria-hidden="true">${esc(cap)}</span>
+        <span class="stepper"><button data-act="-" data-f="w" aria-label="Weight down ${step} ${esc(mode.au)},${at}">&minus;</button>
+        <input class="w" data-f="w" inputmode="decimal" placeholder="0"
+          aria-label="${il}" value="${esc(typedW(st.sets[k]))}">
+        <button data-act="+" data-f="w" aria-label="Weight up ${step} ${esc(mode.au)},${at}">+</button></span></span>
+      <span class="grp"><span class="unit" aria-hidden="true">reps</span>
+        <span class="stepper"><button data-act="-" data-f="r" aria-label="Reps down 1,${at}">&minus;</button>
+        <input class="r" data-f="r" inputmode="numeric" placeholder="&ndash;"
+          aria-label="Reps,${at}" value="${esc(st.sets[k].r)}">
+        <button data-act="+" data-f="r" aria-label="Reps up 1,${at}">+</button></span></span>
+      <span class="ghost"><span class="gtot">${esc(totalWord(st.sets[k],e))}</span><span class="gtxt" data-ghost="${esc(g)}">${esc(g)}</span>
+        <span class="xtra" data-xtra="${k}">${xs.flags[k]?"EXTRA":""}</span></span></div>`;
+      continue;
+    }
     h+=`<div class="setrow" data-i="${k}">
       <span class="idx" aria-hidden="true">${k+1}</span>
       <span class="grp"><span class="unit" aria-hidden="true">kg</span>
@@ -2296,7 +2669,7 @@ function vSession(){
      it belongs to - below every input, reachable for the whole session, and
      never a bar floating over the next four screens. */
   if(S.undo&&S.undo.exId===e.id)
-    h+=`<button class="ghostbtn mb12" id="undoset">Undo &mdash; put set ${S.undo.i+1} back</button>`;
+    h+=`<button class="ghostbtn mb12" id="undoset">${esc(undoLabel(S.undo))}</button>`;
   if(S.err) h+=`<div class="warn hi mb12" role="alert">
     <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div>`;
   /* `#bs-slot` IS GONE FROM THIS SCREEN and lives on the Summary (W8). One
@@ -4337,6 +4710,32 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#bk-push")){ clearTimeout(bkTimer); await runBackup(true,"manual"); return; }
   if(e.target.closest("#bk-restore")){ await restoreStart(); return; }
   if(e.target.closest("#settings-back")){ S.sub=""; S.exp=null; render(); return; }
+  /* ---- WO-010 W6: Settings -> Gym. The stepper and the segment update the
+     form in memory and the node under the thumb - no render while the name
+     field may hold a caret. Save, Remove, Cancel and a row tap are commits. */
+  if(e.target.closest("#gym-add")){ gymOpen("add"); return; }
+  const gr=e.target.closest("[data-gymrow]");
+  if(gr){ gymOpen(+gr.dataset.gymrow); return; }
+  if(e.target.closest("#gym-save")){ await gymSave(); return; }
+  const grm=e.target.closest("#gym-remove");
+  if(grm){ await gymRemove(+grm.dataset.i); return; }
+  if(e.target.closest("#gym-cancel")){ S.gymUi=null; render(true); const b=document.getElementById("gym-add"); if(b) b.focus(); return; }
+  const ga=e.target.closest("[data-gymact]");
+  if(ga&&S.gymUi&&S.gymUi.form){
+    const inp=document.getElementById("gym-w"); if(!inp) return;
+    const f=S.gymUi.form, n=Number(String(inp.value).trim()), step=LD_STEP[f.u];
+    const v=isFinite(n)?Math.max(0,r1(n+(ga.dataset.gymact==="+"?step:-step))):step;
+    inp.value=String(v); f.w=String(v); return;
+  }
+  const gu=e.target.closest("[data-gymu]");
+  if(gu&&S.gymUi&&S.gymUi.form){
+    S.gymUi.form.u=gu.dataset.gymu==="lb"?"lb":"kg";
+    document.querySelectorAll("[data-gymu]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.gymu===S.gymUi.form.u?"true":"false"));
+    const step=LD_STEP[S.gymUi.form.u];
+    document.querySelectorAll("[data-gymact]").forEach(b=>b.setAttribute("aria-label","Bar weight "+(b.dataset.gymact==="+"?"up":"down")+" "+step+" "+S.gymUi.form.u));
+    const inp=document.getElementById("gym-w"); if(inp) inp.setAttribute("aria-label","Bar weight in "+S.gymUi.form.u);
+    return;
+  }
   if(e.target.closest("#rest-auto")){ await setRestAuto(true); return; }
   if(e.target.closest("#rest-manual")){ await setRestAuto(false); return; }
   if(e.target.closest("#ob-start")){ await finishOnboarding(); return; }
@@ -4392,7 +4791,8 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#addset")){ addSet(); return; }
   const rm=e.target.closest("#rmset");
   if(rm){ askRemoveSet(+rm.dataset.k); return; }
-  if(e.target.closest("#undoset")){ undoRemove(); return; }
+  if(e.target.closest("#undoset")){ if(S.undo&&S.undo.kind==="unit") undoUnit(); else undoRemove(); return; }
+  if(e.target.closest("#ldchip")){ openLoadSheet(); return; }
   if(e.target.closest("#backsave")){ backToSave(); return; }
   if(e.target.closest("#v1-add")){ await v1Answer(true); return; }
   if(e.target.closest("#v1-no")){ await v1Answer(false); return; }
@@ -4405,19 +4805,29 @@ document.getElementById("view").addEventListener("click",async e=>{
        jumps 7.5.0 → 10 on one tap has silently changed a number, which is the
        whole class of bug this batch exists to kill (W4 §2.8). */
     const norm=normaliseNum(inp.value,f);
+    /* WO-010 W6: the card's mode decides the weight step (5 lb / 2.5 kg on
+       `add`, 2.5 on a kg-direct row - today's) and whether the announcement
+       carries the kg total. Read once per tap, never per keystroke. */
+    const cardEl=inp.closest(".card"), rowEl=inp.closest(".setrow");
+    const mode=(f==="w"&&cardEl)?cardMode(cardEl.dataset.ex):null, kgd=isKgDirect(mode);
     let out;
     if(norm!==null){
       out=norm;
-      if(out!=="") announce((f==="w"?"Weight":"Reps")+" now "+out+".");
+      if(out!==""&&(f!=="w"||kgd)) announce((f==="w"?"Weight":"Reps")+" now "+out+".");
     } else {
       /* THE SEEDING RULE (spec 4.4) buys back the whole ergonomic win of
          prefill for ONE tap, without prefill's cost. */
-      const seed=seedValue(inp,f,st.dataset.act==="+"?1:-1);
-      if(seed!==null){ out=seed; announce("Weight now "+out+"."); }
-      else out=stepValue(inp.value,f,st.dataset.act==="+"?1:-1);
+      const seed=seedValue(inp,f,st.dataset.act==="+"?1:-1,mode);
+      if(seed!==null){ out=seed; if(kgd) announce("Weight now "+out+"."); }
+      else out=stepValue(inp.value,f,st.dataset.act==="+"?1:-1,(f==="w"&&!kgd)?LD_STEP[mode.au]:undefined);
     }
     inp.value=out;
     commitField(inp,out);
+    if(f==="w"&&!kgd&&out!==""&&cardEl&&rowEl){
+      const stt=S.draft&&S.draft.entries[cardEl.dataset.ex]&&S.draft.entries[cardEl.dataset.ex].sets[+rowEl.dataset.i];
+      const m=stt?ldAnnounce(stt,sessionCtx().list.find(x=>x.id===cardEl.dataset.ex)||exAnywhere(cardEl.dataset.ex)):"";
+      if(m) announce(m);
+    }
     /* Rule R1 rule 2: a REPS stepper tap is a committed rep count and starts
        the rest. A weight tap never does, and no keystroke ever does. */
     if(f==="r"&&out!==""){
@@ -4524,6 +4934,12 @@ document.getElementById("view").addEventListener("input",e=>{
      pasted and blocks the save instead. Stripping a paste is what turns 7,5
      into 75 and 7.5.0 into 750 (W4 §2.1, WO-001 §W6). */
   if(e.target.dataset.f){ syncSet(e.target,e.inputType); scheduleDraftSave(); }
+  /* WO-010 W6: the Gym form's fields are held in memory as typed, verbatim,
+     and answered on Save - the same rule as a set row. */
+  if(S.gymUi&&S.gymUi.form){
+    if(e.target.id==="gym-n") S.gymUi.form.n=e.target.value;
+    if(e.target.id==="gym-w") S.gymUi.form.w=e.target.value;
+  }
 });
 /* blur does not bubble; focusout does. Leaving a field commits it immediately,
    so the only thing a hard kill can cost is the keystroke still in the buffer.
@@ -4557,6 +4973,8 @@ document.getElementById("view").addEventListener("keydown",e=>{
      Enter in the first is "next field", not a submit - a commit from a
      half-filled pair would only ever be a mismatch refusal. */
   if(e.target.id==="bk-new2"){ e.preventDefault(); pwTap(); }
+  if(e.target.id==="gym-n"){ e.preventDefault(); const w=document.getElementById("gym-w"); if(w) w.focus(); }
+  if(e.target.id==="gym-w"){ e.preventDefault(); gymSave(); }
   if(e.target.id==="bk-new"){ e.preventDefault(); const n=document.getElementById("bk-new2"); if(n) n.focus(); }
   /* WO-006: Enter in an editor name field is "done with this field" - it
      blurs, which commits. Enter in the add form's name is not ADD: ADD is
@@ -4585,6 +5003,9 @@ document.getElementById("dr-offer").addEventListener("click",e=>{
   }
 });
 document.getElementById("modal").addEventListener("click",e=>{
+  /* WO-010: the load sheet's segment, bar rows and one-off bar form. */
+  const lb=e.target.closest("[data-ld]");
+  if(lb&&sheetState&&sheetState.load&&!sheetState.onDanger){ loadSheetTap(lb); return; }
   /* WO-007: a day row in the move sheet (9.9.3). */
   const dr=e.target.closest("[data-sheetday]");
   if(dr&&sheetState&&sheetState.move){ moveSheetTap(dr.dataset.sheetday); return; }
@@ -4635,7 +5056,8 @@ function commitField(inp,val){
   const id=card.dataset.ex, i=+row.dataset.i, f=inp.dataset.f;
   const st=S.draft&&S.draft.entries[id]&&S.draft.entries[id].sets[i];
   if(!st) return;
-  st[f]=val;
+  if(f==="w"){ writeW(st,val,cardMode(id)); paintTotal(row,st,exAnywhere(id)); }
+  else st[f]=val;
   paintAdvice(true);
   reviewRow(id,i);
 }
@@ -4666,7 +5088,12 @@ function syncSet(inp,inputType){
       val=kept;
     }
   }
-  st[f]=val;
+  /* WO-010 W6: the weight field writes through writeW - `w` is the kg
+     total on an ld row, recomputed on every keystroke, and the total token
+     on the row follows the keystroke (it is text on his own row, not a
+     verdict: spec 4.4a.2). */
+  if(f==="w"){ writeW(st,val,cardMode(id)); paintTotal(row,st,exAnywhere(id)); }
+  else st[f]=val;
   reviewRow(id,i);
 }
 
@@ -4675,9 +5102,9 @@ function syncSet(inp,inputType){
    is how he undoes an entry, and after W2 a resting 0 in the reps field is a
    refusal. Weight 2.5 → 0 → "" keeps the 0 kg rack chin reachable (B-21) and
    makes it reversible. `+` from empty is 2.5 kg / 1 rep, as today. */
-function stepValue(cur,f,dir){
+function stepValue(cur,f,dir,wstep){
   const s=String(cur==null?"":cur).trim();
-  const step=f==="w"?2.5:1, floor=f==="w"?0:1;
+  const step=f==="w"?(wstep||2.5):1, floor=f==="w"?0:1;
   if(s==="") return dir<0?"":String(step);
   const n=Number(s);
   if(!isFinite(n)) return s;                 // unreachable: normaliseNum ran first
@@ -4718,9 +5145,21 @@ function announce(msg,assertive){
    than looking the value back up in S.draft. That is what makes "7.5.0"
    nameable: by the time the message renders, the draft may already have been
    edited, and a token that disagrees with the row is worse than no token. */
-function tokenFor(p){
+function tokenFor(p,au){
   if(!p) return "";
   if(p.reason==="empty") return p.field==="r"?"no reps":"no weight";
+  /* WO-010 (spec 4.4a.2): a component problem names the limit IN THE UNIT HE
+     TYPED - `over 1100` for lb, `over 500` for kg - and a total that is in
+     range by its parts but over 500 kg says so with the unit. Anything else
+     on `ld` is the token as typed, exactly like a malformed `w`. */
+  if(p.field==="ld"){
+    if(p.reason==="range"){
+      if(p.sub==="w") return "over 500 kg";
+      if(p.sub==="add") return "over "+(PHAT.LIMITS.addMax[au]||500);
+      if(p.sub==="bar") return "bar over "+(PHAT.LIMITS.barMax[au]||50);
+    }
+    if(p.reason==="empty") return "no weight";
+  }
   if(p.reason==="range"){
     if(p.field==="w") return "over 500";
     return (+p.value>100)?"over 100":"0 reps";
@@ -4750,8 +5189,12 @@ function badRows(){
   });
   out.sort((a,b)=>a.ord-b.ord||a.i-b.i);
   out.forEach(r=>{
-    r.primary=r.ps.find(p=>p.reason!=="empty")||r.ps[0];
-    r.token=tokenFor(r.primary);
+    /* An `ld` problem outranks the `w` problem it always travels with: on an
+       ld row `w` mirrors the typed token, so both say the same thing, and
+       the ld one knows the unit. */
+    r.primary=r.ps.find(p=>p.field==="ld")||r.ps.find(p=>p.reason!=="empty")||r.ps[0];
+    const st=S.draft&&S.draft.entries[r.exId]&&S.draft.entries[r.exId].sets[r.i];
+    r.token=tokenFor(r.primary,(st&&st.ld&&st.ld.au)||"kg");
   });
   return out;
 }
@@ -4892,10 +5335,11 @@ function clearSet(key){
   const parts=String(key).split("|"), exId=parts[0], i=+parts[1];
   const st=S.draft&&S.draft.entries[exId]&&S.draft.entries[exId].sets[i];
   if(!st) return;
-  st.w=""; st.r="";
+  st.w=""; st.r=""; if(st.ld&&typeof st.ld==="object") st.ld.add="";
   const row=findRow(exId,i);
   if(row){
     row.querySelectorAll("input[data-f]").forEach(inp=>{ inp.value=""; });
+    paintTotal(row,st,exAnywhere(exId));   // WO-010: the total slot empties with the field
     paintAdvice(true);
   }
   const before=problemSig();
@@ -4961,7 +5405,10 @@ function askRemoveSet(k){
   if(!(k>=0&&k<st.sets.length)) k=removeTarget(st.sets);
   const s=st.sets[k];
   if(blankSet(s)){ doRemoveSet(e.id,k); return; }
-  const w=String(s.w==null?"":s.w).trim()||"—";
+  /* WO-010: an ld set is named by what he TYPED, in its unit (`90 lb`),
+     never by the derived total - the number he can check against the bar. */
+  const w=(s.ld&&typeof s.ld==="object"&&typedW(s).trim()!=="")?typedW(s).trim()+" "+s.ld.au
+         :(String(s.w==null?"":s.w).trim()||"—");
   const r=String(s.r==null?"":s.r).trim()||"—";
   askSheet({headline:"Remove set "+(k+1)+"?", body:"It holds "+w+" × "+r+".",
     danger:"Remove set "+(k+1), safe:"Keep it", back:"rmset",
@@ -4972,6 +5419,7 @@ function doRemoveSet(exId,k){
   if(!st||st.sets.length<=1) return;
   const gone=st.sets.splice(k,1)[0]||{w:"",r:""};
   S.undo={exId:exId,i:k,w:String(gone.w==null?"":gone.w),r:String(gone.r==null?"":gone.r)};
+  if(gone.ld&&typeof gone.ld==="object") S.undo.ld=ldCopy(gone.ld);   // WO-010: the build goes back too
   /* Marks on the rows BELOW the removed one shift up with them, or a standing
      refusal would point at the wrong physical row. */
   S.problems=S.problems.filter(pr=>!(pr.exId===exId&&pr.setIndex===k))
@@ -4982,11 +5430,186 @@ function doRemoveSet(exId,k){
 function undoRemove(){
   const u=S.undo; if(!u) return;
   const st=S.draft&&S.draft.entries[u.exId]; if(!st) return;
-  st.sets.splice(u.i,0,{w:u.w,r:u.r});
+  const back={w:u.w,r:u.r}; if(u.ld) back.ld=ldCopy(u.ld);
+  st.sets.splice(u.i,0,back);
   S.undo=null; hideToast();
   flushDraft(); render(true);
   toast("Set "+(u.i+1)+" restored.");
 }
+/* ============================================================ WO-010 W6:
+   THE LOAD SHEET (spec 4.4b.2). One per card, opened from the chip. The
+   unit segment applies on the tap and the sheet stays open (the bar is
+   usually next); a bar row applies and CLOSES (it is the last choice in the
+   common case); `Another bar…` expands in place and makes a one-off bar for
+   this card, never written to the profile; Done is lowest. Every change is
+   applied on the tap that makes it - nothing to cancel - and a change that
+   would move a typed number is confirmed first (4.4b.3, D9). */
+function sheetBars(){
+  if(S.gymBad) return [];
+  const g=S.prefs.gym; return (g&&Array.isArray(g.bars))?g.bars:[];
+}
+function openLoadSheet(keep){
+  const C=sessionCtx(), e=C.list[S.exIx]; if(!e||!S.draft) return;
+  const id=e.id, prev=PHAT.lastFor(S.sessions,id);
+  const mode=cardMode(id,prev);
+  const bars=sheetBars();
+  const cur=(mode.bar!==undefined)?{w:mode.bar,u:mode.bu}:null;
+  const hit=cur?bars.findIndex(b=>b&&Number(b.w)===Number(cur.w)&&b.u===cur.u):-1;
+  const prevMode=PHAT.loadModeFor(prev);
+  const st=(keep&&sheetState&&sheetState.load===id)?sheetState:{load:id,back:"ldchip",armAt:0,bw:"20",bu:"kg",another:false};
+  st.load=id; st.back="ldchip"; sheetState=st;
+  const radio=(key,label,wt,on)=>`<button class="mvrow ldrow" role="radio" aria-checked="${on?"true":"false"}" data-ld="bar" data-bar="${esc(key)}">
+      <span class="mk" aria-hidden="true"></span><span class="nm">${esc(label)}</span><span class="ct">${esc(wt)}</span></button>`;
+  let rows=radio("none","No bar","",!cur);
+  bars.forEach((b,i)=>{ rows+=radio(String(i),String(b.n),b.w+" "+b.u,hit===i); });
+  if(cur&&hit<0) rows+=radio("cur","Bar "+cur.w+" "+cur.u,"",true);
+  rows+=`<button class="mvrow ldrow" data-ld="another" aria-expanded="${st.another?"true":"false"}"><span class="nm">Another bar…</span></button>`;
+  let form="";
+  if(st.another){
+    const step=LD_STEP[st.bu];
+    form=`<div class="ldform" id="ld-another">
+      <label class="bklbl" for="ld-bw">Bar weight</label>
+      <div class="row ldbw"><span class="stepper"><button data-ld="bw-" aria-label="Bar weight down ${step} ${esc(st.bu)}">&minus;</button>
+        <input id="ld-bw" inputmode="decimal" placeholder="0" aria-label="Bar weight in ${esc(st.bu)}" value="${esc(st.bw)}">
+        <button data-ld="bw+" aria-label="Bar weight up ${step} ${esc(st.bu)}">+</button></span>
+      <div class="seg" role="group" aria-label="Bar weight unit">
+        <button data-ld="bu" data-u="kg" aria-pressed="${st.bu==="kg"?"true":"false"}"><span class="mk" aria-hidden="true"></span>kg</button>
+        <button data-ld="bu" data-u="lb" aria-pressed="${st.bu==="lb"?"true":"false"}"><span class="mk" aria-hidden="true"></span>lb</button></div></div>
+      <div id="ld-form-err"></div>
+      <button class="ghostbtn ldfull" data-ld="use">Use this bar</button>
+      <p class="tiny">Kept for this exercise. Add it in Settings &rarr; Gym to have it on every card.</p></div>`;
+  }
+  let last="";
+  if(prev){
+    const pb=barLabel(prevMode);
+    last=prevMode.au==="kg"&&prevMode.bar===undefined&&!prev.sets.some(x=>x&&x.ld)
+      ? "Last time: kg · no bar."
+      : "Last time: "+prevMode.au+(pb?" + "+pb:" · no bar")+".";
+  }
+  const m=document.getElementById("modal");
+  m.innerHTML=`<div class="scrim" data-sheet="cancel"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title">
+      <h2 id="dr-confirm-title" tabindex="-1">Weight on ${esc(e.n)}</h2>
+      ${S.gymBad||S.prefsBad?`<div class="refuse ldwarn"><p>Could not read your bars. You can still set one here.</p></div>`:""}
+      <span class="lbl ldlbl" id="ld-unit-l">Weight entered in</span>
+      <div class="seg" role="group" aria-labelledby="ld-unit-l">
+        <button data-ld="unit" data-u="kg" aria-pressed="${mode.au==="kg"?"true":"false"}"><span class="mk" aria-hidden="true"></span>kg</button>
+        <button data-ld="unit" data-u="lb" aria-pressed="${mode.au==="lb"?"true":"false"}"><span class="mk" aria-hidden="true"></span>lb</button></div>
+      <span class="lbl ldlbl" id="ld-bar-l">Added to</span>
+      <div class="mvlist ldlist" role="radiogroup" aria-labelledby="ld-bar-l">${rows}</div>
+      ${form}
+      ${last?`<p class="det">${esc(last)}</p>`:""}
+      <div id="dr-sheet-err"></div>
+      <div class="btns"><button class="ghostbtn mvno" data-sheet="safe">Done</button></div>
+    </section>`;
+  const head=m.querySelector("#dr-confirm-title"); if(head) head.focus();
+}
+/* Sets on the card that hold a typed weight - the ones a switch would move. */
+function typedSets(id){
+  const en=S.draft&&S.draft.entries[id]; if(!en) return [];
+  return (en.sets||[]).map((st,i)=>({st:st,i:i})).filter(x=>typedW(x.st).trim()!=="");
+}
+function loadSheetTap(b){
+  const st=sheetState; if(!st||!st.load) return;
+  const id=st.load, a=b.dataset.ld;
+  const mode=cardMode(id);
+  if(a==="unit"){
+    const u=b.dataset.u; if(u===mode.au) return;
+    const typed=typedSets(id);
+    if(typed.length){ askUnitSwitch(id,mode,u,typed); return; }
+    const nm=modeCopy(mode); nm.au=u;
+    applyMode(id,nm,false); paintMode(id);
+    openLoadSheet(true);
+    const again=document.querySelector('#modal [data-ld="unit"][data-u="'+u+'"]'); if(again) again.focus();
+    return;
+  }
+  if(a==="bar"){
+    const key=b.dataset.bar; let nb=null;
+    if(key==="cur"){ closeSheet(); return; }
+    if(key!=="none"){ const bar=sheetBars()[+key]; if(!bar) return; nb={w:Number(bar.w),u:bar.u}; }
+    pickBar(id,mode,nb); return;
+  }
+  if(a==="another"){ st.another=!st.another; openLoadSheet(true);
+    const inp=document.getElementById("ld-bw"); if(inp&&st.another) inp.focus(); return; }
+  if(a==="bu"){ st.bu=b.dataset.u==="lb"?"lb":"kg"; const inp=document.getElementById("ld-bw"); if(inp) st.bw=inp.value; openLoadSheet(true);
+    const again=document.querySelector('#modal [data-ld="bu"][data-u="'+st.bu+'"]'); if(again) again.focus(); return; }
+  if(a==="bw-"||a==="bw+"){
+    const inp=document.getElementById("ld-bw"); if(!inp) return;
+    const n=Number(String(inp.value).trim()); const step=LD_STEP[st.bu];
+    const v=isFinite(n)?Math.max(0,r1(n+(a==="bw+"?step:-step))):step;
+    inp.value=String(v); st.bw=String(v); return;
+  }
+  if(a==="use"){
+    const inp=document.getElementById("ld-bw"); const raw=inp?String(inp.value).trim():"";
+    st.bw=raw;
+    const v=PHAT.validateGymProfile({bars:[{n:"bar",w:raw,u:st.bu}]});
+    if(!v.ok){
+      const el=document.getElementById("ld-form-err");
+      if(el) el.innerHTML=`<p class="rule">${esc("Bar weight must be over 0 and at most "+PHAT.LIMITS.barMax[st.bu]+" "+st.bu+".")}</p>`;
+      if(inp){ inp.focus(); try{ inp.select(); }catch(err){} }
+      return;
+    }
+    pickBar(id,mode,{w:Number(raw),u:st.bu});
+  }
+}
+/* The bar for the card. Same bar → close. Typed weights → the confirmation
+   that names both totals per set (4.4b.3); nothing typed → apply and close. */
+function pickBar(id,mode,nb){
+  const same=nb?(mode.bar!==undefined&&Number(mode.bar)===nb.w&&mode.bu===nb.u):(mode.bar===undefined);
+  if(same){ closeSheet(); return; }
+  const nm={au:mode.au}; if(nb){ nm.bar=nb.w; nm.bu=nb.u; }
+  const typed=typedSets(id).filter(x=>{ const l={add:typedW(x.st),au:mode.au}; if(nb){ l.bar=nb.w; l.bu=nb.u; } return PHAT.composeLoad(l).ok; });
+  if(!typed.length){ applyMode(id,nm,false); closeSheet(); paintMode(id); paintAdvice(false); return; }
+  const b1=barLabel(mode), b2=barLabel(nm);
+  const on=b=>b?"on "+b:"with no bar";
+  const lines=typed.map(x=>{
+    const t=typedW(x.st).trim();
+    const l1={add:t,au:mode.au}; if(mode.bar!==undefined){ l1.bar=mode.bar; l1.bu=mode.bu; }
+    const l2={add:t,au:mode.au}; if(nb){ l2.bar=nb.w; l2.bu=nb.u; }
+    const c1=PHAT.composeLoad(l1), c2=PHAT.composeLoad(l2);
+    return "Set "+(x.i+1)+": "+t+" "+mode.au+" is "+(c1.ok?c1.w:"?")+" kg "+on(b1)+", "+(c2.ok?c2.w:"?")+" kg "+on(b2)+".";
+  });
+  askSheet({headline:"The bar changes the totals.", body:lines.join(" "),
+    danger:"Use "+(b2||"no bar"), safe:"Keep "+(b1||"no bar"), back:"ldchip", load:id,
+    onSafe:()=>openLoadSheet(false),
+    onDanger:()=>{ applyMode(id,nm,false); closeSheet(); paintMode(id); paintAdvice(false); }});
+}
+/* Unit switch with typed weights (4.4b.3): the digits are in the old unit,
+   converting them makes an unloadable number and keeping them re-values w.
+   So: confirm, clear the weight fields, keep reps, offer undo. */
+function askUnitSwitch(id,mode,u,typed){
+  const head=typed.length===1?"Set "+(typed[0].i+1)+" holds "+mode.au+" weights.":typed.length+" sets hold "+mode.au+" weights.";
+  askSheet({headline:head, body:"Switching to "+u+" clears them. Reps stay.",
+    danger:"Switch to "+u+" and clear", safe:"Keep "+mode.au, back:"ldchip", load:id,
+    onSafe:()=>openLoadSheet(false),
+    onDanger:()=>{
+      const en=S.draft.entries[id];
+      S.undo={kind:"unit",exId:id,fromAu:mode.au,mode:en.mode?modeCopy(en.mode):null,
+              sets:en.sets.map(st=>{ const o={w:String(st.w==null?"":st.w)}; if(st.ld&&typeof st.ld==="object") o.ld=ldCopy(st.ld); return o; })};
+      const nm=modeCopy(mode); nm.au=u;
+      applyMode(id,nm,true);
+      /* Nothing is displaced on the card: the fields are emptied in place. */
+      const card=document.getElementById("excard");
+      if(card&&card.dataset.ex===id) card.querySelectorAll("input.w").forEach(inp=>{ inp.value=""; });
+      S.problems=S.problems.filter(pr=>!(pr.exId===id&&pr.field!=="r"));
+      paintMode(id); paintProblems(); paintAdvice(false); paintUndo(id);
+      closeSheet(); openLoadSheet(false);
+      toastUndo("Switched to "+u+". Weights cleared.",undoUnit);
+    }});
+}
+/* Undo the switch: the mode and every weight string go back byte for byte. */
+function undoUnit(){
+  const u=S.undo; if(!u||u.kind!=="unit") return;
+  const en=S.draft&&S.draft.entries[u.exId]; if(!en) return;
+  if(u.mode) en.mode=modeCopy(u.mode); else delete en.mode;
+  u.sets.forEach((o,i)=>{ const st=en.sets[i]; if(!st) return; st.w=o.w; if(o.ld) st.ld=ldCopy(o.ld); else delete st.ld; });
+  S.undo=null; hideToast();
+  flushDraft();
+  if(sheetState&&sheetState.load===u.exId) closeSheet();
+  paintMode(u.exId); paintAdvice(false); paintUndo(u.exId);
+  toast("Weights restored.");
+}
+
 /* Spec 2.3 rule 4: BACK TO SAVE returns to the screen Save lives on — since
    W8 that is the SUMMARY — scrolled to the refusal block, with NO scroll to
    top. The exercise index is left exactly where he was, so cancelling out of
@@ -5032,7 +5655,7 @@ async function v1Answer(add){
    prescription change prescriptionEpoch reports seed:false, so there is
    nothing to adopt: the same fact as prefill:false, twice, because the view
    has two ways to put a number in the box and both are forbidden. */
-function seedValue(inp,f,dir){
+function seedValue(inp,f,dir,mode){
   if(f!=="w"||dir<0) return null;
   if(String(inp.value==null?"":inp.value).trim()!=="") return null;
   const card=inp.closest(".card"), row=inp.closest(".setrow");
@@ -5048,6 +5671,16 @@ function seedValue(inp,f,dir){
   if(!pv) return null;
   const pw=PHAT.parseWeight(pv.w);
   if(!pw.ok||!(pw.value>0)) return null;
+  /* WO-010 spec 4.4a.3: on an ld card the first `+` adopts last session's
+     `add` ONLY in the same-build case - same unit AND same bar. A matching
+     unit on a different bar is a different load and seeds the step; so does
+     a kg-direct prior. Nothing is converted. */
+  if(mode&&!isKgDirect(mode)){
+    if(!pv.ld) return null;
+    if(!modeEq(PHAT.loadModeFor({sets:[pv]}),mode)) return null;
+    const a=String(pv.ld.add==null?"":pv.ld.add).trim();
+    return a===""?null:a;
+  }
   return String(r1(pw.value));
 }
 const problemSig=()=>S.problems.map(p=>[p.exId,p.setIndex,p.field,p.reason,p.value].join(":")).join(",");
@@ -5062,8 +5695,13 @@ function reviewRow(exId,i){
   const d=PHAT.describeSet(st);
   const kept=S.problems.filter(p=>!(p.exId===exId&&p.setIndex===i));
   const add=(d.status==="blank"||d.status==="complete")?[]
-    : d.problems.map(p=>({exId:exId,setIndex:i,field:p.field,reason:p.reason,
-                          value:p.value,status:d.status}));
+    : d.problems.map(p=>{
+        const q={exId:exId,setIndex:i,field:p.field,reason:p.reason,value:p.value,status:d.status};
+        /* WO-010: an ld problem carries WHICH component (sub) and, on a
+           mismatch, the composed kg - the same two keys validateDraft
+           carries, so a re-reviewed row names its token in his unit. */
+        if(p.field==="ld"){ q.sub=p.sub; if(p.reason==="mismatch") q.kg=p.kg; }
+        return q; });
   S.problems=kept.concat(add);
   if(problemSig()===before) return;
   paintProblems(); announceLeft();
@@ -5117,10 +5755,19 @@ async function saveDraft(draft,dayId){
     const entries={};
     Object.keys(draft.entries||{}).forEach(k=>{
       const e=draft.entries[k]||{};
+      /* B-112 (WO-010 W6). `ld` rides the draft VERBATIM, and so does the
+         card's chosen mode. This line used to rebuild {w, r} from scratch,
+         which was the write-side half of the drop path: a reload mid-entry
+         would have come back with the kg total and no lb number, no bar. */
       entries[k]={
-        sets:(e.sets||[]).map(s=>({w:s&&s.w!=null?String(s.w):"",r:s&&s.r!=null?String(s.r):""})),
+        sets:(e.sets||[]).map(s=>{
+          const o={w:s&&s.w!=null?String(s.w):"",r:s&&s.r!=null?String(s.r):""};
+          if(s&&s.ld&&typeof s.ld==="object") o.ld=ldCopy(s.ld);
+          return o;
+        }),
         note:e.note==null?"":String(e.note)
       };
+      if(e.mode&&typeof e.mode==="object") entries[k].mode=modeCopy(e.mode);
     });
     /* exIx rides the draft. Coming back on exercise 1 of 9 after a reload has
        lost his place, and finding it again means nine taps with chalky hands
@@ -5370,11 +6017,22 @@ function hydrateDraft(stored){
        one row: an exercise is skipped by leaving it blank, not by having no
        row at all. */
     const len=ss?Math.max(1,ss.length):(e&&e.s>0?e.s:1);
+    /* B-112 (WO-010 W6). THE THIRD KEY SURVIVES THE RELOAD. Before this,
+       the row was rebuilt as {w, r} and everything else on the set died here
+       - the read-side half of the drop path. `ld` comes back verbatim (bar,
+       bu, add, au - add as the typed string, so a malformed "7.5.0" in lb
+       is offered back to be corrected, exactly as w is), and the card's
+       chosen mode comes back with it. */
     entries[id]={
-      sets:Array.from({length:len},(_,i)=>({
-        w:ss&&ss[i]&&ss[i].w!=null?String(ss[i].w):"",
-        r:ss&&ss[i]&&ss[i].r!=null?String(ss[i].r):""})),
+      sets:Array.from({length:len},(_,i)=>{
+        const o={
+          w:ss&&ss[i]&&ss[i].w!=null?String(ss[i].w):"",
+          r:ss&&ss[i]&&ss[i].r!=null?String(ss[i].r):""};
+        if(ss&&ss[i]&&ss[i].ld&&typeof ss[i].ld==="object") o.ld=ldCopy(ss[i].ld);
+        return o;
+      }),
       note:se.note==null?"":String(se.note)};
+    if(se.mode&&typeof se.mode==="object") entries[id].mode=modeCopy(se.mode);
   };
   Object.keys(src).forEach(id=>{ if(src[id]&&typeof src[id]==="object") take(id,src[id],d.ex.find(e=>e.id===id)); });
   d.ex.forEach(e=>{ if(!entries[e.id]) take(e.id,{},e); });
@@ -6465,7 +7123,16 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   if(rp.status==="ok"&&rp.value&&typeof rp.value==="object"){
     S.prefsMeta={};
     Object.keys(rp.value).forEach(k=>{
-      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate"&&k!=="backup") S.prefsMeta[k]=rp.value[k]; });
+      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate"&&k!=="backup"&&k!=="gym") S.prefsMeta[k]=rp.value[k]; });
+    /* WO-010 W6. The gym profile, validated on the way in. A profile this
+       build cannot read is NOT adopted and NOT rewritten here (no boot
+       write): S.gymBad says so on the sheet and in Settings, and the next
+       Save from Settings writes a valid one over it. */
+    if(rp.value.gym!==undefined&&rp.value.gym!==null){
+      let ok=false; try{ ok=PHAT.validateGymProfile(rp.value.gym).ok; }catch(err){ ok=false; }
+      if(ok) S.prefs.gym={bars:(rp.value.gym.bars||[]).map(b=>({n:String(b.n),w:Number(b.w),u:b.u}))};
+      else{ S.gymBad=true; console.warn("[phat] prefs.gym did not validate"); }
+    }
     /* E-3. The last successful backup, or null. Shape-checked: a stamp that
        is not an object with a numeric `at` is treated as "never backed up",
        which is the honest reading of a stamp this build cannot vouch for. */
