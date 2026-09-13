@@ -55,7 +55,7 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 897 / 897 / 0 on wo-012-default-unit - 1.1 s in Chrome from file://</b> <b>S46</b> (WO-012 §21.13, backend, 2026-09-13) added 32: <b>Rule EQ1</b> — <code>LOAD_EQ = 0.25</code> kg beside <code>LD_TOL</code> and not merged with it, at exactly four sites (P1’s <code>backoff</code> and <code>mixed</code>, <code>workingBuild</code>, T1 clause (c)); the coach’s §21.13.3 #1–#11 with every <i>Must not print</i> (<code>Sets not matched: 76.9 / 77 / 77 kg</code> and <code>Repeat</code> gone from #1, <code> or above</code> from #3, <code>130.5</code> from the tie in #4); the boundary on P1 and on T1 (0.25 one load, 0.26 two); <b>T1 example 5 pinned null-then-date</b> — completed 77, failed twice at the seeded 77.1 (170 lb): the pre-EQ1 file returned null (Node, 2026-09-13), now T1 fires; #6 (77.3) still null, #7 (76.9 on the bar) still fires; <b>H1.4d on the printed percentage</b> — #8 <code>Volume down 0%</code> and #9 <code>Volume up 0%</code> both <code>Volume matched.</code>, #10’s real 3% untouched, the −0.5% / +0.5% asymmetry of <code>Math.round</code> pinned as a known fact, and <b>the 0% strings unreachable as a meta-test</b> over 3,200 H1 verdicts with ±0.1 / ±0.2 kg priors (284 <code>up 0%</code> and 388 <code>down 0%</code> on the pre-EQ1 file, 0 here); <b>the kg-direct differential re-run</b> — 580,608 verdicts byte-identical to the pre-EQ1 file in Node (hash 1438967905 on both, 0 diffs), every 13th case pinned in the browser (44,663, hash 2338777240 computed against the PRE-EQ1 file); <b>Rule SD1</b> — <code>seedFor(priorW, mode)</code> and <code>seedInUnit(prevSet, mode)</code>, §21.13.5 #1–#10 (77 → 125 / 170, 78 → 125 <i>not 130</i>, 86 → 145 / 190, 51 → 65 / 110, 21 on the bar → null <i>not 0, not 5</i>, same build 127 verbatim, lb prior on a kg-bar card → 55, kg-direct card 76.9, the seed idempotent under re-snap), the LOAD_EQ boundary on the seed (76.45 → 125, 76.44 → 120), garbage → null never 0, and a 10,000-prior sweep proving every seed is on its grid, within LOAD_EQ above the prior or under it, and one step more is not. The S45 pin <code>Sets not matched: 76.9 / 77 / 77 kg</code> is re-pinned to P1.4 in S45: it was the coach’s open item and the coach closed it. Before it: <b>865 / 865 / 0.</b> <b>S45</b> (WO-012 W3, backend, 2026-09-13) added 23: <code>displayNum</code> / <code>displayLoad</code> at <b>0.5 lb, ties down</b> (coach &sect;21.3: 77 &rarr; 170, 86 &rarr; 189.5, 51 &rarr; 112.5, 79.5 &rarr; 175.5, 52.5 &rarr; 115.5, 62.4 &rarr; 137.5; the kg path r1 byte for byte; the tie on <code>roundGrid</code> where it is exact, the kg-in boundary either side of it); <code>instr</code>, Rule U1&rsquo;s token; <code>defaultMode</code> (level 1, the first profile bar on the 13 <code>bb</code> slots only, listed once for UX &sect;21.12 #5) and <code>overrideMode</code> (level 2); <b><code>cardModeFor</code>&rsquo;s seven tiers</b> (<code>chip &gt; draft &gt; typed &gt; override &gt; default &gt; history &gt; kg</code>, the mode beside the tier, never inside it), the coordinator&rsquo;s <b>D3</b> replay across all 42 slots, and the ruling that <b>history fires only while <code>prefs.gym.unit</code> is absent</b>; <code>validateGymProfile</code>&rsquo;s <b>per-key refusal</b> (D4: <code>unit: pounds</code> and <code>ex.d3c: stone</code> each dropped by name with <code>ok</code> still true, ten malformed overrides named by key / reason / sub-field, the S40 <code>{ok, problems}</code> bytes untouched) and <code>readGymProfile</code>, the profile the boot adopts; <b>the coach&rsquo;s 23 worked examples for U1</b> with every <i>Must not print</i> (<code>Go to 79.5 kg (175.5 lb) next session.</code>, <code>Stay at 77 kg (170 lb) until &hellip;</code>, zero-load <code>Add 2.5 kg (5.5 lb)</code>, <code>Drop to bodyweight</code> with no bracket, SP1 <code>52.5 kg (115.5 lb).</code> and its flag, the I2 line untouched, L1&rsquo;s lb-built form byte-identical on BB20 / BB45 / KGB / LBN / a built SP1 source, the card&rsquo;s default bar never reaching the verdict); <b>THE INVARIANT as a meta-test</b> over 7 slots &times; 14 loads &times; 12 rep patterns &times; 2 prevs (strip the one <code> (N lb)</code> &rarr; the kg string; &le; 1 bracket, exactly 1 iff an instruction load &gt; 0 is named; N recomputes from the K before it; never after an em dash, never <code>(0 lb)</code>); <b>D6 as a differential</b> (unit <code>kg</code> === unit absent === no key, JSON-identical, verdict and <code>speedLoad</code>; <code>speedLoad</code> gained <code>built</code> and a 6th argument, <code>speedFlagText</code> reads the result object); and <code>priorInUnit</code> / <code>priorGhost</code> through <b>his session</b> on a 20 kg bar card (<code>Last 44 lb total &times; 12</code>, then 44 / 68.5 / 88 / 110 lb) and a no-bar card (44 / 88 / 112.5 / 132.5 / 154.5 lb), <b>with the round-trip pinned as it is</b>: a 77 kg prior seeded as 125.5 lb on the 20 kg bar stores <b>76.9</b>, as 170 lb with no bar <b>77.1</b>; 86 and 51 come back exact; worst drift over 0.2..250 kg is 0.2 kg; and P1 reads 76.9 / 77 / 77 as <i>Sets not matched</i> &mdash; the engine is not tolerant to the display rounding, which is the coach&rsquo;s &sect;21.12 #2 and not W3&rsquo;s to fix. One pin caught a defect before it shipped: <code>priorInUnit</code> read an <code>ld</code> that does not recompose to its <code>w</code> as &ldquo;same build&rdquo; and returned its <code>add</code>; it now classifies through <code>buildOf</code> like every rule. Before it: <b>842 / 842 / 0.</b> <b>S44</b> (WO-011 W5, the QA pass on the
+<b>Today: 905 / 905 / 0 on wo-012-default-unit @ 34f0a68 + S47 - 1.3 s in Chrome from file://</b> <b>S47</b> (WO-012 W5, the QA pass, 2026-09-13) added 8: <b>U1&rsquo;s three loads re-derived</b> with QA&rsquo;s own rounding (a floor-and-fraction, not <code>roundGrid</code>: 77 / 86 / 51 &rarr; 170 / 189.5 / 112.5; the coach&rsquo;s instruction figures 175.5 not 175, 115.5, 181, 160, 195, 200.5, 118, 104.5; his own d5a target 55 &rarr; 121.5; every added weight his lb card printed on 2026-09-13 &mdash; 44 / 68.5 / 16.5 / 27.5 / 33 on the bar, 150 / 170 / 139 / 92.5 / 132.5 with none &mdash; and <code>Last 44 lb total &times; 12</code> for the empty bar); <b>the strip-invariant over S41&rsquo;s own builders</b> (BB20 / BB45 / KGB / LBN &times; 7 slots &times; 10 loads &times; 8 rep patterns: a built set is byte-identical on a lb and a kg card, x and x2; a kg-direct set strips its one bracket to the kg string, N by QA&rsquo;s rounding of the K before it, never after an em dash; &sect;18.1 example 1 and L3&rsquo;s SP1 from a built source on a lb card equal S41&rsquo;s pins); <b>SD1&rsquo;s floor-with-tolerance boundary recomposed by hand</b> (125 lb on the 20 kg bar is 76.7, so 76.45 seeds 125 and 76.44 seeds 120; 170 lb is 77.1, so 76.85 / 76.84 &rarr; 170 / 165; 57.5 kg on the bar is 77.5, so 77.25 / 77.24 &rarr; 57.5 / 55; his 40 kg &rarr; 40 lb, 51 kg &rarr; 65 lb, the empty bar &rarr; nothing; a 2,500-prior sweep); <b>a second 0% generator</b> (mulberry32 seed 20260913, 4,000 random hypertrophy sessions over every hyp slot with &plusmn;0.1&ndash;0.3 / 2.5 kg and &plusmn;1 rep perturbations: no <code>up 0%</code> / <code>down 0%</code>, every 4d percentage equals QA&rsquo;s own <code>Math.round</code> and <code>matched</code> iff 0, p = 0 reached 100+ times); <b><code>cardModeFor</code>&rsquo;s every tier as a table under unit lb / kg / ABSENT</b> (chip, draft, typed, override the same either way; <code>default</code> only with a unit set and then a WO-010 ld is not read; <code>history</code> only while absent; <code>pounds</code> reads as absent); <b><code>readGymProfile</code> over 600 random profiles</b> (ok always true, the bars back as numbers in order every time, a bad unit / ex map / override dropped and named, never a bar; the whole gym a string &rarr; ok false, no throw); and <b>D8&rsquo;s pure half</b> (restorePayload&rsquo;s document and mergeStores / mergeSteps carry and write no prefs key). Nine <code>logic.js</code> mutants on copies, nine killed, eight by S47 (LOAD_EQ 0.2, the 0% branch back, history over default, a bad override refusing whole, 1 lb display, nearest instead of floor on the seed, a bracket on a built set, a bad override kept) and the ninth (ties up) by S45. <b>The browser half is &ldquo;Already proven&rdquo; item 38</b>: D1&ndash;D8 observed on his session, the six attacks, the D6 diff against <code>main @ 81fc0b8</code>, and four findings &mdash; two on the row (B-76-class two-tab wipe of the unit and of an override from a stale tab), one P2 (Settings shows neither <code>kg</code> nor <code>lb</code> pressed while the unit is absent; spec 21.1 and the code&rsquo;s own comment say kg), one P3 (at 200 % text the lb ghost row overflows the viewport by 29 px and the chip changes height on a tap). Before it: <b>897 / 897 / 0.</b> <b>S46</b> (WO-012 §21.13, backend, 2026-09-13) added 32: <b>Rule EQ1</b> — <code>LOAD_EQ = 0.25</code> kg beside <code>LD_TOL</code> and not merged with it, at exactly four sites (P1’s <code>backoff</code> and <code>mixed</code>, <code>workingBuild</code>, T1 clause (c)); the coach’s §21.13.3 #1–#11 with every <i>Must not print</i> (<code>Sets not matched: 76.9 / 77 / 77 kg</code> and <code>Repeat</code> gone from #1, <code> or above</code> from #3, <code>130.5</code> from the tie in #4); the boundary on P1 and on T1 (0.25 one load, 0.26 two); <b>T1 example 5 pinned null-then-date</b> — completed 77, failed twice at the seeded 77.1 (170 lb): the pre-EQ1 file returned null (Node, 2026-09-13), now T1 fires; #6 (77.3) still null, #7 (76.9 on the bar) still fires; <b>H1.4d on the printed percentage</b> — #8 <code>Volume down 0%</code> and #9 <code>Volume up 0%</code> both <code>Volume matched.</code>, #10’s real 3% untouched, the −0.5% / +0.5% asymmetry of <code>Math.round</code> pinned as a known fact, and <b>the 0% strings unreachable as a meta-test</b> over 3,200 H1 verdicts with ±0.1 / ±0.2 kg priors (284 <code>up 0%</code> and 388 <code>down 0%</code> on the pre-EQ1 file, 0 here); <b>the kg-direct differential re-run</b> — 580,608 verdicts byte-identical to the pre-EQ1 file in Node (hash 1438967905 on both, 0 diffs), every 13th case pinned in the browser (44,663, hash 2338777240 computed against the PRE-EQ1 file); <b>Rule SD1</b> — <code>seedFor(priorW, mode)</code> and <code>seedInUnit(prevSet, mode)</code>, §21.13.5 #1–#10 (77 → 125 / 170, 78 → 125 <i>not 130</i>, 86 → 145 / 190, 51 → 65 / 110, 21 on the bar → null <i>not 0, not 5</i>, same build 127 verbatim, lb prior on a kg-bar card → 55, kg-direct card 76.9, the seed idempotent under re-snap), the LOAD_EQ boundary on the seed (76.45 → 125, 76.44 → 120), garbage → null never 0, and a 10,000-prior sweep proving every seed is on its grid, within LOAD_EQ above the prior or under it, and one step more is not. The S45 pin <code>Sets not matched: 76.9 / 77 / 77 kg</code> is re-pinned to P1.4 in S45: it was the coach’s open item and the coach closed it. Before it: <b>865 / 865 / 0.</b> <b>S45</b> (WO-012 W3, backend, 2026-09-13) added 23: <code>displayNum</code> / <code>displayLoad</code> at <b>0.5 lb, ties down</b> (coach &sect;21.3: 77 &rarr; 170, 86 &rarr; 189.5, 51 &rarr; 112.5, 79.5 &rarr; 175.5, 52.5 &rarr; 115.5, 62.4 &rarr; 137.5; the kg path r1 byte for byte; the tie on <code>roundGrid</code> where it is exact, the kg-in boundary either side of it); <code>instr</code>, Rule U1&rsquo;s token; <code>defaultMode</code> (level 1, the first profile bar on the 13 <code>bb</code> slots only, listed once for UX &sect;21.12 #5) and <code>overrideMode</code> (level 2); <b><code>cardModeFor</code>&rsquo;s seven tiers</b> (<code>chip &gt; draft &gt; typed &gt; override &gt; default &gt; history &gt; kg</code>, the mode beside the tier, never inside it), the coordinator&rsquo;s <b>D3</b> replay across all 42 slots, and the ruling that <b>history fires only while <code>prefs.gym.unit</code> is absent</b>; <code>validateGymProfile</code>&rsquo;s <b>per-key refusal</b> (D4: <code>unit: pounds</code> and <code>ex.d3c: stone</code> each dropped by name with <code>ok</code> still true, ten malformed overrides named by key / reason / sub-field, the S40 <code>{ok, problems}</code> bytes untouched) and <code>readGymProfile</code>, the profile the boot adopts; <b>the coach&rsquo;s 23 worked examples for U1</b> with every <i>Must not print</i> (<code>Go to 79.5 kg (175.5 lb) next session.</code>, <code>Stay at 77 kg (170 lb) until &hellip;</code>, zero-load <code>Add 2.5 kg (5.5 lb)</code>, <code>Drop to bodyweight</code> with no bracket, SP1 <code>52.5 kg (115.5 lb).</code> and its flag, the I2 line untouched, L1&rsquo;s lb-built form byte-identical on BB20 / BB45 / KGB / LBN / a built SP1 source, the card&rsquo;s default bar never reaching the verdict); <b>THE INVARIANT as a meta-test</b> over 7 slots &times; 14 loads &times; 12 rep patterns &times; 2 prevs (strip the one <code> (N lb)</code> &rarr; the kg string; &le; 1 bracket, exactly 1 iff an instruction load &gt; 0 is named; N recomputes from the K before it; never after an em dash, never <code>(0 lb)</code>); <b>D6 as a differential</b> (unit <code>kg</code> === unit absent === no key, JSON-identical, verdict and <code>speedLoad</code>; <code>speedLoad</code> gained <code>built</code> and a 6th argument, <code>speedFlagText</code> reads the result object); and <code>priorInUnit</code> / <code>priorGhost</code> through <b>his session</b> on a 20 kg bar card (<code>Last 44 lb total &times; 12</code>, then 44 / 68.5 / 88 / 110 lb) and a no-bar card (44 / 88 / 112.5 / 132.5 / 154.5 lb), <b>with the round-trip pinned as it is</b>: a 77 kg prior seeded as 125.5 lb on the 20 kg bar stores <b>76.9</b>, as 170 lb with no bar <b>77.1</b>; 86 and 51 come back exact; worst drift over 0.2..250 kg is 0.2 kg; and P1 reads 76.9 / 77 / 77 as <i>Sets not matched</i> &mdash; the engine is not tolerant to the display rounding, which is the coach&rsquo;s &sect;21.12 #2 and not W3&rsquo;s to fix. One pin caught a defect before it shipped: <code>priorInUnit</code> read an <code>ld</code> that does not recompose to its <code>w</code> as &ldquo;same build&rdquo; and returned its <code>add</code>; it now classifies through <code>buildOf</code> like every rule. Before it: <b>842 / 842 / 0.</b> <b>S44</b> (WO-011 W5, the QA pass on the
 merge, 2026-09-13) added 11 and re-pinned two lines in S43. The reds: (1) S43&rsquo;s <code>ownerRefusal("merge")</code> and (2) S44&rsquo;s
 <b>R-d</b> shape test both pin UX spec &sect;20.3&rsquo;s sentence verbatim &mdash; <i>This device's log belongs to {owner}. The backup under
 {me} was not read and nothing here changed. Sign in as {owner} to restore what is missing.</i> &mdash; where <code>logic.js</code> still
@@ -17482,6 +17482,290 @@ T("§21.13 - up to the end of S46 no fixture wrote a phat:* key", function(a){
 });
 
 
+group("S47 WO-012 W5 / the QA pass: U1 re-derived, the strip-invariant over S41's builders, the SD1 boundary by hand, a second 0% generator, cardModeFor's tiers under the ruling, readGymProfile never loses a bar, prefs outside the backup");
+
+/* ---- QA's own arithmetic, written without reading roundGrid: the pound at
+   0.5 lb with a tie going DOWN, as the coach ruled (§21.3). n = x * 2; the
+   fraction above the floor decides; exactly .5 stays on the floor. ---- */
+function qaLb(kgW){
+  var x = kgW / 0.45359237, n = x * 2, lo = Math.floor(n), f = n - lo;
+  return (f > 0.5 ? lo + 1 : lo) / 2;
+}
+function qaKg(x){ return Math.round(x * 10) / 10; }
+/* mulberry32 - the same generator S44's second fuzz used, a different seed */
+function rng47(seed){ var t = seed >>> 0; return function(){ t = (t + 0x6D2B79F5) >>> 0; var r = Math.imul(t ^ (t >>> 15), 1 | t); r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r; return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+function pick47(rnd, arr){ return arr[Math.floor(rnd() * arr.length)]; }
+var BARS47 = [{ n: "Barbell", w: 20, u: "kg" }, { n: "EZ bar", w: 10, u: "kg" }];
+function PREFS47(unit, ex){ var g = { bars: BARS47 }; if (unit !== undefined) g.unit = unit; if (ex !== undefined) g.ex = ex; return { gym: g }; }
+var LB20_47 = { au: "lb", bar: 20, bu: "kg" }, LBN_47 = { au: "lb" }, KGB_47 = { au: "kg", bar: 20, bu: "kg" };
+/* his session's kg-direct loads and what the lb card showed for them on
+   2026-09-13 (the W5 rig, 400 px, lb default, Barbell 20 kg first) */
+var HIS_ADDED_47 = [
+  [40, 20, 44],     /* d1a set 2: 40 kg on the 20 kg bar -> 20 kg added -> `Last 44 lb × 12` */
+  [51, 20, 68.5],   /* d1a set 3 -> `Last 68.5 lb × 15` */
+  [27.5, 20, 16.5], /* d1g set 1 -> `Last 16.5 lb × 15` */
+  [32.5, 20, 27.5], /* d1g set 2 */
+  [35, 20, 33],     /* d1g set 3 -> 33.07 -> 33 */
+  [68, 0, 150],     /* d1b set 1, no bar -> `Last 150 lb × 12` */
+  [77, 0, 170],     /* d1b set 2, d1d sets 2-3 */
+  [63, 0, 139],     /* d1d set 1 -> 138.9 -> 139 */
+  [42, 0, 92.5],    /* d1f set 1 -> 92.59 -> 92.5 */
+  [60, 0, 132.5]    /* d1f set 3 -> 132.28 -> 132.5 */
+];
+
+/* ------------------------------------------------------ 1. U1's three loads, re-derived */
+
+T("W5 / U1 - the three loads re-derived without roundGrid: 77 / 86 / 51 kg -> 170 / 189.5 / 112.5 lb; the coach's instruction figures 79.5 -> 175.5 (not 175), 52.5 -> 115.5, 82 -> 181, 72.5 -> 160, 88.5 -> 195, 91 -> 200.5, 53.5 -> 118, 47.5 -> 104.5; his own d5a target 55 -> 121.5; displayNum, displayLoad and instr agree with QA's arithmetic on every one, and on every added weight his lb card printed", function(a){
+  var table = [[77, 170], [86, 189.5], [51, 112.5], [79.5, 175.5], [52.5, 115.5], [82, 181], [72.5, 160], [88.5, 195], [91, 200.5], [53.5, 118], [47.5, 104.5], [82.5, 182], [37.5, 82.5], [22.5, 49.5], [2.5, 5.5], [55, 121.5]];
+  table.forEach(function(row){
+    a.eq(qaLb(row[0]), row[1], "QA's own: " + row[0] + " kg -> " + row[1] + " lb");
+    a.eq(P.displayNum(row[0], "lb"), row[1], "displayNum " + row[0]);
+    a.eq(P.displayLoad(row[0], "lb"), String(row[1]) + " lb", "displayLoad " + row[0]);
+    a.eq(P.instr(row[0], "lb"), String(qaKg(row[0])) + " kg (" + row[1] + " lb)", "instr " + row[0]);
+  });
+  a.ne(P.displayLoad(79.5, "lb"), "175 lb", "175.27 is nearer 175.5: the 5 lb ladder never reaches the display");
+  HIS_ADDED_47.forEach(function(row){
+    var added = row[0] - row[1];
+    a.eq(qaLb(added), row[2], "his " + row[0] + " kg less a " + row[1] + " kg bar = " + added + " kg -> " + row[2] + " lb");
+    a.eq(P.priorInUnit({ w: row[0], r: 5 }, row[1] ? LB20_47 : LBN_47), row[2], "priorInUnit prints the same figure the rig read off the card");
+  });
+  a.eq(P.priorInUnit({ w: 20, r: 12 }, LB20_47), null, "his set 1 (the empty bar on a 20 kg bar card): nothing belongs in the field");
+  a.eq(P.priorGhost({ w: 20, r: 12 }, LB20_47, "bb"), "Last 44 lb total × 12", "and the ghost the rig read: `Last 44 lb total × 12` (see the checklist for the legibility call)");
+  /* the tie: exactly x.25 lb goes down in both */
+  var i, bad = 0, w;
+  for (i = 1; i <= 4000; i++) { w = i / 8; if (qaLb(w) !== P.displayNum(w, "lb")) bad++; }
+  a.eq(bad, 0, "0.125..500 kg by 0.125: QA's rounding and displayNum agree at every step, ties included");
+});
+
+/* ------------------------------------------------------ 2. the strip-invariant over S41's builders */
+
+T("W5 / U1 THE INVARIANT over S41's own fixture builders (BB20 / BB45 / KGB / LBN, kg-direct KGD) on the seven S41 slots × 10 loads × 8 rep patterns: every BUILT working set prints the SAME string on a lb card and a kg card (x and x2, byte for byte); every KG-DIRECT set prints at most one ` (N lb)` on the lb card, N === QA's own rounding of the K before it, and with that bracket removed the string is the kg card's; a bracket never follows an em dash; the second line never carries one", function(a){
+  var slots = ["d1a", "d1b", "d1d", "d2d", "d3c", "d4e", "d5b"], loads = [2.5, 5, 20, 35, 51, 60.8, 77, 86, 100, 140];
+  var pats = [[1, 1, 1], [0, 0, 0], [0, 0, -1], [2, 2, 2], [-2, 0, 0], [3, 3, 3], [1, 0, -1], [0, 1, 1]];
+  var builders = { BB20: BB20, BB45: BB45, KGB: KGB, LBN: LBN };
+  var n = 0, built = 0, direct = 0, brk = 0, si, li, pi, E, sets, k, r, vk, vl, m, sl, sk, name, i;
+  function setsFor(mk, w, E, pat){ var out = [], k, r; for (k = 0; k < E.s; k++) { r = E.hi + pat[k % pat.length]; if (r < 1) r = 1; out.push(mk(w, r)); } return out; }
+  for (si = 0; si < slots.length; si++) {
+    E = EX41(slots[si]);
+    for (li = 0; li < loads.length; li++) {
+      for (pi = 0; pi < pats.length; pi++) {
+        /* built: the add is the load in the build's unit, chosen so the fixture composes */
+        for (name in builders) if (Object.prototype.hasOwnProperty.call(builders, name)) {
+          var addW = (name === "KGB") ? loads[li] : Math.round(loads[li] / 0.45359237 / 5) * 5;
+          if (addW <= 0) continue;
+          sets = setsFor(builders[name], addW, E, pats[pi]);
+          vk = P.verdict({ ex: E, sets: sets, prev: null, unit: "kg" }); vl = P.verdict({ ex: E, sets: sets, prev: null, unit: "lb" });
+          n++; built++;
+          a.eq(JSON.stringify(vl), JSON.stringify(vk), name + " " + slots[si] + " " + addW + " " + pats[pi].join("/") + ": a built set is L1's form on every card unit");
+          if (vl && vl.x) a.eq(brackets45(vl.x + vl.x2), 0, "no bracket on a built set");
+        }
+        /* kg-direct */
+        sets = setsFor(KGD, loads[li], E, pats[pi]);
+        vk = P.verdict({ ex: E, sets: sets, prev: null, unit: "kg" }); vl = P.verdict({ ex: E, sets: sets, prev: null, unit: "lb" });
+        n++; direct++;
+        if (!vk || !vl) { a.eq(!!vl, !!vk, "both null or both verdicts"); continue; }
+        a.eq(vl.x2, vk.x2, "the second line (I2) never changes");
+        a.eq(vl.rule, vk.rule, "the rule id never changes"); a.eq(vl.t, vk.t, "the tone never changes");
+        sl = vl.x; sk = vk.x;
+        a.ok(brackets45(sl) <= 1, "at most one bracket: " + sl);
+        a.eq(strip45(sl), sk, "strip the one bracket -> the kg string: " + sl);
+        m = /([\d.]+) kg \(([\d.]+) lb\)/.exec(sl);
+        if (m) { brk++; a.eq(Number(m[2]), qaLb(Number(m[1])), "N recomputes from the K before it by QA's rounding: " + sl); a.eq(sl.indexOf("— " + m[1]), -1, "never after an em dash"); }
+        a.eq(sl.indexOf("(0 lb)"), -1, "never (0 lb)"); a.eq(sl.indexOf("NaN"), -1, "never NaN");
+      }
+    }
+  }
+  a.ok(n >= 2000, "grid size " + n);
+  a.ok(brk >= 200, "the bracket was exercised " + brk + " times");
+  /* the eleven §18.1 sentences S41 pinned, re-run with unit lb: byte-identical to the kg pins already in S41_SENTENCES */
+  var ex1 = P.verdict({ ex: EX41("d1a"), sets: [BB20(135, 5), BB20(135, 5), BB20(135, 5)], prev: null, unit: "lb" });
+  a.eq(ex1.x, "Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb.", "§18.1 example 1 on a lb card");
+  a.ok(S41_SENTENCES.indexOf(ex1.x) >= 0, "and it is one of the sentences S41 pinned with no unit");
+  var sp = SP41("d1a", BB20(135, 3), "d3a");
+  var spl = P.speedLoad([{ id: 1, date: "2026-09-10", dayId: "d1", dateBasis: "local", planId: "phat", entries: { d1a: { sets: [BB20(135, 3)], note: "" } } }], "d3a", "2026-09-12", EX41("d1a").n, undefined, "lb");
+  a.eq(spl.text, sp.text, "L3's SP1 from a built source: the lb card prints the kg card's build phrase");
+});
+
+/* ------------------------------------------------------ 3. SD1's boundary by hand */
+
+T("W5 / SD1 - the floor-with-tolerance boundary, recomposed by QA: 125 lb on the 20 kg bar is r1(20 + 125 × 0.45359237) = 76.7, so a prior of 76.45 (cap 76.70) seeds 125 and 76.44 (cap 76.69) seeds 120; with no bar 170 lb = 77.1, so 76.85 seeds 170 and 76.84 seeds 165; kg on the bar 57.5 = 77.5, so 77.25 seeds 57.5 and 77.24 seeds 55; every seed's own total is within 0.25 above the prior or under it and one more step is not", function(a){
+  function tot(bar, add, au){ return Math.round((bar + (au === "lb" ? add * 0.45359237 : add)) * 10) / 10; }
+  a.eq(tot(20, 125, "lb"), 76.7); a.eq(tot(20, 130, "lb"), 79); a.eq(tot(0, 170, "lb"), 77.1); a.eq(tot(0, 165, "lb"), 74.8); a.eq(tot(20, 57.5, "kg"), 77.5);
+  a.eq(P.seedFor(76.45, LB20_47), 125, "76.45 + 0.25 = 76.70 >= 76.7: 125 stays");
+  a.eq(P.seedFor(76.44, LB20_47), 120, "76.44 + 0.25 = 76.69 < 76.7: one step down");
+  a.eq(P.seedFor(76.85, LBN_47), 170, "no bar: 76.85 + 0.25 = 77.10 >= 77.1");
+  a.eq(P.seedFor(76.84, LBN_47), 165, "no bar: 76.84 + 0.25 = 77.09 < 77.1");
+  a.eq(P.seedFor(77.25, KGB_47), 57.5, "kg on the bar: 77.25 + 0.25 = 77.5");
+  a.eq(P.seedFor(77.24, KGB_47), 55);
+  /* his session's seeds as the rig observed them: 40 kg -> 40 lb (38.1), 51 kg -> 65 lb (49.5), 20 kg -> nothing (the `total` ghost) */
+  a.eq(P.seedFor(40, LB20_47), 40, "40 kg on the bar: 44.09 lb of plates -> 40 lb (38.1) - the rig read w=40, = 38.1 kg");
+  a.eq(tot(20, 40, "lb"), 38.1); a.ok(tot(20, 45, "lb") > 40.25, "45 lb = " + tot(20, 45, "lb") + " is above 40.25");
+  a.eq(P.seedFor(51, LB20_47), 65, "51 kg -> 65 lb (49.5); 70 lb = " + tot(20, 70, "lb") + " > 51.25");
+  a.eq(P.seedInUnit({ w: 20, r: 12 }, LB20_47), null, "the empty bar: no seed (`+` is one step, the rig read 5 -> = 22.3 kg)");
+  var i, w, s, t, bad = 0;
+  for (i = 1; i <= 2500; i++) {
+    w = i / 10; s = P.seedFor(w, LB20_47); if (s === null) continue;
+    t = tot(20, s, "lb");
+    if (!(t <= w + 0.25 + 1e-9)) bad++;
+    if (tot(20, s + 5, "lb") <= w + 0.25 + 1e-9) bad++;
+    if (s % 5 !== 0 || s < 5) bad++;
+  }
+  a.eq(bad, 0, "0.1..250 by 0.1 on the 20 kg bar: every seed recomposes within LOAD_EQ above the prior or below it, one step more does not, on the 5 lb grid");
+});
+
+/* ------------------------------------------------------ 4. a second 0% generator */
+
+T("W5 / H1.4d META with QA's own generator (mulberry32, seed 20260913): 4,000 random hypertrophy sessions over every hyp slot in the plan - loads on the 0.1 kg grid, reps around the range, the current session's tonnage perturbed by ±0.1 / ±0.2 / ±0.3 / ±2.5 kg on one or every set and ±1 rep on one set - never print `Volume up 0%` or `Volume down 0%`; on every H1.4d verdict the printed percentage equals QA's own Math.round((va − vb) / vb × 100) and `matched` iff it is 0; the generator reaches 4d and reaches p = 0 enough times to mean something", function(a){
+  var rnd = rng47(20260913), hyp = [];
+  P.PHAT_PLAN.days.forEach(function(d){ d.ex.forEach(function(e){ if (e.k === "hyp") hyp.push(e); }); });
+  a.ok(hyp.length >= 20, hyp.length + " hyp slots");
+  var i, E, k, w, sets, prev, dw, v, j, va, vb, p, m, n4d = 0, zero = 0, up0 = 0, dn0 = 0, bad = 0, mode, r0, r;
+  for (i = 0; i < 4000; i++) {
+    E = pick47(rnd, hyp);
+    w = Math.round((10 + rnd() * 150) * 10) / 10;
+    prev = { sets: [] }; sets = [];
+    mode = Math.floor(rnd() * 3);
+    dw = pick47(rnd, [-0.3, -0.2, -0.1, 0, 0, 0.1, 0.2, 0.3, 2.5, -2.5]);
+    for (k = 0; k < E.s; k++) {
+      r0 = E.lo + Math.floor(rnd() * (E.hi - E.lo + 1));
+      prev.sets.push({ w: w, r: r0 });
+      r = r0; if (mode === 2 && k === 0) r = Math.max(1, r0 + (rnd() < 0.5 ? -1 : 1));
+      sets.push({ w: Math.round((w + (mode === 0 || k === 0 ? dw : 0)) * 10) / 10, r: r });
+    }
+    v = P.verdict({ ex: E, sets: sets, prev: prev, unit: rnd() < 0.5 ? "lb" : "kg" });
+    if (!v) continue;
+    j = v.x + " " + v.x2;
+    if (j.indexOf("Volume up 0%") >= 0) up0++;
+    if (j.indexOf("Volume down 0%") >= 0) dn0++;
+    if (v.rule !== "H1.4d") continue;
+    n4d++;
+    va = 0; vb = 0; for (k = 0; k < E.s; k++) { va += sets[k].w * sets[k].r; vb += prev.sets[k].w * prev.sets[k].r; }
+    p = Math.round((va - vb) / vb * 100);
+    if (p === 0) { zero++; if (v.x !== "Volume matched. One more rep next session.") bad++; }
+    else if (p > 0) { m = /^Volume up (\d+)% — /.exec(v.x); if (!m || Number(m[1]) !== p) bad++; }
+    else { m = /^Volume down (\d+)%\. Add a rep or /.exec(v.x); if (!m || Number(m[1]) !== -p) bad++; }
+  }
+  a.eq(up0, 0, "`Volume up 0%` printed " + up0 + " times");
+  a.eq(dn0, 0, "`Volume down 0%` printed " + dn0 + " times");
+  a.eq(bad, 0, "every 4d percentage is QA's own and `matched` iff it rounds to 0");
+  a.ok(n4d >= 800, "4d reached " + n4d + " times");
+  a.ok(zero >= 100, "p = 0 reached " + zero + " times - the case the ruling was about");
+});
+
+/* ------------------------------------------------------ 5. cardModeFor's tiers under the ruling */
+
+T("W5 / §0.1 + the ruling - cardModeFor's every tier with prefs.gym.unit PRESENT (kg and lb) and ABSENT, as a table: chip / draft / typed / override fire the same either way; `default` fires only when a unit is set (kg included) and then a WO-010 ld in history is NOT read; `history` fires only while the unit is absent; `kg` only with nothing anywhere. Every mode is a clean {au, bar?, bu?}", function(a){
+  var ldPrev = { sets: [{ w: 60.8, r: 5, ld: { bar: 20, bu: "kg", add: 90, au: "lb" } }] }, kgPrev = { sets: [{ w: 77, r: 5 }] };
+  var ov = { d1a: { au: "kg" } };
+  var rows = [
+    /* label, args-builder, [expected under unit lb, under unit kg, under absent] */
+    ["chip",     function(u){ return { exId: "d1a", entry: { mode: { au: "lb", bar: 10, bu: "kg" }, sets: [{ w: "60", r: "5" }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "lb", bar: 10, bu: "kg" }, tier: "chip" }, { mode: { au: "lb", bar: 10, bu: "kg" }, tier: "chip" }, { mode: { au: "lb", bar: 10, bu: "kg" }, tier: "chip" }]],
+    ["draft",    function(u){ return { exId: "d1a", entry: { sets: [{ w: "", r: "", ld: { add: "", au: "lb" } }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "lb" }, tier: "draft" }, { mode: { au: "lb" }, tier: "draft" }, { mode: { au: "lb" }, tier: "draft" }]],
+    ["typed",    function(u){ return { exId: "d1a", entry: { sets: [{ w: "60", r: "" }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "kg" }, tier: "typed" }, { mode: { au: "kg" }, tier: "typed" }, { mode: { au: "kg" }, tier: "typed" }]],
+    ["override", function(u){ return { exId: "d1a", entry: { sets: [{ w: "", r: "" }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "kg" }, tier: "override" }, { mode: { au: "kg" }, tier: "override" }, { mode: { au: "kg" }, tier: "override" }]],
+    ["default vs history (bb slot, lb history)", function(u){ return { exId: "d1a", prefs: PREFS47(u), prev: ldPrev }; },
+                 [{ mode: { au: "lb", bar: 20, bu: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "history" }]],
+    ["default vs history (db slot, lb history)", function(u){ return { exId: "d1d", prefs: PREFS47(u), prev: ldPrev }; },
+                 [{ mode: { au: "lb" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "history" }]],
+    ["default vs kg (kg-direct history)", function(u){ return { exId: "d1a", prefs: PREFS47(u), prev: kgPrev }; },
+                 [{ mode: { au: "lb", bar: 20, bu: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "kg" }]],
+    ["default vs kg (no history)", function(u){ return { exId: "d3c", prefs: PREFS47(u), prev: null }; },
+                 [{ mode: { au: "lb" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "kg" }]]
+  ];
+  var units = ["lb", "kg", undefined], i, u, r;
+  rows.forEach(function(row){
+    for (i = 0; i < units.length; i++) {
+      u = units[i]; r = P.cardModeFor(row[1](u));
+      a.deep(r, row[2][i], row[0] + " with unit " + (u === undefined ? "ABSENT" : u));
+      a.ok(!("tier" in r.mode), "the tier stays beside the mode");
+    }
+  });
+  /* a malformed unit reads as absent: history wins again, which is what the boot drops it to */
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: PREFS47("pounds"), prev: ldPrev }), { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "history" }, "`pounds` is not a unit: the device has no default, history fires");
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: PREFS47("pounds"), prev: kgPrev }), { mode: { au: "kg" }, tier: "kg" });
+});
+
+/* ------------------------------------------------------ 6. readGymProfile never loses a bar */
+
+T("W5 / D4 - readGymProfile over 600 random profiles (mulberry32, seed 4): valid bars + a unit from {absent, kg, lb, pounds, 7, null, \"\"} + an ex map from {absent, a string, 0-5 overrides each valid / stone / bar-without-bu / an extra key / a string}: ok is ALWAYS true, the bars come back as numbers in their order every time, the unit is adopted iff kg | lb, every valid override is kept as numbers, every bad one is dropped and named `ex.<id>`, and `drop` never names a bar", function(a){
+  var rnd = rng47(4), i, k, bars, nb, unit, exm, ex, ids = ["d1a", "d1b", "d3c", "d5b", "gone", "toString"], nEx, id, kind, r, expBars, expUnit, keep, dropped, bad = 0, n = 0, kept = 0, drops = 0;
+  var units = [undefined, "kg", "lb", "pounds", 7, null, ""];
+  for (i = 0; i < 600; i++) {
+    nb = 1 + Math.floor(rnd() * 4); bars = [];
+    for (k = 0; k < nb; k++) bars.push({ n: pick47(rnd, ["Barbell", "EZ bar", "Trap bar", "Safety squat bar"]), w: pick47(rnd, [20, 10, 15, 25, "20", "45", 7.5]), u: pick47(rnd, ["kg", "lb"]) });
+    bars.forEach(function(b){ if (b.u === "lb" && Number(b.w) > 110) b.w = 45; });
+    unit = pick47(rnd, units);
+    kind = Math.floor(rnd() * 3);
+    keep = {}; dropped = [];
+    if (kind === 0) exm = undefined;
+    else if (kind === 1) exm = "lb";
+    else {
+      exm = {}; nEx = Math.floor(rnd() * 6);
+      for (k = 0; k < nEx; k++) {
+        id = pick47(rnd, ids); if (Object.prototype.hasOwnProperty.call(exm, id)) continue;
+        r = rnd();
+        if (r < 0.4) { exm[id] = { au: "kg" }; keep[id] = { au: "kg" }; }
+        else if (r < 0.6) { exm[id] = { au: "lb", bar: "20", bu: "kg" }; keep[id] = { au: "lb", bar: 20, bu: "kg" }; }
+        else if (r < 0.7) { exm[id] = { au: "stone" }; dropped.push("ex." + id); }
+        else if (r < 0.8) { exm[id] = { au: "lb", bar: 20 }; dropped.push("ex." + id); }
+        else if (r < 0.9) { exm[id] = { au: "lb", tier: "override" }; dropped.push("ex." + id); }
+        else { exm[id] = "kg"; dropped.push("ex." + id); }
+      }
+    }
+    var g = { bars: bars }; if (unit !== undefined) g.unit = unit; if (exm !== undefined) g.ex = exm;
+    r = P.readGymProfile(g); n++;
+    expBars = bars.map(function(b){ return { n: b.n, w: Number(b.w), u: b.u }; });
+    expUnit = (unit === "kg" || unit === "lb") ? unit : undefined;
+    if (r.ok !== true) { bad++; continue; }
+    if (JSON.stringify(r.gym.bars) !== JSON.stringify(expBars)) bad++;
+    if (r.gym.unit !== expUnit) bad++;
+    if (unit !== undefined && expUnit === undefined && r.drop.indexOf("unit") < 0) bad++;
+    if (kind === 1) { if (r.drop.indexOf("ex") < 0 || r.gym.ex !== undefined) bad++; }
+    else if (kind === 2) {
+      if (JSON.stringify(r.gym.ex) !== JSON.stringify(keep)) bad++;
+      dropped.forEach(function(d){ if (r.drop.indexOf(d) < 0) bad++; drops++; });
+      Object.keys(keep).forEach(function(kid){ if (r.drop.indexOf("ex." + kid) >= 0) bad++; kept++; });
+    } else if (r.gym.ex !== undefined) bad++;
+    r.drop.forEach(function(d){ if (!/^(unit|ex|ex\.[A-Za-z0-9]+)$/.test(d)) bad++; });
+  }
+  a.eq(n, 600); a.eq(bad, 0, "no profile lost a bar, adopted a bad unit, kept a bad override or dropped a good one");
+  a.ok(kept >= 200 && drops >= 200, "kept " + kept + " good overrides, dropped " + drops + " bad ones - the generator reached both");
+  /* attack 6's shape: the whole gym a string -> ok false, gym null, no throw; and the boot's keep-aside reads nothing off a string */
+  var s = a.noThrow(function(){ return P.readGymProfile("garbage"); });
+  a.eq(s.ok, false); a.eq(s.gym, null); a.deep(s.drop, []);
+  a.eq(a.noThrow(function(){ return P.overrideMode({ gym: "garbage" }, "d1a"); }), null);
+  a.deep(a.noThrow(function(){ return P.defaultMode({ gym: "garbage" }, "d1a"); }), { au: "kg" });
+});
+
+/* ------------------------------------------------------ 7. D8's pure half: prefs live outside the backup */
+
+T("W5 / D8 - prefs are not in the backup and the merge cannot touch them: restorePayload's document carries no prefs / gym / unit key; mergeStores reads log, bw and plans only; mergeSteps' writes and keeps name the three store keys and never a prefs key, on his session and on a store where the other side carries a `prefs` field", function(a){
+  var his = CHADY_SESSION();
+  var rem = R43([his]);
+  var rp = P.restorePayload(rem);
+  a.eq(rp.ok, true, "restorePayload opens his session"); a.eq(rp.counts.sessions, 1);
+  a.eq(hasKeyDeep40(rp, "prefs"), false, "no prefs key anywhere in the restore document");
+  a.eq(hasKeyDeep40(rp, "gym"), false); a.eq(hasKeyDeep40(rp, "unit"), false);
+  var loc = L43([]);
+  rem.prefs = { gym: { unit: "kg", bars: [] } };   /* a field no pull() row carries; if it ever did, the merge must not read it */
+  var mr = P.mergeStores(loc, rem);
+  a.eq(mr.ok, true); a.eq(mr.added.sessions, 1, "his session comes back");
+  a.eq(hasKeyDeep40(mr.merged, "prefs"), false, "the merged stores carry no prefs");
+  a.eq(hasKeyDeep40(mr.merged, "unit"), false);
+  var st = P.mergeSteps(mr, { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} }, W2KEYS, 1789300000000);
+  a.eq(st.ok, true);
+  a.ok(st.writes.length >= 1, "at least the log is written");
+  st.writes.concat(st.keeps || []).forEach(function(w){ a.ok(/^phat:v1:(recover:)?(log|bw|plans)(:\d+)?$/.test(w.key), "a merge write / keep key is a data store, never prefs: " + w.key); });
+});
+
+T("W5 - up to the end of S47 no fixture wrote a phat:* key", function(a){
+  a.deep(PHAT_KEY_WRITES, []);
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -18457,10 +18741,18 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<b>One consequence to be aware of, not a defect:</b> a hand-edited backup whose plan copy carries a malformed " +
     "<code>fig</code> is refused WHOLE by <code>restorePayload</code> (R4), because <code>validatePlan</code> types the field " +
     "(W4) and R4 refuses a plan it cannot open. A display-only field can therefore block a restore until the backup is " +
-    "fixed by hand; pinned as-is in S39 and named in the contract questions for the PM.</p>";
+    "fixed by hand; pinned as-is in S39 and named in the contract questions for the PM.</p>" +
+    "<p><b>WO-012 W5 &mdash; two things are <code>index.html</code>&rsquo;s, one of them asked for (B-20).</b> <b>(1) <code>chipLevel(id, cm, prev)</code></b> is the spec-21.2 " +
+    "table &mdash; the chip&rsquo;s second line from the tier, whether an override exists, whether the profile is readable, whether a default is known, the unit, the implement, whether the " +
+    "profile has a bar and whether the prior carries an <code>ld</code> &mdash; eight facts, nine strings, and it reads <code>S</code> for four of them. Every row of that table was read off " +
+    "the screen (item 38) and none is pinned here. <b>Extract it</b> as <code>PHAT.chipLevel({tier, override, unreadable, defaultKnown, unit, implement, hasBar, prevHasLd}) &rarr; string</code> " +
+    "and the nine strings pin in twelve lines; <code>chipLevel</code> in <code>index.html</code> becomes a caller that gathers the eight facts. <b>(2) <code>vGym</code>&rsquo;s segment</b> " +
+    "renders <code>aria-pressed</code> from <code>gymUnit()</code>, which is <code>null</code> for an absent unit, so a WO-010 device sees neither option pressed &mdash; a defect (item 38, " +
+    "found 1), not an extraction. <b>(3) <code>gymBase()</code></b> spreads the profile from memory: the two-tab wipe (item 38, attack 5) is B-76&rsquo;s class and is a store-layer " +
+    "read-before-write, not a function this page can pin.</p>";
 
   document.getElementById("manual").innerHTML =
-    "<p><b>Eleven items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Twelve items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -18605,7 +18897,20 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<span class=\"skipmsg\">Why a phone: iOS gives the home-screen app and the Safari tab <b>separate</b> storage, which is the leading reading of how " +
     "your 12 Sep session went missing (B-119, H1). Everything the merge does is measured (the WO-011 W5 item below: F1&ndash;F10, the P1&ndash;P14 paint " +
     "rule, six attacks, against the live project as a throwaway account); what no rig can reach is your two launch contexts on your phone, and whether " +
-    "the pull lands on gym signal before you start the first set. This is a one-time check; after it the merge is silent when nothing is missing.</span></li></ol>" +
+    "the pull lands on gym signal before you start the first set. This is a one-time check; after it the merge is silent when nothing is missing.</span></li>" +
+    "<li><b>Read row 1 of Bent-over row from arm&rsquo;s length, then decide the unit once (WO-012).</b> Settings &rarr; Gym: under <i>I lift in</i> tap <b>lb</b>. Start Day 1, " +
+    "<i>Bent-over row</i>: the chip reads <i>Weight in lb + Barbell 20 kg</i> over <i>Your default &middot; first bar in your gym</i>, the caption <b>+ LB</b>, and the three ghost lines under the " +
+    "rows read <i>Last 44 lb total &times; 12</i>, <i>Last 44 lb &times; 12</i>, <i>Last 68.5 lb &times; 15</i> &mdash; your 20 / 40 / 51 kg from 12 Sep. <b>Question 1, for you:</b> " +
+    "with chalk on and the phone at arm&rsquo;s length, do rows 1 and 2 read as the same load? QA says they do &mdash; both say <code>44</code>, the word <i>total</i> is in the same grey at the " +
+    "same size, and row 1 was the empty bar (nothing added), which the word does not say. If you agree, that is a UX word to change, not a number. Then tap <b>+</b> on row 2: <code>40</code> " +
+    "lands and <b>= 38.1 kg</b> is on the row (44 lb of plates does not exist; 40 lb is the heaviest that is not above 40 kg by more than a quarter kilo). Tap the chip, tap <b>kg</b>: " +
+    "the sheet now has <i>Use my default &middot; lb + Barbell 20 kg</i>; leave it, tap Done, discard the session, kill the app, reopen Day 1: Bent-over row is still <i>Weight in kg + Barbell 20 kg</i> " +
+    "over <i>Set for this exercise</i> and every other card is lb. <b>Question 2:</b> on Day 5, <i>Speed DB press</i> reads <i>55 kg (121.5 lb). 65&ndash;70% of your 81 kg triple.</i> &mdash; " +
+    "is a kg figure with the pounds in brackets what you want to read at the rack, or would you rather it read the pounds first? The coach ruled the brackets (&sect;21); your word overturns it.<br>" +
+    "<span class=\"skipmsg\">Why a phone: everything measurable is measured (item 38) &mdash; the ghost strings, the seed, the override on the tap, the sheet row, D1&ndash;D8, the six attacks, " +
+    "the D6 diff against <code>main</code>. What no rig can answer is whether <i>total</i> reads as a different thing from arm&rsquo;s length, and whether the two-line chip is read or skipped. " +
+    "<b>One thing to know before you look:</b> at 200 % OS text the ghost line on a lb card runs 29 px past the right edge and the chip shrinks by a line when you pick a unit, so the rows " +
+    "move under your thumb once; both are P3 on the row, neither loses a number.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -19639,6 +19944,60 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "The project rate-limited the rig&rsquo;s pull rate twice (a <code>429</code> without CORS headers, seen by the app as a failed read): M-f, " +
     "nothing changed, and the next merge succeeded &mdash; the offline-first path holding under a network fault. " +
     "<b>file:// suite 842 / 839 / 3 (the three named reds above), three tripwires.</b></span></li>" +
+    "<li><b>WO-012 W5 &mdash; the unit decided once, 2026-09-13, on <code>wo-012-default-unit @ 34f0a68</code>.</b> <span class=\"msg\">Rig: Node + Playwright, the branch served on " +
+    ":8821 and <code>main @ 81fc0b8</code> (a <code>git archive</code>, not a checkout) on :8822, 400 &times; 850, the CDN and Supabase blocked; expectations re-derived from WO-012 &sect;4, coach &sect;21 / &sect;21.13 " +
+    "and UX &sect;21, not from frontend&rsquo;s rig. Seeded by writing <code>localStorage</code> before boot; his session <code>1789264514484</code> as the log. " +
+    "<b>D1, his session on a lb default with Barbell 20 kg first.</b> d1a: chip <i>Weight in lb + Barbell 20 kg</i> / <i>Your default &middot; first bar in your gym</i>, name " +
+    "<i>Weight in lb + Barbell 20 kg. Your default, first bar in your gym. Change.</i>, 56 px; captions <code>+ lb</code> at 11 px (B-118); ghosts <i>Last 44 lb total &times; 12</i> / " +
+    "<i>Last 44 lb &times; 12</i> / <i>Last 68.5 lb &times; 15</i>; steppers <i>Weight up 5 lb, Bent-over row set 1</i>; input <i>Added weight in lb on Barbell 20 kg, &hellip;</i>. " +
+    "d1b (bodyweight slot): <i>Weight in lb &middot; no bar</i> / <i>Your default</i>, <i>Last 150 lb &times; 12</i>, <i>Last 170 lb &times; 12</i>, caption <code>lb</code>. d1d (db): " +
+    "<i>Last 139 lb &times; 12</i>, <i>Last 170 lb &times; 5</i>, <i>Last 170 lb &times; 6</i>. d1e: <i>Last bodyweight &times; 12</i> (Z2). d1f: 92.5 / 112.5 / 132.5 lb. d1g (bb, the set he " +
+    "noted <i>did this in cable</i>): the bar rule attaches the 20 kg bar to the slot &mdash; 16.5 / 27.5 / 33 lb; honest to the slot, not the note. <code>phat:v1:log</code> byte-identical " +
+    "after every card, Summary and Trend; no set gained an <code>ld</code>. <b>The seed.</b> <code>+</code> on row 1 (the <code>total</code> ghost) gives one step, <code>5</code>, " +
+    "<i>= 22.3 kg</i>; on row 2 seeds <code>40</code>, <i>= 38.1 kg</i>, live <i>Weight now 40 lb, 38.1 kg.</i> (SD1: 44.09 lb of plates &rarr; 40 lb); on row 3 <code>65</code>, <i>= 49.5 kg</i>; " +
+    "the chip&rsquo;s second line unchanged under typing. <b>Remove-set</b>: <i>It holds 65 lb &times; &mdash;.</i> <b>The sheet</b> on a default card: no <i>Use my default</i> row, " +
+    "<i>Last time: kg &middot; no bar.</i> unconverted, no control under 44 px. <b>Summary</b>: <i>Bent-over row :: 40 lb &times; 12</i>, no <code>kg &times;</code> on the screen. " +
+    "<b>Trend</b>: one date reads <i>203.5 lb on 12 Sep. One date cannot make a line.</i> (his d1d e1RM 92.4 kg); with an older fixture session the DB press row reads <i>+10.5 lb</i> / " +
+    "<i>Up 10.5 lb since 5 Sep</i> with the foot <i>203.5 lb &middot; 12 Sep</i> &mdash; 193 &rarr; 203.5 in the displayed unit, endpoint minus endpoint, where the kg delta is 4.9; no horizontal overflow. " +
+    "<b>U1 on screen</b>: Day 5&rsquo;s speed card reads <i>55 kg (121.5 lb). 65&ndash;70% of your 81 kg triple. Rest 60&ndash;90 s. Fast, never grinding.</i> from his kg-direct d1d 81 &times; 3, and " +
+    "with 180 lb typed <i>81.6 kg is not speed work. Drop to 55 kg (121.5 lb).</i>; strip the bracket and it is the kg card&rsquo;s string. <b>The P1 bracket has no on-screen path</b>: every set " +
+    "typed on a lb card carries <code>ld</code>, so its verdict is L1&rsquo;s form (125 &times; 5/5/5 on the bar: <i>Top of range on all 3 sets. Go to 79 kg next session &mdash; 20 kg bar + 130 lb.</i>, " +
+    "no bracket); the kg-direct P1 sentences are pinned in S45 and S47 and reachable today only through the speed slot. Stated, not a defect: &sect;21.9 #3. " +
+    "<b>D3, the coordinator&rsquo;s literal.</b> d3c chip &rarr; kg: prefs on disk <code>{bars, unit: lb, ex: {d3c: {au: kg}}}</code> on the tap, nothing logged; the sheet gains " +
+    "<i>Use my default &middot; lb &middot; no bar</i> (368 &times; 48); discard, reload: the override survives; d3c <i>Weight in kg &middot; no bar</i> / <i>Set for this exercise</i>, d3a " +
+    "<i>Weight in lb + Barbell 20 kg</i> / <i>Your default &middot; first bar in your gym</i>, d3b / d3e / d3f / d3h <i>Weight in lb &middot; no bar</i> / <i>Your default</i>. Settings &rarr; kg: live " +
+    "<i>I lift in kg.</i>, prefs <code>unit: kg</code> with the override untouched, the lb-only bars sentence gone; d3c unmoved, d3b now <i>Weight in kg &middot; no bar</i> / <i>Your default</i>. " +
+    "<i>Use my default &middot; kg &middot; no bar</i> on d3c: the key gone and the empty map removed, live <i>On your default: kg &middot; no bar.</i>, focus on the chip, no <code>mode</code> on the draft. " +
+    "<b>D4.</b> <code>ex.d3c = {au: stone}</code> beside a good <code>d1a</code>: one warn <code>[phat] prefs.gym: dropped ex.d3c</code>, bars intact, <i>I lift in</i> lb, d3c on the default, d1a&rsquo;s override " +
+    "reads, the bad key still on disk (no boot write) until the next Settings tap writes <code>{bars, unit, ex: {d1a}}</code>. <code>unit: pounds</code> + <code>ex: \"x\"</code>: <code>dropped unit, ex</code>, bars intact. " +
+    "<b>D5.</b> 135 lb on d1a (<i>= 81.2 kg</i>) and 60 kg on d1d under a kg override; reload: the offer <i>Upper power &middot; 2 sets logged</i>; the draft&rsquo;s numbers and both <code>ld</code> byte-identical " +
+    "across the reload (only <code>savedAt</code> moves, stamped by the leaving page&rsquo;s <code>pagehide</code> flush &mdash; a cold boot on a seeded draft rewrites nothing, checked separately at 2.5 s); " +
+    "Resume: d1a <code>135</code> / <code>+ lb</code> / <i>= 81.2 kg</i>, d1d <code>60</code> / <code>kg</code> / <i>Set for this exercise</i>; declining discards it and the override outlives the draft. " +
+    "<b>D6.</b> With <code>prefs.gym</code> = bars only and with no prefs key at all, against <code>main @ 81fc0b8</code> on the same log: <code>#excard .sets</code> before and after typing 77 &times; 5/5/5, " +
+    "<code>#ldchip</code>, <code>#slot-verdict</code> (<i>Go to 79.5 kg next session.</i>), the draft (but for <code>savedAt</code>), the Summary and Trend <code>#view</code>, and <code>phat:v1:prefs</code> after adding a " +
+    "bar (<code>prefsPayload</code>) &mdash; byte-identical; the load sheet differs by one whitespace text node (the empty <i>Use my default</i> slot), no element. Settings differs by the segment, as it must. " +
+    "<b>D7 / attack 4.</b> <code>setItem</code> stubbed to throw on <code>phat:v1:prefs</code>: chip &rarr; kg on d1a gives <i>Could not save the unit for next time. It holds for this session.</i> once " +
+    "(the second card&rsquo;s failed write is silent), the card <i>Weight in kg + Barbell 20 kg</i> / <i>Set for this exercise</i>, no generic <i>Could not save</i> refusal; the session saves " +
+    "<i>Session saved.</i> with d1d kg-direct <code>{w: 77, r: 5}</code> and d1a <code>{w: 97, r: 5, ld: {bar: 20, bu: kg, add: 77, au: kg}}</code>; prefs on disk untouched. " +
+    "<b>D8.</b> lb tapped, context killed and reopened from its storage: Settings reads lb, a fresh d2a opens <i>Weight in lb + Barbell 20 kg</i>; a tap on the pressed option writes nothing and says nothing. " +
+    "<b>Attack 1.</b> lb + d1a / d1b / d1d flipped to kg, then a bar saved and removed: <code>unit</code> and all three overrides survive (d1a&rsquo;s keeps the bar: <code>{au: kg, bar: 20, bu: kg}</code>). " +
+    "<b>Attack 2.</b> 77 &times; 5 prior: the ghost <i>Last 125.5 lb &times; 5</i>, the seed <code>125</code> / <i>= 76.7 kg</i>, three at 125 &rarr; <i>Go to 79 kg next session &mdash; 20 kg bar + 130 lb.</i>; " +
+    "125 / 125.5 / 125.5 the same; d1d with no bar seeds 170 / <i>= 77.1 kg</i> &rarr; <i>Go to 79.4 kg next session &mdash; 175 lb per DB.</i>; never <i>Sets not matched</i>. " +
+    "<b>Attack 3.</b> 14 filler weeks + 77 &times; 5/5/5 completed at day &minus;30 and two failures at 170 lb (77.1, no bar) at &minus;10 and &minus;3: Home reads <i>Two sessions where Bent-over row went backwards. " +
+    "Take a deload week &hellip;</i>; at 170.5 lb (77.3) no banner. <b>Attack 5 &mdash; reproduced, on the row.</b> Tab A sets lb; tab B (booted before) saves a bar: <code>prefs.gym</code> on disk is " +
+    "<code>{bars: [3]}</code>, the unit gone, A&rsquo;s Settings after reload neither pressed. Tab A writes an override on d1a; tab B taps a unit in Settings: the override gone. <code>gymBase()</code> spreads " +
+    "<code>S.prefs.gym</code> from memory and <code>save(PREFS, prefsPayload())</code> never re-reads disk &mdash; B-76 / B-124&rsquo;s class, not fixed here. <b>Attack 6.</b> <code>prefs.gym = \"garbage\"</code>: " +
+    "no throw, one warn <i>did not validate</i>, d1a <i>Weight in kg &middot; no bar</i> / <i>Could not read Settings &middot; kg for now</i>, the sheet <i>Could not read your settings. You can still set the unit and bar here.</i>, " +
+    "77 &times; 5/5/5 saved kg-direct, Settings <i>Could not read your unit. Pick one to set it again.</i> + <i>Could not read your bars.</i> with neither pressed, a tap writes <code>{bars: [], unit: lb}</code> over it. " +
+    "<b>Geometry.</b> Row 95 px and stepper x 41 / 161 / 217 / 337 identical on lb + bar, kg-direct and lb no-bar; chip 56 in every state; no control under 44 px on the card, in the sheet or on Settings; " +
+    "the segment 180 &times; 48 each at y 296. <b>The history tier</b>: unit absent with a WO-010 lb session &rarr; <i>From last time</i>, ghost <i>Last 90 lb &times; 5</i>, the sheet&rsquo;s line " +
+    "<i>From last time. Set your default in Settings &rarr; Gym.</i>; unit absent, kg history &rarr; <code>main</code>&rsquo;s chip with no second line. <b>D9 + Undo</b>: 125 typed, chip &rarr; kg: " +
+    "<i>Set 1 holds lb weights.</i> / <i>Switching to kg clears them. Reps stay.</i> / <i>Switch to kg and clear</i> / <i>Keep lb</i>; Keep writes nothing; Switch writes <code>{au: kg, bar: 20, bu: kg}</code>, " +
+    "clears the weight, keeps the reps; Undo puts the 125 and the absent key back. <b>Found.</b> (1) With <code>prefs.gym.unit</code> absent &mdash; a WO-010 device, or no prefs at all, or a dropped " +
+    "<code>pounds</code> &mdash; Settings shows <b>neither</b> <code>kg</code> nor <code>lb</code> pressed and no refusal; spec 21.1 and <code>vGym</code>&rsquo;s own comment say <i>absent &rarr; kg pressed</i>; " +
+    "<code>gymUnit()</code> returns null for absent and the render reads null as unpressed. P2, frontend, one line. (2) At 200 % text the lb ghost row (<code>.ghost</code>, WO-010&rsquo;s CSS) overflows the " +
+    "viewport by 29 px on <i>Last 44 lb total &times; 12</i> where <code>main</code>&rsquo;s <i>Last 20 &times; 12</i> fits; and the chip, 152 px at first paint, drops to 98 px when line 2 shortens on a " +
+    "unit tap, moving the rows 26 px (UX 21.2 says nothing moves on a tap). P3, frontend. <b>file:// suite 905 / 905 / 0, three tripwires; nine mutants on copies, nine killed.</b></span></li>" +
     "</ol>";
 })();
 </script>
