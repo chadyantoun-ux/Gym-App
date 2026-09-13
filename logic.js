@@ -147,6 +147,27 @@
   var ADD_MAX = { kg: 500, lb: 1100 };
   var BAR_MAX = { kg: 50, lb: 110 };
   var LD_TOL = 0.05;
+  /* Rule EQ1 (addendum §21.13.1) — when two STORED loads are the same load.
+     |a − b| <= LOAD_EQ is the same load; a − b > LOAD_EQ is a heavier one.
+     Stored loads are multiples of 0.1, so a spread of 0.2 kg or less is one
+     load and 0.3 kg or more is two. 0.25 is above the worst drift a seeded
+     lb conversion can store (0.2 kg: the 0.5 lb display, r1 once at the
+     total) and below every plate step he owns (0.25 kg plates the pair,
+     5 lb on a bar, 2.5 kg on a stack). Exactly four sites read it, and the
+     working load is still min(C) at every one — EQ1 moves which branch
+     fires, never which number is printed:
+       verdictPower  backoff  (R − load) > LOAD_EQ        (was 0.01)
+       verdictPower  mixed    (top − load) > LOAD_EQ      (was 0.01)
+       workingBuild  |s.w − load| <= LOAD_EQ              (was 0.01)
+       d1T1 (c)      failLoad > best + LOAD_EQ → MISS-NEW (was 1e-9)
+     NOT LD_TOL, which is a different question: does THIS set's typed w
+     agree with the total its OWN components compose to — one set, a
+     data-integrity check, tighter on purpose. Do not merge the two.
+     NOT H1.4d either: a tonnage has reps in it, and its own criterion is
+     the printed percentage (§21.13.2). Also the grid SD1's seed snaps to
+     (seedFor): the heaviest grid load not above the prior by more than
+     LOAD_EQ. */
+  var LOAD_EQ = 0.25;
   var LD_KEYS = ["bar", "bu", "add", "au"];
 
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -449,7 +470,8 @@
   }
   /* The working-load set's build: the FIRST set among the first `n`
      completed sets, in logged order, whose w equals `load` (P1's min of C,
-     0.01-tolerant like P1 itself). Its ld, or its absence, is the build —
+     the same load under Rule EQ1 — within LOAD_EQ, like P1 itself). Its
+     ld, or its absence, is the build —
      ties to the earliest set. Walks the RAW rows because completedSets
      strips everything but w and r. */
   function workingBuild(sets, n, load) {
@@ -459,7 +481,7 @@
       s = numSet(sets[i]);
       if (!s) continue;
       done++;
-      if (Math.abs(s.w - load) <= 0.01) return buildOf(sets[i].ld, s.w);
+      if (Math.abs(s.w - load) <= LOAD_EQ + 1e-9) return buildOf(sets[i].ld, s.w);
     }
     return null;
   }
@@ -495,11 +517,29 @@
     return mode;
   }
 
-  /* validateGymProfile(gym) -> { ok, problems:[{i, field, reason, value}] }
-     The Settings -> Gym list: { bars: [{n, w, u}] }. A bar needs a non-empty
-     name, a unit in {kg, lb} and a weight in (0, BAR_MAX[u]]. Per device, in
-     phat:v1:prefs, never pushed — the log is self-describing, so nothing
-     here is history and nothing reads it but the card's sheet. */
+  /* validateGymProfile(gym) -> { ok, problems:[{i, field, reason, value, sub?, drop?}] }
+     The Settings -> Gym profile: { bars: [{n, w, u}], unit?, ex? }. A bar
+     needs a non-empty name, a unit in {kg, lb} and a weight in (0,
+     BAR_MAX[u]]. Per device, in phat:v1:prefs, never pushed — the log is
+     self-describing, so nothing here is history and nothing reads it but
+     the card's sheet.
+
+     WO-012 W3 — two more keys, and a second KIND of problem.
+       unit   "kg" | "lb", optional. Where every card starts (level 1).
+       ex     { exId: {au, bar?, bu?} }, optional. Per-exercise overrides
+              (level 2), each validated like a mode: au a unit; bar and bu
+              both present or both absent; bar in (0, BAR_MAX[bu]]; no
+              other key. An UNKNOWN exId is kept — a plan he deleted must
+              not brick the profile, and this function cannot see the plan.
+     A bad `unit`, a bad `ex` map, or one bad override is a PER-KEY refusal
+     (D4): the problem carries `drop` — the key path to remove ("unit",
+     "ex", "ex.d3c") — and `ok` stays true for the bars. The profile is
+     never refused whole for one bad override, because refusing it empties
+     the bars list on every card at boot. `ok` is false only for what it
+     was false for before: not an object, `bars` not an array, a bad bar.
+     `sub` names the field inside an override (like validateEntry's ld
+     problems). The existing pins on {ok, problems} hold to the byte: a
+     profile with no unit and no ex produces exactly what it did. */
   function validateGymProfile(gym) {
     var out = { ok: false, problems: [] };
     if (!isObj(gym)) { out.problems.push({ i: -1, field: null, reason: "malformed", value: "" }); return out; }
@@ -515,7 +555,348 @@
       else if (pw.value <= 0) out.problems.push({ i: i, field: "w", reason: "range", value: pw.raw });
     });
     out.ok = out.problems.length === 0;
+    /* the per-key half: nothing below moves `ok` */
+    if (gym.unit !== undefined && !isUnit(gym.unit)) {
+      out.problems.push({ i: -1, field: "unit", reason: "unit", value: str(gym.unit), drop: "unit" });
+    }
+    if (gym.ex !== undefined) {
+      if (!isObj(gym.ex)) {
+        out.problems.push({ i: -1, field: "ex", reason: "malformed", value: "", drop: "ex" });
+      } else {
+        Object.keys(gym.ex).forEach(function (id) {
+          var p = modeProblem(gym.ex[id]);
+          if (p) out.problems.push({ i: -1, field: "ex." + id, reason: p.reason, value: p.value, sub: p.sub, drop: "ex." + id });
+        });
+      }
+    }
     return out;
+  }
+  /* One override / one mode, validated like composeLoad validates an ld
+     minus `add`: null when it is a mode, else {reason, value, sub}. */
+  var MODE_KEYS = ["au", "bar", "bu"];
+  function modeProblem(m) {
+    if (!isObj(m)) return { reason: "malformed", value: str(m), sub: null };
+    var k;
+    for (k in m) {
+      if (Object.prototype.hasOwnProperty.call(m, k) && MODE_KEYS.indexOf(k) < 0) return { reason: "malformed", value: str(m[k]), sub: k };
+    }
+    if (!isUnit(m.au)) return { reason: "unit", value: str(m.au), sub: "au" };
+    var hasBar = m.bar !== undefined, hasBu = m.bu !== undefined;
+    if (!hasBar && !hasBu) return null;
+    if (!hasBar) return { reason: "empty", value: "", sub: "bar" };
+    if (!isUnit(m.bu)) return { reason: "unit", value: str(m.bu), sub: "bu" };
+    var pb = parsePart(m.bar, 0, BAR_MAX[m.bu]);
+    if (!pb.ok) return { reason: pb.reason, value: pb.value, sub: "bar" };
+    if (pb.value <= 0) return { reason: "range", value: pb.raw, sub: "bar" };
+    return null;
+  }
+  /* The mode's saved form: au, then bar/bu as numbers when present. Only
+     ever called on a mode modeProblem accepted. */
+  function modeNumbers(m) {
+    var o = { au: m.au };
+    if (m.bar !== undefined) { o.bar = Number(str(m.bar).trim()); o.bu = m.bu; }
+    return o;
+  }
+
+  /* readGymProfile(gym) -> { ok, gym, drop:[key path], problems }
+     The boot's one call: validateGymProfile, then the profile this build
+     ADOPTS — bars as numbers, `unit` only when valid, `ex` with every
+     refused key dropped and every kept one normalised. `gym` is null when
+     `ok` is false (the bars did not validate: today's S.gymBad path); the
+     dropped keys are listed so the boot can warn by name, once. A bad key
+     is dropped from what is adopted, never rewritten on disk here — the
+     next Save from Settings writes the clean profile over it. */
+  function readGymProfile(gym) {
+    var v = validateGymProfile(gym);
+    var out = { ok: v.ok, gym: null, drop: [], problems: v.problems };
+    v.problems.forEach(function (p) { if (p.drop) out.drop.push(p.drop); });
+    if (!v.ok) return out;
+    var g = { bars: (gym.bars || []).map(function (b) { return { n: String(b.n), w: Number(str(b.w).trim()), u: b.u }; }) };
+    if (gym.unit !== undefined && out.drop.indexOf("unit") < 0) g.unit = gym.unit;
+    if (gym.ex !== undefined && out.drop.indexOf("ex") < 0) {
+      g.ex = {};
+      Object.keys(gym.ex).forEach(function (id) {
+        if (out.drop.indexOf("ex." + id) < 0) g.ex[id] = modeNumbers(gym.ex[id]);
+      });
+    }
+    out.gym = g;
+    return out;
+  }
+
+  /* ---- WO-012 W3: the two levels and the card's precedence ----
+
+     Level 1, the DEFAULT: prefs.gym.unit — where every card starts.
+     Level 2, the OVERRIDE: prefs.gym.ex[exId] — a choice made on the chip,
+     stored the moment it is made, whether or not a set follows.
+     Both per device (B-113). Nothing here writes; these are readers.
+
+     `prefs` is the prefs root ({gym, merge, backup, ...}) or the gym object
+     itself — whichever the caller holds; the reader looks for `.gym` first.
+     Garbage anywhere → {au: "kg"}. Never throws. */
+  function gymOf(prefs) {
+    if (!isObj(prefs)) return null;
+    if (isObj(prefs.gym)) return prefs.gym;
+    return prefs;
+  }
+  function exOf(ex, plan) {
+    if (isObj(ex)) return ex;
+    if (typeof ex === "string") return exById(isPlanDoc(plan) ? plan : PHAT_PLAN, ex);
+    return null;
+  }
+  /* The profile's first bar as a mode's bar, or null when there is none or
+     it does not validate (a refused profile never lends a bar). */
+  function firstBar(g) {
+    if (!g || !Array.isArray(g.bars) || !isObj(g.bars[0])) return null;
+    var b = g.bars[0];
+    if (!isUnit(b.u)) return null;
+    var pw = parsePart(b.w, 0, BAR_MAX[b.u]);
+    if (!pw.ok || pw.value <= 0) return null;
+    return { bar: pw.value, bu: b.u };
+  }
+
+  /* defaultMode(prefs, ex, plan?) -> { au, bar?, bu? }
+     LEVEL 1 ONLY — the override is cardModeFor's tier, not this one, so the
+     sheet can name the default (`Use my default · lb + Barbell 20 kg`)
+     while an override is in force. `ex` is the exercise object or its id
+     (resolved in `plan`, default PHAT_PLAN).
+       unit absent, "kg", or unreadable   -> {au: "kg"}          today's card
+       unit "lb", implement not "bb"      -> {au: "lb"}          no bar
+       unit "lb", implement "bb"          -> {au: "lb", bar, bu} the profile's
+                                             FIRST bar (WO-012 §0.1, the PM's
+                                             ruling; UX §21.7) — none → no bar
+     The bar follows `bb` only: a lb card with no bar on Bench stores 61.2 kg
+     for a 135 he added to a 20 kg bar; the first bar on a dumbbell row is
+     the mirror error. One branch, if Chady wants no bar ever. */
+  function defaultMode(prefs, ex, plan) {
+    var g = gymOf(prefs);
+    if (!g || g.unit !== "lb") return { au: "kg" };
+    var e = exOf(ex, plan);
+    if (!isObj(e) || e.implement !== "bb") return { au: "lb" };
+    var fb = firstBar(g);
+    if (!fb) return { au: "lb" };
+    return { au: "lb", bar: fb.bar, bu: fb.bu };
+  }
+
+  /* overrideMode(prefs, exId) -> { au, bar?, bu? } | null
+     Level 2: the stored override for this exercise, validated like a mode,
+     or null when there is none or it does not validate (a refused key is
+     read as absent, which is what readGymProfile drops it to). */
+  function overrideMode(prefs, exId) {
+    var g = gymOf(prefs);
+    var id = typeof exId === "string" ? exId : (isObj(exId) ? exId.id : undefined);
+    if (!g || !isObj(g.ex) || typeof id !== "string") return null;
+    if (!Object.prototype.hasOwnProperty.call(g.ex, id)) return null;
+    var m = g.ex[id];
+    if (modeProblem(m)) return null;
+    return modeNumbers(m);
+  }
+
+  /* A draft-side ld or mode, copied the way index.html's modeCopy copies it:
+     au "lb" or "kg", bar as a number with its unit only when present. */
+  function modeFromLd(l) {
+    var o = { au: l.au === "lb" ? "lb" : "kg" };
+    if (l.bar !== undefined && l.bar !== null) {
+      var n = (typeof l.bar === "number") ? l.bar : Number(str(l.bar).trim());
+      if (isFinite(n) && n > 0) { o.bar = n; o.bu = l.bu === "lb" ? "lb" : "kg"; }
+    }
+    return o;
+  }
+  /* loadModeFor's finder, but honest about NOT finding: null when no set on
+     the entry carries an ld that composes. loadModeFor itself keeps
+     returning {au: "kg"} in that case (its contract since WO-010). */
+  function historyMode(e) {
+    if (!isObj(e) || !Array.isArray(e.sets)) return null;
+    for (var i = 0; i < e.sets.length; i++) {
+      var s = e.sets[i];
+      if (!isObj(s) || s.ld === undefined || !composeLoad(s.ld).ok) continue;
+      var n = ldNumbers(s.ld), mode = { au: n.au };
+      if (n.bar !== undefined) { mode.bar = n.bar; mode.bu = n.bu; }
+      return mode;
+    }
+    return null;
+  }
+
+  /* cardModeFor(args) -> { mode: {au, bar?, bu?}, tier }
+     THE PRECEDENCE, one pure function, so the chip's state is a fact of the
+     engine and not the view. Top wins:
+       "chip"      entry.mode — the chip's choice this session, on the draft
+       "draft"     the first ld already on the draft's own sets
+       "typed"     a kg-direct set is typed on this card (a w with no ld)
+       "override"  prefs.gym.ex[exId]           (level 2)
+       "default"   prefs.gym.unit + the bar rule (level 1) — whenever the
+                   default is SET, "kg" included
+       "history"   loadModeFor(prev) — ONLY while prefs.gym.unit is absent:
+                   a pre-WO-012 device keeps WO-010's memory; the moment a
+                   default is chosen, history stops outranking it (the main
+                   session's ruling on UX §21.12 #1: the default governs)
+       "kg"        nothing anywhere: {au: "kg"}
+     args: { entry | draft, exId, ex?, plan?, prefs, prev | sessions,
+             typedKg? }. `entry` is this card's draft entry ({sets, mode?});
+     `draft` may be the whole draft ({entries}) with `exId` naming the card.
+     `prev` is the last logged entry for this card, or pass `sessions` and
+     it is looked up. `typedKg: true` asserts the typed tier from the view;
+     otherwise it is read from the entry's rows. Never throws: garbage in
+     any argument is that tier absent. */
+  function cardModeFor(args) {
+    var a = isObj(args) ? args : {};
+    var id = typeof a.exId === "string" ? a.exId : (isObj(a.ex) && typeof a.ex.id === "string" ? a.ex.id : undefined);
+    var entry = a.entry;
+    if (!isObj(entry) && isObj(a.draft)) entry = isObj(a.draft.entries) ? a.draft.entries[id] : a.draft;
+    if (isObj(entry)) {
+      if (isObj(entry.mode)) return { mode: modeFromLd(entry.mode), tier: "chip" };
+      var sets = Array.isArray(entry.sets) ? entry.sets : [], i, s;
+      for (i = 0; i < sets.length; i++) {
+        s = sets[i];
+        if (isObj(s) && isObj(s.ld)) return { mode: modeFromLd(s.ld), tier: "draft" };
+      }
+      var typed = a.typedKg === true;
+      for (i = 0; i < sets.length && !typed; i++) {
+        s = sets[i];
+        if (isObj(s) && str(s.w).trim() !== "") typed = true;
+      }
+      if (typed) return { mode: { au: "kg" }, tier: "typed" };
+    } else if (a.typedKg === true) {
+      return { mode: { au: "kg" }, tier: "typed" };
+    }
+    var ov = overrideMode(a.prefs, id);
+    if (ov) return { mode: ov, tier: "override" };
+    var g = gymOf(a.prefs);
+    if (g && isUnit(g.unit)) return { mode: defaultMode(a.prefs, isObj(a.ex) ? a.ex : id, a.plan), tier: "default" };
+    var prev = a.prev;
+    if (prev === undefined && Array.isArray(a.sessions) && typeof id === "string") prev = lastFor(a.sessions, id);
+    var h = historyMode(prev);
+    if (h) return { mode: h, tier: "history" };
+    return { mode: { au: "kg" }, tier: "kg" };
+  }
+
+  /* ---- WO-012 W3: the prior set in the card's unit (UX §21.4, §21.5) ----
+
+     priorInUnit(prevSet, mode) -> number | null
+     THE NUMBER THAT BELONGS IN THE WEIGHT FIELD to reproduce the prior on
+     THIS card — what the ghost prints and the first `+` seeds:
+       same build (prev.ld composes to the card's mode)  the typed figure, ld.add
+       kg-direct card                                    r1(w), as today
+       card has a bar, prior is a different build        the ADDED weight for
+                                                         this bar in the card's
+                                                         unit: 77 kg on a 20 kg
+                                                         bar card → 125.5 lb
+       card has no bar, prior is a different build       the total in the
+                                                         card's unit: 170 lb
+       prior at or under the bar (added ≤ 0)             null — nothing belongs
+                                                         in the field
+       w = 0, or an unreadable prior                     null
+     lb figures are displayNum's: 0.5 lb, ties down. THE ROUND-TRIP IS NOT
+     EXACT and is pinned as such: 125.5 lb on a 20 kg bar composes to 76.9,
+     170 lb with no bar to 77.1 — the half-pound's resolution, ±0.1 kg, and
+     the seeded set is a NEW set (D2: the stored prior never changes). The
+     coach's open item (§21.12 #2); nothing here hides it. */
+  function priorInUnit(prevSet, mode) {
+    var m = isObj(mode) ? modeFromLd(mode) : { au: "kg" };
+    if (!isObj(prevSet)) return null;
+    var pw = parseWeight(prevSet.w);
+    if (!pw.ok || !(pw.value > 0)) return null;
+    /* "same build" is buildOf's word for it, not composeLoad's: an ld that
+       does not recompose to this w (an older store, a hand edit) is read
+       as kg-direct and converted from w — never its own `add` printed as
+       if it were the plates he lifted. */
+    var b = buildOf(prevSet.ld, pw.value);
+    if (b && sameMode({ au: b.au, bar: b.hasBar ? b.bar : undefined, bu: b.hasBar ? b.bu : undefined }, m)) return b.add;
+    if (m.au === "kg" && m.bar === undefined) return r1(pw.value);
+    var addKg = m.bar !== undefined ? pw.value - toKg(m.bar, m.bu) : pw.value;
+    if (!(addKg > 0)) return null;
+    var n = displayNum(addKg, m.au);
+    return isFinite(n) && n > 0 ? n : null;
+  }
+  function sameMode(x, y) { return x.au === y.au && x.bar === y.bar && x.bu === y.bu; }
+
+  /* priorGhost(prevSet, mode, implement) -> "Last 125.5 lb × 5" | ""
+     The ghost line per UX §21.4, one grammar per case; "" when the prior
+     does not parse (the view prints `No prior set.`).
+       kg-direct card              `Last 77 × 5`            main's bytes, unitless
+       zero prior                  `Last bodyweight × 10`   Z2, on any card
+       same build                  `Last 90 lb × 5`         ld.add verbatim
+       different build, added > 0  `Last 125.5 lb × 5`      priorInUnit's figure
+       different build, added ≤ 0  `Last 33 lb total × 5`   the total, marked;
+                                                            does not seed */
+  function priorGhost(prevSet, mode, implement) {
+    if (!isObj(prevSet)) return "";
+    var pw = parseWeight(prevSet.w), pr = parseReps(prevSet.r);
+    if (!pw.ok || !pr.ok) return "";
+    var m = isObj(mode) ? modeFromLd(mode) : { au: "kg" };
+    if (!(pw.value > 0)) return "Last " + loadWord(0, implement) + " × " + pr.value;
+    if (m.au === "kg" && m.bar === undefined) return "Last " + String(r1(pw.value)) + " × " + pr.value;
+    var n = priorInUnit(prevSet, m);
+    if (n !== null) return "Last " + String(n) + " " + m.au + " × " + pr.value;
+    return "Last " + displayLoad(pw.value, m.au, implement) + " total × " + pr.value;
+  }
+
+  /* ---- Rule SD1 (addendum §21.13.4): the CONVERTED seed lands on the grid ----
+
+     seedFor(priorW, mode) -> number | null
+     The figure the first `+` puts in an EMPTY weight field when the prior
+     set was built some OTHER way than this card builds (kg-direct prior on
+     a lb card, a lb prior on a kg-on-bar card, a different bar). priorInUnit
+     is the READING (0.5 lb, what the ghost prints); this is the PROPOSAL,
+     and a proposal is an instruction with a softer verb: it must name a
+     load the plates build. `125.5 lb` is 62.75 a side, and L1 would ladder
+     it to 130.5, 135.5 — plates he does not have — forever.
+       kg-direct card (au kg, no bar)   r1(priorW) — no build, no grid, the
+                                        kg total as today (§21.13.5 #9)
+       any built card                   the LARGEST n × grid (n >= 1) with
+                                        buildTotal(b, n × grid) <= priorW + LOAD_EQ
+                                        — the heaviest load on this card's
+                                        grid not above the prior by more
+                                        than the same-load tolerance.
+                                        FLOOR WITH TOLERANCE, NEVER NEAREST:
+                                        78 kg on a 20 kg bar is 127.87 lb of
+                                        plates; nearest is 130 = 79.0, a
+                                        kilo above a load he may have been
+                                        told to stay at. 125 = 76.7 costs
+                                        one session; 130 can cost a rep.
+                                        The tolerance is what keeps 170 lb
+                                        (77.1) for a 77 kg prior.
+       n < 1, priorW <= 0, garbage      null — nothing belongs in the field;
+                                        `+` gives one step, as today
+     The grid is the build's (L1): LB_BAR_STEP on a bar in lb, LB_STEP with
+     no bar, KG_STEP for kg on a bar. The tie test is EQ1's, so a wrong
+     plate constant (B-117) moves the seed WITH the ladder, which is the
+     point. Pure: no history, no DOM. The SAME-BUILD seed is not this
+     function's — it is ld.add verbatim (he typed 127, the seed is 127);
+     seedInUnit below does the split the way priorInUnit does. */
+  function seedFor(priorW, mode) {
+    var pw = parseWeight(priorW);
+    if (!pw.ok || !(pw.value > 0)) return null;
+    var m = isObj(mode) ? modeFromLd(mode) : { au: "kg" };
+    if (m.au === "kg" && m.bar === undefined) return r1(pw.value);
+    var hasBar = m.bar !== undefined;
+    var b = { au: m.au, barKg: hasBar ? toKg(m.bar, m.bu) : 0 };
+    var grid = m.au === "lb" ? (hasBar ? LB_BAR_STEP : LB_STEP) : KG_STEP;
+    var cap = pw.value + LOAD_EQ + 1e-9;
+    /* start from the arithmetic floor, then walk to the exact boundary
+       through buildTotal itself (r1 at the total can pull a figure onto
+       either side of the cap: 190 lb is 86.18 raw, 86.2 stored) */
+    var n = Math.floor(inUnit(b, cap - b.barKg) / grid);
+    if (!isFinite(n)) return null;
+    while (n >= 1 && buildTotal(b, addStep(0, n * grid)) > cap) n--;
+    while (buildTotal(b, addStep(0, (n + 1) * grid)) <= cap) n++;
+    if (n < 1) return null;
+    return addStep(0, n * grid);
+  }
+  /* seedInUnit(prevSet, mode) -> number | null
+     priorInUnit's split with SD1 on the converted branch — the one call the
+     view makes on the first `+`:
+       same build          ld.add verbatim (priorInUnit's answer, untouched)
+       kg-direct card      r1(w), as today
+       converted           seedFor(w, mode) — the grid figure
+       zero / unreadable   null */
+  function seedInUnit(prevSet, mode) {
+    var m = isObj(mode) ? modeFromLd(mode) : { au: "kg" };
+    if (!isObj(prevSet)) return null;
+    var pw = parseWeight(prevSet.w);
+    if (!pw.ok || !(pw.value > 0)) return null;
+    var b = buildOf(prevSet.ld, pw.value);
+    if (b && sameMode({ au: b.au, bar: b.hasBar ? b.bar : undefined, bu: b.hasBar ? b.bu : undefined }, m)) return b.add;
+    return seedFor(pw.value, m);
   }
 
   /* ------------------------------------------------------- classification */
@@ -4572,6 +4953,67 @@
     return implement === "bodyweight" ? "bodyweight" : "zero load";
   }
 
+  /* ---- WO-012 W3: a kg total READ in the card's unit (coach §21.3) ----
+
+     displayNum(w, unit) -> number | NaN
+       "lb"        roundGrid(w / LB_KG, LB_DISPLAY): nearest 0.5 lb, ties
+                   down — 0.227 kg, coarser than the 0.1 kg the store holds
+                   (never claims a precision `w` lacks), finer than any
+                   plate step (no two grid loads collide), and the only
+                   rounding a lb-bar total (45 + 92.5 = 137.5 lb) survives.
+       anything    r1(w) — the kg figure every token already prints.
+                   "" / "pounds" / 7 / undefined are NOT lb.
+       garbage     NaN, never 0 (round2p5's rule: no caller invents a load).
+     displayLoad(w, unit, implement?) -> "170 lb" | "60.8 kg" | "bodyweight" | ""
+       The token: displayNum + the unit. Zero goes through loadWord (Z2):
+       `0 lb` is never printed. Unparseable → "".
+     ONE constant, ONE call site for the rounding: the verdict's bracket
+     (instr), the ghost, the seed and the Trend endpoints all read this, so
+     `Stay at 86 kg (189.5 lb)` sits over a row reading `189.5 lb` and not
+     `190 lb`. Two roundings on one screen is a defect, not a choice. */
+  var LB_DISPLAY = 0.5;
+  function displayNum(w, unit) {
+    var p = parseWeight(w);
+    if (!p.ok) return NaN;
+    if (unit === "lb") return roundGrid(p.value / LB_KG, LB_DISPLAY);
+    return r1(p.value);
+  }
+  function displayLoad(w, unit, implement) {
+    var n = displayNum(w, unit);
+    if (!isFinite(n)) return "";
+    if (!(n > 0)) return loadWord(0, implement);
+    return String(n) + " " + (unit === "lb" ? "lb" : "kg");
+  }
+
+  /* Rule U1 (addendum §21.1) — the load token at an INSTRUCTION site on the
+     KG-DIRECT path. `x` is the kg figure the rule already computed and
+     rounded (r1, the 2.5 grid, w + 2.5 — nothing here changes x).
+       unit !== "lb"        `{kg(x)} kg`                      today, byte for byte
+       unit === "lb", x > 0 `{kg(x)} kg ({displayLoad(x, "lb")})`
+       x not > 0            `{kg(x)} kg` — the callers route zero through
+                            loadWord before they get here (Z2)
+       displayNum NaN       `{kg(x)} kg`, never `(NaN lb)`
+     ON THE TOKEN, wherever it sits: `Stay at 77 kg (170 lb) until …`, not
+     `… reach 5 reps (170 lb).`, which reads as reps. Report tokens (`7 reps
+     at 77 kg`, the `Sets not matched` list, `your 77 kg triple`) never come
+     here — they describe sets already on his rows in lb. A set with a
+     build (L1's lb / kg-on-bar forms) never comes here either: the build
+     phrase after the em dash IS the lb reading (§21.6). */
+  function instr(x, unit) {
+    var s = kg(x) + " kg";
+    if (unit !== "lb" || !(x > 0)) return s;
+    var n = displayNum(x, "lb");
+    if (!isFinite(n) || !(n > 0)) return s;
+    return s + " (" + String(n) + " lb)";
+  }
+  /* loadWord with U1 on top: the token for an instruction whose load may be
+     zero. `b` is the working-load set's build — any build means L1's form
+     and no bracket. */
+  function instrWord(x, implement, b, unit) {
+    if (b || !(x > 0)) return loadWord(x, implement);
+    return instr(x, unit);
+  }
+
   /* Rule I2 — the "if 2.5 kg is not available" line, as its own second line.
      db · machine · cable · bodyweight only. NEVER bb (a 1.25 kg plate per side
      makes 2.5 kg, so the line is simply false there) and never on speed work.
@@ -5080,7 +5522,7 @@
      degenerate §18.6 #1 found: a 20 kg dumbbell missed at 2 reps printed
      `Drop to 20 kg next session.` — at every kg-direct load ≤ 22.5 kg. It
      is the ONLY kg-direct output §18 changes. */
-  function tooHeavy(ex, C, rangeWord, b) {
+  function tooHeavy(ex, C, rangeWord, b, unit) {
     var im = ex.implement, w0 = C[0].w;
     var head = repWord(C[0].r) + " at " + loadWord(w0, im) + ". Below the " + rangeWord + ".";
     var hold = mk("", head + " Hold here until all " + ex.s + " sets reach " + ex.lo + " reps.", "", "1z");
@@ -5096,7 +5538,9 @@
       if (drop > 0) p = " — " + buildAt(b, add2, im);
     }
     if (drop < 0) { hold.p = ""; return hold; }
-    var out = mk("down", head + " Drop to " + (drop > 0 ? kg(drop) + " kg" : loadWord(0, im)), "", "1");
+    /* Rule U1: the bracket rides the kg-direct token only; a build's drop
+       is L1's form (the phrase in `p` is its lb reading). */
+    var out = mk("down", head + " Drop to " + (drop > 0 ? (b ? kg(drop) + " kg" : instr(drop, unit)) : loadWord(0, im)), "", "1");
     out.p = p;
     return out;
   }
@@ -5120,15 +5564,21 @@
      `mixed` survives only as a COPY variant in cases 3 and 4, where the
      sentence makes a claim about every set and has to stay true.
 
-     Float-tolerant on 0.01: 2.5 kg steps arriving as parsed strings. */
-  function verdictPower(ex, C, pain, b) {
+     `backoff` and `mixed` are Rule EQ1 tests (§21.13.1): a spread within
+     LOAD_EQ is one load, so a seeded 76.9 beside a typed 77 is not a
+     mismatch. Was 0.01 (float noise on parsed 2.5 kg steps); the working
+     load is still min(C) and every printed figure is what it was. */
+  function verdictPower(ex, C, pain, b, unit) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var load = minW(C), top = maxW(C), R = repeatLoad(C);
-    var backoff = (R - load) > 0.01;
-    var mixed = (top - load) > 0.01;
+    var backoff = (R - load) > LOAD_EQ + 1e-9;
+    var mixed = (top - load) > LOAD_EQ + 1e-9;
     var word = loadWord(load, im);
-    var hold = mk("", "Stay at " + word + " until all " + s + " sets reach " + hi + " reps.", "", "P1.5");
+    /* `word` is the REPORT token (P1.3's head, kg on every card); the hold
+       is an INSTRUCTION and takes Rule U1's bracket on a lb card when the
+       working set is kg-direct (`Stay at 77 kg (170 lb) until …`). */
+    var hold = mk("", "Stay at " + instrWord(load, im, b, unit) + " until all " + s + " sets reach " + hi + " reps.", "", "P1.5");
     /* `b` is the working-load set's build (Rule L1) or null for kg-direct.
        It reaches cases 1, 3 and 4 — the cases that name a NEW load — and
        never 2 or 5, which name a load he built this session and is on his
@@ -5138,7 +5588,7 @@
     /* 1 — too heavy. Beats case 2 deliberately: a mismatch is a symptom of the
        load being wrong, and the useful instruction is about the load. */
     if (C[0].r < lo) {
-      var th = tooHeavy(ex, C, "range", b);
+      var th = tooHeavy(ex, C, "range", b, unit);
       return mk(th.t, th.rule === "1" ? th.x + " next session" + th.p + "." : th.x, "", "P1." + th.rule);
     }
 
@@ -5161,7 +5611,7 @@
       } else {
         list = C.map(function (x) { return kg(x.w); }).join(" / ") + " kg";
       }
-      return mk("down", "Sets not matched: " + list + ". Repeat " + loadWord(R, im) +
+      return mk("down", "Sets not matched: " + list + ". Repeat " + instrWord(R, im, b, unit) +
         " until all " + s + " sets reach " + hi + " reps.", "", "P1.2");
     }
 
@@ -5178,7 +5628,7 @@
       var head3 = repWord(mr) + " at " + word + (mixed ? " or above" : "") + " on every set. Too light. ";
       if (!b) {
         var step = g1Step(load, mr, hi);
-        return mk("up", head3 + (load === 0 ? "Add " + kg(step) + " kg." : "Go to " + kg(load + step) + " kg."),
+        return mk("up", head3 + (load === 0 ? "Add " + instr(step, unit) + "." : "Go to " + instr(load + step, unit) + "."),
           incrementLine(ex), "P1.3");
       }
       /* Rule L1, TOO LIGHT on a build: G1 in the build's unit, bar included;
@@ -5202,8 +5652,8 @@
       var inc = stepOf(b);
       if (!b) {
         return mk("up", load === 0
-          ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + kg(inc) + " kg next session."
-          : "Top of range on all " + s + " sets. Go to " + kg(load + inc) + " kg next session.",
+          ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + instr(inc, unit) + " next session."
+          : "Top of range on all " + s + " sets. Go to " + instr(load + inc, unit) + " next session.",
           incrementLine(ex), "P1.4");
       }
       /* Rule L1, INCREASE on a build: add' = add + one grid step; the printed
@@ -5224,7 +5674,7 @@
 
   /* Rule H1 — hypertrophy verdict (audit §9), with Z1/Z2/Z3/G1/I2/S1.
      Cprev is the previous entry's first ex.s completed sets, or null. */
-  function verdictHyp(ex, C, Cprev, pain, epochChanged, b) {
+  function verdictHyp(ex, C, Cprev, pain, epochChanged, b, unit) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var range = lo + "–" + hi + " range";
@@ -5236,7 +5686,7 @@
 
     /* 1 — too heavy. */
     if (C[0].r < lo) {
-      var th = tooHeavy(ex, C, range, b);
+      var th = tooHeavy(ex, C, range, b, unit);
       return mk(th.t, th.rule === "1" ? th.x + th.p + "." : th.x, "", "H1." + th.rule);
     }
 
@@ -5250,8 +5700,8 @@
       if (!b) {
         var step = g1Step(load, mr, hi);
         return mk("up", load === 0
-          ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + kg(step) + " kg next session."
-          : "All sets above " + hi + ". Go to " + kg(load + step) + " kg next session.",
+          ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + instr(step, unit) + " next session."
+          : "All sets above " + hi + ". Go to " + instr(load + step, unit) + " next session.",
           incrementLine(ex), "H1.2");
       }
       /* Rule L1 on a build — G1 in the build's unit, the phrase after the
@@ -5330,10 +5780,16 @@
 
     var va = volOf(C), vb = volOf(Cprev);                 /* 4d — tonnage */
     var p = vb > 0 ? Math.round((va - vb) / vb * 100) : 0;
-    if (va > vb) return mk("up", "Volume up " + p + "% — " + grp(va) + " kg against " + grp(vb) + " kg.", "", "H1.4d");
+    /* §21.13.2: THE PRINTED PERCENTAGE IS THE DECISION. A difference that
+       rounds to 0% (a seeded 76.9 against a typed 77: 2307 against 2310)
+       is a matched session; `Volume down 0%. Add a rep` contradicted
+       itself and `Volume up 0%` was the same defect with a nicer face.
+       Both strings are now unreachable. Not LOAD_EQ: a tonnage has reps
+       in it, and |Δ| < 0.5% of vb is what p === 0 means. */
+    if (p > 0) return mk("up", "Volume up " + p + "% — " + grp(va) + " kg against " + grp(vb) + " kg.", "", "H1.4d");
     /* H1.4d's step is the working-load set's (L1): `5 lb` on an lb build,
        `2.5 kg` otherwise — a kg-on-bar build steps 2.5 kg too. */
-    if (va < vb) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or " + String(stepOf(b)) + " " + (b ? b.au : "kg") + " next time.", "", "H1.4d");
+    if (p < 0) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or " + (b ? String(b.grid) + " " + b.au : instr(KG_STEP, unit)) + " next time.", "", "H1.4d");
     return mk("", "Volume matched. One more rep next session.", "", "H1.4d");
   }
 
@@ -5531,7 +5987,12 @@
        storage read. null is kg-direct, and kg-direct is the baseline. */
     var b = workingBuild(ctx.sets, s, minW(C));
 
-    if (ex.k === "power") return notAbsent(verdictPower(ex, C, pain, b));
+    /* Rule U1 (WO-012 W3): the card's DISPLAY unit, threaded like `pain`
+       and `b`. Absent, unreadable, "kg", "pounds" → the kg form, byte for
+       byte (D6). Only "lb" is lb. */
+    var unit = ctx.unit === "lb" ? "lb" : "kg";
+
+    if (ex.k === "power") return notAbsent(verdictPower(ex, C, pain, b, unit));
 
     /* Rule PE1. Computed HERE from the entry rather than trusted from the
        caller, so a view that forgets to pass anything still cannot compare
@@ -5548,7 +6009,7 @@
     var praw = ctx.prev;
     if (isObj(praw) && Array.isArray(praw.sets)) praw = praw.sets;
     var Cprev = Array.isArray(praw) ? completedSets(praw).slice(0, s) : null;
-    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch, b));
+    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch, b, unit));
   }
 
   /* ==================================================== Rule W1 - W7
@@ -6603,13 +7064,13 @@
      that came from seven weeks ago.
 
      Never throws, never mutates, never caches. */
-  function speedLoad(sessions, exId, todayStr, srcName, plan) {
+  function speedLoad(sessions, exId, todayStr, srcName, plan, unit) {
     var id = str(exId).trim();
     var p = isPlanDoc(plan) ? plan : PHAT_PLAN;
     var map = (p === PHAT_PLAN) ? SPEED_SRC : planSpeedSource(p);
     var out = notAbsent({
       exId: id, srcId: null, target: null, lo: null, hi: null,
-      source: null, srcWindow: null, reason: null, text: "",
+      source: null, srcWindow: null, reason: null, text: "", built: false,
       instruction: SP1_INSTRUCTION
     });
     if (!own(map, id)) {
@@ -6679,7 +7140,7 @@
       out.target = round2p5(src.w * SP1_MID);
       out.lo = round2p5(src.w * SP1_BAND_LO);
       out.hi = round2p5(src.w * SP1_BAND_HI);
-      out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
+      out.text = instr(out.target, unit) + ". 65–70% of your " + kg(src.w) +
                  " kg triple. Rest 60–90 s. Fast, never grinding.";
       return out;
     }
@@ -6715,7 +7176,7 @@
       out.target = round2p5(src.w * SP1_MID);
       out.lo = round2p5(src.w * SP1_BAND_LO);
       out.hi = round2p5(src.w * SP1_BAND_HI);
-      out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
+      out.text = instr(out.target, unit) + ". 65–70% of your " + kg(src.w) +
                  " kg triple. Rest 60–90 s. Fast, never grinding.";
       return out;
     }
@@ -6724,6 +7185,7 @@
     out.target = buildTotal(b, pick);
     out.lo = lo;
     out.hi = hi;
+    out.built = true;
     out.text = kg(out.target) + " kg — " + buildAt(b, pick, srcIm) + ". " +
                (inBand ? "65–70% of your " : "The nearest you can build under 65–70% of your ") +
                kg(src.w) + " kg triple. Rest 60–90 s. Fast, never grinding.";
@@ -6747,11 +7209,18 @@
   /* The flag's copy: `110 kg is not speed work. Drop to 95 kg.`
      "" when there is no target to drop to - the app never says `Drop to 0 kg`
      (Rule Z2), and it never flags a load it cannot name an alternative to. */
-  function speedFlagText(w, target) {
+  function speedFlagText(w, target, unit) {
     var pw = parseWeight(w);
     if (!pw.ok) return "";
+    /* Rule U1 (WO-012 W3): pass speedLoad's result as `target` and the
+       bracket follows its path — kg-direct source on a lb card → `Drop to
+       52.5 kg (115.5 lb).`; a built source (L3, `built: true`) → no
+       bracket, L1's rule. A bare number is today's call, byte for byte. */
+    var built = false;
+    if (isObj(target)) { built = target.built === true; target = target.target; }
     if (typeof target !== "number" || !isFinite(target) || !(target > 0)) return "";
-    return kg(pw.value) + " kg is not speed work. Drop to " + kg(target) + " kg.";
+    var tok = built ? kg(target) + " kg" : instr(target, unit);
+    return kg(pw.value) + " kg is not speed work. Drop to " + tok + ".";
   }
 
   /* =============================================== Rule S2 - painWindow
@@ -8142,7 +8611,11 @@
       if (r.failLoad === null) { run = 0; prevFail = null; continue; }
 
       best = bestWithin(done, r.date, ST1_PRIOR_FROM);          /* clause (c) */
-      if (best === null || r.failLoad > best + 1e-9) {          /* MISS-NEW */
+      /* Rule EQ1: a failure AT OR WITHIN LOAD_EQ of the completed load is
+         a failure at that load. Was `best + 1e-9`, which read a seeded
+         77.1 (170 lb) against a completed 77 as an attempt at a NEW load
+         and left the trigger blind to the stall (§21.13.3 #5). */
+      if (best === null || r.failLoad > best + LOAD_EQ + 1e-9) { /* MISS-NEW */
         run = 0; prevFail = null; continue;
       }
 
@@ -9307,6 +9780,27 @@
     workingBuild: workingBuild,
     loadModeFor: loadModeFor,
     validateGymProfile: validateGymProfile,
+    /* WO-012 W3 — decide the unit once. readGymProfile is the boot's call
+       (per-key refusal, D4); defaultMode is level 1, overrideMode level 2,
+       cardModeFor the precedence with the tier that chose it; displayNum /
+       displayLoad the one 0.5 lb rounding every surface reads; instr the
+       U1 token; priorInUnit / priorGhost the prior set in the card's unit. */
+    LB_DISPLAY: LB_DISPLAY,
+    readGymProfile: readGymProfile,
+    defaultMode: defaultMode,
+    overrideMode: overrideMode,
+    cardModeFor: cardModeFor,
+    displayNum: displayNum,
+    displayLoad: displayLoad,
+    instr: instr,
+    priorInUnit: priorInUnit,
+    priorGhost: priorGhost,
+    /* WO-012 §21.13 — Rule EQ1's constant (the four sites assert against
+       it, not a literal) and Rule SD1's seed: seedFor is the pure grid
+       arithmetic, seedInUnit the split the view calls on the first `+`. */
+    LOAD_EQ: LOAD_EQ,
+    seedFor: seedFor,
+    seedInUnit: seedInUnit,
     localDate: localDate,
     draftAge: draftAge,
     parseWeight: parseWeight,

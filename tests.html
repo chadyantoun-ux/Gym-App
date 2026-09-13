@@ -55,7 +55,7 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 842 / 842 / 0 on main @ bbcdac3 - the three WO-011 reds closed in f133d8e</b> <b>S44</b> (WO-011 W5, the QA pass on the
+<b>Today: 905 / 905 / 0 on wo-012-default-unit @ 34f0a68 + S47 - 1.3 s in Chrome from file://</b> <b>S47</b> (WO-012 W5, the QA pass, 2026-09-13) added 8: <b>U1&rsquo;s three loads re-derived</b> with QA&rsquo;s own rounding (a floor-and-fraction, not <code>roundGrid</code>: 77 / 86 / 51 &rarr; 170 / 189.5 / 112.5; the coach&rsquo;s instruction figures 175.5 not 175, 115.5, 181, 160, 195, 200.5, 118, 104.5; his own d5a target 55 &rarr; 121.5; every added weight his lb card printed on 2026-09-13 &mdash; 44 / 68.5 / 16.5 / 27.5 / 33 on the bar, 150 / 170 / 139 / 92.5 / 132.5 with none &mdash; and <code>Last 44 lb total &times; 12</code> for the empty bar); <b>the strip-invariant over S41&rsquo;s own builders</b> (BB20 / BB45 / KGB / LBN &times; 7 slots &times; 10 loads &times; 8 rep patterns: a built set is byte-identical on a lb and a kg card, x and x2; a kg-direct set strips its one bracket to the kg string, N by QA&rsquo;s rounding of the K before it, never after an em dash; &sect;18.1 example 1 and L3&rsquo;s SP1 from a built source on a lb card equal S41&rsquo;s pins); <b>SD1&rsquo;s floor-with-tolerance boundary recomposed by hand</b> (125 lb on the 20 kg bar is 76.7, so 76.45 seeds 125 and 76.44 seeds 120; 170 lb is 77.1, so 76.85 / 76.84 &rarr; 170 / 165; 57.5 kg on the bar is 77.5, so 77.25 / 77.24 &rarr; 57.5 / 55; his 40 kg &rarr; 40 lb, 51 kg &rarr; 65 lb, the empty bar &rarr; nothing; a 2,500-prior sweep); <b>a second 0% generator</b> (mulberry32 seed 20260913, 4,000 random hypertrophy sessions over every hyp slot with &plusmn;0.1&ndash;0.3 / 2.5 kg and &plusmn;1 rep perturbations: no <code>up 0%</code> / <code>down 0%</code>, every 4d percentage equals QA&rsquo;s own <code>Math.round</code> and <code>matched</code> iff 0, p = 0 reached 100+ times); <b><code>cardModeFor</code>&rsquo;s every tier as a table under unit lb / kg / ABSENT</b> (chip, draft, typed, override the same either way; <code>default</code> only with a unit set and then a WO-010 ld is not read; <code>history</code> only while absent; <code>pounds</code> reads as absent); <b><code>readGymProfile</code> over 600 random profiles</b> (ok always true, the bars back as numbers in order every time, a bad unit / ex map / override dropped and named, never a bar; the whole gym a string &rarr; ok false, no throw); and <b>D8&rsquo;s pure half</b> (restorePayload&rsquo;s document and mergeStores / mergeSteps carry and write no prefs key). Nine <code>logic.js</code> mutants on copies, nine killed, eight by S47 (LOAD_EQ 0.2, the 0% branch back, history over default, a bad override refusing whole, 1 lb display, nearest instead of floor on the seed, a bracket on a built set, a bad override kept) and the ninth (ties up) by S45. <b>The browser half is &ldquo;Already proven&rdquo; item 38</b>: D1&ndash;D8 observed on his session, the six attacks, the D6 diff against <code>main @ 81fc0b8</code>, and four findings &mdash; two on the row (B-76-class two-tab wipe of the unit and of an override from a stale tab), one P2 (Settings shows neither <code>kg</code> nor <code>lb</code> pressed while the unit is absent; spec 21.1 and the code&rsquo;s own comment say kg), one P3 (at 200 % text the lb ghost row overflows the viewport by 29 px and the chip changes height on a tap). Before it: <b>897 / 897 / 0.</b> <b>S46</b> (WO-012 §21.13, backend, 2026-09-13) added 32: <b>Rule EQ1</b> — <code>LOAD_EQ = 0.25</code> kg beside <code>LD_TOL</code> and not merged with it, at exactly four sites (P1’s <code>backoff</code> and <code>mixed</code>, <code>workingBuild</code>, T1 clause (c)); the coach’s §21.13.3 #1–#11 with every <i>Must not print</i> (<code>Sets not matched: 76.9 / 77 / 77 kg</code> and <code>Repeat</code> gone from #1, <code> or above</code> from #3, <code>130.5</code> from the tie in #4); the boundary on P1 and on T1 (0.25 one load, 0.26 two); <b>T1 example 5 pinned null-then-date</b> — completed 77, failed twice at the seeded 77.1 (170 lb): the pre-EQ1 file returned null (Node, 2026-09-13), now T1 fires; #6 (77.3) still null, #7 (76.9 on the bar) still fires; <b>H1.4d on the printed percentage</b> — #8 <code>Volume down 0%</code> and #9 <code>Volume up 0%</code> both <code>Volume matched.</code>, #10’s real 3% untouched, the −0.5% / +0.5% asymmetry of <code>Math.round</code> pinned as a known fact, and <b>the 0% strings unreachable as a meta-test</b> over 3,200 H1 verdicts with ±0.1 / ±0.2 kg priors (284 <code>up 0%</code> and 388 <code>down 0%</code> on the pre-EQ1 file, 0 here); <b>the kg-direct differential re-run</b> — 580,608 verdicts byte-identical to the pre-EQ1 file in Node (hash 1438967905 on both, 0 diffs), every 13th case pinned in the browser (44,663, hash 2338777240 computed against the PRE-EQ1 file); <b>Rule SD1</b> — <code>seedFor(priorW, mode)</code> and <code>seedInUnit(prevSet, mode)</code>, §21.13.5 #1–#10 (77 → 125 / 170, 78 → 125 <i>not 130</i>, 86 → 145 / 190, 51 → 65 / 110, 21 on the bar → null <i>not 0, not 5</i>, same build 127 verbatim, lb prior on a kg-bar card → 55, kg-direct card 76.9, the seed idempotent under re-snap), the LOAD_EQ boundary on the seed (76.45 → 125, 76.44 → 120), garbage → null never 0, and a 10,000-prior sweep proving every seed is on its grid, within LOAD_EQ above the prior or under it, and one step more is not. The S45 pin <code>Sets not matched: 76.9 / 77 / 77 kg</code> is re-pinned to P1.4 in S45: it was the coach’s open item and the coach closed it. Before it: <b>865 / 865 / 0.</b> <b>S45</b> (WO-012 W3, backend, 2026-09-13) added 23: <code>displayNum</code> / <code>displayLoad</code> at <b>0.5 lb, ties down</b> (coach &sect;21.3: 77 &rarr; 170, 86 &rarr; 189.5, 51 &rarr; 112.5, 79.5 &rarr; 175.5, 52.5 &rarr; 115.5, 62.4 &rarr; 137.5; the kg path r1 byte for byte; the tie on <code>roundGrid</code> where it is exact, the kg-in boundary either side of it); <code>instr</code>, Rule U1&rsquo;s token; <code>defaultMode</code> (level 1, the first profile bar on the 13 <code>bb</code> slots only, listed once for UX &sect;21.12 #5) and <code>overrideMode</code> (level 2); <b><code>cardModeFor</code>&rsquo;s seven tiers</b> (<code>chip &gt; draft &gt; typed &gt; override &gt; default &gt; history &gt; kg</code>, the mode beside the tier, never inside it), the coordinator&rsquo;s <b>D3</b> replay across all 42 slots, and the ruling that <b>history fires only while <code>prefs.gym.unit</code> is absent</b>; <code>validateGymProfile</code>&rsquo;s <b>per-key refusal</b> (D4: <code>unit: pounds</code> and <code>ex.d3c: stone</code> each dropped by name with <code>ok</code> still true, ten malformed overrides named by key / reason / sub-field, the S40 <code>{ok, problems}</code> bytes untouched) and <code>readGymProfile</code>, the profile the boot adopts; <b>the coach&rsquo;s 23 worked examples for U1</b> with every <i>Must not print</i> (<code>Go to 79.5 kg (175.5 lb) next session.</code>, <code>Stay at 77 kg (170 lb) until &hellip;</code>, zero-load <code>Add 2.5 kg (5.5 lb)</code>, <code>Drop to bodyweight</code> with no bracket, SP1 <code>52.5 kg (115.5 lb).</code> and its flag, the I2 line untouched, L1&rsquo;s lb-built form byte-identical on BB20 / BB45 / KGB / LBN / a built SP1 source, the card&rsquo;s default bar never reaching the verdict); <b>THE INVARIANT as a meta-test</b> over 7 slots &times; 14 loads &times; 12 rep patterns &times; 2 prevs (strip the one <code> (N lb)</code> &rarr; the kg string; &le; 1 bracket, exactly 1 iff an instruction load &gt; 0 is named; N recomputes from the K before it; never after an em dash, never <code>(0 lb)</code>); <b>D6 as a differential</b> (unit <code>kg</code> === unit absent === no key, JSON-identical, verdict and <code>speedLoad</code>; <code>speedLoad</code> gained <code>built</code> and a 6th argument, <code>speedFlagText</code> reads the result object); and <code>priorInUnit</code> / <code>priorGhost</code> through <b>his session</b> on a 20 kg bar card (<code>Last 44 lb total &times; 12</code>, then 44 / 68.5 / 88 / 110 lb) and a no-bar card (44 / 88 / 112.5 / 132.5 / 154.5 lb), <b>with the round-trip pinned as it is</b>: a 77 kg prior seeded as 125.5 lb on the 20 kg bar stores <b>76.9</b>, as 170 lb with no bar <b>77.1</b>; 86 and 51 come back exact; worst drift over 0.2..250 kg is 0.2 kg; and P1 reads 76.9 / 77 / 77 as <i>Sets not matched</i> &mdash; the engine is not tolerant to the display rounding, which is the coach&rsquo;s &sect;21.12 #2 and not W3&rsquo;s to fix. One pin caught a defect before it shipped: <code>priorInUnit</code> read an <code>ld</code> that does not recompose to its <code>w</code> as &ldquo;same build&rdquo; and returned its <code>add</code>; it now classifies through <code>buildOf</code> like every rule. Before it: <b>842 / 842 / 0.</b> <b>S44</b> (WO-011 W5, the QA pass on the
 merge, 2026-09-13) added 11 and re-pinned two lines in S43. The reds: (1) S43&rsquo;s <code>ownerRefusal("merge")</code> and (2) S44&rsquo;s
 <b>R-d</b> shape test both pin UX spec &sect;20.3&rsquo;s sentence verbatim &mdash; <i>This device's log belongs to {owner}. The backup under
 {me} was not read and nothing here changed. Sign in as {owner} to restore what is missing.</i> &mdash; where <code>logic.js</code> still
@@ -16471,6 +16471,1301 @@ T("W5 - up to the end of S44 no fixture wrote a phat:* key (the suite tripwire, 
 });
 
 
+/* ==========================================================================
+   S45 - WO-012 W3: decide the unit once (backend, 2026-09-13)
+   Pins, in order: the surface; displayNum / displayLoad at 0.5 lb, ties
+   down (coach §21.3); instr, Rule U1's token; defaultMode and the bar rule;
+   overrideMode; cardModeFor's seven tiers, the coordinator's D3 replay, and
+   the ruling that history fires only while prefs.gym.unit is absent;
+   validateGymProfile's per-key refusal (D4) with the S40 bytes untouched;
+   readGymProfile; the coach's 23 worked examples for U1 with every `Must
+   not print`; THE INVARIANT as a meta-test over a kg-direct sweep (strip
+   the one ` (N lb)` -> the kg string; N recomputes from the K before it;
+   <= 1 bracket; 0 on any ld-carrying set); kg default = today's bytes as a
+   differential (unit "kg" === unit absent === no key, verdict and
+   speedLoad); speedFlagText on the result object; priorInUnit / priorGhost
+   through his session on a bar card and a no-bar card, WITH THE ROUND-TRIP
+   DISCREPANCY PINNED AS IT IS (125.5 lb on the 20 kg bar stores 76.9 for a
+   77 kg prior; 170 lb with no bar stores 77.1). No schema bump: prefs
+   carry no version and the log does not change shape.
+   ========================================================================== */
+group("S45 WO-012 W3 / displayLoad / defaultMode / cardModeFor / validateGymProfile per-key / Rule U1 / priorInUnit / the strip-invariant / kg = today");
+
+/* ---- fixtures, this section's own ---- */
+function EX45(id){ return P.exById(P.PHAT_PLAN, id); }
+function KGD45(w, r){ return { w: w, r: r }; }
+function V45(id, sets, unit, prev){ return P.verdict({ ex: EX45(id), sets: sets, prev: prev === undefined ? null : prev, unit: unit }); }
+function BB20_45(add, r){ var ld = { bar: 20, bu: "kg", add: add, au: "lb" }, c = P.composeLoad(ld); if (!c.ok) throw new Error("fixture"); return { w: c.w, r: r, ld: ld }; }
+function BB45_45(add, r){ var ld = { bar: 45, bu: "lb", add: add, au: "lb" }, c = P.composeLoad(ld); if (!c.ok) throw new Error("fixture"); return { w: c.w, r: r, ld: ld }; }
+function KGB45(add, r){ var ld = { bar: 20, bu: "kg", add: add, au: "kg" }, c = P.composeLoad(ld); if (!c.ok) throw new Error("fixture"); return { w: c.w, r: r, ld: ld }; }
+function LBN45(add, r){ var ld = { add: add, au: "lb" }, c = P.composeLoad(ld); if (!c.ok) throw new Error("fixture"); return { w: c.w, r: r, ld: ld }; }
+/* the profile Chady would hold: his 20 kg barbell first, an EZ bar second, lb by default, d3c set back to kg */
+function PREFS45(unit, ex){ var g = { bars: [{ n: "Barbell", w: 20, u: "kg" }, { n: "EZ bar", w: 10, u: "kg" }] }; if (unit !== undefined) g.unit = unit; if (ex !== undefined) g.ex = ex; return { gym: g, merge: null, backup: null }; }
+var LB20_45 = { au: "lb", bar: 20, bu: "kg" };
+/* count and strip the U1 bracket */
+function brackets45(s){ var m = s.match(/ \([\d.]+ lb\)/g); return m ? m.length : 0; }
+function strip45(s){ return s.replace(/ \([\d.]+ lb\)/, ""); }
+/* the 13 bb slots of the shipped plan (UX §21.12 #5 asked for the list once) */
+var BB_SLOTS45 = ["d1a", "d1g", "d1h", "d2a", "d2d", "d3a", "d3g", "d4a", "d4e", "d5e", "d5g", "d5h", "d5i"];
+
+/* ------------------------------------------------------ 0. surface */
+
+T("W3 - the surface: LB_DISPLAY 0.5, readGymProfile, defaultMode, overrideMode, cardModeFor, displayNum, displayLoad, instr, priorInUnit, priorGhost exported; speedLoad and speedFlagText grew a unit argument; validateGymProfile's arity unchanged; no schema bump", function(a){
+  ["readGymProfile", "defaultMode", "overrideMode", "cardModeFor", "displayNum", "displayLoad", "instr", "priorInUnit", "priorGhost", "validateGymProfile", "loadModeFor", "speedLoad", "speedFlagText", "verdict"].forEach(function(n){ a.isFn(P[n], n); });
+  a.eq(P.LB_DISPLAY, 0.5, "the one display constant (coach §21.3): 0.5 lb, ties down");
+  a.eq(P.defaultMode.length, 3, "defaultMode(prefs, ex, plan?)");
+  a.eq(P.cardModeFor.length, 1, "cardModeFor(args)");
+  a.eq(P.displayNum.length, 2, "displayNum(w, unit)");
+  a.eq(P.displayLoad.length, 3, "displayLoad(w, unit, implement?)");
+  a.eq(P.instr.length, 2, "instr(x, unit)");
+  a.eq(P.priorInUnit.length, 2, "priorInUnit(prevSet, mode)");
+  a.eq(P.priorGhost.length, 3, "priorGhost(prevSet, mode, implement)");
+  a.eq(P.readGymProfile.length, 1);
+  a.eq(P.speedLoad.length, 6, "speedLoad(sessions, exId, todayStr, srcName, plan, unit)");
+  a.eq(P.speedFlagText.length, 3, "speedFlagText(w, target | speedLoad result, unit)");
+  a.eq(P.SCHEMA_VERSION, 6, "no schema bump: prefs carry no version, the log's shape is unchanged");
+});
+
+/* ------------------------------------------------------ 1. displayNum / displayLoad (coach §21.3) */
+
+T("W3 / §21.3 - displayLoad at 0.5 lb: 77 -> `170 lb`, 86 -> `189.5 lb`, 51 -> `112.5 lb`, 79.5 -> `175.5 lb`, 52.5 -> `115.5 lb`, 62.4 (45 lb bar + 92.5) -> `137.5 lb`; kg is r1 byte for byte; never `170.0 lb`", function(a){
+  a.eq(P.displayLoad(77, "lb"), "170 lb");
+  a.eq(P.displayLoad(86, "lb"), "189.5 lb");
+  a.eq(P.displayLoad(51, "lb"), "112.5 lb");
+  a.eq(P.displayLoad(79.5, "lb"), "175.5 lb", "175.2675 is nearer 175.5 - NOT 175 (that is 1 lb or 5 lb rounding)");
+  a.eq(P.displayLoad(52.5, "lb"), "115.5 lb", "115.74: 0.24 to 115.5, 0.26 to 116 - the near-tie the coach asked to compute");
+  a.eq(P.displayLoad(62.4, "lb"), "137.5 lb", "a total built on a lb bar comes back intact; 1 lb would print 137 or 138 for plates he can see");
+  a.eq(P.displayLoad(60.8, "kg"), "60.8 kg");
+  a.eq(P.displayLoad(60.84, "kg"), "60.8 kg", "the kg path is r1, as every token already prints");
+  a.eq(P.displayLoad(100, "kg"), "100 kg");
+  a.eq(P.displayNum(77, "lb"), 170); a.eq(P.displayNum(86, "lb"), 189.5); a.eq(P.displayNum(51, "lb"), 112.5);
+  a.eq(P.displayNum(60.84, "kg"), 60.8);
+  a.eq(P.displayNum("77", "lb"), 170, "a numeric string reads like a number (the draft's w)");
+  a.eq(String(P.displayNum(77, "lb")).indexOf(".0"), -1, "170, never 170.0");
+});
+
+T("W3 / §21.3 - the ties-down boundary: exactly x.25 lb goes DOWN, x.26 up, x.75 down, x.76 up; on the 0.5 grid for every w in 0..250 by 0.01; the kg path equals r1 on the same sweep; garbage is NaN / \"\", never 0; zero routes through loadWord (Z2); an unknown unit is the kg form", function(a){
+  var K = P.LB_KG;
+  a.eq(P.roundGrid(170.25, 0.5), 170, "170.25 -> 170 (a tie goes down) - on the grid function, where the tie is exact");
+  a.eq(P.roundGrid(170.75, 0.5), 170.5, "170.75 -> 170.5 (a tie goes down)");
+  a.eq(P.roundGrid(0.25, 0.5), 0, "0.25 -> 0, not -0");
+  a.eq(P.displayNum(170.24 * K, "lb"), 170, "170.24 -> 170 (kg in, lb out: the tie itself is not representable after w * K / K)");
+  a.eq(P.displayNum(170.26 * K, "lb"), 170.5, "170.26 -> 170.5");
+  a.eq(P.displayNum(170.74 * K, "lb"), 170.5, "170.74 -> 170.5");
+  a.eq(P.displayNum(170.76 * K, "lb"), 171, "170.76 -> 171");
+  a.eq(P.displayNum(0.25 * K, "lb"), 0, "0.25 lb -> 0: not > 0, so displayLoad prints the Z2 word");
+  var i, w, n, bad = 0, badKg = 0;
+  for (i = 0; i <= 5000; i++) {
+    w = i / 20; n = P.displayNum(w, "lb");
+    if (Math.abs(n * 2 - Math.round(n * 2)) > 1e-9) bad++;
+    if (Math.abs(n - w / K) > 0.25 + 1e-9) bad++;
+    if (P.displayNum(w, "kg") !== Math.round(w * 10) / 10) badKg++;
+  }
+  a.eq(bad, 0, "0..250 by 0.05: every lb figure sits on the 0.5 grid and within a quarter pound of the true conversion");
+  a.eq(badKg, 0, "every kg figure is r1(w)");
+  a.ok(isNaN(P.displayNum("x", "lb")) && isNaN(P.displayNum(undefined, "lb")) && isNaN(P.displayNum("7.5.0", "lb")) && isNaN(P.displayNum(-5, "lb")), "garbage is NaN, never 0: no caller may invent a load");
+  a.eq(P.displayLoad("x", "lb"), ""); a.eq(P.displayLoad(null, "kg"), "");
+  a.eq(P.displayLoad(0, "lb", "bodyweight"), "bodyweight", "zero on a bodyweight slot");
+  a.eq(P.displayLoad(0, "lb", "cable"), "zero load"); a.eq(P.displayLoad(0, "kg"), "zero load");
+  a.eq(P.displayLoad(77, "pounds"), "77 kg", "`pounds` is not lb");
+  a.eq(P.displayLoad(77, ""), "77 kg"); a.eq(P.displayLoad(77), "77 kg"); a.eq(P.displayLoad(77, 7), "77 kg");
+  a.eq(P.displayLoad(77, "LB"), "77 kg", "case matters: the store writes lowercase and nothing else is a unit");
+});
+
+/* ------------------------------------------------------ 2. instr - Rule U1's token */
+
+T("W3 / U1 - instr(x, unit): the kg form is `kg(x) kg` to the byte for every unit but `lb`; on lb the bracket is displayLoad's figure ON THE TOKEN; x = 0 no bracket; N === displayNum(K, \"lb\") always", function(a){
+  a.eq(P.instr(79.5, "lb"), "79.5 kg (175.5 lb)");
+  a.eq(P.instr(77, "lb"), "77 kg (170 lb)");
+  a.eq(P.instr(2.5, "lb"), "2.5 kg (5.5 lb)", "the H1.4d / zero-load step: 5.51 -> 5.5");
+  a.eq(P.instr(79.5, "kg"), "79.5 kg"); a.eq(P.instr(79.5), "79.5 kg"); a.eq(P.instr(79.5, ""), "79.5 kg"); a.eq(P.instr(79.5, "pounds"), "79.5 kg"); a.eq(P.instr(79.5, 7), "79.5 kg");
+  a.eq(P.instr(0, "lb"), "0 kg", "zero never reaches instr from a rule (Z2 routes it to loadWord first); if it did, no bracket");
+  var i, x, m, bad = 0;
+  for (i = 1; i <= 1000; i++) {
+    x = i / 2; m = /^([\d.]+) kg \(([\d.]+) lb\)$/.exec(P.instr(x, "lb"));
+    if (!m || Number(m[1]) !== Math.round(x * 10) / 10 || Number(m[2]) !== P.displayNum(x, "lb")) bad++;
+    if (P.instr(x, "kg") !== String(Math.round(x * 10) / 10) + " kg") bad++;
+  }
+  a.eq(bad, 0, "0.5..500 by 0.5: one bracket, N recomputes from K, kg form byte-identical");
+});
+
+/* ------------------------------------------------------ 3. defaultMode - level 1 and the bar rule */
+
+T("W3 / §0.1 - defaultMode: unit absent / kg / unreadable -> {au: kg} on every slot; lb on a bb slot -> the profile's FIRST bar; lb on db / cable / machine / bodyweight -> lb, no bar; lb on bb with no bars -> lb, no bar (the chip says so); ex by object or by id; garbage prefs never throw", function(a){
+  var lb = PREFS45("lb"), kgp = PREFS45("kg"), none = PREFS45();
+  a.deep(P.defaultMode(none, "d1a"), { au: "kg" }, "no default chosen: today's card, even on a bb slot with a bar in the profile");
+  a.deep(P.defaultMode(kgp, "d1a"), { au: "kg" }, "kg default: kg-direct, the bar rule does not apply");
+  a.deep(P.defaultMode(lb, "d1a"), { au: "lb", bar: 20, bu: "kg" }, "lb + bb: the first bar (his 20 kg barbell), never the EZ bar");
+  a.deep(P.defaultMode(lb, EX45("d1a")), { au: "lb", bar: 20, bu: "kg" }, "the exercise object works too");
+  a.deep(P.defaultMode(lb, "d1d"), { au: "lb" }, "db: no bar - the first bar on a dumbbell row is the mirror error");
+  a.deep(P.defaultMode(lb, "d3c"), { au: "lb" }, "cable: no bar");
+  a.deep(P.defaultMode(lb, "d2b"), { au: "lb" }, "machine: no bar");
+  a.deep(P.defaultMode(lb, "d1b"), { au: "lb" }, "bodyweight: no bar");
+  a.deep(P.defaultMode({ gym: { bars: [], unit: "lb" } }, "d1a"), { au: "lb" }, "bb with no profile bar: lb, no bar");
+  a.deep(P.defaultMode({ gym: { unit: "lb" } }, "d1a"), { au: "lb" }, "no bars key at all");
+  a.deep(P.defaultMode({ gym: { bars: [{ n: "Trap bar", w: 60, u: "lb" }], unit: "lb" } }, "d1a"), { au: "lb", bar: 60, bu: "lb" }, "a lb bar first: its own unit");
+  a.deep(P.defaultMode({ gym: { bars: [{ n: "", w: 0, u: "kilo" }, { n: "Barbell", w: 20, u: "kg" }], unit: "lb" } }, "d1a"), { au: "lb" }, "an invalid first bar lends nothing - not the second bar either (the rule is FIRST, and a refused profile never lends a bar)");
+  a.deep(P.defaultMode({ gym: { bars: [{ n: "Barbell", w: 20, u: "kg" }], unit: "pounds" } }, "d1a"), { au: "kg" }, "`pounds` is not lb");
+  a.deep(P.defaultMode(lb.gym, "d1a"), { au: "lb", bar: 20, bu: "kg" }, "the gym object itself is accepted, not only the prefs root");
+  a.deep(P.defaultMode(lb, "nope"), { au: "lb" }, "an unknown id has no implement: no bar");
+  a.deep(P.defaultMode(lb, { id: "x", implement: "bb" }), { au: "lb", bar: 20, bu: "kg" }, "a plan exercise not in PHAT_PLAN, passed as an object");
+  var q = { planId: "q", name: "Q", days: [{ id: "qd", n: "Day", ex: [{ id: "qx", n: "Row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb" }, { id: "qy", n: "Curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable" }] }] };
+  a.deep(P.defaultMode(lb, "qx", q), { au: "lb", bar: 20, bu: "kg" }, "an id resolved in the plan passed");
+  a.deep(P.defaultMode(lb, "qy", q), { au: "lb" });
+  a.deep(P.defaultMode(lb, "qx"), { au: "lb" }, "the same id with no plan is unknown to PHAT_PLAN: no bar");
+  [null, undefined, 7, "lb", [], { gym: "lb" }, { gym: null }, { gym: { unit: "lb", bars: "x" } }].forEach(function(bad){
+    a.deep(a.noThrow(function(){ return P.defaultMode(bad, "d1a"); }), bad && bad.gym && bad.gym.unit === "lb" ? { au: "lb" } : { au: "kg" }, "garbage: " + JSON.stringify(bad));
+  });
+  a.deep(a.noThrow(function(){ return P.defaultMode(lb, null); }), { au: "lb" }, "no exercise: lb, no bar");
+});
+
+T("W3 / UX §21.12 #5 - every slot in PHAT_PLAN carries an implement, and the bb slots are exactly the 13 the bar rule reaches; on a lb default those 13 get the first bar and the other 29 do not", function(a){
+  var ids = [], bb = [], lb = PREFS45("lb");
+  P.PHAT_PLAN.days.forEach(function(d){ d.ex.forEach(function(e){ ids.push(e.id); a.oneOf(e.implement, P.PLAN_IMPLEMENTS, e.id + " carries an implement"); if (e.implement === "bb") bb.push(e.id); }); });
+  a.eq(ids.length, 42);
+  a.deep(bb, BB_SLOTS45, "the bb list, once, for the record");
+  ids.forEach(function(id){
+    var m = P.defaultMode(lb, id);
+    if (bb.indexOf(id) >= 0) a.deep(m, { au: "lb", bar: 20, bu: "kg" }, id + " gets the first bar");
+    else a.deep(m, { au: "lb" }, id + " gets no bar");
+  });
+});
+
+/* ------------------------------------------------------ 4. overrideMode - level 2 */
+
+T("W3 / §0.1 - overrideMode: the stored override as numbers; kg-direct, lb no bar, lb on a bar; a malformed override reads as absent (what readGymProfile drops it to); unknown id, no ex map, garbage prefs -> null", function(a){
+  var p = PREFS45("lb", { d3c: { au: "kg" }, d1a: { au: "lb", bar: "20", bu: "kg" }, d1d: { au: "lb" }, bad: { au: "stone" }, bad2: { au: "lb", bar: 20 }, bad3: "lb" });
+  a.deep(P.overrideMode(p, "d3c"), { au: "kg" });
+  a.deep(P.overrideMode(p, "d1a"), { au: "lb", bar: 20, bu: "kg" }, "a string bar (a hand edit) reads as its number");
+  a.deep(P.overrideMode(p, "d1d"), { au: "lb" });
+  a.deep(P.overrideMode(p, EX45("d3c")), { au: "kg" }, "the exercise object works too");
+  a.eq(P.overrideMode(p, "bad"), null, "au stone: absent");
+  a.eq(P.overrideMode(p, "bad2"), null, "bar without bu: absent");
+  a.eq(P.overrideMode(p, "bad3"), null, "not an object: absent");
+  a.eq(P.overrideMode(p, "d2a"), null, "no override for this id");
+  a.eq(P.overrideMode(PREFS45("lb"), "d3c"), null, "no ex map");
+  a.eq(P.overrideMode(null, "d3c"), null); a.eq(P.overrideMode({ gym: { ex: null } }, "d3c"), null); a.eq(P.overrideMode(p, null), null);
+  a.eq(P.overrideMode({ gym: { ex: {} } }, "toString"), null, "own-property only: nothing is read off Object.prototype");
+  a.eq(P.overrideMode({ gym: { ex: {} } }, "constructor"), null);
+});
+
+/* ------------------------------------------------------ 5. cardModeFor - the precedence */
+
+T("W3 / §0.1 - cardModeFor's tiers, top wins: chip (entry.mode) > draft (an ld on the draft's own rows, even a blank one) > typed (a w with no ld) > override > default > history (unit absent only) > kg; the mode is a clean {au, bar?, bu?} with the tier BESIDE it, never inside it", function(a){
+  var p = PREFS45("lb", { d1a: { au: "kg" } }), prev = { sets: [BB45_45(90, 5)] };
+  var r = P.cardModeFor({ exId: "d1a", entry: { mode: { au: "lb", bar: 10, bu: "kg" }, sets: [{ w: "60", r: "5" }] }, prefs: p, prev: prev });
+  a.deep(r, { mode: { au: "lb", bar: 10, bu: "kg" }, tier: "chip" }, "the chip's choice this session beats everything, including a typed kg set");
+  r = P.cardModeFor({ exId: "d1a", entry: { sets: [{ w: "", r: "", ld: { bar: 20, bu: "kg", add: "", au: "lb" } }] }, prefs: p, prev: prev });
+  a.deep(r, { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "draft" }, "a blank lb row on the draft IS the card's mode (WO-010 §1) and beats the override");
+  r = P.cardModeFor({ exId: "d1a", entry: { sets: [{ w: "60", r: "" }, { w: "", r: "" }] }, prefs: p, prev: prev });
+  a.deep(r, { mode: { au: "kg" }, tier: "typed" }, "a kg-direct set typed: kg, and the override does not re-value it");
+  r = P.cardModeFor({ exId: "d1a", entry: { sets: [{ w: "", r: "5" }] }, prefs: p, prev: prev });
+  a.deep(r, { mode: { au: "kg" }, tier: "override" }, "reps alone are not a typed weight: falls to the override");
+  r = P.cardModeFor({ exId: "d1a", entry: { sets: [] }, prefs: p, prev: prev, typedKg: true });
+  a.deep(r, { mode: { au: "kg" }, tier: "typed" }, "the view may assert `typed` (typedKg: true) when it holds a field the draft has not received yet");
+  r = P.cardModeFor({ exId: "d1a", prefs: p, prev: prev });
+  a.deep(r, { mode: { au: "kg" }, tier: "override" }, "no draft: the override (kg-direct on a bb slot with a lb default and lb history)");
+  r = P.cardModeFor({ exId: "d2a", prefs: p, prev: prev });
+  a.deep(r, { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "default" }, "no override: the default with the bar rule, and the 45 lb bar in history is NOT read - the default governs");
+  r = P.cardModeFor({ exId: "d2a", prefs: PREFS45(), prev: prev });
+  a.deep(r, { mode: { au: "lb", bar: 45, bu: "lb" }, tier: "history" }, "unit absent (a pre-WO-012 device): WO-010's memory");
+  r = P.cardModeFor({ exId: "d2a", prefs: PREFS45(), prev: { sets: [KGD45(100, 5)] } });
+  a.deep(r, { mode: { au: "kg" }, tier: "kg" }, "unit absent, kg-direct history: nothing anywhere -> kg");
+  r = P.cardModeFor({ exId: "d2a", prefs: PREFS45(), prev: null });
+  a.deep(r, { mode: { au: "kg" }, tier: "kg" }, "unit absent, no history");
+  r = P.cardModeFor({ exId: "d2a", prefs: PREFS45(), prev: { sets: [{ w: 35, r: 10, ld: { add: 35, au: "kg" } }] } });
+  a.deep(r, { mode: { au: "kg" }, tier: "history" }, "a kg-no-bar ld in history IS a found ld: tier history, mode kg-direct");
+  a.eq(Object.keys(r.mode).join(","), "au", "the tier never leaks into the mode object (it would reach entry.mode and the draft)");
+  /* the whole draft may be passed with exId, and sessions instead of prev */
+  var draft = { date: "2026-09-13", entries: { d1a: { sets: [{ w: "60", r: "5" }], note: "" } } };
+  a.deep(P.cardModeFor({ exId: "d1a", draft: draft, prefs: p }), { mode: { au: "kg" }, tier: "typed" }, "draft.entries[exId]");
+  a.deep(P.cardModeFor({ exId: "d2a", draft: draft, prefs: p }), { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "default" }, "a card the draft has no entry for");
+  var sess = [{ id: 1, date: "2026-09-10", dayId: "d2", dateBasis: "local", planId: "phat", entries: { d2a: { sets: [BB45_45(90, 5)], note: "" } } }];
+  a.deep(P.cardModeFor({ exId: "d2a", sessions: sess, prefs: PREFS45() }), { mode: { au: "lb", bar: 45, bu: "lb" }, tier: "history" }, "sessions + exId resolves prev through lastFor");
+  a.deep(P.cardModeFor({ ex: EX45("d2a"), sessions: sess, prefs: PREFS45("lb") }), { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "default" }, "ex object alone names the card");
+});
+
+T("W3 / D3 (the coordinator's replay) - d3c overridden to kg, nothing logged: d3c opens kg on `override`, every other card on `default`; the default changed to kg: d3c unaffected, a never-touched card follows; the override removed: d3c follows the default", function(a){
+  var ids = [], i, r;
+  P.PHAT_PLAN.days.forEach(function(d){ d.ex.forEach(function(e){ ids.push(e.id); }); });
+  var lbOv = PREFS45("lb", { d3c: { au: "kg" } });
+  r = P.cardModeFor({ exId: "d3c", prefs: lbOv, prev: null });
+  a.deep(r, { mode: { au: "kg" }, tier: "override" }, "d3c: kg, override, with nothing logged (the chip wrote it on the tap)");
+  for (i = 0; i < ids.length; i++) {
+    if (ids[i] === "d3c") continue;
+    r = P.cardModeFor({ exId: ids[i], prefs: lbOv, prev: null });
+    a.eq(r.tier, "default", ids[i] + " is on the default");
+    a.eq(r.mode.au, "lb", ids[i] + " opens in lb");
+    a.eq(r.mode.bar !== undefined, BB_SLOTS45.indexOf(ids[i]) >= 0, ids[i] + ": a bar only on a bb slot");
+  }
+  var kgOv = PREFS45("kg", { d3c: { au: "kg" } });
+  a.deep(P.cardModeFor({ exId: "d3c", prefs: kgOv, prev: null }), { mode: { au: "kg" }, tier: "override" }, "default changed to kg: d3c is unaffected, still the override");
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: kgOv, prev: null }), { mode: { au: "kg" }, tier: "default" }, "a never-touched card now opens in kg, on the default tier");
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: kgOv, prev: { sets: [BB20_45(135, 5)] } }), { mode: { au: "kg" }, tier: "default" }, "with lb history too: the default governs once it is set");
+  var lbNone = PREFS45("lb", {});
+  a.deep(P.cardModeFor({ exId: "d3c", prefs: lbNone, prev: null }), { mode: { au: "lb" }, tier: "default" }, "`Use my default` on d3c (the key deleted): it follows the default from then on");
+  /* the same override with a bar, and an override equal to the default is still an override */
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: PREFS45("lb", { d1a: { au: "lb", bar: 20, bu: "kg" } }), prev: null }), { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "override" }, "picking the bar the rule would have picked is still his choice: tier override (UX §21.7 row 4)");
+});
+
+T("W3 - cardModeFor never throws and never mutates: garbage in every argument is that tier absent; the inputs are byte-identical after the call", function(a){
+  [undefined, null, 7, "x", [], {}, { exId: 7 }, { exId: "d1a", entry: "x" }, { exId: "d1a", entry: { mode: "lb" } }, { exId: "d1a", entry: { sets: "x" } }, { exId: "d1a", entry: { sets: [null, 7, "x"] } }, { exId: "d1a", prefs: "lb" }, { exId: "d1a", prefs: { gym: { ex: { d1a: null } } } }, { exId: "d1a", prev: "x" }, { exId: "d1a", sessions: "x" }, { exId: "d1a", draft: { entries: null } }].forEach(function(args){
+    var r = a.noThrow(function(){ return P.cardModeFor(args); }, JSON.stringify(args));
+    a.ok(r && typeof r.mode === "object" && typeof r.tier === "string", "a mode and a tier for " + JSON.stringify(args));
+  });
+  a.deep(P.cardModeFor({ exId: "d1a", entry: { mode: { au: "lb", bar: "20", bu: "kg" } } }), { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "chip" }, "a string bar on entry.mode is read as its number (modeCopy's rule)");
+  a.deep(P.cardModeFor({ exId: "d1a", entry: { mode: { au: "lb", bar: "x", bu: "kg" } } }), { mode: { au: "lb" }, tier: "chip" }, "an unreadable bar is no bar");
+  a.deep(P.cardModeFor({ exId: "d1a", entry: { mode: { au: "stone" } } }), { mode: { au: "kg" }, tier: "chip" }, "an unknown unit on the chip is kg (modeCopy's rule)");
+  var args = { exId: "d1a", entry: { sets: [{ w: "60", r: "5" }], note: "" }, prefs: PREFS45("lb", { d3c: { au: "kg" } }), prev: { sets: [BB20_45(135, 5)] } };
+  var before = JSON.stringify(args);
+  P.cardModeFor(args); P.defaultMode(args.prefs, "d1a"); P.overrideMode(args.prefs, "d3c"); P.priorInUnit(args.prev.sets[0], LB20_45); P.priorGhost(args.prev.sets[0], LB20_45, "bb");
+  a.eq(JSON.stringify(args), before, "nothing mutated");
+});
+
+/* ------------------------------------------------------ 6. validateGymProfile - per-key refusal (D4), readGymProfile */
+
+T("W3 / D4 - validateGymProfile accepts unit and ex; refuses `unit: pounds` BY NAME with ok still true; refuses ONE bad override by its key (`ex.d3c`) with ok still true and the good keys untouched; an unknown exId is kept; `ex` not an object drops `ex` whole; the S40 shapes are byte-identical", function(a){
+  a.deep(P.validateGymProfile({ bars: [{ n: "Barbell", w: 20, u: "kg" }], unit: "lb", ex: { d3c: { au: "kg" } } }), { ok: true, problems: [] }, "the acceptance literal");
+  a.deep(P.validateGymProfile({ bars: [], unit: "kg" }), { ok: true, problems: [] });
+  a.deep(P.validateGymProfile({ unit: "lb", ex: { d1a: { au: "lb", bar: 20, bu: "kg" }, d1d: { au: "lb" }, gone: { au: "kg" }, "": { au: "kg" } } }), { ok: true, problems: [] }, "no bars key, an unknown id, an empty id: all kept");
+  var r = P.validateGymProfile({ bars: [{ n: "Barbell", w: 20, u: "kg" }], unit: "pounds" });
+  a.eq(r.ok, true, "the bars are fine: the profile loads");
+  a.deep(r.problems, [{ i: -1, field: "unit", reason: "unit", value: "pounds", drop: "unit" }], "refused on `unit` by name, with the key to drop");
+  r = P.validateGymProfile({ bars: [{ n: "Barbell", w: 20, u: "kg" }], unit: "lb", ex: { d3c: { au: "stone" }, d1a: { au: "lb", bar: 20, bu: "kg" } } });
+  a.eq(r.ok, true, "one bad override: ok is STILL TRUE for the bars (D4 - the profile is never refused whole for it)");
+  a.deep(r.problems, [{ i: -1, field: "ex.d3c", reason: "unit", value: "stone", sub: "au", drop: "ex.d3c" }], "that key only, named, with the sub-field");
+  r = P.validateGymProfile({ bars: [], ex: { a: { au: "lb", bar: 20 }, b: { au: "lb", bu: "kg" }, c: { au: "lb", bar: 0, bu: "kg" }, d: { au: "lb", bar: 200, bu: "kg" }, e: { au: "lb", bar: "7.5.0", bu: "kg" }, f: { au: "lb", bar: 20, bu: "kilo" }, g: { au: "kg", add: 5 }, h: null, i: "lb", j: 7, k: { au: "lb", bar: "20", bu: "kg" } } });
+  a.eq(r.ok, true);
+  a.deep(r.problems.map(function(p){ return p.drop + ":" + p.reason + ":" + p.sub + ":" + p.value; }), [
+    "ex.a:unit:bu:", "ex.b:empty:bar:", "ex.c:range:bar:0", "ex.d:range:bar:200", "ex.e:malformed:bar:7.5.0", "ex.f:unit:bu:kilo", "ex.g:malformed:add:5", "ex.h:malformed:null:", "ex.i:malformed:null:lb", "ex.j:malformed:null:7"
+  ], "every malformed override named by key, reason and sub-field - k (a string bar) is fine");
+  r = P.validateGymProfile({ bars: [], ex: [{ au: "kg" }] });
+  a.deep(r, { ok: true, problems: [{ i: -1, field: "ex", reason: "malformed", value: "", drop: "ex" }] }, "ex as an array: the map is dropped whole, the profile loads");
+  r = P.validateGymProfile({ bars: [], ex: null, unit: null });
+  a.deep(r.problems.map(function(p){ return p.drop; }), ["unit", "ex"], "null is not absent: dropped by name, never silently");
+  /* a bad bar AND a bad override: ok false (the bars), both named, in shape order */
+  r = P.validateGymProfile({ bars: [{ n: "", w: 20, u: "kg" }], unit: "lb", ex: { d3c: { au: "stone" } } });
+  a.eq(r.ok, false);
+  a.deep(r.problems, [{ i: 0, field: "n", reason: "empty", value: "" }, { i: -1, field: "ex.d3c", reason: "unit", value: "stone", sub: "au", drop: "ex.d3c" }]);
+  /* the S40 pins, restated as bytes: no unit, no ex -> exactly what S40 pinned */
+  a.eq(JSON.stringify(P.validateGymProfile({ bars: [{ n: "Barbell", w: 20, u: "kg" }] })), '{"ok":true,"problems":[]}');
+  a.eq(JSON.stringify(P.validateGymProfile({})), '{"ok":true,"problems":[]}');
+  a.eq(JSON.stringify(P.validateGymProfile(null)), '{"ok":false,"problems":[{"i":-1,"field":null,"reason":"malformed","value":""}]}');
+  a.eq(P.validateGymProfile.length, 1);
+});
+
+T("W3 / D4 - readGymProfile: the profile the boot ADOPTS - bars as numbers, unit only when valid, ex with the refused keys dropped and the kept ones normalised; `drop` lists the paths for one console.warn; ok false -> gym null (today's S.gymBad path); no key is invented", function(a){
+  var r = P.readGymProfile({ bars: [{ n: "Barbell", w: "20", u: "kg" }, { n: "EZ bar", w: 10, u: "kg" }], unit: "lb", ex: { d3c: { au: "stone" }, d1a: { au: "lb", bar: "20", bu: "kg" }, gone: { au: "kg" } } });
+  a.eq(r.ok, true);
+  a.deep(r.drop, ["ex.d3c"]);
+  a.eq(JSON.stringify(r.gym), '{"bars":[{"n":"Barbell","w":20,"u":"kg"},{"n":"EZ bar","w":10,"u":"kg"}],"unit":"lb","ex":{"d1a":{"au":"lb","bar":20,"bu":"kg"},"gone":{"au":"kg"}}}', "d3c gone, d1a's bar a number, the unknown id kept, key order bars/unit/ex");
+  a.eq(r.problems.length, 1); a.eq(r.problems[0].field, "ex.d3c");
+  r = P.readGymProfile({ bars: [{ n: "Barbell", w: 20, u: "kg" }], unit: "pounds", ex: "lb" });
+  a.deep(r.drop, ["unit", "ex"]);
+  a.eq(JSON.stringify(r.gym), '{"bars":[{"n":"Barbell","w":20,"u":"kg"}]}', "both dropped, the bars intact; no empty ex invented");
+  r = P.readGymProfile({ bars: [{ n: "Barbell", w: 20, u: "kg" }] });
+  a.eq(JSON.stringify(r.gym), '{"bars":[{"n":"Barbell","w":20,"u":"kg"}]}', "a WO-010 profile reads as itself: no unit, no ex");
+  a.deep(r.drop, []);
+  r = P.readGymProfile({ bars: [{ n: "", w: 20, u: "kg" }], unit: "lb" });
+  a.eq(r.ok, false); a.eq(r.gym, null, "a bad bar refuses the profile as it always did");
+  r = P.readGymProfile(null); a.eq(r.ok, false); a.eq(r.gym, null);
+  r = P.readGymProfile({ unit: "lb", ex: {} });
+  a.eq(JSON.stringify(r.gym), '{"bars":[],"unit":"lb","ex":{}}', "an empty ex map is kept as given");
+  /* the adopted profile validates clean, and reads the same a second time: a fixed point */
+  var g = P.readGymProfile({ bars: [{ n: "Barbell", w: "20", u: "kg" }], unit: "lb", ex: { d3c: { au: "stone" }, d1a: { au: "lb", bar: "20", bu: "kg" } } }).gym;
+  a.deep(P.validateGymProfile(g), { ok: true, problems: [] });
+  a.eq(JSON.stringify(P.readGymProfile(g).gym), JSON.stringify(g));
+  /* and the engines read the adopted profile the way the boot will hold it */
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: { gym: g }, prev: null }), { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "override" });
+  a.deep(P.cardModeFor({ exId: "d3c", prefs: { gym: g }, prev: null }), { mode: { au: "lb" }, tier: "default" }, "the dropped d3c override is simply absent: the default");
+});
+
+/* ------------------------------------------------------ 7. Rule U1 - the coach's 23 worked examples (§21.2) */
+
+T("W3 / U1 ex 1-6 - 77 kg on d1a (bb, kg-direct, unit lb): P1.4 `Go to 79.5 kg (175.5 lb) next session.`, P1.3 `Go to 82 kg (181 lb).`, P1.1 `Drop to 72.5 kg (160 lb)`, P1.2 `Repeat 77 kg (170 lb)`, P1.5 `Stay at 77 kg (170 lb)`, SP1 `52.5 kg (115.5 lb).`; every `Must not print`", function(a){
+  var v = V45("d1a", [KGD45(77, 5), KGD45(77, 5), KGD45(77, 5)], "lb");
+  a.eq(v.x, "Top of range on all 3 sets. Go to 79.5 kg (175.5 lb) next session."); a.eq(v.rule, "P1.4"); a.eq(v.x2, "");
+  a.eq(v.x.indexOf("175 lb"), -1, "MUST NOT print (175 lb) - 1 lb or 5 lb rounding");
+  a.eq(v.x.indexOf("Go to 175"), -1, "MUST NOT print `Go to 175 lb` - the lb ladder was rejected (§21.5)");
+  a.eq(v.x.indexOf(" — "), -1, "MUST NOT print a build phrase: the set has no build");
+  v = V45("d1a", [KGD45(77, 7), KGD45(77, 7), KGD45(77, 7)], "lb");
+  a.eq(v.x, "7 reps at 77 kg on every set. Too light. Go to 82 kg (181 lb)."); a.eq(v.rule, "P1.3"); a.eq(v.x2, "", "no I2 line on bb");
+  a.eq(v.x.indexOf("77 kg (170 lb)"), -1, "MUST NOT bracket the report token `7 reps at 77 kg`");
+  v = V45("d1a", [KGD45(77, 2), KGD45(77, 4), KGD45(77, 5)], "lb");
+  a.eq(v.x, "2 reps at 77 kg. Below the range. Drop to 72.5 kg (160 lb) next session."); a.eq(v.rule, "P1.1");
+  v = V45("d1a", [KGD45(77, 5), KGD45(77, 5), KGD45(75, 5)], "lb");
+  a.eq(v.x, "Sets not matched: 77 / 77 / 75 kg. Repeat 77 kg (170 lb) until all 3 sets reach 5 reps."); a.eq(v.rule, "P1.2");
+  a.eq(brackets45(v.x), 1, "ONE bracket - MUST NOT print `77 / 77 / 75 kg (170 / 170 / 165.5 lb)`");
+  v = V45("d1a", [KGD45(77, 5), KGD45(77, 5), KGD45(77, 4)], "lb");
+  a.eq(v.x, "Stay at 77 kg (170 lb) until all 3 sets reach 5 reps."); a.eq(v.rule, "P1.5");
+  a.eq(v.x.indexOf("reps (170 lb)"), -1, "the bracket is ON THE TOKEN, never after `5 reps`");
+  a.eq("170 lb", P.displayLoad(77, "lb"), "the bracket's 170 lb equals the ghost's figure on the same card (ex 5's assertion)");
+  a.eq(P.priorGhost(KGD45(77, 5), { au: "lb" }, "bb"), "Last 170 lb × 5", "and the no-bar ghost prints it");
+  /* ex 6: SP1 from the 77 x 3 within 28 days, and the flag */
+  var sess = [{ id: 1, date: "2026-09-10", dayId: "d1", dateBasis: "local", planId: "phat", entries: { d1a: { sets: [KGD45(77, 3)], note: "" } } }];
+  var sl = P.speedLoad(sess, "d3a", "2026-09-12", "Bent-over row", undefined, "lb");
+  a.eq(sl.text, "52.5 kg (115.5 lb). 65–70% of your 77 kg triple. Rest 60–90 s. Fast, never grinding.");
+  a.eq(sl.target, 52.5); a.eq(sl.built, false);
+  a.eq(sl.text.indexOf("77 kg (170 lb) triple"), -1, "MUST NOT bracket `your 77 kg triple` - a report token");
+  a.eq(P.speedFlagText(81, sl, "lb"), "81 kg is not speed work. Drop to 52.5 kg (115.5 lb).");
+  a.eq(P.speedFlagText(81, sl, "kg"), "81 kg is not speed work. Drop to 52.5 kg.");
+  a.eq(P.speedFlagText(81, sl.target), "81 kg is not speed work. Drop to 52.5 kg.", "a bare number is today's call, byte for byte");
+  a.eq(P.speedFlagText(81, sl.target, "lb"), "81 kg is not speed work. Drop to 52.5 kg (115.5 lb).", "a bare number with unit lb: the caller vouches it is kg-direct");
+});
+
+T("W3 / U1 ex 7-10 - 86 kg on d1b (bodyweight slot, kg-direct, unit lb): `Go to 88.5 kg (195 lb)` + the I2 line UNCHANGED, `Drop to 82.5 kg (182 lb)`, `Stay at 86 kg (189.5 lb)`, `Go to 91 kg (200.5 lb).` - and the coach's caveat that 86 is not an added load (21.7 #2) is not ticked here", function(a){
+  var v = V45("d1b", [KGD45(86, 10), KGD45(86, 10)], "lb");
+  a.eq(v.x, "Top of range on all 2 sets. Go to 88.5 kg (195 lb) next session."); a.eq(v.rule, "P1.4");
+  a.eq(v.x2, "If 2.5 kg is not available, add reps up to 12 first, then jump.", "the I2 line never gains a bracket: `If 2.5 kg (5.5 lb)` would read as if 5.5 lb were a plate");
+  v = V45("d1b", [KGD45(86, 5), KGD45(86, 8)], "lb");
+  a.eq(v.x, "5 reps at 86 kg. Below the range. Drop to 82.5 kg (182 lb) next session."); a.eq(v.rule, "P1.1");
+  v = V45("d1b", [KGD45(86, 10), KGD45(86, 9)], "lb");
+  a.eq(v.x, "Stay at 86 kg (189.5 lb) until all 2 sets reach 10 reps.");
+  a.eq(v.x.indexOf("190 lb"), -1, "189.5975 -> 189.5; `190 lb` over a row reading 189.5 lb would be two roundings on one screen");
+  v = V45("d1b", [KGD45(86, 12), KGD45(86, 12)], "lb");
+  a.eq(v.x, "12 reps at 86 kg on every set. Too light. Go to 91 kg (200.5 lb)."); a.eq(v.rule, "P1.3");
+  a.eq(v.x2, "If 2.5 kg is not available, add reps up to 12 first, then jump.");
+});
+
+T("W3 / U1 ex 11-14 - 51 kg on d1d (db, kg-direct, unit lb): `Go to 53.5 kg (118 lb)` + `If 2.5 kg per DB …` unchanged (the bracket does not repeat ` · per DB`), `Drop to 47.5 kg (104.5 lb)`, `Stay at 51 kg (112.5 lb)`", function(a){
+  var v = V45("d1d", [KGD45(51, 5), KGD45(51, 5), KGD45(51, 5)], "lb");
+  a.eq(v.x, "Top of range on all 3 sets. Go to 53.5 kg (118 lb) next session."); a.eq(v.rule, "P1.4");
+  a.eq(v.x2, "If 2.5 kg per DB is not available, add reps up to 7 first, then jump.");
+  a.eq(v.x.indexOf("per DB"), -1, "the bracket does not repeat the per-DB word");
+  v = V45("d1d", [KGD45(51, 7), KGD45(51, 7), KGD45(51, 7)], "lb");
+  a.eq(v.x, "7 reps at 51 kg on every set. Too light. Go to 53.5 kg (118 lb)."); a.eq(v.rule, "P1.3");
+  a.eq(v.x2, "If 2.5 kg per DB is not available, add reps up to 7 first, then jump.");
+  v = V45("d1d", [KGD45(51, 2), KGD45(51, 4), KGD45(51, 5)], "lb");
+  a.eq(v.x, "2 reps at 51 kg. Below the range. Drop to 47.5 kg (104.5 lb) next session."); a.eq(v.rule, "P1.1");
+  v = V45("d1d", [KGD45(51, 5), KGD45(51, 5), KGD45(51, 4)], "lb");
+  a.eq(v.x, "Stay at 51 kg (112.5 lb) until all 3 sets reach 5 reps."); a.eq(v.rule, "P1.5");
+});
+
+T("W3 / U1 ex 15-20 - the edges: zero-load `Add 2.5 kg (5.5 lb)` (never `Add 5 lb`); drop to zero `Drop to bodyweight` with NO bracket (never `(0 lb)`); the hold names no load, zero brackets; H1.2 on a cable stack `Go to 37.5 kg (82.5 lb)` - the same string for a kg-no-bar ld; H1.1 `Drop to 22.5 kg (49.5 lb).`; H1.4d `Add a rep or 2.5 kg (5.5 lb) next time.`", function(a){
+  var v = V45("d1c", [KGD45(0, 10), KGD45(0, 10)], "lb");
+  a.eq(v.x, "Top of range on all 2 sets at bodyweight. Add 2.5 kg (5.5 lb) next session."); a.eq(v.rule, "P1.4");
+  a.eq(v.x2, "If 2.5 kg is not available, add reps up to 12 first, then jump.");
+  a.eq(v.x.indexOf("Add 5 lb"), -1, "MUST NOT print `Add 5 lb` - the app choosing a ladder from a display setting (B-58)");
+  v = V45("d1c", [KGD45(2.5, 4), KGD45(2.5, 6)], "lb");
+  a.eq(v.x, "4 reps at 2.5 kg. Below the range. Drop to bodyweight next session."); a.eq(v.rule, "P1.1");
+  a.eq(brackets45(v.x), 0, "no kg token, no bracket"); a.eq(v.x.indexOf("0 lb"), -1, "MUST NOT print (0 lb)");
+  v = V45("d1c", [KGD45(2, 4), KGD45(2, 6)], "lb");
+  a.eq(v.x, "4 reps at 2 kg. Below the range. Hold here until all 2 sets reach 6 reps."); a.eq(v.rule, "P1.1z");
+  a.eq(brackets45(v.x), 0, "`2 kg` is a report token: zero brackets");
+  v = V45("d3c", [KGD45(35, 13), KGD45(35, 13), KGD45(35, 13)], "lb");
+  a.eq(v.x, "All sets above 12. Go to 37.5 kg (82.5 lb) next session."); a.eq(v.rule, "H1.2");
+  a.eq(v.x2, "If 2.5 kg is not available, add reps first, then jump.");
+  var v2 = V45("d3c", [{ w: 35, r: 13, ld: { add: 35, au: "kg" } }, { w: 35, r: 13, ld: { add: 35, au: "kg" } }, { w: 35, r: 13, ld: { add: 35, au: "kg" } }], "lb");
+  a.eq(v2.x, v.x, "a kg-no-bar ld IS kg-direct (L1): the same string, bracket included"); a.eq(v2.x2, v.x2);
+  var prev = { sets: [KGD45(25, 10), KGD45(25, 10), KGD45(25, 10)] };
+  v = V45("d5b", [KGD45(25, 6), KGD45(25, 9), KGD45(25, 9)], "lb", prev);
+  a.eq(v.x, "6 reps at 25 kg. Below the 8–12 range. Drop to 22.5 kg (49.5 lb)."); a.eq(v.rule, "H1.1");
+  v = V45("d5b", [KGD45(25, 9), KGD45(25, 9), KGD45(25, 9)], "lb", prev);
+  a.eq(v.x, "Volume down 10%. Add a rep or 2.5 kg (5.5 lb) next time."); a.eq(v.rule, "H1.4d");
+  /* and the H1 lines that name no new load take no bracket */
+  v = V45("d5b", [KGD45(25, 10), KGD45(25, 10), KGD45(25, 11)], "lb", prev);
+  a.eq(v.x, "Volume up 3% — 775 kg against 750 kg.", "tonnage is a report: kg, no bracket");
+  v = V45("d5b", [KGD45(25, 10), KGD45(25, 10), KGD45(25, 10)], "lb", null);
+  a.eq(v.x, "First time logged. This becomes your baseline.");
+  v = V45("d5b", [KGD45(25, 10), KGD45(25, 10), KGD45(25, 10)], "lb", { sets: [KGD45(0, 10), KGD45(0, 10), KGD45(0, 10)] });
+  a.eq(v.x, "Added load since last session. New baseline at 25 kg.", "H1.4c's baseline is a report token: kg on every card");
+});
+
+T("W3 / U1 ex 21-23 - the failing cases: a lb-BUILT set on a lb card is L1's form BYTE FOR BYTE (`Go to 83.5 kg next session — 20 kg bar + 140 lb.`, no bracket, on BB20 / BB45 / KGB / LBN and SP1 from a built source); the kg card with `kg`, ``, 7, `pounds`, absent is today's string; the card's default bar never reaches the verdict", function(a){
+  var fx = [
+    ["d1a", [BB20_45(135, 5), BB20_45(135, 5), BB20_45(135, 5)], "Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb."],
+    ["d1a", [BB20_45(135, 7), BB20_45(135, 7), BB20_45(135, 7)], "7 reps at 81.2 kg on every set. Too light. Go to 85.8 kg — 20 kg bar + 145 lb."],
+    ["d1a", [BB20_45(135, 2), BB20_45(130, 4), BB20_45(130, 5)], "2 reps at 81.2 kg. Below the range. Drop to 76.7 kg next session — 20 kg bar + 125 lb."],
+    ["d1a", [BB20_45(135, 5), BB20_45(135, 5), BB20_45(130, 5)], "Sets not matched: 81.2 / 81.2 / 79 kg. Repeat 81.2 kg until all 3 sets reach 5 reps."],
+    ["d1a", [BB20_45(135, 5), BB20_45(135, 5), BB20_45(135, 4)], "Stay at 81.2 kg until all 3 sets reach 5 reps."],
+    ["d1a", [BB45_45(90, 5), BB45_45(90, 5), BB45_45(90, 5)], null],
+    ["d1a", [KGB45(60, 5), KGB45(60, 5), KGB45(60, 5)], null],
+    ["d1d", [LBN45(55, 5), LBN45(55, 5), LBN45(55, 5)], null],
+    ["d3c", [LBN45(60, 13), LBN45(60, 13), LBN45(60, 13)], null]
+  ], i, lb, kgv;
+  for (i = 0; i < fx.length; i++) {
+    lb = V45(fx[i][0], fx[i][1], "lb"); kgv = V45(fx[i][0], fx[i][1], "kg");
+    if (fx[i][2] !== null) a.eq(lb.x, fx[i][2], "ex 21 / §18.1 literal on a lb card");
+    a.eq(lb.x, kgv.x, "byte-identical across units: " + kgv.x);
+    a.eq(lb.x2, kgv.x2);
+    a.eq(brackets45(lb.x), 0, "no bracket on an ld-carrying working set: " + lb.x);
+    a.eq(lb.x.indexOf("(184 lb)"), -1, "MUST NOT print `83.5 kg (184 lb)`");
+  }
+  var sess = [{ id: 1, date: "2026-09-10", dayId: "d1", dateBasis: "local", planId: "phat", entries: { d1a: { sets: [BB20_45(135, 3)], note: "" } } }];
+  var sl = P.speedLoad(sess, "d3a", "2026-09-12", "Bent-over row", undefined, "lb");
+  a.eq(sl.text, P.speedLoad(sess, "d3a", "2026-09-12", "Bent-over row").text, "SP1 from a built source: L3's form on every unit");
+  a.eq(sl.built, true); a.eq(brackets45(sl.text), 0);
+  a.ok(sl.text.indexOf(" — 20 kg bar + ") > 0, "the build phrase is the lb reading: " + sl.text);
+  a.eq(P.speedFlagText(81, sl, "lb"), "81 kg is not speed work. Drop to " + String(sl.target) + " kg.", "the flag on a built target: no bracket");
+  /* ex 22: the kg card */
+  var today = "Top of range on all 3 sets. Go to 79.5 kg next session.";
+  ["kg", "", 7, "pounds", undefined, null, "LB", "Lb"].forEach(function(u){
+    var v = V45("d1a", [KGD45(77, 5), KGD45(77, 5), KGD45(77, 5)], u);
+    a.eq(v.x, today, "unit " + JSON.stringify(u) + " is the kg form");
+  });
+  a.eq(P.verdict({ ex: EX45("d1a"), sets: [KGD45(77, 5), KGD45(77, 5), KGD45(77, 5)], prev: null }).x, today, "no unit key at all");
+  /* ex 23: the card's mode is not the set's build */
+  var v = P.verdict({ ex: EX45("d1a"), sets: [KGD45(77, 5), KGD45(77, 5), KGD45(77, 5)], prev: null, unit: "lb", mode: { au: "lb", bar: 20, bu: "kg" } });
+  a.eq(v.x, "Top of range on all 3 sets. Go to 79.5 kg (175.5 lb) next session.", "the default bar on the card is a default nobody confirmed: ex 1's string exactly");
+  a.eq(v.x.indexOf("20 kg bar + 130"), -1); a.eq(v.x.indexOf("131.4"), -1); a.eq(v.x.indexOf("Go to 79 kg"), -1);
+});
+
+/* ------------------------------------------------------ 8. THE INVARIANT - the meta-test over a kg-direct sweep */
+
+T("W3 / U1 THE INVARIANT - over 7 slots x 14 loads x 12 rep patterns x 2 prevs of kg-direct verdicts with unit lb: strip the one ` (N lb)` and the string is BYTE-IDENTICAL to the kg-card string; x2 identical; <= 1 bracket; exactly 1 iff the kg string names an instruction load > 0; N === displayNum(K, lb) for the K before it; never after an em dash; never `(0 lb)` or `(NaN lb)`", function(a){
+  var slots = ["d1a", "d1b", "d1c", "d1d", "d3c", "d5b", "d2b"], loads = [0, 2, 2.5, 5, 12.5, 20, 22.5, 25, 35, 51, 77, 86, 100, 200];
+  var reps = [[1, 1, 1], [2, 4, 5], [3, 3, 3], [5, 5, 4], [5, 5, 5], [6, 6, 6], [7, 7, 7], [9, 9, 9], [10, 10, 10], [12, 12, 12], [13, 13, 13], [20, 20, 20]];
+  var n = 0, br = 0, i, j, k, q, ex, sets, prev, lb, kgv, m, K, N;
+  var instrRe = /(?:Go to|Drop to|Repeat|Stay at|Add(?: a rep or)?) ([\d.]+) kg/;
+  for (i = 0; i < slots.length; i++) {
+    ex = EX45(slots[i]);
+    for (j = 0; j < loads.length; j++) for (k = 0; k < reps.length; k++) for (q = 0; q < 2; q++) {
+      sets = [KGD45(loads[j], reps[k][0]), KGD45(loads[j], reps[k][1]), KGD45(loads[j], reps[k][2])];
+      prev = q === 0 ? null : { sets: [KGD45(loads[j], 8), KGD45(loads[j], 8), KGD45(loads[j], 8)] };
+      lb = P.verdict({ ex: ex, sets: sets, prev: prev, unit: "lb" });
+      kgv = P.verdict({ ex: ex, sets: sets, prev: prev, unit: "kg" });
+      if (lb === null || kgv === null) { a.eq(lb, kgv, "both null or neither"); continue; }
+      n++;
+      a.eq(strip45(lb.x), kgv.x, "strip one bracket -> the kg string: " + lb.x);
+      a.eq(lb.x2, kgv.x2, "the second line never moves: " + lb.x2);
+      a.eq(lb.t, kgv.t); a.eq(lb.rule, kgv.rule);
+      a.ok(brackets45(lb.x) <= 1, "at most one bracket: " + lb.x);
+      m = instrRe.exec(kgv.x);
+      a.eq(brackets45(lb.x), m ? 1 : 0, "exactly one bracket iff an instruction load > 0 is named: " + lb.x);
+      a.eq(lb.x.indexOf("(0 lb)"), -1); a.eq(lb.x.indexOf("NaN"), -1); a.eq(lb.x.indexOf("— ") >= 0 && lb.x.indexOf("lb)") > lb.x.indexOf("— "), false, "no bracket after an em dash");
+      if (m) {
+        br++;
+        K = Number(m[1]);
+        N = /\(([\d.]+) lb\)/.exec(lb.x);
+        a.ok(N !== null, "the bracket sits on the token: " + lb.x);
+        a.eq(Number(N[1]), P.displayNum(K, "lb"), "N recomputes from the K before it: " + lb.x);
+        a.ok(lb.x.indexOf(m[1] + " kg (" + N[1] + " lb)") >= 0, "K and N are adjacent: " + lb.x);
+      }
+    }
+  }
+  a.ok(n >= 2000, "verdicts compared: " + n);
+  a.ok(br >= 1000, "brackets checked: " + br);
+});
+
+/* ------------------------------------------------------ 9. kg default = today's bytes (D6) */
+
+T("W3 / D6 - kg default is today: over the same sweep, unit `kg`, unit absent and NO unit key produce JSON-identical verdicts; speedLoad with unit kg / absent identical to the byte (built: false on every kg-direct source); the S41 pins above ran without a unit and are green", function(a){
+  var slots = ["d1a", "d1b", "d1c", "d1d", "d3c", "d5b"], loads = [0, 2.5, 20, 22.5, 51, 77, 86, 100], reps = [[2, 4, 5], [5, 5, 4], [5, 5, 5], [7, 7, 7], [9, 9, 9], [13, 13, 13]];
+  var i, j, k, ex, sets, prev, x, y, z, n = 0;
+  for (i = 0; i < slots.length; i++) { ex = EX45(slots[i]); for (j = 0; j < loads.length; j++) for (k = 0; k < reps.length; k++) {
+    sets = [KGD45(loads[j], reps[k][0]), KGD45(loads[j], reps[k][1]), KGD45(loads[j], reps[k][2])];
+    prev = { sets: [KGD45(loads[j], 8), KGD45(loads[j], 8), KGD45(loads[j], 8)] };
+    x = JSON.stringify(P.verdict({ ex: ex, sets: sets, prev: prev, unit: "kg" }));
+    y = JSON.stringify(P.verdict({ ex: ex, sets: sets, prev: prev, unit: undefined }));
+    z = JSON.stringify(P.verdict({ ex: ex, sets: sets, prev: prev }));
+    a.eq(x, y); a.eq(y, z); n++;
+    /* and the built fixtures too */
+    sets = [BB20_45(90 + j * 10, reps[k][0]), BB20_45(90 + j * 10, reps[k][1]), BB20_45(90 + j * 10, reps[k][2])];
+    a.eq(JSON.stringify(P.verdict({ ex: ex, sets: sets, prev: prev, unit: "lb" })), JSON.stringify(P.verdict({ ex: ex, sets: sets, prev: prev })), "a built working set: lb === no unit");
+  } }
+  a.ok(n >= 250, "verdicts compared three ways: " + n);
+  var sess = [{ id: 1, date: "2026-09-10", dayId: "d1", dateBasis: "local", planId: "phat", entries: { d1a: { sets: [KGD45(100, 5)], note: "" }, d2a: { sets: [BB20_45(200, 4)], note: "" } } }];
+  ["d3a", "d4a", "d5a", "d1a", "zzz"].forEach(function(id){
+    var k1 = P.speedLoad(sess, id, "2026-09-12", "X", undefined, "kg"), k0 = P.speedLoad(sess, id, "2026-09-12", "X");
+    a.eq(JSON.stringify(k1), JSON.stringify(k0), id + ": unit kg === no unit");
+    a.eq(k0.built, id === "d4a", id + ": built only from the 20 kg bar + 200 lb source");
+  });
+  a.eq(P.speedLoad(sess, "d3a", "2026-09-12", "Row").text, "67.5 kg. 65–70% of your 100 kg triple. Rest 60–90 s. Fast, never grinding.", "S20's literal, unchanged");
+  a.eq(P.speedFlagText(110, 95), "110 kg is not speed work. Drop to 95 kg.", "S20's literal, unchanged");
+  a.eq(P.speedFlagText(110, { target: 95, built: false }), "110 kg is not speed work. Drop to 95 kg.");
+  a.eq(P.speedFlagText(110, { target: null, built: false }, "lb"), "", "no target: nothing to drop to, as today");
+  a.eq(P.speedFlagText(110, {}, "lb"), "");
+});
+
+/* ------------------------------------------------------ 10. priorInUnit / priorGhost - his session on a bar card and a no-bar card */
+
+T("W3 / §21.4-§21.5 - priorInUnit through his session (1789264514484): d1a's 77 / 86 / 51 kg priors on a 20 kg BAR card seed 125.5 / 145.5 / 68.5 lb; on a NO-BAR card 170 / 189.5 / 112.5 lb; the kg card r1(w) as today; same build the typed figure; a prior at or under the bar, zero, or unreadable -> null (nothing belongs in the field)", function(a){
+  a.eq(P.priorInUnit(KGD45(77, 5), LB20_45), 125.5, "77 kg on a 20 kg bar card: (77 - 20) / LB_KG = 125.66 -> 125.5");
+  a.eq(P.priorInUnit(KGD45(86, 5), LB20_45), 145.5);
+  a.eq(P.priorInUnit(KGD45(51, 3), LB20_45), 68.5);
+  a.eq(P.priorInUnit(KGD45(77, 5), { au: "lb" }), 170, "no bar: the total");
+  a.eq(P.priorInUnit(KGD45(86, 5), { au: "lb" }), 189.5);
+  a.eq(P.priorInUnit(KGD45(51, 3), { au: "lb" }), 112.5);
+  a.eq(P.priorInUnit(KGD45(77, 5), { au: "kg" }), 77, "kg-direct card: r1(w), the seed as today");
+  a.eq(P.priorInUnit(KGD45(60.84, 5), { au: "kg" }), 60.8);
+  a.eq(P.priorInUnit(KGD45(77, 5), { au: "kg", bar: 20, bu: "kg" }), 57, "kg on a bar card: the added kg");
+  a.eq(P.priorInUnit(KGD45(77, 5), undefined), 77, "no mode is the kg card");
+  a.eq(P.priorInUnit(BB20_45(135, 5), LB20_45), 135, "same build: the typed figure verbatim");
+  a.eq(P.priorInUnit(BB20_45(135, 5), { au: "lb", bar: 10, bu: "kg" }), 157, "same unit, a different bar: NOT the typed figure - the added weight for THIS bar (81.2 - 10 = 71.2 kg = 156.97 -> 157)");
+  a.eq(P.priorInUnit(BB20_45(135, 5), { au: "lb" }), 179, "a bar-built prior on a no-bar card: the total, 81.2 / LB_KG = 179.02 -> 179");
+  a.eq(P.priorInUnit(BB20_45(135, 5), { au: "kg" }), 81.2, "a bar-built prior on a kg card: main's row");
+  a.eq(P.priorInUnit(LBN45(90, 8), { au: "lb" }), 90, "same no-bar build");
+  a.eq(P.priorInUnit(KGD45(15, 5), LB20_45), null, "15 kg on a 20 kg bar card: at or under the bar, nothing belongs in the field");
+  a.eq(P.priorInUnit(KGD45(20, 5), LB20_45), null, "exactly the bar: null (added 0 is not > 0)");
+  a.eq(P.priorInUnit(KGD45(20.1, 5), LB20_45), null, "0.1 kg over the bar rounds to 0 lb: null, never 0");
+  a.eq(P.priorInUnit(KGD45(0, 10), LB20_45), null, "zero seeds nothing (Z2)");
+  a.eq(P.priorInUnit(KGD45(0, 10), { au: "kg" }), null);
+  a.eq(P.priorInUnit({ w: "7.5.0", r: 5 }, LB20_45), null); a.eq(P.priorInUnit(null, LB20_45), null); a.eq(P.priorInUnit({ w: "", r: "" }, LB20_45), null);
+  a.eq(P.priorInUnit({ w: 81.5, r: 5, ld: { bar: 20, bu: "kg", add: 135, au: "lb" } }, LB20_45), 135.5, "an ld that does not recompose to w is read as kg-direct (buildOf's rule): the added weight for this bar from w, not ld.add");
+  a.eq(P.priorInUnit({ w: 77, r: 5, ld: null }, LB20_45), 125.5, "ld: null is absent");
+});
+
+T("W3 / §21.12 #2 - THE ROUND-TRIP, pinned as it is and not as anyone would like it: a 77 kg prior seeded as 125.5 lb on the 20 kg bar composes to 76.9 (NOT 77); as 170 lb with no bar to 77.1; 86 and 51 come back exact; the drift is bounded by the half-pound (0.23 kg) and the stored prior is never touched", function(a){
+  var c = P.composeLoad({ bar: 20, bu: "kg", add: 125.5, au: "lb" });
+  a.eq(c.w, 76.9, "the seed on a bar card stores 76.9 for a 77 kg prior - the discrepancy the coach named");
+  a.ne(c.w, 77, "it is NOT 77, and this test says so rather than hiding it");
+  a.eq(P.composeLoad({ add: 170, au: "lb" }).w, 77.1, "the seed on a no-bar card stores 77.1");
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 145.5, au: "lb" }).w, 86, "86 on the bar: exact");
+  a.eq(P.composeLoad({ add: 189.5, au: "lb" }).w, 86, "86 no bar: exact");
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 68.5, au: "lb" }).w, 51.1, "51 on the bar: 51.1");
+  a.eq(P.composeLoad({ add: 112.5, au: "lb" }).w, 51, "51 no bar: exact");
+  /* the bound: for every kg-direct w in 0.1..250, the seed on a no-bar lb card and on the 20 kg bar card re-composes within 0.2 kg (0.25 lb = 0.113 kg, then r1) */
+  var i, w, s, back, worst = 0;
+  for (i = 1; i <= 1250; i++) {
+    w = i / 5;
+    s = P.priorInUnit(KGD45(w, 5), { au: "lb" });
+    if (s !== null) { back = P.composeLoad({ add: s, au: "lb" }).w; worst = Math.max(worst, Math.abs(back - w)); }
+    if (w > 20) { s = P.priorInUnit(KGD45(w, 5), LB20_45); if (s !== null) { back = P.composeLoad({ bar: 20, bu: "kg", add: s, au: "lb" }).w; worst = Math.max(worst, Math.abs(back - w)); } }
+  }
+  a.ok(worst <= 0.2 + 1e-9, "worst round-trip drift over the sweep: " + worst + " kg (the half-pound's resolution, then r1)");
+  a.ok(worst > 0, "and it is not zero: " + worst);
+  /* the drift is a fact about the seeded NEW set. When S45 was written P1 read 76.9 and 77 as
+     different loads (0.01-tolerant) and this pinned `Sets not matched: 76.9 / 77 / 77 kg` as the
+     coach's open item (§21.12 #2). The coach ruled (§21.13, Rule EQ1): within LOAD_EQ they are ONE
+     load. Re-pinned to the ruling; S46 carries the full set. */
+  var v = V45("d1a", [KGD45(76.9, 5), KGD45(77, 5), KGD45(77, 5)], "lb");
+  a.eq(v.rule, "P1.4", "76.9 then 77 x 2 is one load under Rule EQ1 (was P1.2 before §21.13)");
+  a.eq(v.x, "Top of range on all 3 sets. Go to 79.4 kg (175 lb) next session.");
+  a.eq(v.x.indexOf("Sets not matched"), -1, "the S45 string is gone on purpose");
+  /* his real session's d1a through a bar card: the ghosts per set index, and the stored bytes untouched */
+  var his = CHADY_SESSION(), before = JSON.stringify(his), e = his.entries.d1a, k, out = [];
+  for (k = 0; k < e.sets.length; k++) out.push(P.priorGhost(e.sets[k], LB20_45, "bb"));
+  a.deep(out, ["Last 44 lb total × 12", "Last 44 lb × 12", "Last 68.5 lb × 15", "Last 88 lb × 14", "Last 110 lb × 10"], "his d1a ramp on a 20 kg bar lb card: the empty bar reads as a total (44 lb), every other set as plates - 20 kg total and 20 kg added both print 44, and the word `total` is the only difference");
+  out = []; for (k = 0; k < e.sets.length; k++) out.push(P.priorGhost(e.sets[k], { au: "lb" }, "bb"));
+  a.deep(out, ["Last 44 lb × 12", "Last 88 lb × 12", "Last 112.5 lb × 15", "Last 132.5 lb × 14", "Last 154.5 lb × 10"], "the same on a no-bar lb card: totals");
+  out = []; for (k = 0; k < e.sets.length; k++) out.push(P.priorGhost(e.sets[k], { au: "kg" }, "bb"));
+  a.deep(out, ["Last 20 × 12", "Last 40 × 12", "Last 51 × 15", "Last 60 × 14", "Last 70 × 10"], "and on the kg card: main's unitless row");
+  a.eq(P.priorGhost(his.entries.d1e.sets[0], LB20_45, "bodyweight"), "Last bodyweight × 12", "his rack chins: Z2 on any card");
+  a.eq(JSON.stringify(his), before, "D1: his session is untouched by any of it");
+});
+
+T("W3 / §21.4 - priorGhost's grammar per row: kg-direct `Last 77 × 5`; same build `Last 90 lb × 5`; different build `Last 125.5 lb × 5`; prior under the bar `Last 33 lb total × 5` (does not seed); zero `Last bodyweight × 10` / `Last zero load × 10`; unparseable -> \"\"; the ghost's figure and the seed agree on every seeding row", function(a){
+  a.eq(P.priorGhost(KGD45(77, 5), { au: "kg" }, "bb"), "Last 77 × 5");
+  a.eq(P.priorGhost(KGD45(60.84, 5), { au: "kg" }, "bb"), "Last 60.8 × 5");
+  a.eq(P.priorGhost(LBN45(90, 5), { au: "lb" }, "bb"), "Last 90 lb × 5", "same build, verbatim");
+  a.eq(P.priorGhost(BB20_45(135, 5), LB20_45, "bb"), "Last 135 lb × 5");
+  a.eq(P.priorGhost(KGD45(77, 5), LB20_45, "bb"), "Last 125.5 lb × 5", "the spec's d1a line");
+  a.eq(P.priorGhost(KGD45(77, 5), { au: "lb" }, "bb"), "Last 170 lb × 5");
+  a.eq(P.priorGhost(KGD45(15, 5), LB20_45, "bb"), "Last 33 lb total × 5", "the spec's `total` line: 15 / LB_KG = 33.07 -> 33");
+  a.eq(P.priorGhost(KGD45(20, 5), LB20_45, "bb"), "Last 44 lb total × 5", "exactly the bar");
+  a.eq(P.priorGhost(KGD45(0, 10), LB20_45, "bodyweight"), "Last bodyweight × 10");
+  a.eq(P.priorGhost(KGD45(0, 10), { au: "lb" }, "cable"), "Last zero load × 10");
+  a.eq(P.priorGhost(KGD45(0, 10), { au: "kg" }, "cable"), "Last zero load × 10", "the kg card's zero row, as main prints it");
+  a.eq(P.priorGhost(BB20_45(135, 5), { au: "kg" }, "bb"), "Last 81.2 × 5", "the reverse case (§21.4): a lb-built prior on a kg card is main's row");
+  a.eq(P.priorGhost(KGD45(77, 5), { au: "kg", bar: 20, bu: "kg" }, "bb"), "Last 57 kg × 5", "kg on a bar card: the added kg, with its unit (an ld card)");
+  a.eq(P.priorGhost({ w: "7.5.0", r: 5 }, LB20_45, "bb"), ""); a.eq(P.priorGhost({ w: 77, r: "x" }, LB20_45, "bb"), ""); a.eq(P.priorGhost(null, LB20_45, "bb"), ""); a.eq(P.priorGhost({}, LB20_45, "bb"), "");
+  a.eq(P.priorGhost(KGD45("77", "5"), LB20_45, "bb"), "Last 125.5 lb × 5", "strings (a draft-shaped prior) read the same");
+  /* agreement: wherever the ghost prints `Last N unit × r` (no `total`), priorInUnit is N */
+  var rows = [[KGD45(77, 5), LB20_45], [KGD45(77, 5), { au: "lb" }], [BB20_45(135, 5), LB20_45], [KGD45(86, 5), LB20_45], [LBN45(45, 8), { au: "lb" }], [KGD45(77, 5), { au: "kg", bar: 20, bu: "kg" }]], i, g, m;
+  for (i = 0; i < rows.length; i++) {
+    g = P.priorGhost(rows[i][0], rows[i][1], "bb"); m = /^Last ([\d.]+) (kg|lb) × \d+$/.exec(g);
+    a.ok(m !== null, "a seeding row: " + g);
+    a.eq(Number(m[1]), P.priorInUnit(rows[i][0], rows[i][1]), "the ghost and the seed agree: " + g);
+  }
+  a.eq(P.priorInUnit(KGD45(15, 5), LB20_45), null, "and the `total` row does not seed");
+});
+
+/* ------------------------------------------------------ 11. the tripwire, restated for this section */
+
+T("W3 - up to the end of S45 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S45 or earlier wrote into his history");
+});
+
+/* ==========================================================================
+   S46 - WO-012 §21.13 (backend, 2026-09-13): Rule EQ1, H1.4d's amendment,
+   Rule SD1. The coach's ruling on the 0.1 kg a seeded lb conversion stores.
+
+   - LOAD_EQ = 0.25 kg, beside LD_TOL and NOT merged with it, at exactly four
+     sites: P1's `backoff` and `mixed` (were 0.01), workingBuild (was 0.01),
+     T1 clause (c) (was 1e-9). The working load is still min(C); no printed
+     number moves.
+   - H1.4d branches on the PRINTED percentage: p === 0 is `Volume matched.`,
+     and `Volume up 0%` / `Volume down 0%` are unreachable strings.
+   - seedFor(priorW, mode): the converted seed is the heaviest load on the
+     card's grid whose buildTotal is not above the prior by more than
+     LOAD_EQ - floor with tolerance, never nearest. seedInUnit(prevSet, mode)
+     is priorInUnit's split with SD1 on the converted branch, for the view.
+   - §21.13.3 #1-#11 and §21.13.5 #1-#10 as tests, every `Must not` its own
+     assertion. T1 example 5 is pinned with its regression named: under
+     `best + 1e-9` the same fixture returned null (Node, the pre-EQ1 file,
+     2026-09-13). The 0% strings are a meta-test over an H1 grid that
+     includes ±0.1 / ±0.2 kg priors: 284 `up 0%` and 388 `down 0%` on the
+     pre-EQ1 file, 0 here.
+   - The kg-direct differential re-run: 580,608 verdicts (7 slots x 81 loads
+     x 256 rep pairs x 2 patterns x 2 prevs) between the pre-EQ1 file and
+     this one, JSON byte for byte, 0 diffs, hash40 chain 1438967905 on both
+     (Node, 2026-09-13). The suite carries a 2 s budget, so the browser pins
+     every 13th case of the same enumeration (44,663 verdicts, ~0.2 s): hash
+     2338777240, computed against the PRE-EQ1 file. A different number here
+     is a kg-direct verdict that moved.
+   - The S45 pin `Sets not matched: 76.9 / 77 / 77 kg` is re-pinned in S45
+     to P1.4: it was written as the coach's open item and the coach closed it.
+   ========================================================================== */
+group("S46 WO-012 §21.13 / Rule EQ1 / H1.4d on the printed percentage / Rule SD1 seedFor / T1 example 5 / the differential re-run");
+
+/* ---- fixtures, this section's own ---- */
+function EX46(id){ return P.exById(P.PHAT_PLAN, id); }
+function KGD46(w, r){ return { w: w, r: r }; }
+function LD46(add, r){ var ld = { bar: 20, bu: "kg", add: add, au: "lb" }, c = P.composeLoad(ld); if (!c.ok) throw new Error("fixture"); return { w: c.w, r: r, ld: ld }; }
+function LBN46(add, r){ var ld = { add: add, au: "lb" }, c = P.composeLoad(ld); if (!c.ok) throw new Error("fixture"); return { w: c.w, r: r, ld: ld }; }
+function V46(id, sets, unit, prev){ return P.verdict({ ex: EX46(id), sets: sets, prev: prev === undefined ? null : prev, unit: unit }); }
+function ALL46(v){ return v ? (v.x + "\n" + v.x2) : ""; }
+var LB20_46 = { au: "lb", bar: 20, bu: "kg" };
+var LBN_46 = { au: "lb" };
+var KGB_46 = { au: "kg", bar: 20, bu: "kg" };
+var KGD_46 = { au: "kg" };
+/* the §21.13.3 fixture set: `L` is 125.5 lb on the 20 kg bar (w 76.9) */
+function L46(r){ return LD46(125.5, r); }
+/* T1 fixtures on Row (d1a: s 3, lo 3) through deloadCheck, the S22 way */
+var KL46 = [{ id: "d1a", n: "Row", s: 3, lo: 3, hi: 5 }];
+function T1_46(failW, ld){
+  function fs(r){ var s = { w: failW, r: r }; if (ld !== undefined) s.ld = ld; return s; }
+  var s = D1BG().concat([
+    TSESS(DA(-30), "a", "d1a", SETS(77, 5, 77, 5, 77, 5)),
+    TSESS(DA(-10), "b", "d1a", [fs(3), fs(2), fs(2)]),
+    TSESS(DA(-3),  "c", "d1a", [fs(3), fs(3), fs(2)])
+  ]);
+  return P.deloadCheck({ sessions: s, todayStr: TODAY, keyLifts: KL46, state: STORE(),
+                         stallReport: { stalled: [], untested: [], testable: true } });
+}
+
+/* ------------------------------------------------------ 0. surface */
+
+T("§21.13 - the surface: LOAD_EQ exported and 0.25; it is NOT LD_TOL (0.05, still LIMITS.ldTol) and the two are not merged; seedFor(priorW, mode) and seedInUnit(prevSet, mode) exported and pure; nothing else on PHAT moved", function(a){
+  a.eq(P.LOAD_EQ, 0.25, "Rule EQ1's constant");
+  a.eq(P.LIMITS.ldTol, 0.05, "LD_TOL untouched - a different question (this set's w against its own components)");
+  a.ne(P.LOAD_EQ, P.LIMITS.ldTol, "do not merge the constants");
+  a.isFn(P.seedFor, "seedFor"); a.isFn(P.seedInUnit, "seedInUnit");
+  a.eq(P.seedFor.length, 2, "seedFor(priorW, mode)");
+  a.eq(P.seedInUnit.length, 2, "seedInUnit(prevSet, mode)");
+  a.isFn(P.priorInUnit, "priorInUnit stays: the READING the ghost prints");
+  a.eq(P.LB_DISPLAY, 0.5, "§21.13.6: the display constant stands");
+});
+
+/* ------------------------------------------------------ 1. Rule EQ1 - §21.13.3 #1-#4 */
+
+T("§21.13.3 #1 - the fixture the question was built on: {76.9, L} / 77 / 77 × 5 is ONE load under EQ1 -> P1.4 off set 1's build: `Top of range on all 3 sets. Go to 79.2 kg next session — 20 kg bar + 130.5 lb.` Must not print `Sets not matched`, `Repeat`", function(a){
+  var v = V46("d1a", [L46(5), KGD46(77, 5), KGD46(77, 5)], "lb");
+  a.eq(v.rule, "P1.4", "77 − 76.9 = 0.1 <= LOAD_EQ: backoff false, mixed false");
+  a.eq(v.x, "Top of range on all 3 sets. Go to 79.2 kg next session — 20 kg bar + 130.5 lb.");
+  a.eq(ALL46(v).indexOf("Sets not matched"), -1, "MUST NOT print `Sets not matched`");
+  a.eq(ALL46(v).indexOf("Repeat"), -1, "MUST NOT print `Repeat`");
+  /* and the same three loads in every order are the same verdict class: the working load is min(C) and set 1's build wins the tie */
+  a.eq(V46("d1a", [KGD46(77, 5), KGD46(77, 5), L46(5)], "lb").rule, "P1.4", "the 76.9 last: still one load");
+});
+
+T("§21.13.3 #2 - the boundary: 0.3 kg IS a different load. {76.7, 125 lb} / 77 / 77 × 5 -> P1.2 `Sets not matched: 76.7 / 77 / 77 kg. Repeat 77 kg until all 3 sets reach 5 reps.` - unchanged from before EQ1, and correct (125 lb against 77 kg is a plate short, not a rounding)", function(a){
+  var v = V46("d1a", [LD46(125, 5), KGD46(77, 5), KGD46(77, 5)], "lb");
+  a.eq(v.rule, "P1.2", "77 − 76.7 = 0.3 > LOAD_EQ: backoff");
+  a.eq(v.x, "Sets not matched: 76.7 / 77 / 77 kg. Repeat 77 kg until all 3 sets reach 5 reps.");
+});
+
+T("§21.13.3 #3 - the mixed copy is suppressed: fixture #1 at 7/7/7 -> P1.3 `7 reps at 76.9 kg on every set. Too light. Go to 81.5 kg — 20 kg bar + 135.5 lb.` Must not print ` or above`; the figure recomputes from g1Step on the lb build", function(a){
+  var v = V46("d1a", [L46(7), KGD46(77, 7), KGD46(77, 7)], "lb");
+  a.eq(v.rule, "P1.3");
+  a.eq(v.x, "7 reps at 76.9 kg on every set. Too light. Go to 81.5 kg — 20 kg bar + 135.5 lb.");
+  a.eq(ALL46(v).indexOf(" or above"), -1, "MUST NOT print ` or above` - the spread is within LOAD_EQ");
+  /* the figure, recomputed: G1 on the lb build - 76.9 kg = 169.53 lb, 5% -> 10 on the 5 grid, cap 35 -> step 10 -> 135.5 lb -> 81.46 -> 81.5 */
+  var b = P.buildOf({ bar: 20, bu: "kg", add: 125.5, au: "lb" }, 76.9);
+  a.eq(P.g1Step(76.9 / P.LB_KG, 7, 5, b.grid), 10, "g1Step on the lb grid: 10 lb");
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 135.5, au: "lb" }).w, 81.5, "20 kg bar + 135.5 lb composes to the figure printed");
+});
+
+T("§21.13.3 #4 - workingBuild ties to the EARLIEST set within LOAD_EQ: 77 (kg-direct) / {76.9, L} / {76.9, L} × 5 -> load 76.9, set 1 is within 0.1 so ITS build (none) wins -> kg-direct P1.4 `Top of range on all 3 sets. Go to 79.4 kg (175 lb) next session.` (§18.1's tie rule, stated; unreachable from the card); the direct calls either side of the tolerance", function(a){
+  var v = V46("d1a", [KGD46(77, 5), L46(5), L46(5)], "lb");
+  a.eq(v.rule, "P1.4");
+  a.eq(v.x, "Top of range on all 3 sets. Go to 79.4 kg (175 lb) next session.", "kg-direct ladder from the min, U1's bracket, no build phrase");
+  a.eq(ALL46(v).indexOf("130.5"), -1, "MUST NOT ladder set 2's build");
+  a.eq(P.workingBuild([KGD46(77, 5), L46(5), L46(5)], 3, 76.9), null, "the earliest set within LOAD_EQ is kg-direct: null");
+  a.eq(P.workingBuild([L46(5), KGD46(77, 5), KGD46(77, 5)], 3, 76.9).add, 125.5, "set 1 is the build when it is the build");
+  a.eq(P.workingBuild([KGD46(77.2, 5), L46(5)], 2, 76.9).add, 125.5, "0.3 above the load (0.3 > 0.25): the kg-direct set 1 is skipped; set 2 at 76.9 is the build");
+  a.eq(P.workingBuild([KGD46(77.1, 5), L46(5)], 2, 76.9), null, "0.2 above: within tolerance, set 1 (kg-direct) wins - null");
+  a.eq(P.workingBuild([LD46(125, 5), L46(5)], 2, 76.9).add, 125, "0.2 under: within tolerance, set 1's build wins");
+  a.eq(P.workingBuild([LD46(124, 5), L46(5)], 2, 76.9).add, 125.5, "0.7 under (124 lb = 76.2): set 1 skipped, set 2's build");
+});
+
+T("§21.13.1 - the LOAD_EQ boundary on P1 itself: a spread of exactly 0.25 is ONE load (P1.4 off the min), 0.26 is two (P1.2); the same on `mixed`; the working load is min(C) at both", function(a){
+  var v = V46("d1a", [KGD46(77, 5), KGD46(77.25, 5), KGD46(77.25, 5)]);
+  a.eq(v.rule, "P1.4", "R − load = 0.25 <= LOAD_EQ");
+  a.eq(v.x, "Top of range on all 3 sets. Go to 79.5 kg next session.", "and the ladder starts from the MIN, 77, not 77.25");
+  v = V46("d1a", [KGD46(77, 5), KGD46(77.26, 5), KGD46(77.26, 5)]);
+  a.eq(v.rule, "P1.2", "R − load = 0.26 > LOAD_EQ");
+  a.eq(v.x, "Sets not matched: 77 / 77.3 / 77.3 kg. Repeat 77.3 kg until all 3 sets reach 5 reps.", "(the kg token prints 77.26 as 77.3: r1, as every token does - a stored load is a multiple of 0.1 in any case)");
+  /* mixed: the copy variant in P1.3 */
+  a.eq(V46("d1a", [KGD46(77, 7), KGD46(77.25, 7), KGD46(77, 7)]).x.indexOf(" or above"), -1, "top − load = 0.25: not mixed");
+  a.ok(V46("d1a", [KGD46(77, 7), KGD46(77.26, 7), KGD46(77, 7)]).x.indexOf(" or above") >= 0, "top − load = 0.26: mixed");
+  /* stored loads are multiples of 0.1: 0.2 is one load, 0.3 is two */
+  a.eq(V46("d1a", [KGD46(77, 5), KGD46(77.2, 5), KGD46(77.1, 5)]).rule, "P1.4", "77 / 77.2 / 77.1: one load");
+  a.eq(V46("d1a", [KGD46(77, 5), KGD46(77.3, 5), KGD46(77.3, 5)]).rule, "P1.2", "77 / 77.3 / 77.3: two");
+});
+
+/* ------------------------------------------------------ 2. T1 clause (c) - §21.13.3 #5-#7 */
+
+T("§21.13.3 #5 - T1, THE BLIND SPOT CLOSED, pinned null-then-date: completed 77 × 5/5/5 (day −30); fails at {77.1, 170 lb} × 3/2/2 (day −10) and × 3/3/2 (day −3). Under `failLoad > best + 1e-9` both failures read MISS-NEW and d1T1 returned null (the pre-EQ1 file, Node, 2026-09-13). Under `best + LOAD_EQ` they are FAIL, FAIL: run 2, day −3 within 20 -> T1 fires on Row", function(a){
+  var r = T1_46(77.1, { add: 170, au: "lb" });
+  a.eq(r.trigger, "T1", "77.1 > 77.25 is false: a failure at a load he has completed");
+  a.deep(r.lifts, ["Row"]);
+  a.eq(r.text, "Two sessions where Row went backwards. " + D1_TAIL);
+  a.eq(P.composeLoad({ add: 170, au: "lb" }).w, 77.1, "the fixture is the seeded no-bar figure, 170 lb");
+});
+
+T("§21.13.3 #6 - T1 failing case, a real jump: the same at 77.3 -> `77.3 > 77.25` -> MISS-NEW -> null. A 0.3 kg he cannot have loaded by accident is a load he chose", function(a){
+  a.eq(T1_46(77.3, { add: 170.5, au: "lb" }).trigger, null, "170.5 lb = 77.3: an attempt at a new load");
+  a.eq(T1_46(77.3).trigger, null, "kg-direct 77.3: the same");
+});
+
+T("§21.13.3 #7 - T1 in the bar direction: completed 77; fails at {76.9, 125.5 lb on the bar} twice -> FAIL before EQ1 and FAIL after. Nothing moves in the direction the drift goes down", function(a){
+  a.eq(T1_46(76.9, { bar: 20, bu: "kg", add: 125.5, au: "lb" }).trigger, "T1");
+});
+
+T("§21.13.1 - T1's boundary on LOAD_EQ: a failure at best + 0.25 is a failure at the completed load (T1); at best + 0.26 it is MISS-NEW (null)", function(a){
+  a.eq(T1_46(77.25).trigger, "T1", "77.25 = 77 + LOAD_EQ: FAIL");
+  a.eq(T1_46(77.26).trigger, null, "77.26 > 77 + LOAD_EQ: MISS-NEW");
+  a.eq(T1_46(77.2).trigger, "T1", "and the 0.1-grid case either side: 77.2 FAIL");
+  a.eq(T1_46(77).trigger, "T1", "the exact load, as always");
+});
+
+/* ------------------------------------------------------ 3. H1.4d - §21.13.3 #8-#10 */
+
+T("§21.13.3 #8 - H1.4d, an identical session read as `down`: prior 77 × 10/10/10 (2310); now {76.9, L} × 10/10/10 (2307) -> p = 0 -> `Volume matched. One more rep next session.` Must not print `down 0%`", function(a){
+  var prev = { sets: [KGD46(77, 10), KGD46(77, 10), KGD46(77, 10)] };
+  var v = V46("d4e", [L46(10), L46(10), L46(10)], "lb", prev);
+  a.eq(v.rule, "H1.4d");
+  a.eq(v.x, "Volume matched. One more rep next session.");
+  a.eq(v.t, "", "no `down` tone on a matched session");
+  a.eq(ALL46(v).indexOf("down 0%"), -1, "MUST NOT print `Volume down 0%`");
+  a.eq(ALL46(v).indexOf("Add a rep or"), -1, "and not the down copy's tail either");
+});
+
+T("§21.13.3 #9 - H1.4d, an identical session read as `up`: prior 2310; now 77.1 × 10/10/10 (2313) -> `Volume matched. One more rep next session.` Must not print `up 0%` - the kg-direct microload the coach found reachable on main (§21.13.7 #1)", function(a){
+  var prev = { sets: [KGD46(77, 10), KGD46(77, 10), KGD46(77, 10)] };
+  var v = V46("d4e", [KGD46(77.1, 10), KGD46(77.1, 10), KGD46(77.1, 10)], "lb", prev);
+  a.eq(v.x, "Volume matched. One more rep next session.");
+  a.eq(v.t, "", "no `up` tone");
+  a.eq(ALL46(v).indexOf("up 0%"), -1, "MUST NOT print `Volume up 0%`");
+  a.eq(ALL46(v).indexOf("2,313"), -1, "and not the tonnage pair");
+  /* the same with no unit (a kg card): the hand-typed 77.1 from main */
+  a.eq(V46("d4e", [KGD46(77.1, 10), KGD46(77.1, 10), KGD46(77.1, 10)], undefined, prev).x, "Volume matched. One more rep next session.", "kg card, hand-typed 77.1: the same");
+  a.eq(V46("d4e", [LBN46(170, 10), LBN46(170, 10), LBN46(170, 10)], "lb", prev).x, "Volume matched. One more rep next session.", "the seeded no-bar 170 lb: the same");
+});
+
+T("§21.13.3 #10 - H1.4d, one rep short still fires: now {76.9, L} × 10/10/9 (2230.1) -> p = −3 -> `Volume down 3%. Add a rep or 5 lb next time.` Unchanged; and a real 1% up is still `up`", function(a){
+  var prev = { sets: [KGD46(77, 10), KGD46(77, 10), KGD46(77, 10)] };
+  var v = V46("d4e", [L46(10), L46(10), L46(9)], "lb", prev);
+  a.eq(v.rule, "H1.4d"); a.eq(v.t, "down");
+  a.eq(v.x, "Volume down 3%. Add a rep or 5 lb next time.");
+  v = V46("d4e", [KGD46(77, 10), KGD46(77, 10), KGD46(77, 10)], undefined, { sets: [KGD46(77, 10), KGD46(77, 10), KGD46(77, 9)] });
+  a.eq(v.t, "up"); a.eq(v.x, "Volume up 3% — 2,310 kg against 2,233 kg.", "a real difference prints as before");
+  /* the edge of p: 0.4% rounds to 0 -> matched; 0.5% rounds to 1 -> up (Math.round, half up) */
+  v = V46("d4e", [KGD46(100.5, 10), KGD46(100.5, 10), KGD46(100.5, 10)], undefined, { sets: [KGD46(100, 10), KGD46(100, 10), KGD46(100, 10)] });
+  a.eq(v.x, "Volume up 1% — 3,015 kg against 3,000 kg.", "+0.5%: p = 1");
+  v = V46("d4e", [KGD46(100.4, 10), KGD46(100.4, 10), KGD46(100.4, 10)], undefined, { sets: [KGD46(100, 10), KGD46(100, 10), KGD46(100, 10)] });
+  a.eq(v.x, "Volume matched. One more rep next session.", "+0.4%: p = 0 - the printed figure is the decision");
+});
+
+T("§21.13.2 - Math.round(−0.5) is −0 in JS and −0 < 0 is false: a −0.5% session is `matched`, a −0.51% one is `down 1%`. Pinned so the asymmetry (+0.5% is `up 1%`) is a known fact and not a surprise", function(a){
+  var prev = { sets: [KGD46(100, 10), KGD46(100, 10), KGD46(100, 10)] };
+  var v = V46("d4e", [KGD46(99.5, 10), KGD46(99.5, 10), KGD46(99.5, 10)], undefined, prev);
+  a.eq(v.x, "Volume matched. One more rep next session.", "−0.5% rounds to −0 -> matched");
+  a.eq(Object.is(Math.round(-0.5), -0), true, "the JS fact");
+  v = V46("d4e", [KGD46(99.4, 10), KGD46(99.4, 10), KGD46(99.4, 10)], undefined, prev);
+  a.eq(v.x, "Volume down 1%. Add a rep or 2.5 kg next time.", "−0.6%: down 1%");
+});
+
+T("§21.13.2 META - `Volume up 0%` and `Volume down 0%` are UNREACHABLE over an H1 grid that includes the priors the ruling was about: 5 hyp slots × 40 loads × 8 prior offsets (−0.2, −0.1, 0, +0.1, +0.2, +0.3, +0.5, +2.5 kg) × 2 rep patterns = 3,200 verdicts. On the pre-EQ1 file this grid printed 284 `up 0%` and 388 `down 0%` (Node, 2026-09-13); here 0 and 0. Every verdict on the grid is still H1.4d", function(a){
+  var SL = ["d3c", "d4e", "d3g", "d4h", "d3h"], D = [-0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.5, 2.5];
+  var up0 = 0, dn0 = 0, n = 0, other = 0, si, li, di, cur, E, w, pw, k, sets, prev, v, j;
+  for (si = 0; si < SL.length; si++) {
+    E = EX46(SL[si]);
+    for (li = 1; li <= 40; li++) {
+      w = li * 2.5;
+      for (di = 0; di < D.length; di++) {
+        pw = Math.round((w + D[di]) * 10) / 10;
+        if (pw <= 0) continue;
+        for (cur = 0; cur < 2; cur++) {
+          sets = []; for (k = 0; k < E.s; k++) sets.push({ w: w, r: (cur === 1 && k === E.s - 1) ? E.hi - 1 : E.hi });
+          prev = { sets: [] }; for (k = 0; k < E.s; k++) prev.sets.push({ w: pw, r: E.hi });
+          v = P.verdict({ ex: E, sets: sets, prev: prev }); j = JSON.stringify(v); n++;
+          if (j.indexOf("Volume up 0%") >= 0) up0++;
+          if (j.indexOf("Volume down 0%") >= 0) dn0++;
+          if (v.rule !== "H1.4d") other++;
+        }
+      }
+    }
+  }
+  a.eq(n, 3200, "the grid");
+  a.eq(up0, 0, "`Volume up 0%` printed " + up0 + " times");
+  a.eq(dn0, 0, "`Volume down 0%` printed " + dn0 + " times");
+  a.eq(other, 0, "every case is a tonnage comparison");
+});
+
+/* ------------------------------------------------------ 4. #11 - the kg-direct differential, re-run */
+
+T("§21.13.3 #11 - THE DIFFERENTIAL: the kg-direct verdict grid (7 slots × 81 loads × 256 rep pairs × 2 patterns × 2 prevs, 580,608 verdicts) is byte-identical to the pre-EQ1 file - 0 diffs and hash40 chain 1438967905 on both in Node, 2026-09-13. In the browser: every 13th case of the same enumeration, 44,663 verdicts, hash 2338777240 computed against the PRE-EQ1 file. A different number is a kg-direct verdict that moved", function(a){
+  var SLOTS = ["d1a", "d1b", "d1d", "d2d", "d3c", "d4e", "d5b"], stride = 13;
+  var h = 0, n = 0, i = 0, si, li, ra, rb, pat, pv, E, w, reps, k, sets, prev;
+  for (si = 0; si < SLOTS.length; si++) {
+    E = EX46(SLOTS[si]);
+    for (li = 0; li <= 80; li++) {
+      w = li * 2.5;
+      for (ra = 0; ra < 16; ra++) for (rb = 0; rb < 16; rb++) for (pat = 0; pat < 2; pat++) for (pv = 0; pv < 2; pv++) {
+        if ((i++) % stride !== 0) continue;
+        reps = []; for (k = 0; k < E.s; k++) reps.push(pat === 0 ? (k === 0 ? ra : rb) : (k === E.s - 1 ? rb : ra));
+        sets = reps.map(function(r){ return { w: w, r: r }; });
+        prev = pv === 0 ? null : { sets: reps.map(function(r){ return { w: w, r: Math.max(0, r - 1) }; }) };
+        h = (h * 31 + hash40(JSON.stringify(P.verdict({ ex: E, sets: sets, prev: prev })))) >>> 0; n++;
+      }
+    }
+  }
+  a.eq(i, 580608, "the full enumeration is the S42 count");
+  a.eq(n, 44663, "the browser sample");
+  a.eq(h, 2338777240, "the kg-direct sample moved: a printed number changed under EQ1, which the ruling says cannot happen");
+});
+
+T("§21.13.0 #6 - the pinned §13 / §18 / §21 fixtures do not move: a spot check of one exact string per rule family on the 2.5 kg and 5 lb grids (the sections that pin them in full are S41, S42 and S45 and they are still green above)", function(a){
+  a.eq(V46("d1a", [KGD46(100, 5), KGD46(100, 5), KGD46(100, 5)]).x, "Top of range on all 3 sets. Go to 102.5 kg next session.");
+  a.eq(V46("d1a", [KGD46(100, 5), KGD46(100, 5), KGD46(100, 4)]).x, "Stay at 100 kg until all 3 sets reach 5 reps.");
+  a.eq(V46("d1a", [KGD46(100, 5), KGD46(102.5, 5), KGD46(102.5, 5)]).x, "Sets not matched: 100 / 102.5 / 102.5 kg. Repeat 102.5 kg until all 3 sets reach 5 reps.", "a 2.5 kg spread is two loads, as ever");
+  a.eq(V46("d1a", [LD46(135, 5), LD46(135, 5), LD46(135, 5)], "lb").x, "Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb.", "§18.1 #1");
+  a.eq(V46("d1a", [LD46(135, 5), LD46(140, 5), LD46(140, 5)], "lb").x, "Sets not matched: 81.2 / 83.5 / 83.5 kg. Repeat 83.5 kg until all 3 sets reach 5 reps.", "a 5 lb spread is two loads");
+  a.eq(V46("d1a", [KGD46(77, 5), KGD46(77, 5), KGD46(77, 4)], "lb").x, "Stay at 77 kg (170 lb) until all 3 sets reach 5 reps.", "§21.2");
+});
+
+/* ------------------------------------------------------ 5. Rule SD1 - §21.13.5 #1-#10 */
+
+T("§21.13.5 #1 - 77 kg prior, lb + 20 kg bar: 57 kg of plates = 125.66 lb; 125 -> 76.7 <= 77.25, 130 -> 79.0 > 77.25. seedFor -> 125. Must not seed 125.5, 126 or 130. And the next session's P1.4 on that seed names plate loads only: `Go to 79 kg next session — 20 kg bar + 130 lb.`", function(a){
+  var s = P.seedFor(77, LB20_46);
+  a.eq(s, 125);
+  a.ne(s, 125.5, "MUST NOT seed the half-pound"); a.ne(s, 126, "MUST NOT seed 126"); a.ne(s, 130, "MUST NOT seed a plate above the prior");
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 125, au: "lb" }).w, 76.7, "`= 76.7 kg`");
+  var v = V46("d1a", [LD46(125, 5), LD46(125, 5), LD46(125, 5)], "lb");
+  a.eq(v.x, "Top of range on all 3 sets. Go to 79 kg next session — 20 kg bar + 130 lb.", "(the coach's `79.0` is the kg token's `79`)");
+  a.eq(ALL46(v).indexOf("130.5"), -1, "MUST NOT name 130.5 lb - the plate that does not exist");
+  a.eq(P.priorInUnit(KGD46(77, 5), LB20_46), 125.5, "the ghost's READING is still 125.5 (§21.3 stands); the seed is the PROPOSAL");
+});
+
+T("§21.13.5 #2 - 77 kg, no bar, lb: 169.76 lb; 170 -> 77.1 <= 77.25, 175 -> 79.4. seedFor -> 170: the tolerance clause is what keeps it (floor without it would be 165 = 74.8, 2.2 kg under)", function(a){
+  a.eq(P.seedFor(77, LBN_46), 170);
+  a.eq(P.composeLoad({ add: 170, au: "lb" }).w, 77.1);
+  a.eq(P.composeLoad({ add: 165, au: "lb" }).w, 74.8, "what a plain floor would have seeded");
+});
+
+T("§21.13.5 #3 - 78 kg, lb + 20 kg bar, THE NEAREST-REJECTING CASE: 127.87 lb; nearest is 130 = 79.0 > 78.25; 125 = 76.7. seedFor -> 125. Must not seed 130 - a plate above a load whose verdict may have been `Stay at 78`", function(a){
+  var s = P.seedFor(78, LB20_46);
+  a.eq(s, 125);
+  a.ne(s, 130, "MUST NOT seed 130");
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 130, au: "lb" }).w, 79, "130 lb is 79.0: a kilo above");
+  a.eq(P.priorInUnit(KGD46(78, 5), LB20_46), 128, "(the reading rounds to 128 - which no plate builds either)");
+});
+
+T("§21.13.5 #4 - 86 kg, no bar, lb (a belt, taking the number as logged): 189.6 lb; 190 -> 86.18 -> r1 86.2 <= 86.25. seedFor -> 190. (185 = 83.9 would be the floor without the tolerance: wrong by a plate.) The r1 at the total is why seedFor walks buildTotal and not raw arithmetic", function(a){
+  a.eq(P.seedFor(86, LBN_46), 190);
+  a.eq(P.composeLoad({ add: 190, au: "lb" }).w, 86.2, "86.18 stored as 86.2, within LOAD_EQ");
+  a.eq(P.composeLoad({ add: 185, au: "lb" }).w, 83.9);
+});
+
+T("§21.13.5 #5 - 51 kg, db, lb, no bar: 112.44 lb; 110 -> 49.9, 115 -> 52.2. seedFor -> 110 (per DB); the mode has no implement and needs none", function(a){
+  a.eq(P.seedFor(51, LBN_46), 110);
+  a.eq(P.composeLoad({ add: 115, au: "lb" }).w, 52.2, "52.2 > 51.25");
+});
+
+T("§21.13.5 #6 - 21 kg prior, lb + 20 kg bar: 2.2 lb of plates; 5 lb -> 22.3 > 21.25; n < 1 -> NO SEED (null). Must not seed 0 (B-114 territory) and must not seed 5", function(a){
+  var s = P.seedFor(21, LB20_46);
+  a.eq(s, null);
+  a.ne(s, 0, "MUST NOT seed 0"); a.ne(s, 5, "MUST NOT seed 5");
+  a.eq(P.seedFor(20, LB20_46), null, "exactly the bar: null");
+  a.eq(P.seedFor(15, LB20_46), null, "under the bar: null");
+  a.eq(P.seedFor(22.3, LB20_46), 5, "and the first load the grid CAN build: 22.3 = 20 + 5 lb -> 5");
+  a.eq(P.seedFor(22.2, LB20_46), 5, "22.2: 22.3 <= 22.45 -> 5, the tolerance clause");
+  a.eq(P.seedFor(22, LB20_46), null, "22.0: 22.3 > 22.25 -> null");
+});
+
+T("§21.13.5 #7 - same build, verbatim, untouched: prior {20 kg bar + 127 lb} (he typed 127) on a lb + 20 kg bar card -> seedInUnit 127, not 125. SD1 never touches a number he typed; seedFor is not consulted on the same-build path", function(a){
+  var prior = LD46(127, 5);
+  a.eq(P.seedInUnit(prior, LB20_46), 127, "verbatim");
+  a.eq(P.priorInUnit(prior, LB20_46), 127, "and the ghost agrees");
+  a.eq(P.seedFor(prior.w, LB20_46), 125, "(what SD1 would have said - which is why it is not asked)");
+  a.eq(P.seedInUnit(LBN46(172.5, 8), LBN_46), 172.5, "no bar, same build: 172.5 verbatim, off the 5 lb grid and his");
+});
+
+T("§21.13.5 #8 - a lb prior on a kg-on-bar card: prior w 76.9 (125.5 lb on the 20 kg bar), card kg + 20 kg bar -> 56.9 kg of plates; 55 -> 75.0, 57.5 -> 77.5. seedFor -> 55 (`= 75 kg`); seedInUnit reads it as a conversion", function(a){
+  a.eq(P.seedFor(76.9, KGB_46), 55);
+  a.eq(P.seedInUnit(L46(5), KGB_46), 55, "different build -> the grid figure");
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 55, au: "kg" }).w, 75);
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 57.5, au: "kg" }).w, 77.5, "77.5 > 77.15");
+});
+
+T("§21.13.5 #9 - a lb prior on a kg-direct card (§21.8 step 6): no build, no grid; seedFor -> 76.9 as today, r1 of the kg total. The off-grid kg-direct ladder that follows (`Go to 79.4 kg`) is §21.13.7 #2, named and not ruled", function(a){
+  a.eq(P.seedFor(76.9, KGD_46), 76.9);
+  a.eq(P.seedInUnit(L46(5), KGD_46), 76.9);
+  a.eq(P.seedFor(76.94, KGD_46), 76.9, "r1");
+  a.eq(P.seedFor(77, null), 77, "no mode is the kg card");
+  a.eq(P.seedFor(77, undefined), 77);
+  a.eq(V46("d1a", [KGD46(76.9, 5), KGD46(76.9, 5), KGD46(76.9, 5)]).x, "Top of range on all 3 sets. Go to 79.4 kg next session.", "§21.13.7 #2: honest to what he typed");
+});
+
+T("§21.13.5 #10 - the second `+` is the view's arithmetic on the field, never a re-snap: the seed is ON the grid, so snapping it again is a no-op - seedFor(buildTotal(seed)) === seed for every SD1 figure above; seed + grid = 130, + grid = 135", function(a){
+  a.eq(P.seedFor(P.composeLoad({ bar: 20, bu: "kg", add: 125, au: "lb" }).w, LB20_46), 125, "125 -> 76.7 -> 125");
+  a.eq(P.seedFor(P.composeLoad({ add: 170, au: "lb" }).w, LBN_46), 170, "170 -> 77.1 -> 170");
+  a.eq(P.seedFor(P.composeLoad({ add: 190, au: "lb" }).w, LBN_46), 190);
+  a.eq(P.seedFor(P.composeLoad({ bar: 20, bu: "kg", add: 55, au: "kg" }).w, KGB_46), 55);
+  a.eq(125 + P.LB_BAR_STEP, 130); a.eq(130 + P.LB_BAR_STEP, 135);
+});
+
+T("SD1 - the four the order names, with and without the bar: 77 -> 125 / 170; 78 -> 125 / 170; 86 -> 145 / 190; 51 -> 65 / 110 (lb + 20 kg bar / lb no bar), each recomposed within LOAD_EQ of the prior and one grid step over it NOT", function(a){
+  var cases = [[77, 125, 170], [78, 125, 170], [86, 145, 190], [51, 65, 110]], i, w, sb, sn, back;
+  for (i = 0; i < cases.length; i++) {
+    w = cases[i][0]; sb = P.seedFor(w, LB20_46); sn = P.seedFor(w, LBN_46);
+    a.eq(sb, cases[i][1], w + " kg on the 20 kg bar"); a.eq(sn, cases[i][2], w + " kg, no bar");
+    back = P.composeLoad({ bar: 20, bu: "kg", add: sb, au: "lb" }).w;
+    a.ok(back <= w + P.LOAD_EQ + 1e-9, w + " bar: " + sb + " lb composes to " + back + ", not above the prior by more than LOAD_EQ");
+    a.ok(P.composeLoad({ bar: 20, bu: "kg", add: sb + P.LB_BAR_STEP, au: "lb" }).w > w + P.LOAD_EQ + 1e-9, w + " bar: one plate up is above");
+    back = P.composeLoad({ add: sn, au: "lb" }).w;
+    a.ok(back <= w + P.LOAD_EQ + 1e-9, w + " no bar: " + sn + " lb composes to " + back);
+    a.ok(P.composeLoad({ add: sn + P.LB_STEP, au: "lb" }).w > w + P.LOAD_EQ + 1e-9, w + " no bar: one step up is above");
+  }
+  /* a 45 lb bar: the grid is LB_BAR_STEP on add, the bar in lb */
+  a.eq(P.seedFor(77, { au: "lb", bar: 45, bu: "lb" }), 125, "77 kg on a 45 lb bar: 125 lb (20.41 + 56.7 = 77.1)");
+  a.eq(P.seedFor(77, { au: "lb", bar: "20", bu: "kg" }), 125, "a draft-shaped mode (bar as a string) reads the same");
+});
+
+T("SD1 - the LOAD_EQ boundary on the seed: a prior of 76.45 (125 lb = 76.7 is exactly 0.25 above) seeds 125; 76.44 (0.26 above) seeds 120", function(a){
+  a.eq(P.seedFor(76.45, LB20_46), 125, "76.7 <= 76.45 + 0.25");
+  a.eq(P.seedFor(76.44, LB20_46), 120, "76.7 > 76.44 + 0.25 -> the plate below");
+  a.eq(P.composeLoad({ bar: 20, bu: "kg", add: 120, au: "lb" }).w, 74.4);
+});
+
+T("SD1 - garbage in, null out, never 0 and never a throw: `7.5.0`, −5, 0, NaN, \"\", null, a non-object prior; a mode with junk falls to its kg-direct default", function(a){
+  a.eq(P.seedFor("7.5.0", LB20_46), null); a.eq(P.seedFor(-5, LB20_46), null); a.eq(P.seedFor(0, LB20_46), null);
+  a.eq(P.seedFor(NaN, LB20_46), null); a.eq(P.seedFor("", LB20_46), null); a.eq(P.seedFor(null, LB20_46), null); a.eq(P.seedFor(undefined, LB20_46), null);
+  a.eq(P.seedFor("77", LB20_46), 125, "a draft-shaped string prior reads");
+  a.eq(P.seedFor(77, "lb"), 77, "a non-object mode is the kg card");
+  a.eq(P.seedInUnit(null, LB20_46), null); a.eq(P.seedInUnit({}, LB20_46), null); a.eq(P.seedInUnit({ w: "", r: "" }, LB20_46), null);
+  a.eq(P.seedInUnit(KGD46(0, 10), LB20_46), null, "zero seeds nothing (Z2)");
+  a.eq(P.seedInUnit({ w: 77, r: 5, ld: null }, LB20_46), 125, "ld: null is absent -> converted");
+  a.eq(P.seedInUnit({ w: 81.5, r: 5, ld: { bar: 20, bu: "kg", add: 135, au: "lb" } }, LB20_46), 135, "an ld that does not recompose to w is kg-direct (buildOf's rule) -> converted from w: 61.5 kg = 135.6 lb -> 135");
+  a.noThrow(function(){ P.seedFor({}, LB20_46); P.seedFor([], LB20_46); P.seedFor(77, { au: "lb", bar: -1, bu: "kg" }); P.seedFor(77, { au: "lb", bar: "x", bu: "kg" }); });
+  a.eq(P.seedFor(77, { au: "lb", bar: "x", bu: "kg" }), 170, "an unreadable bar is no bar (modeFromLd's rule): the no-bar grid");
+});
+
+T("SD1 META - over every prior 0.1..250 kg on the four built modes, seedFor is on the grid (n × grid, n >= 1) or null; when a seed exists its buildTotal is within LOAD_EQ above the prior or below it, one grid step more is not, and the seeded set reads to P1 as the SAME load or a lighter one - never a heavier one", function(a){
+  var modes = [LB20_46, LBN_46, KGB_46, { au: "lb", bar: 45, bu: "lb" }], grids = [P.LB_BAR_STEP, P.LB_STEP, P.KG_STEP, P.LB_BAR_STEP];
+  var i, m, w, s, g, ld, back, up, bad = 0, n = 0, nulls = 0, worstUnder = 0;
+  for (m = 0; m < modes.length; m++) {
+    g = grids[m];
+    for (i = 1; i <= 2500; i++) {
+      w = i / 10; s = P.seedFor(w, modes[m]); n++;
+      if (s === null) { nulls++; continue; }
+      if (Math.abs(s / g - Math.round(s / g)) > 1e-9 || s < g) { bad++; continue; }
+      ld = { add: s, au: modes[m].au }; if (modes[m].bar !== undefined) { ld.bar = modes[m].bar; ld.bu = modes[m].bu; }
+      back = P.composeLoad(ld).w;
+      ld.add = s + g; up = P.composeLoad(ld).w;
+      if (!(back <= w + P.LOAD_EQ + 1e-9)) bad++;
+      if (!(up > w + P.LOAD_EQ + 1e-9)) bad++;
+      worstUnder = Math.max(worstUnder, w - back);
+    }
+  }
+  a.eq(bad, 0, "seeds off the grid, above the prior by more than LOAD_EQ, or not the heaviest such: " + bad + " of " + n);
+  a.ok(nulls > 0 && nulls < n, "some priors are under the first plate (null), most are not: " + nulls);
+  a.ok(worstUnder < 2.5 + 1e-9, "the seed is never more than a grid step under the prior on the kg grid: " + worstUnder);
+});
+
+/* ------------------------------------------------------ 6. the tripwire, restated for this section */
+
+T("§21.13 - up to the end of S46 no fixture wrote a phat:* key", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S46 or earlier wrote into his history");
+});
+
+
+group("S47 WO-012 W5 / the QA pass: U1 re-derived, the strip-invariant over S41's builders, the SD1 boundary by hand, a second 0% generator, cardModeFor's tiers under the ruling, readGymProfile never loses a bar, prefs outside the backup");
+
+/* ---- QA's own arithmetic, written without reading roundGrid: the pound at
+   0.5 lb with a tie going DOWN, as the coach ruled (§21.3). n = x * 2; the
+   fraction above the floor decides; exactly .5 stays on the floor. ---- */
+function qaLb(kgW){
+  var x = kgW / 0.45359237, n = x * 2, lo = Math.floor(n), f = n - lo;
+  return (f > 0.5 ? lo + 1 : lo) / 2;
+}
+function qaKg(x){ return Math.round(x * 10) / 10; }
+/* mulberry32 - the same generator S44's second fuzz used, a different seed */
+function rng47(seed){ var t = seed >>> 0; return function(){ t = (t + 0x6D2B79F5) >>> 0; var r = Math.imul(t ^ (t >>> 15), 1 | t); r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r; return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+function pick47(rnd, arr){ return arr[Math.floor(rnd() * arr.length)]; }
+var BARS47 = [{ n: "Barbell", w: 20, u: "kg" }, { n: "EZ bar", w: 10, u: "kg" }];
+function PREFS47(unit, ex){ var g = { bars: BARS47 }; if (unit !== undefined) g.unit = unit; if (ex !== undefined) g.ex = ex; return { gym: g }; }
+var LB20_47 = { au: "lb", bar: 20, bu: "kg" }, LBN_47 = { au: "lb" }, KGB_47 = { au: "kg", bar: 20, bu: "kg" };
+/* his session's kg-direct loads and what the lb card showed for them on
+   2026-09-13 (the W5 rig, 400 px, lb default, Barbell 20 kg first) */
+var HIS_ADDED_47 = [
+  [40, 20, 44],     /* d1a set 2: 40 kg on the 20 kg bar -> 20 kg added -> `Last 44 lb × 12` */
+  [51, 20, 68.5],   /* d1a set 3 -> `Last 68.5 lb × 15` */
+  [27.5, 20, 16.5], /* d1g set 1 -> `Last 16.5 lb × 15` */
+  [32.5, 20, 27.5], /* d1g set 2 */
+  [35, 20, 33],     /* d1g set 3 -> 33.07 -> 33 */
+  [68, 0, 150],     /* d1b set 1, no bar -> `Last 150 lb × 12` */
+  [77, 0, 170],     /* d1b set 2, d1d sets 2-3 */
+  [63, 0, 139],     /* d1d set 1 -> 138.9 -> 139 */
+  [42, 0, 92.5],    /* d1f set 1 -> 92.59 -> 92.5 */
+  [60, 0, 132.5]    /* d1f set 3 -> 132.28 -> 132.5 */
+];
+
+/* ------------------------------------------------------ 1. U1's three loads, re-derived */
+
+T("W5 / U1 - the three loads re-derived without roundGrid: 77 / 86 / 51 kg -> 170 / 189.5 / 112.5 lb; the coach's instruction figures 79.5 -> 175.5 (not 175), 52.5 -> 115.5, 82 -> 181, 72.5 -> 160, 88.5 -> 195, 91 -> 200.5, 53.5 -> 118, 47.5 -> 104.5; his own d5a target 55 -> 121.5; displayNum, displayLoad and instr agree with QA's arithmetic on every one, and on every added weight his lb card printed", function(a){
+  var table = [[77, 170], [86, 189.5], [51, 112.5], [79.5, 175.5], [52.5, 115.5], [82, 181], [72.5, 160], [88.5, 195], [91, 200.5], [53.5, 118], [47.5, 104.5], [82.5, 182], [37.5, 82.5], [22.5, 49.5], [2.5, 5.5], [55, 121.5]];
+  table.forEach(function(row){
+    a.eq(qaLb(row[0]), row[1], "QA's own: " + row[0] + " kg -> " + row[1] + " lb");
+    a.eq(P.displayNum(row[0], "lb"), row[1], "displayNum " + row[0]);
+    a.eq(P.displayLoad(row[0], "lb"), String(row[1]) + " lb", "displayLoad " + row[0]);
+    a.eq(P.instr(row[0], "lb"), String(qaKg(row[0])) + " kg (" + row[1] + " lb)", "instr " + row[0]);
+  });
+  a.ne(P.displayLoad(79.5, "lb"), "175 lb", "175.27 is nearer 175.5: the 5 lb ladder never reaches the display");
+  HIS_ADDED_47.forEach(function(row){
+    var added = row[0] - row[1];
+    a.eq(qaLb(added), row[2], "his " + row[0] + " kg less a " + row[1] + " kg bar = " + added + " kg -> " + row[2] + " lb");
+    a.eq(P.priorInUnit({ w: row[0], r: 5 }, row[1] ? LB20_47 : LBN_47), row[2], "priorInUnit prints the same figure the rig read off the card");
+  });
+  a.eq(P.priorInUnit({ w: 20, r: 12 }, LB20_47), null, "his set 1 (the empty bar on a 20 kg bar card): nothing belongs in the field");
+  a.eq(P.priorGhost({ w: 20, r: 12 }, LB20_47, "bb"), "Last 44 lb total × 12", "and the ghost the rig read: `Last 44 lb total × 12` (see the checklist for the legibility call)");
+  /* the tie: exactly x.25 lb goes down in both */
+  var i, bad = 0, w;
+  for (i = 1; i <= 4000; i++) { w = i / 8; if (qaLb(w) !== P.displayNum(w, "lb")) bad++; }
+  a.eq(bad, 0, "0.125..500 kg by 0.125: QA's rounding and displayNum agree at every step, ties included");
+});
+
+/* ------------------------------------------------------ 2. the strip-invariant over S41's builders */
+
+T("W5 / U1 THE INVARIANT over S41's own fixture builders (BB20 / BB45 / KGB / LBN, kg-direct KGD) on the seven S41 slots × 10 loads × 8 rep patterns: every BUILT working set prints the SAME string on a lb card and a kg card (x and x2, byte for byte); every KG-DIRECT set prints at most one ` (N lb)` on the lb card, N === QA's own rounding of the K before it, and with that bracket removed the string is the kg card's; a bracket never follows an em dash; the second line never carries one", function(a){
+  var slots = ["d1a", "d1b", "d1d", "d2d", "d3c", "d4e", "d5b"], loads = [2.5, 5, 20, 35, 51, 60.8, 77, 86, 100, 140];
+  var pats = [[1, 1, 1], [0, 0, 0], [0, 0, -1], [2, 2, 2], [-2, 0, 0], [3, 3, 3], [1, 0, -1], [0, 1, 1]];
+  var builders = { BB20: BB20, BB45: BB45, KGB: KGB, LBN: LBN };
+  var n = 0, built = 0, direct = 0, brk = 0, si, li, pi, E, sets, k, r, vk, vl, m, sl, sk, name, i;
+  function setsFor(mk, w, E, pat){ var out = [], k, r; for (k = 0; k < E.s; k++) { r = E.hi + pat[k % pat.length]; if (r < 1) r = 1; out.push(mk(w, r)); } return out; }
+  for (si = 0; si < slots.length; si++) {
+    E = EX41(slots[si]);
+    for (li = 0; li < loads.length; li++) {
+      for (pi = 0; pi < pats.length; pi++) {
+        /* built: the add is the load in the build's unit, chosen so the fixture composes */
+        for (name in builders) if (Object.prototype.hasOwnProperty.call(builders, name)) {
+          var addW = (name === "KGB") ? loads[li] : Math.round(loads[li] / 0.45359237 / 5) * 5;
+          if (addW <= 0) continue;
+          sets = setsFor(builders[name], addW, E, pats[pi]);
+          vk = P.verdict({ ex: E, sets: sets, prev: null, unit: "kg" }); vl = P.verdict({ ex: E, sets: sets, prev: null, unit: "lb" });
+          n++; built++;
+          a.eq(JSON.stringify(vl), JSON.stringify(vk), name + " " + slots[si] + " " + addW + " " + pats[pi].join("/") + ": a built set is L1's form on every card unit");
+          if (vl && vl.x) a.eq(brackets45(vl.x + vl.x2), 0, "no bracket on a built set");
+        }
+        /* kg-direct */
+        sets = setsFor(KGD, loads[li], E, pats[pi]);
+        vk = P.verdict({ ex: E, sets: sets, prev: null, unit: "kg" }); vl = P.verdict({ ex: E, sets: sets, prev: null, unit: "lb" });
+        n++; direct++;
+        if (!vk || !vl) { a.eq(!!vl, !!vk, "both null or both verdicts"); continue; }
+        a.eq(vl.x2, vk.x2, "the second line (I2) never changes");
+        a.eq(vl.rule, vk.rule, "the rule id never changes"); a.eq(vl.t, vk.t, "the tone never changes");
+        sl = vl.x; sk = vk.x;
+        a.ok(brackets45(sl) <= 1, "at most one bracket: " + sl);
+        a.eq(strip45(sl), sk, "strip the one bracket -> the kg string: " + sl);
+        m = /([\d.]+) kg \(([\d.]+) lb\)/.exec(sl);
+        if (m) { brk++; a.eq(Number(m[2]), qaLb(Number(m[1])), "N recomputes from the K before it by QA's rounding: " + sl); a.eq(sl.indexOf("— " + m[1]), -1, "never after an em dash"); }
+        a.eq(sl.indexOf("(0 lb)"), -1, "never (0 lb)"); a.eq(sl.indexOf("NaN"), -1, "never NaN");
+      }
+    }
+  }
+  a.ok(n >= 2000, "grid size " + n);
+  a.ok(brk >= 200, "the bracket was exercised " + brk + " times");
+  /* the eleven §18.1 sentences S41 pinned, re-run with unit lb: byte-identical to the kg pins already in S41_SENTENCES */
+  var ex1 = P.verdict({ ex: EX41("d1a"), sets: [BB20(135, 5), BB20(135, 5), BB20(135, 5)], prev: null, unit: "lb" });
+  a.eq(ex1.x, "Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb.", "§18.1 example 1 on a lb card");
+  a.ok(S41_SENTENCES.indexOf(ex1.x) >= 0, "and it is one of the sentences S41 pinned with no unit");
+  var sp = SP41("d1a", BB20(135, 3), "d3a");
+  var spl = P.speedLoad([{ id: 1, date: "2026-09-10", dayId: "d1", dateBasis: "local", planId: "phat", entries: { d1a: { sets: [BB20(135, 3)], note: "" } } }], "d3a", "2026-09-12", EX41("d1a").n, undefined, "lb");
+  a.eq(spl.text, sp.text, "L3's SP1 from a built source: the lb card prints the kg card's build phrase");
+});
+
+/* ------------------------------------------------------ 3. SD1's boundary by hand */
+
+T("W5 / SD1 - the floor-with-tolerance boundary, recomposed by QA: 125 lb on the 20 kg bar is r1(20 + 125 × 0.45359237) = 76.7, so a prior of 76.45 (cap 76.70) seeds 125 and 76.44 (cap 76.69) seeds 120; with no bar 170 lb = 77.1, so 76.85 seeds 170 and 76.84 seeds 165; kg on the bar 57.5 = 77.5, so 77.25 seeds 57.5 and 77.24 seeds 55; every seed's own total is within 0.25 above the prior or under it and one more step is not", function(a){
+  function tot(bar, add, au){ return Math.round((bar + (au === "lb" ? add * 0.45359237 : add)) * 10) / 10; }
+  a.eq(tot(20, 125, "lb"), 76.7); a.eq(tot(20, 130, "lb"), 79); a.eq(tot(0, 170, "lb"), 77.1); a.eq(tot(0, 165, "lb"), 74.8); a.eq(tot(20, 57.5, "kg"), 77.5);
+  a.eq(P.seedFor(76.45, LB20_47), 125, "76.45 + 0.25 = 76.70 >= 76.7: 125 stays");
+  a.eq(P.seedFor(76.44, LB20_47), 120, "76.44 + 0.25 = 76.69 < 76.7: one step down");
+  a.eq(P.seedFor(76.85, LBN_47), 170, "no bar: 76.85 + 0.25 = 77.10 >= 77.1");
+  a.eq(P.seedFor(76.84, LBN_47), 165, "no bar: 76.84 + 0.25 = 77.09 < 77.1");
+  a.eq(P.seedFor(77.25, KGB_47), 57.5, "kg on the bar: 77.25 + 0.25 = 77.5");
+  a.eq(P.seedFor(77.24, KGB_47), 55);
+  /* his session's seeds as the rig observed them: 40 kg -> 40 lb (38.1), 51 kg -> 65 lb (49.5), 20 kg -> nothing (the `total` ghost) */
+  a.eq(P.seedFor(40, LB20_47), 40, "40 kg on the bar: 44.09 lb of plates -> 40 lb (38.1) - the rig read w=40, = 38.1 kg");
+  a.eq(tot(20, 40, "lb"), 38.1); a.ok(tot(20, 45, "lb") > 40.25, "45 lb = " + tot(20, 45, "lb") + " is above 40.25");
+  a.eq(P.seedFor(51, LB20_47), 65, "51 kg -> 65 lb (49.5); 70 lb = " + tot(20, 70, "lb") + " > 51.25");
+  a.eq(P.seedInUnit({ w: 20, r: 12 }, LB20_47), null, "the empty bar: no seed (`+` is one step, the rig read 5 -> = 22.3 kg)");
+  var i, w, s, t, bad = 0;
+  for (i = 1; i <= 2500; i++) {
+    w = i / 10; s = P.seedFor(w, LB20_47); if (s === null) continue;
+    t = tot(20, s, "lb");
+    if (!(t <= w + 0.25 + 1e-9)) bad++;
+    if (tot(20, s + 5, "lb") <= w + 0.25 + 1e-9) bad++;
+    if (s % 5 !== 0 || s < 5) bad++;
+  }
+  a.eq(bad, 0, "0.1..250 by 0.1 on the 20 kg bar: every seed recomposes within LOAD_EQ above the prior or below it, one step more does not, on the 5 lb grid");
+});
+
+/* ------------------------------------------------------ 4. a second 0% generator */
+
+T("W5 / H1.4d META with QA's own generator (mulberry32, seed 20260913): 4,000 random hypertrophy sessions over every hyp slot in the plan - loads on the 0.1 kg grid, reps around the range, the current session's tonnage perturbed by ±0.1 / ±0.2 / ±0.3 / ±2.5 kg on one or every set and ±1 rep on one set - never print `Volume up 0%` or `Volume down 0%`; on every H1.4d verdict the printed percentage equals QA's own Math.round((va − vb) / vb × 100) and `matched` iff it is 0; the generator reaches 4d and reaches p = 0 enough times to mean something", function(a){
+  var rnd = rng47(20260913), hyp = [];
+  P.PHAT_PLAN.days.forEach(function(d){ d.ex.forEach(function(e){ if (e.k === "hyp") hyp.push(e); }); });
+  a.ok(hyp.length >= 20, hyp.length + " hyp slots");
+  var i, E, k, w, sets, prev, dw, v, j, va, vb, p, m, n4d = 0, zero = 0, up0 = 0, dn0 = 0, bad = 0, mode, r0, r;
+  for (i = 0; i < 4000; i++) {
+    E = pick47(rnd, hyp);
+    w = Math.round((10 + rnd() * 150) * 10) / 10;
+    prev = { sets: [] }; sets = [];
+    mode = Math.floor(rnd() * 3);
+    dw = pick47(rnd, [-0.3, -0.2, -0.1, 0, 0, 0.1, 0.2, 0.3, 2.5, -2.5]);
+    for (k = 0; k < E.s; k++) {
+      r0 = E.lo + Math.floor(rnd() * (E.hi - E.lo + 1));
+      prev.sets.push({ w: w, r: r0 });
+      r = r0; if (mode === 2 && k === 0) r = Math.max(1, r0 + (rnd() < 0.5 ? -1 : 1));
+      sets.push({ w: Math.round((w + (mode === 0 || k === 0 ? dw : 0)) * 10) / 10, r: r });
+    }
+    v = P.verdict({ ex: E, sets: sets, prev: prev, unit: rnd() < 0.5 ? "lb" : "kg" });
+    if (!v) continue;
+    j = v.x + " " + v.x2;
+    if (j.indexOf("Volume up 0%") >= 0) up0++;
+    if (j.indexOf("Volume down 0%") >= 0) dn0++;
+    if (v.rule !== "H1.4d") continue;
+    n4d++;
+    va = 0; vb = 0; for (k = 0; k < E.s; k++) { va += sets[k].w * sets[k].r; vb += prev.sets[k].w * prev.sets[k].r; }
+    p = Math.round((va - vb) / vb * 100);
+    if (p === 0) { zero++; if (v.x !== "Volume matched. One more rep next session.") bad++; }
+    else if (p > 0) { m = /^Volume up (\d+)% — /.exec(v.x); if (!m || Number(m[1]) !== p) bad++; }
+    else { m = /^Volume down (\d+)%\. Add a rep or /.exec(v.x); if (!m || Number(m[1]) !== -p) bad++; }
+  }
+  a.eq(up0, 0, "`Volume up 0%` printed " + up0 + " times");
+  a.eq(dn0, 0, "`Volume down 0%` printed " + dn0 + " times");
+  a.eq(bad, 0, "every 4d percentage is QA's own and `matched` iff it rounds to 0");
+  a.ok(n4d >= 800, "4d reached " + n4d + " times");
+  a.ok(zero >= 100, "p = 0 reached " + zero + " times - the case the ruling was about");
+});
+
+/* ------------------------------------------------------ 5. cardModeFor's tiers under the ruling */
+
+T("W5 / §0.1 + the ruling - cardModeFor's every tier with prefs.gym.unit PRESENT (kg and lb) and ABSENT, as a table: chip / draft / typed / override fire the same either way; `default` fires only when a unit is set (kg included) and then a WO-010 ld in history is NOT read; `history` fires only while the unit is absent; `kg` only with nothing anywhere. Every mode is a clean {au, bar?, bu?}", function(a){
+  var ldPrev = { sets: [{ w: 60.8, r: 5, ld: { bar: 20, bu: "kg", add: 90, au: "lb" } }] }, kgPrev = { sets: [{ w: 77, r: 5 }] };
+  var ov = { d1a: { au: "kg" } };
+  var rows = [
+    /* label, args-builder, [expected under unit lb, under unit kg, under absent] */
+    ["chip",     function(u){ return { exId: "d1a", entry: { mode: { au: "lb", bar: 10, bu: "kg" }, sets: [{ w: "60", r: "5" }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "lb", bar: 10, bu: "kg" }, tier: "chip" }, { mode: { au: "lb", bar: 10, bu: "kg" }, tier: "chip" }, { mode: { au: "lb", bar: 10, bu: "kg" }, tier: "chip" }]],
+    ["draft",    function(u){ return { exId: "d1a", entry: { sets: [{ w: "", r: "", ld: { add: "", au: "lb" } }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "lb" }, tier: "draft" }, { mode: { au: "lb" }, tier: "draft" }, { mode: { au: "lb" }, tier: "draft" }]],
+    ["typed",    function(u){ return { exId: "d1a", entry: { sets: [{ w: "60", r: "" }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "kg" }, tier: "typed" }, { mode: { au: "kg" }, tier: "typed" }, { mode: { au: "kg" }, tier: "typed" }]],
+    ["override", function(u){ return { exId: "d1a", entry: { sets: [{ w: "", r: "" }] }, prefs: PREFS47(u, ov), prev: ldPrev }; },
+                 [{ mode: { au: "kg" }, tier: "override" }, { mode: { au: "kg" }, tier: "override" }, { mode: { au: "kg" }, tier: "override" }]],
+    ["default vs history (bb slot, lb history)", function(u){ return { exId: "d1a", prefs: PREFS47(u), prev: ldPrev }; },
+                 [{ mode: { au: "lb", bar: 20, bu: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "history" }]],
+    ["default vs history (db slot, lb history)", function(u){ return { exId: "d1d", prefs: PREFS47(u), prev: ldPrev }; },
+                 [{ mode: { au: "lb" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "history" }]],
+    ["default vs kg (kg-direct history)", function(u){ return { exId: "d1a", prefs: PREFS47(u), prev: kgPrev }; },
+                 [{ mode: { au: "lb", bar: 20, bu: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "kg" }]],
+    ["default vs kg (no history)", function(u){ return { exId: "d3c", prefs: PREFS47(u), prev: null }; },
+                 [{ mode: { au: "lb" }, tier: "default" }, { mode: { au: "kg" }, tier: "default" }, { mode: { au: "kg" }, tier: "kg" }]]
+  ];
+  var units = ["lb", "kg", undefined], i, u, r;
+  rows.forEach(function(row){
+    for (i = 0; i < units.length; i++) {
+      u = units[i]; r = P.cardModeFor(row[1](u));
+      a.deep(r, row[2][i], row[0] + " with unit " + (u === undefined ? "ABSENT" : u));
+      a.ok(!("tier" in r.mode), "the tier stays beside the mode");
+    }
+  });
+  /* a malformed unit reads as absent: history wins again, which is what the boot drops it to */
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: PREFS47("pounds"), prev: ldPrev }), { mode: { au: "lb", bar: 20, bu: "kg" }, tier: "history" }, "`pounds` is not a unit: the device has no default, history fires");
+  a.deep(P.cardModeFor({ exId: "d1a", prefs: PREFS47("pounds"), prev: kgPrev }), { mode: { au: "kg" }, tier: "kg" });
+});
+
+/* ------------------------------------------------------ 6. readGymProfile never loses a bar */
+
+T("W5 / D4 - readGymProfile over 600 random profiles (mulberry32, seed 4): valid bars + a unit from {absent, kg, lb, pounds, 7, null, \"\"} + an ex map from {absent, a string, 0-5 overrides each valid / stone / bar-without-bu / an extra key / a string}: ok is ALWAYS true, the bars come back as numbers in their order every time, the unit is adopted iff kg | lb, every valid override is kept as numbers, every bad one is dropped and named `ex.<id>`, and `drop` never names a bar", function(a){
+  var rnd = rng47(4), i, k, bars, nb, unit, exm, ex, ids = ["d1a", "d1b", "d3c", "d5b", "gone", "toString"], nEx, id, kind, r, expBars, expUnit, keep, dropped, bad = 0, n = 0, kept = 0, drops = 0;
+  var units = [undefined, "kg", "lb", "pounds", 7, null, ""];
+  for (i = 0; i < 600; i++) {
+    nb = 1 + Math.floor(rnd() * 4); bars = [];
+    for (k = 0; k < nb; k++) bars.push({ n: pick47(rnd, ["Barbell", "EZ bar", "Trap bar", "Safety squat bar"]), w: pick47(rnd, [20, 10, 15, 25, "20", "45", 7.5]), u: pick47(rnd, ["kg", "lb"]) });
+    bars.forEach(function(b){ if (b.u === "lb" && Number(b.w) > 110) b.w = 45; });
+    unit = pick47(rnd, units);
+    kind = Math.floor(rnd() * 3);
+    keep = {}; dropped = [];
+    if (kind === 0) exm = undefined;
+    else if (kind === 1) exm = "lb";
+    else {
+      exm = {}; nEx = Math.floor(rnd() * 6);
+      for (k = 0; k < nEx; k++) {
+        id = pick47(rnd, ids); if (Object.prototype.hasOwnProperty.call(exm, id)) continue;
+        r = rnd();
+        if (r < 0.4) { exm[id] = { au: "kg" }; keep[id] = { au: "kg" }; }
+        else if (r < 0.6) { exm[id] = { au: "lb", bar: "20", bu: "kg" }; keep[id] = { au: "lb", bar: 20, bu: "kg" }; }
+        else if (r < 0.7) { exm[id] = { au: "stone" }; dropped.push("ex." + id); }
+        else if (r < 0.8) { exm[id] = { au: "lb", bar: 20 }; dropped.push("ex." + id); }
+        else if (r < 0.9) { exm[id] = { au: "lb", tier: "override" }; dropped.push("ex." + id); }
+        else { exm[id] = "kg"; dropped.push("ex." + id); }
+      }
+    }
+    var g = { bars: bars }; if (unit !== undefined) g.unit = unit; if (exm !== undefined) g.ex = exm;
+    r = P.readGymProfile(g); n++;
+    expBars = bars.map(function(b){ return { n: b.n, w: Number(b.w), u: b.u }; });
+    expUnit = (unit === "kg" || unit === "lb") ? unit : undefined;
+    if (r.ok !== true) { bad++; continue; }
+    if (JSON.stringify(r.gym.bars) !== JSON.stringify(expBars)) bad++;
+    if (r.gym.unit !== expUnit) bad++;
+    if (unit !== undefined && expUnit === undefined && r.drop.indexOf("unit") < 0) bad++;
+    if (kind === 1) { if (r.drop.indexOf("ex") < 0 || r.gym.ex !== undefined) bad++; }
+    else if (kind === 2) {
+      if (JSON.stringify(r.gym.ex) !== JSON.stringify(keep)) bad++;
+      dropped.forEach(function(d){ if (r.drop.indexOf(d) < 0) bad++; drops++; });
+      Object.keys(keep).forEach(function(kid){ if (r.drop.indexOf("ex." + kid) >= 0) bad++; kept++; });
+    } else if (r.gym.ex !== undefined) bad++;
+    r.drop.forEach(function(d){ if (!/^(unit|ex|ex\.[A-Za-z0-9]+)$/.test(d)) bad++; });
+  }
+  a.eq(n, 600); a.eq(bad, 0, "no profile lost a bar, adopted a bad unit, kept a bad override or dropped a good one");
+  a.ok(kept >= 200 && drops >= 200, "kept " + kept + " good overrides, dropped " + drops + " bad ones - the generator reached both");
+  /* attack 6's shape: the whole gym a string -> ok false, gym null, no throw; and the boot's keep-aside reads nothing off a string */
+  var s = a.noThrow(function(){ return P.readGymProfile("garbage"); });
+  a.eq(s.ok, false); a.eq(s.gym, null); a.deep(s.drop, []);
+  a.eq(a.noThrow(function(){ return P.overrideMode({ gym: "garbage" }, "d1a"); }), null);
+  a.deep(a.noThrow(function(){ return P.defaultMode({ gym: "garbage" }, "d1a"); }), { au: "kg" });
+});
+
+/* ------------------------------------------------------ 7. D8's pure half: prefs live outside the backup */
+
+T("W5 / D8 - prefs are not in the backup and the merge cannot touch them: restorePayload's document carries no prefs / gym / unit key; mergeStores reads log, bw and plans only; mergeSteps' writes and keeps name the three store keys and never a prefs key, on his session and on a store where the other side carries a `prefs` field", function(a){
+  var his = CHADY_SESSION();
+  var rem = R43([his]);
+  var rp = P.restorePayload(rem);
+  a.eq(rp.ok, true, "restorePayload opens his session"); a.eq(rp.counts.sessions, 1);
+  a.eq(hasKeyDeep40(rp, "prefs"), false, "no prefs key anywhere in the restore document");
+  a.eq(hasKeyDeep40(rp, "gym"), false); a.eq(hasKeyDeep40(rp, "unit"), false);
+  var loc = L43([]);
+  rem.prefs = { gym: { unit: "kg", bars: [] } };   /* a field no pull() row carries; if it ever did, the merge must not read it */
+  var mr = P.mergeStores(loc, rem);
+  a.eq(mr.ok, true); a.eq(mr.added.sessions, 1, "his session comes back");
+  a.eq(hasKeyDeep40(mr.merged, "prefs"), false, "the merged stores carry no prefs");
+  a.eq(hasKeyDeep40(mr.merged, "unit"), false);
+  var st = P.mergeSteps(mr, { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} }, W2KEYS, 1789300000000);
+  a.eq(st.ok, true);
+  a.ok(st.writes.length >= 1, "at least the log is written");
+  st.writes.concat(st.keeps || []).forEach(function(w){ a.ok(/^phat:v1:(recover:)?(log|bw|plans)(:\d+)?$/.test(w.key), "a merge write / keep key is a data store, never prefs: " + w.key); });
+});
+
+T("W5 - up to the end of S47 no fixture wrote a phat:* key", function(a){
+  a.deep(PHAT_KEY_WRITES, []);
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){
@@ -17446,10 +18741,18 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<b>One consequence to be aware of, not a defect:</b> a hand-edited backup whose plan copy carries a malformed " +
     "<code>fig</code> is refused WHOLE by <code>restorePayload</code> (R4), because <code>validatePlan</code> types the field " +
     "(W4) and R4 refuses a plan it cannot open. A display-only field can therefore block a restore until the backup is " +
-    "fixed by hand; pinned as-is in S39 and named in the contract questions for the PM.</p>";
+    "fixed by hand; pinned as-is in S39 and named in the contract questions for the PM.</p>" +
+    "<p><b>WO-012 W5 &mdash; two things are <code>index.html</code>&rsquo;s, one of them asked for (B-20).</b> <b>(1) <code>chipLevel(id, cm, prev)</code></b> is the spec-21.2 " +
+    "table &mdash; the chip&rsquo;s second line from the tier, whether an override exists, whether the profile is readable, whether a default is known, the unit, the implement, whether the " +
+    "profile has a bar and whether the prior carries an <code>ld</code> &mdash; eight facts, nine strings, and it reads <code>S</code> for four of them. Every row of that table was read off " +
+    "the screen (item 38) and none is pinned here. <b>Extract it</b> as <code>PHAT.chipLevel({tier, override, unreadable, defaultKnown, unit, implement, hasBar, prevHasLd}) &rarr; string</code> " +
+    "and the nine strings pin in twelve lines; <code>chipLevel</code> in <code>index.html</code> becomes a caller that gathers the eight facts. <b>(2) <code>vGym</code>&rsquo;s segment</b> " +
+    "renders <code>aria-pressed</code> from <code>gymUnit()</code>, which is <code>null</code> for an absent unit, so a WO-010 device sees neither option pressed &mdash; a defect (item 38, " +
+    "found 1), not an extraction. <b>(3) <code>gymBase()</code></b> spreads the profile from memory: the two-tab wipe (item 38, attack 5) is B-76&rsquo;s class and is a store-layer " +
+    "read-before-write, not a function this page can pin.</p>";
 
   document.getElementById("manual").innerHTML =
-    "<p><b>Eleven items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Twelve items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -17594,7 +18897,20 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "<span class=\"skipmsg\">Why a phone: iOS gives the home-screen app and the Safari tab <b>separate</b> storage, which is the leading reading of how " +
     "your 12 Sep session went missing (B-119, H1). Everything the merge does is measured (the WO-011 W5 item below: F1&ndash;F10, the P1&ndash;P14 paint " +
     "rule, six attacks, against the live project as a throwaway account); what no rig can reach is your two launch contexts on your phone, and whether " +
-    "the pull lands on gym signal before you start the first set. This is a one-time check; after it the merge is silent when nothing is missing.</span></li></ol>" +
+    "the pull lands on gym signal before you start the first set. This is a one-time check; after it the merge is silent when nothing is missing.</span></li>" +
+    "<li><b>Read row 1 of Bent-over row from arm&rsquo;s length, then decide the unit once (WO-012).</b> Settings &rarr; Gym: under <i>I lift in</i> tap <b>lb</b>. Start Day 1, " +
+    "<i>Bent-over row</i>: the chip reads <i>Weight in lb + Barbell 20 kg</i> over <i>Your default &middot; first bar in your gym</i>, the caption <b>+ LB</b>, and the three ghost lines under the " +
+    "rows read <i>Last 44 lb total &times; 12</i>, <i>Last 44 lb &times; 12</i>, <i>Last 68.5 lb &times; 15</i> &mdash; your 20 / 40 / 51 kg from 12 Sep. <b>Question 1, for you:</b> " +
+    "with chalk on and the phone at arm&rsquo;s length, do rows 1 and 2 read as the same load? QA says they do &mdash; both say <code>44</code>, the word <i>total</i> is in the same grey at the " +
+    "same size, and row 1 was the empty bar (nothing added), which the word does not say. If you agree, that is a UX word to change, not a number. Then tap <b>+</b> on row 2: <code>40</code> " +
+    "lands and <b>= 38.1 kg</b> is on the row (44 lb of plates does not exist; 40 lb is the heaviest that is not above 40 kg by more than a quarter kilo). Tap the chip, tap <b>kg</b>: " +
+    "the sheet now has <i>Use my default &middot; lb + Barbell 20 kg</i>; leave it, tap Done, discard the session, kill the app, reopen Day 1: Bent-over row is still <i>Weight in kg + Barbell 20 kg</i> " +
+    "over <i>Set for this exercise</i> and every other card is lb. <b>Question 2:</b> on Day 5, <i>Speed DB press</i> reads <i>55 kg (121.5 lb). 65&ndash;70% of your 81 kg triple.</i> &mdash; " +
+    "is a kg figure with the pounds in brackets what you want to read at the rack, or would you rather it read the pounds first? The coach ruled the brackets (&sect;21); your word overturns it.<br>" +
+    "<span class=\"skipmsg\">Why a phone: everything measurable is measured (item 38) &mdash; the ghost strings, the seed, the override on the tap, the sheet row, D1&ndash;D8, the six attacks, " +
+    "the D6 diff against <code>main</code>. What no rig can answer is whether <i>total</i> reads as a different thing from arm&rsquo;s length, and whether the two-line chip is read or skipped. " +
+    "<b>One thing to know before you look:</b> at 200 % OS text the ghost line on a lb card runs 29 px past the right edge and the chip shrinks by a line when you pick a unit, so the rows " +
+    "move under your thumb once; both are P3 on the row, neither loses a number.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -18628,6 +19944,60 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "The project rate-limited the rig&rsquo;s pull rate twice (a <code>429</code> without CORS headers, seen by the app as a failed read): M-f, " +
     "nothing changed, and the next merge succeeded &mdash; the offline-first path holding under a network fault. " +
     "<b>file:// suite 842 / 839 / 3 (the three named reds above), three tripwires.</b></span></li>" +
+    "<li><b>WO-012 W5 &mdash; the unit decided once, 2026-09-13, on <code>wo-012-default-unit @ 34f0a68</code>.</b> <span class=\"msg\">Rig: Node + Playwright, the branch served on " +
+    ":8821 and <code>main @ 81fc0b8</code> (a <code>git archive</code>, not a checkout) on :8822, 400 &times; 850, the CDN and Supabase blocked; expectations re-derived from WO-012 &sect;4, coach &sect;21 / &sect;21.13 " +
+    "and UX &sect;21, not from frontend&rsquo;s rig. Seeded by writing <code>localStorage</code> before boot; his session <code>1789264514484</code> as the log. " +
+    "<b>D1, his session on a lb default with Barbell 20 kg first.</b> d1a: chip <i>Weight in lb + Barbell 20 kg</i> / <i>Your default &middot; first bar in your gym</i>, name " +
+    "<i>Weight in lb + Barbell 20 kg. Your default, first bar in your gym. Change.</i>, 56 px; captions <code>+ lb</code> at 11 px (B-118); ghosts <i>Last 44 lb total &times; 12</i> / " +
+    "<i>Last 44 lb &times; 12</i> / <i>Last 68.5 lb &times; 15</i>; steppers <i>Weight up 5 lb, Bent-over row set 1</i>; input <i>Added weight in lb on Barbell 20 kg, &hellip;</i>. " +
+    "d1b (bodyweight slot): <i>Weight in lb &middot; no bar</i> / <i>Your default</i>, <i>Last 150 lb &times; 12</i>, <i>Last 170 lb &times; 12</i>, caption <code>lb</code>. d1d (db): " +
+    "<i>Last 139 lb &times; 12</i>, <i>Last 170 lb &times; 5</i>, <i>Last 170 lb &times; 6</i>. d1e: <i>Last bodyweight &times; 12</i> (Z2). d1f: 92.5 / 112.5 / 132.5 lb. d1g (bb, the set he " +
+    "noted <i>did this in cable</i>): the bar rule attaches the 20 kg bar to the slot &mdash; 16.5 / 27.5 / 33 lb; honest to the slot, not the note. <code>phat:v1:log</code> byte-identical " +
+    "after every card, Summary and Trend; no set gained an <code>ld</code>. <b>The seed.</b> <code>+</code> on row 1 (the <code>total</code> ghost) gives one step, <code>5</code>, " +
+    "<i>= 22.3 kg</i>; on row 2 seeds <code>40</code>, <i>= 38.1 kg</i>, live <i>Weight now 40 lb, 38.1 kg.</i> (SD1: 44.09 lb of plates &rarr; 40 lb); on row 3 <code>65</code>, <i>= 49.5 kg</i>; " +
+    "the chip&rsquo;s second line unchanged under typing. <b>Remove-set</b>: <i>It holds 65 lb &times; &mdash;.</i> <b>The sheet</b> on a default card: no <i>Use my default</i> row, " +
+    "<i>Last time: kg &middot; no bar.</i> unconverted, no control under 44 px. <b>Summary</b>: <i>Bent-over row :: 40 lb &times; 12</i>, no <code>kg &times;</code> on the screen. " +
+    "<b>Trend</b>: one date reads <i>203.5 lb on 12 Sep. One date cannot make a line.</i> (his d1d e1RM 92.4 kg); with an older fixture session the DB press row reads <i>+10.5 lb</i> / " +
+    "<i>Up 10.5 lb since 5 Sep</i> with the foot <i>203.5 lb &middot; 12 Sep</i> &mdash; 193 &rarr; 203.5 in the displayed unit, endpoint minus endpoint, where the kg delta is 4.9; no horizontal overflow. " +
+    "<b>U1 on screen</b>: Day 5&rsquo;s speed card reads <i>55 kg (121.5 lb). 65&ndash;70% of your 81 kg triple. Rest 60&ndash;90 s. Fast, never grinding.</i> from his kg-direct d1d 81 &times; 3, and " +
+    "with 180 lb typed <i>81.6 kg is not speed work. Drop to 55 kg (121.5 lb).</i>; strip the bracket and it is the kg card&rsquo;s string. <b>The P1 bracket has no on-screen path</b>: every set " +
+    "typed on a lb card carries <code>ld</code>, so its verdict is L1&rsquo;s form (125 &times; 5/5/5 on the bar: <i>Top of range on all 3 sets. Go to 79 kg next session &mdash; 20 kg bar + 130 lb.</i>, " +
+    "no bracket); the kg-direct P1 sentences are pinned in S45 and S47 and reachable today only through the speed slot. Stated, not a defect: &sect;21.9 #3. " +
+    "<b>D3, the coordinator&rsquo;s literal.</b> d3c chip &rarr; kg: prefs on disk <code>{bars, unit: lb, ex: {d3c: {au: kg}}}</code> on the tap, nothing logged; the sheet gains " +
+    "<i>Use my default &middot; lb &middot; no bar</i> (368 &times; 48); discard, reload: the override survives; d3c <i>Weight in kg &middot; no bar</i> / <i>Set for this exercise</i>, d3a " +
+    "<i>Weight in lb + Barbell 20 kg</i> / <i>Your default &middot; first bar in your gym</i>, d3b / d3e / d3f / d3h <i>Weight in lb &middot; no bar</i> / <i>Your default</i>. Settings &rarr; kg: live " +
+    "<i>I lift in kg.</i>, prefs <code>unit: kg</code> with the override untouched, the lb-only bars sentence gone; d3c unmoved, d3b now <i>Weight in kg &middot; no bar</i> / <i>Your default</i>. " +
+    "<i>Use my default &middot; kg &middot; no bar</i> on d3c: the key gone and the empty map removed, live <i>On your default: kg &middot; no bar.</i>, focus on the chip, no <code>mode</code> on the draft. " +
+    "<b>D4.</b> <code>ex.d3c = {au: stone}</code> beside a good <code>d1a</code>: one warn <code>[phat] prefs.gym: dropped ex.d3c</code>, bars intact, <i>I lift in</i> lb, d3c on the default, d1a&rsquo;s override " +
+    "reads, the bad key still on disk (no boot write) until the next Settings tap writes <code>{bars, unit, ex: {d1a}}</code>. <code>unit: pounds</code> + <code>ex: \"x\"</code>: <code>dropped unit, ex</code>, bars intact. " +
+    "<b>D5.</b> 135 lb on d1a (<i>= 81.2 kg</i>) and 60 kg on d1d under a kg override; reload: the offer <i>Upper power &middot; 2 sets logged</i>; the draft&rsquo;s numbers and both <code>ld</code> byte-identical " +
+    "across the reload (only <code>savedAt</code> moves, stamped by the leaving page&rsquo;s <code>pagehide</code> flush &mdash; a cold boot on a seeded draft rewrites nothing, checked separately at 2.5 s); " +
+    "Resume: d1a <code>135</code> / <code>+ lb</code> / <i>= 81.2 kg</i>, d1d <code>60</code> / <code>kg</code> / <i>Set for this exercise</i>; declining discards it and the override outlives the draft. " +
+    "<b>D6.</b> With <code>prefs.gym</code> = bars only and with no prefs key at all, against <code>main @ 81fc0b8</code> on the same log: <code>#excard .sets</code> before and after typing 77 &times; 5/5/5, " +
+    "<code>#ldchip</code>, <code>#slot-verdict</code> (<i>Go to 79.5 kg next session.</i>), the draft (but for <code>savedAt</code>), the Summary and Trend <code>#view</code>, and <code>phat:v1:prefs</code> after adding a " +
+    "bar (<code>prefsPayload</code>) &mdash; byte-identical; the load sheet differs by one whitespace text node (the empty <i>Use my default</i> slot), no element. Settings differs by the segment, as it must. " +
+    "<b>D7 / attack 4.</b> <code>setItem</code> stubbed to throw on <code>phat:v1:prefs</code>: chip &rarr; kg on d1a gives <i>Could not save the unit for next time. It holds for this session.</i> once " +
+    "(the second card&rsquo;s failed write is silent), the card <i>Weight in kg + Barbell 20 kg</i> / <i>Set for this exercise</i>, no generic <i>Could not save</i> refusal; the session saves " +
+    "<i>Session saved.</i> with d1d kg-direct <code>{w: 77, r: 5}</code> and d1a <code>{w: 97, r: 5, ld: {bar: 20, bu: kg, add: 77, au: kg}}</code>; prefs on disk untouched. " +
+    "<b>D8.</b> lb tapped, context killed and reopened from its storage: Settings reads lb, a fresh d2a opens <i>Weight in lb + Barbell 20 kg</i>; a tap on the pressed option writes nothing and says nothing. " +
+    "<b>Attack 1.</b> lb + d1a / d1b / d1d flipped to kg, then a bar saved and removed: <code>unit</code> and all three overrides survive (d1a&rsquo;s keeps the bar: <code>{au: kg, bar: 20, bu: kg}</code>). " +
+    "<b>Attack 2.</b> 77 &times; 5 prior: the ghost <i>Last 125.5 lb &times; 5</i>, the seed <code>125</code> / <i>= 76.7 kg</i>, three at 125 &rarr; <i>Go to 79 kg next session &mdash; 20 kg bar + 130 lb.</i>; " +
+    "125 / 125.5 / 125.5 the same; d1d with no bar seeds 170 / <i>= 77.1 kg</i> &rarr; <i>Go to 79.4 kg next session &mdash; 175 lb per DB.</i>; never <i>Sets not matched</i>. " +
+    "<b>Attack 3.</b> 14 filler weeks + 77 &times; 5/5/5 completed at day &minus;30 and two failures at 170 lb (77.1, no bar) at &minus;10 and &minus;3: Home reads <i>Two sessions where Bent-over row went backwards. " +
+    "Take a deload week &hellip;</i>; at 170.5 lb (77.3) no banner. <b>Attack 5 &mdash; reproduced, on the row.</b> Tab A sets lb; tab B (booted before) saves a bar: <code>prefs.gym</code> on disk is " +
+    "<code>{bars: [3]}</code>, the unit gone, A&rsquo;s Settings after reload neither pressed. Tab A writes an override on d1a; tab B taps a unit in Settings: the override gone. <code>gymBase()</code> spreads " +
+    "<code>S.prefs.gym</code> from memory and <code>save(PREFS, prefsPayload())</code> never re-reads disk &mdash; B-76 / B-124&rsquo;s class, not fixed here. <b>Attack 6.</b> <code>prefs.gym = \"garbage\"</code>: " +
+    "no throw, one warn <i>did not validate</i>, d1a <i>Weight in kg &middot; no bar</i> / <i>Could not read Settings &middot; kg for now</i>, the sheet <i>Could not read your settings. You can still set the unit and bar here.</i>, " +
+    "77 &times; 5/5/5 saved kg-direct, Settings <i>Could not read your unit. Pick one to set it again.</i> + <i>Could not read your bars.</i> with neither pressed, a tap writes <code>{bars: [], unit: lb}</code> over it. " +
+    "<b>Geometry.</b> Row 95 px and stepper x 41 / 161 / 217 / 337 identical on lb + bar, kg-direct and lb no-bar; chip 56 in every state; no control under 44 px on the card, in the sheet or on Settings; " +
+    "the segment 180 &times; 48 each at y 296. <b>The history tier</b>: unit absent with a WO-010 lb session &rarr; <i>From last time</i>, ghost <i>Last 90 lb &times; 5</i>, the sheet&rsquo;s line " +
+    "<i>From last time. Set your default in Settings &rarr; Gym.</i>; unit absent, kg history &rarr; <code>main</code>&rsquo;s chip with no second line. <b>D9 + Undo</b>: 125 typed, chip &rarr; kg: " +
+    "<i>Set 1 holds lb weights.</i> / <i>Switching to kg clears them. Reps stay.</i> / <i>Switch to kg and clear</i> / <i>Keep lb</i>; Keep writes nothing; Switch writes <code>{au: kg, bar: 20, bu: kg}</code>, " +
+    "clears the weight, keeps the reps; Undo puts the 125 and the absent key back. <b>Found.</b> (1) With <code>prefs.gym.unit</code> absent &mdash; a WO-010 device, or no prefs at all, or a dropped " +
+    "<code>pounds</code> &mdash; Settings shows <b>neither</b> <code>kg</code> nor <code>lb</code> pressed and no refusal; spec 21.1 and <code>vGym</code>&rsquo;s own comment say <i>absent &rarr; kg pressed</i>; " +
+    "<code>gymUnit()</code> returns null for absent and the render reads null as unpressed. P2, frontend, one line. (2) At 200 % text the lb ghost row (<code>.ghost</code>, WO-010&rsquo;s CSS) overflows the " +
+    "viewport by 29 px on <i>Last 44 lb total &times; 12</i> where <code>main</code>&rsquo;s <i>Last 20 &times; 12</i> fits; and the chip, 152 px at first paint, drops to 98 px when line 2 shortens on a " +
+    "unit tap, moving the rows 26 px (UX 21.2 says nothing moves on a tap). P3, frontend. <b>file:// suite 905 / 905 / 0, three tripwires; nine mutants on copies, nine killed.</b></span></li>" +
     "</ol>";
 })();
 </script>

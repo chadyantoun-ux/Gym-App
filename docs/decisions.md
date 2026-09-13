@@ -3046,3 +3046,74 @@ still reads `Last 77 kg × 5` on a lb card.
 **Rejected.** Converting history (`w` rewritten to lb) — storage is kg by §3.5 and every engine reads
 it. A per-implement unit default — his WO-010 ruling stands. Migrating WO-010's `ld` history into
 overrides — a logged build is a fact, an override is a choice; kept as separate tiers.
+
+## 2026-09-13 — WO-012 W5: D1–D8 pass as observed on his session; the unit and the override survive a bar save; two-tab writes from stale memory wipe both (B-76's class, on the row); Settings shows nothing pressed while the unit is absent (P2); `44 lb total` does not read as a different thing from `44 lb`
+
+**Context.** W1 (`811ad29`), W2 (`7486fa7`), W3 (`d70438a`, `fd24342`), W4 (`34f0a68`) on `wo-012-default-unit`,
+verified by `qa-engineer`. `tests.html` gains S47 (8 tests); the suite reads **905 / 905 / 0**, three tripwires, no
+fixture writes a `phat:*` key. The browser half ran on a Node + Playwright rig serving the branch and a `git archive`
+of `main @ 81fc0b8` on two ports, 400 × 850, CDN and Supabase blocked, seeded with his session `1789264514484`; the
+record is "Already proven" item 38. Nine `logic.js` mutants on copies, nine killed, eight by S47.
+
+**Ruled: pass for release, with three rows to file and one line to fix before or after — none of them loses a number.**
+
+**D1–D8, each observed.** D1: the lb card over his session prints `Last 44 lb total × 12` / `Last 44 lb × 12` /
+`Last 68.5 lb × 15` on d1a, 150 / 170 lb on d1b, 139 / 170 / 170 on d1d, bodyweight on d1e, 92.5 / 112.5 / 132.5 on
+d1f, 16.5 / 27.5 / 33 on d1g; `phat:v1:log` byte-identical after every card, Summary and Trend; no set gained `ld`.
+D2: a chip tap writes `prefs` and `entry.mode` on the draft — the draft write is §0.1's "as today", so D2's "draft
+byte-identical" is read as "no number in the draft moves", which held. D3: the coordinator's literal, exactly —
+override on the tap with nothing logged, survives discard + reload, d3c kg on `Set for this exercise` while every
+other d3 card is lb on `Your default …`; the default to kg leaves d3c alone and moves d3b; *Use my default* removes
+the key and the empty map. D4: `ex.d3c = {au: "stone"}` dropped by name, bars and the good override intact, no boot
+write, the next Settings tap writes the clean profile. D5: the draft's numbers and both `ld` byte-identical across a
+reload; only `savedAt` moves, and it is the leaving page's `pagehide` flush (WO-001), not a boot write — a cold boot on
+a seeded draft rewrote nothing at 2.5 s. D6: `#excard .sets`, `#ldchip`, `#slot-verdict`, the draft, the Summary and
+Trend `#view` and `phat:v1:prefs` after a bar save are byte-identical to `main @ 81fc0b8` with `unit` absent, with and
+without a prefs key; the load sheet differs by one whitespace text node and no element. D7: the prefs write stubbed to
+throw — one toast, the card holds the choice, the session saves with the right `ld` (kg on the 20 kg bar, `w` 97;
+kg-direct on d1d), prefs untouched. D8: lb survives a context kill; prefs are outside the backup and the merge
+(pinned pure in S47).
+
+**The six attacks.** (1) lb, three cards to kg, a bar saved and removed: unit and all three overrides survive — the
+`gymWrite` fix holds. (2) A converted seed: 125 lb on the bar for a 77 kg prior, three at 125 → `Go to 79 kg next
+session — 20 kg bar + 130 lb.`; 125 / 125.5 / 125.5 the same; never `Sets not matched`. (3) 77 completed, two
+failures at 170 lb (77.1) → the deload banner fires; at 170.5 lb (77.3) it does not. (4) = D7. (5) **Reproduced, on
+the row.** Tab B, booted before tab A chose lb, saves a bar: the unit is gone from disk; B taps a unit in Settings:
+A's override is gone. `gymBase()` spreads `S.prefs.gym` from memory and `save(PREFS, prefsPayload())` never re-reads
+disk. B-76 / B-124's class — the store layer's read-before-write — not fixed here and not WO-012's to fix. (6)
+`prefs.gym = "garbage"`: no throw, the chip says `Could not read Settings · kg for now`, sets log in kg, Settings shows
+the refusal, a tap writes over it.
+
+**Ruled: the P1 bracket has no on-screen path today, and that is not a defect.** Every set typed on a lb card carries
+`ld`, so its verdict is L1's form; the kg-direct P1 sentences (`Go to 79.5 kg (175.5 lb) next session.`) are engine
+literals pinned in S45 and S47 and reachable on screen only through the speed slot — Day 5 reads `55 kg (121.5 lb).
+65–70% of your 81 kg triple.` from his kg-direct d1d 81 × 3, and the flag `Drop to 55 kg (121.5 lb).` Coach §21.9 #3
+already says U1 is the form until his next lb-logged set. Stated so nobody hunts for it.
+
+**Ruled: `44 lb total` does not separate the empty bar from 44 lb of plates at a glance.** Rows 1 and 2 of d1a both
+say `44`; the word `total` is the same grey at the same size; row 1 was the bar alone, which `total` does not say. The
+behaviour separates them (row 1 `+` gives one step, row 2 seeds 40); the reading does not. The added weight is exactly
+zero there — a different fact from "a prior under the bar", which UX 21.4 case 3 folds it into. Recommended to UX:
+`added === 0` → a word for the bar alone (`Last bar only × 12` or `Last empty bar × 12`); `added < 0` keeps `total`.
+Chady's eye decides (checklist item 12, question 1). Not blocking: no number is wrong, and the set was a warm-up
+(B-116).
+
+**Found, filed for the PM.**
+
+1. **P2 — Settings shows neither `kg` nor `lb` pressed while `prefs.gym.unit` is absent** (a WO-010 device, no prefs
+   at all, or a dropped `pounds`). UX 21.1 and `vGym`'s own comment say *absent → kg pressed*; `gymUnit()` returns
+   `null` for absent and the render reads null as unpressed. Frontend, one line. Not blocking: a tap writes correctly
+   and cards behave; but the first thing he sees on the new segment is a control with nothing chosen.
+2. **P3 — at 200 % text the lb ghost row overflows the viewport by 29 px** (`Last 44 lb total × 12`; `main`'s
+   `Last 20 × 12` fits) — WO-010's `.ghost` CSS meeting WO-012's longer strings; **and the chip changes height on a
+   unit tap** (152 → 98 px when line 2 shortens), moving the rows 26 px, where UX 21.2 says nothing moves on a tap.
+   Frontend; the manual checklist carries both so he is not surprised.
+3. **B-76-class — the two-tab wipe** (attack 5), to sit with B-74 / B-76 / B-123 / B-124 as the memory-over-disk row.
+
+**Asked (B-20).** `chipLevel` is the spec-21.2 table — eight facts, nine strings — in `index.html`, reading `S` for
+four of them; every row was read off the screen and none is pinned. Extract as
+`PHAT.chipLevel({tier, override, unreadable, defaultKnown, unit, implement, hasBar, prevHasLd})` and the table pins in
+twelve lines.
+
+**Not a coach item beyond what §21 / §21.13 already ruled.** EQ1, SD1, H1.4d and U1 are observed as ruled. B-116
+(his d1a warm-ups feeding the verdict) is unchanged by this order and still the first coaching question.
