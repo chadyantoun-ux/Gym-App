@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phat diag</title>
+<style>
+  body{margin:0;padding:16px;background:#1c1b1a;color:#f0eeea;font:14px/1.5 -apple-system,system-ui,sans-serif}
+  h1{font-size:16px;margin:0 0 12px;letter-spacing:.04em;text-transform:uppercase;color:#f5b32b}
+  pre{white-space:pre-wrap;word-break:break-all;background:#2a2827;padding:12px;border-left:3px solid #f5b32b;font:13px/1.45 ui-monospace,Menlo,monospace}
+  p{color:#bdb9b3}
+</style></head><body>
+<h1>Phat diag — read only</h1>
+<p>This page reads storage and writes nothing. Screenshot it and send it.</p>
+<pre id="out">reading…</pre>
+<script>
+/* WO-011 W1. Read-only. Not in the service worker shell list. */
+(async function(){
+  var L=[];
+  function line(s){ L.push(s); }
+  function size(v){ return v==null?0:String(v).length; }
+  try{
+    line("origin   " + location.origin);
+    line("ua       " + navigator.userAgent.replace(/^Mozilla\/5\.0 /,""));
+    line("standalone " + (window.navigator.standalone===true ? "yes (home-screen app)" : "no (browser tab)"));
+    line("online   " + navigator.onLine);
+    line("");
+    var keys=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(/^phat/.test(k)) keys.push(k); }
+    keys.sort();
+    line("localStorage keys (" + keys.length + "):");
+    keys.forEach(function(k){
+      var v=localStorage.getItem(k); var note="";
+      try{
+        var j=JSON.parse(v);
+        if(k==="phat:v1:log"){
+          note = "  schema=" + j.schemaVersion + " sessions=" + (Array.isArray(j.sessions)?j.sessions.length:"?") + " profile=" + JSON.stringify(j.profile);
+          if(Array.isArray(j.sessions)) j.sessions.forEach(function(s){ note += "\n      · " + s.id + " " + s.date + " " + s.dayId + " entries=" + (s.entries?Object.keys(s.entries).length:"?"); });
+        } else if(k==="phat:v1:bw"){
+          note = "  schema=" + j.schemaVersion + " entries=" + (Array.isArray(j.entries)?j.entries.length:"?");
+        } else if(k==="phat:v1:draft"){
+          note = "  day=" + j.dayId + " date=" + j.date + " entries=" + (j.entries?Object.keys(j.entries).length:"?") + " savedAt=" + (j.savedAt?new Date(j.savedAt).toISOString():"-");
+        } else if(k==="phat:v1:prefs"){
+          note = "  onboarded=" + j.onboarded + " backup=" + JSON.stringify(j.backup) + " profileless=" + (j.profile===undefined);
+        } else if(/^phat:v1:recover:/.test(k)){
+          var inner=null; try{ inner = j.value && typeof j.value==="object" ? j.value : (typeof j.raw==="string" ? JSON.parse(j.raw) : null); }catch(e){}
+          note = "  reason=" + j.reason + " savedAt=" + (j.savedAt?new Date(j.savedAt).toISOString():"-") + (inner&&inner.sessions ? " sessions=" + inner.sessions.length : "") + (j.raw?" raw=" + String(j.raw).slice(0,80):"");
+        } else if(k==="phat:auth"){
+          note = "  user=" + (j.user&&j.user.email) + " expires=" + (j.expires_at?new Date(j.expires_at*1000).toISOString():"-");
+        }
+      }catch(e){ note = "  UNPARSEABLE: " + String(v).slice(0,120); }
+      line("  " + k + "  (" + size(v) + " bytes)" + note);
+    });
+    line("");
+    if(window.caches){
+      var names=await caches.keys();
+      line("caches: " + (names.join(", ")||"none"));
+      for(var n=0;n<names.length;n++){ var c=await caches.open(names[n]); var reqs=await c.keys(); line("  " + names[n] + " entries=" + reqs.length); }
+    }
+    if(navigator.serviceWorker){
+      var reg=await navigator.serviceWorker.getRegistration();
+      line("sw: " + (reg ? (reg.active?"active":"registered, not active") + " scope=" + reg.scope : "none"));
+    }
+    var idx=await fetch("index.html",{cache:"no-store"}).then(function(r){return r.text();}).catch(function(){return "";});
+    var lg=await fetch("logic.js",{cache:"no-store"}).then(function(r){return r.text();}).catch(function(){return "";});
+    line("");
+    line("network index.html has chip: " + (idx.indexOf("Weight in lb")>=0));
+    line("network logic.js SCHEMA_VERSION: " + ((lg.match(/SCHEMA_VERSION\s*=\s*(\d+)/)||[])[1]||"?"));
+    line("now " + new Date().toISOString());
+  }catch(e){ line("ERROR " + e.message); }
+  document.getElementById("out").textContent = L.join("\n");
+})();
+</script>
+</body></html>
