@@ -2811,3 +2811,59 @@ light — manual item 10, only his phone answers. Every other criterion has its 
 **Standing diagnosis.** Moved, and stays moved: one session logged, and this order was the first in the project's history
 that came from lifting with the app. The next number is the second session. The tooling now matches his gym; nothing
 below asks for more tooling before it is logged.
+
+## 2026-09-13 — WO-011: the phone lost a session the server still has; E-3's "never pull" is overruled by Chady; pull-and-merge on every open, local wins, nothing removed; no deploy until the cause is known
+
+**The incident, as known at filing (B-119).** His 12 Sep session (`1789264514484`, `d1`, six entries) is on the
+server with `deleted_at null` and `client_updated_at 2026-09-13 01:55:19 UTC` — three hours after the WO-010 deploy
+(`main @ 11c44ff`, ~22:40 UTC, 59 files byte-verified). That stamp is the WO-010 build on his phone reading the
+session, migrating it to schema 6 (`m.logChanged` → `save(LOG)` → `backupSoon`) and pushing it. Whatever he is
+holding this morning does not show it. The app has **no path that removes `phat:v1:log`**: `del()` is called on the
+draft only, and `restoreApply` behind a typed `REPLACE` with a `recover:*` keep first is the only control that
+shrinks the log. So the app deleting his log is the least likely reading; a *different storage context* (iOS keeps
+a Safari tab and a home-screen app apart) or a *wiped context* (icon deleted and re-added, site data cleared) is the
+most likely. `[Likely]`, not `[Certain]`, and the difference is the point of the next paragraph.
+
+**Ruled: no deploy of `index.html`, `logic.js`, `sync.js` or `sw.js` until the cause is confirmed by an observation.**
+Not by inference from the code. A merge-on-open shipped before we know why the phone is empty would make a phone that
+loses its log every night look healthy every morning — the loss would recur and the symptom would be gone. The
+discriminating observations are WO-011 W0 (four questions: which launcher, what the Backup line says in each, did he
+reinstall, what "can't see it" means) and, if those do not settle it, W1: a read-only `diag.html` that prints the
+display mode, every `phat:v1:*` store's status and session ids, every `recover:*` key, the SW cache names and the
+network build. `diag.html` is the one exception to the stop: a file the app never loads, not in the SW shell list,
+deployed alone with the shell hashes re-verified unchanged.
+
+**Ruled by Chady, verbatim: *"it needs to pull from the db"* / *"otherwise how can I track"*.** This overrides
+E-3 (2026-09-11, "push-only backup with an explicit Restore; the server never writes to the device except on a
+Restore tap") **entirely** — not only for an empty local log, which was the first proposal this morning. Recorded as
+his decision, reaffirmed after the E-3 rationale was put to him. The rule that ships under WO-011:
+
+- On every open (and after sign-in, and on `online`), signed in and online, the app pulls the account's sessions,
+  bodyweight and plans and **merges by id** into the local stores — sessions by `id`, bodyweight by local date,
+  plans by plan id. **Union: anything the server has and the phone lacks is added. Same id on both: the local
+  document wins, byte for byte** — the phone is what he was typing on. **Nothing is ever removed by a pull.** The
+  merged set is then pushed, so the two converge.
+- The draft never syncs. A demo store never pulls. Signed out never pulls. `file://` never pulls. A device whose
+  non-empty log belongs to another account (B-88 `storeOwner`) never merges — the owner refusal, nothing written.
+- Before the first merge that would change a non-empty store on a device, a verbatim keep under
+  `phat:v1:recover:<store>:<ts>` through `save()`, once per device (`prefs.merge.keptAt`); if the keep fails, no
+  merge.
+- Every merge that adds something is announced once — `Restored 1 session from your backup.` — and never repaints a
+  screen with a focused input or an open sheet (B-19). A merge that adds nothing is silent.
+- Pulled documents pass through the same validation and migration a Restore uses (`restorePayload` +
+  `migrateStore`); a document that fails is refused and named, never merged, and never blocks the rest.
+- The merge is a pure function, `PHAT.mergeStores(local, remote) → {merged, added, kept, refused}`, in `logic.js`,
+  so `tests.html` pins it from `file://`: a pull never reduces a count, never changes an existing local document,
+  is idempotent, and a session logged offline and pushed later is never overwritten by the pull that precedes the
+  push (WO-011 M1–M12, plus a 200-pair fuzz that the merge never shrinks a store).
+
+**What E-3 protected survives as a data criterion, not a ban.** E-3's reason was that a stale server copy must not
+overwrite a phone's fresher log. Local-wins-by-id keeps that guarantee exactly, and adds what E-3 could not: a phone
+with nothing on it fills itself from the account without a tap. The one cost is recorded as B-121: a session edited
+on a second device is undone by the first device's next open (the server's copy goes to `conflicts`, so nothing is
+destroyed). One phone today; revisit as newer-`client_updated_at`-wins when a second device is real.
+
+**Not a coach item.** This is data movement; no verdict, stall, deload or `PROGRAM` path is touched.
+
+**Not ruled:** which of H1–H7 it was. That line is written here by the main session when W0 or W1 answers it, and
+not before. The design complaint (*"dude what is this design ridiculous"*) is B-120, parked until he says which part.
