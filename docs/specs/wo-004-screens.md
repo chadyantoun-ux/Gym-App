@@ -2926,3 +2926,484 @@ device's log for a different account (B-88's note: not in this order) · any sen
 Diet for an account with no profile (W1) · the diet editor (B-93) · per-user plans (already true;
 plans are per store) · a sixth tab or any change to the tab dock · a sign-in prompt anywhere outside
 first run and Settings.
+
+---
+
+# 19. Load in the unit it is built in — the row, the chip, the sheet, Settings → Gym (WO-010 W2, 2026-09-12)
+
+Appended here; the canonical names are **§4.4a** (the set row in `ld` mode), **§4.4b** (the card's
+load chip and its sheet) and **§10.6** (Settings → Gym). Bound by WO-010 §1 — the set shape, `w` as
+the kg total rounded once, `ld` absent meaning kg, the per-card mode remembered from history, the
+stepper never snapping — and by Chady's two settled points: added weight is a **total**, and **no
+entry is keyed by `implement`**. None of that is re-opened below.
+
+**The uncomfortable answer first.** The ask adds five things to a row that already holds four
+buttons and two inputs on 366 px. The only way that fits is if four of the five are **not on the
+row**. They are not: the unit and the bar are chosen once per card (§4.4b) and stamped on every set;
+the row gains exactly **one token** — the kg total, on the ghost line it already has — and its
+caption changes one word. The common case is one number typed, the lb number, with the bar already
+known. And the PM's proposed ghost `Last 20 kg + 90 lb = 60.8 × 5` is **struck**: it is 30
+characters and the ghost line has room for about 29 beside the total and `EXTRA`. The rule that
+replaces it is shorter and more honest (§4.4a rule 4).
+
+## 4.4a The set row in `ld` mode
+
+```
+Flow:   Log a set whose load is built in lb (or in kg on a bar)
+Entry:  The card's mode is `ld` — remembered from the last logged session on this id, or chosen on
+        the chip this session. First time on a card it is never `ld`: the row is §4.4, byte for byte.
+Exit:   As §4.4. Nothing here adds a screen.
+```
+
+### 4.4a.1 Geometry — the invariant, then what changes
+
+**Rule 1 (normative). The row's box model is identical in `kg` and `ld` mode.** Same children in the
+same order, same classes, same stepper width, same button x-positions, same row height — at 400 px
+and at 200 % text, measured with `getBoundingClientRect` on the same card before and after a mode
+switch. A row that rewraps when he switches units is a B-19-class hazard and a worse bug than either
+unit.
+
+What that leaves room for — and everything in `ld` mode is one of these three:
+
+| Element | `kg` mode (today, §4.4) | `ld` mode | Why the geometry holds |
+|---|---|---|---|
+| Caption over the weight stepper (`.unit`) | `KG` | `LB` / `KG` with no bar · `+ LB` / `+ KG` with a bar | One line of 10 px uppercase either way. Longest is 4 characters over a 136 px stepper |
+| Weight input | binds to `w` | binds to `ld.add`, placeholder `0` | Same input, same size. `w` is derived (`PHAT.composeLoad`), never typed |
+| Ghost row, left | `Last 100 × 5` | **`= 60.8 kg`** then `Last 90 lb × 5` | The ghost row is already full-width with a fixed line box. The total is a token *on* it, not a row |
+
+Nothing else on the row changes. Reps stepper, `EXTRA`, the refusal marks, the clear strip: as §4.4
+and WO-001 §2.4.
+
+**Rule 2. The kg total is on every set row with no tap, and it leads the ghost line.** Token
+`= {w} kg` — `= 60.8 kg` — in `--bone`, **weight 800, `0.875rem`, `font-variant-numeric:
+tabular-nums`**, first on the ghost line, left-aligned under the weight stepper. The ghost text
+follows it in `.55` at `.78125rem` as today. `EXTRA` stays right-aligned. **The word after `=` is the
+engine's load word for `w` (Rule Z2), never composed in the view** — so it reads `= bodyweight` for
+a zero total and no view ever prints `0 kg`.
+
+Why it leads, and why a column: `tabular-nums` plus a fixed minimum width on the slot (**`5.5em`**
+`[REF]` — `= 60.8 kg` is 9 characters) make the totals of set 1, 2, 3 line up under one another.
+That column *is* the "per set" he asked for: three numbers he reads top to bottom without reading
+anything else. A number that moved left and right with the ghost's length would not be scannable.
+
+**Rule 3. The ghost row's line box is fixed, in both modes, to the taller token.** `.ghost` gets a
+fixed `min-height` sized to the `0.875rem` total (`1.25rem` `[REF]`), applied in `kg` mode too, so
+a card measures the same height whether or not a total is present. The ghost row **never wraps**:
+`.gtxt` may ellipsise (`white-space:nowrap; overflow:hidden; text-overflow:ellipsis`); the total
+and `EXTRA` never truncate. At 100 % nothing truncates (budget below). At 200 % the ghost text may
+lose its tail — see §19.6 item 2.
+
+**Rule 4. The ghost prints in the unit he will load only when it is the same build.** Otherwise it
+prints the kg total, with `kg`, so it is never a number that looks loadable and is not.
+
+| Case | Condition | String | Chars |
+|---|---|---|---|
+| History, same build | Last session's set at this index carries `ld`; its `au` equals the card's, and its bar equals the card's (both absent, or same `bar` and `bu`) | `Last 90 lb × 5` **NEW** | 14 |
+| History, different build | Any other valid prior set at this index — kg-direct, another unit, another bar, bar vs no bar | `Last 60.8 kg × 5` **NEW** — the stored `w`, Z2's word | 16 |
+| History, zero load | Prior `w` is 0 | `Last bodyweight × 10` (Z2, unchanged) | 20 |
+| No history at this index | — | `No prior set.` (§4.4, unchanged) | 13 |
+| Prescription changed this session | `prescriptionEpoch.changed` | `` — empty, as today | 0 |
+| Row marked by a refusal | — | `! {token}` displacing the ghost (WO-001 §2.4) | ≤ 14 |
+
+In **`kg` mode nothing above applies**: the ghost is `Last 100 × 5`, unitless, exactly as `main`
+renders it — D8 diffs the row DOM against `main` and this is why.
+
+The bar is **not repeated** on a same-build ghost. The chip above the rows names it; a row that said
+`Last 20 kg bar + 90 lb × 5` three times down the card would be three copies of the chip. Where the
+build differs, the build is not on the row either — it is one tap away, on the chip's sheet
+(§4.4b.3, `Last time:`). What is on the row is the one number the two builds share: the kg total.
+
+**Budget, at 400 px, Archivo `[REF]` estimate — W6 measures.** `.sets` content box 366 px; ghost row
+`padding-left:22px` → 344 px. Total slot `5.5em` at 14 px = 77 px; gap 8; `EXTRA` ≈ 40 px; gap 8.
+Ghost text gets **≈ 211 px ≈ 29 characters** at 12.5 px (0.58 em/char assumed). Longest ghost in
+this table is 20 (`Last bodyweight × 10`); longest with digits is `Last 1100 lb × 20` at 17.
+Longest refusal token line `! over 500 kg` is 13. Margin ≈ 9 characters. **Acceptance: the longest
+string above renders on one line at 400 px in Archivo, with `EXTRA` present, no ellipsis** — W6
+measures with the real face (B-67).
+
+### 4.4a.2 The total token — states
+
+| `add` field | Total slot | Note |
+|---|---|---|
+| Empty | **Empty**, slot keeps its width | A blank row is blank (D6). Nothing says `= 20 kg` for a bar he has not loaded |
+| Valid, `> 0` | `= 60.8 kg` | `w = r1(kg(bar) + kg(add))`, from `composeLoad`, recomputed on **commit** (stepper tap, `focusout`) — and on `input` too, because it is text on his own row, not a verdict. It never calls `render()` |
+| `0`, with a bar | `= 20 kg` | The empty bar. Typing `0` is deliberate |
+| `0`, no bar | `= bodyweight` | Z2. The slot grows past its minimum for this one string; the row height does not change |
+| Malformed (`7.5.0`) | Empty | The refusal owns the line: `! 7.5.0` in the ghost slot on a blocked save (WO-001 §2.4). The token names what he typed **in the unit he typed** — never a converted `! 3.4` |
+| Out of its own range | Empty | Token `over 1100` (lb) / `over 500` (kg) — the limit in the entry unit |
+| In range, total over 500 kg | Empty | Token `over 500 kg` **NEW**, 11 characters. Needs `composeLoad` to name the field — §19.6 item 1 |
+
+### 4.4a.3 Interactions, tap by tap
+
+Card: Bent-over row, second session. Last session `ld: {bar: 20, bu: "kg", add: 90, au: "lb"}` on
+set 1. The card opens with `loadModeFor(prev)` = `{au: "lb", bar: 20, bu: "kg"}`.
+
+| # | Tap | What changes |
+|---|---|---|
+| 0 | Card paints | Chip `Weight in lb + Barbell 20 kg` (§4.4b). Row 1: caption `+ LB`, input empty, placeholder `0`; ghost `= ` slot empty, `Last 90 lb × 5`. Rows 2, 3 likewise with their own ghosts |
+| 1 | `+` on row 1's empty weight | **Seeds `90`** (§4.4 seeding rule, in the entry unit). Total `= 60.8 kg`. Live region `Weight now 90 lb, 60.8 kg.` **NEW**. Draft written with `ld` (D3). Verdict slot unchanged (below `{s}`) |
+| 2 | `+` again | `95`. `= 63.1 kg`. `Weight now 95 lb, 63.1 kg.` |
+| 3 | `−` | `90`. `= 60.8 kg` |
+| 4 | Reps `+` ×5 | `5`. Rest band starts (R1). Verdict evaluates on commit; still waiting |
+| 5 | Row 2 `+` | Seeds `90` — same build as last session's set 2. If last session's set 2 was kg-direct or on another bar: **`5`**, not a seed, and the ghost already said `Last 60.8 kg × 5` so the difference is on screen before the tap |
+| 6 | Type `7.5.0` into row 3, `focusout` | Field keeps `7.5.0` (deletions and typing pass verbatim, WO-001). Total slot empty. Draft holds `add: "7.5.0"` and `w` mirrors the token (W6) |
+| 7 | `FINISH SESSION` → `SAVE SESSION` | Refusal: `Bent-over row · set 3   7.5.0 ›`. Tap → row 3 focused, contents selected, ghost slot reads `! 7.5.0`, clear strip below. Exactly §2.3 |
+| 8 | Type `95`, `focusout` | `= 63.1 kg`, marks clear, fix bar reads `Nothing left to fix.` |
+
+**Seeding, refined from §4.4 and the PM's W2 note.** The first `+` on an empty weight field adopts
+last session's `add` **only in the same-build case of rule 4** — same `au` *and* same bar. A matching
+unit on a different bar is a different load and seeds the step instead (`5` lb / `2.5` kg). A
+kg-direct prior on an `ld` card seeds the step. Reps are never seeded. `−` from empty stays empty.
+
+**Stepper.** `± 5` in lb, `± 2.5` in kg, on `add`, never snapping (`r1(n + step)`). Whether these
+are the right taps is confirmed or struck by `strength-coach` (WO-010 W1); the row is built to take
+whatever constant W4 exposes and hardcodes nothing.
+
+### 4.4a.4 States
+
+| State | What renders |
+|---|---|
+| Card in `kg` mode | §4.4, unchanged. Chip present (§4.4b). D8 |
+| Card in `ld` mode, empty | Caption per rule 1; ghosts per rule 4; total slots empty |
+| Typing | Total updates as he types; verdict and rest do not (commit only) |
+| Blocked save on an `ld` row | As §2.2 / §2.3; the token in his unit |
+| Draft restored (D3) | Every row back with `add` in its unit, the same bar, totals recomputed from `ld` — never from the stored `w` |
+| Prescription changed | Ghost empty (today's rule); total still renders |
+| Error — `composeLoad` throws on a row | That row's total slot is empty and the row still paints and saves-or-refuses through `validateEntry`. Inputs are built outside every try block (§0.7) |
+| Offline | Identical |
+
+## 4.4b The load chip and its sheet — how a card's weight is entered
+
+```
+Flow:   Choose how the weight on this exercise is built (unit, bar)
+Entry:  The chip directly above the set rows on every exercise screen. Every card, every `k`, every
+        `implement` — his ruling, no split by type.
+Exit:   `Done`, a bar row, scrim, Escape. Every change is applied on the tap that makes it.
+```
+
+### 4.4b.1 The chip
+
+Position — **normative**: between the movement-and-cue disclosure and `#excard`, directly above the
+first set row, outside the card element (so the row DOM is untouched for D8). It is about the rows,
+so it sits on them. It is a control above inputs and is allowed there because it is **present from
+first paint on every card at a fixed height of 44 px**, and its text changes only as the result of
+a tap inside a modal he opened — never on its own.
+
+```
+[REF]
+│ ▸ movement & cue                                   │  existing disclosure, 44
+│ Weight in lb + Barbell 20 kg                     › │  the chip, full × 44
+│ ┌────────────────────────────────────────────────┐ │
+│ │ 1  + LB                REPS                    │ │  set row 1
+│ │    [−] [ 90 ] [+]      [−] [ 5 ] [+]           │ │
+│ │    = 60.8 kg   Last 90 lb × 5                  │ │  ghost row
+```
+
+| Mode | Chip text |
+|---|---|
+| kg, no bar (the default, first time on any card) | `Weight in kg · no bar` **NEW** |
+| lb, no bar | `Weight in lb · no bar` **NEW** |
+| lb, bar from the profile | `Weight in lb + Barbell 20 kg` **NEW** — `{name} {w} {u}` |
+| kg, bar | `Weight in kg + EZ bar 10 kg` **NEW** |
+| bar not in the profile (from history, or one-off) | `Weight in lb + bar 20 kg` **NEW** — lowercase `bar`, no name |
+
+`+` means added to; `· no bar` means the number is the whole load. A `›` chevron at the right,
+`aria-hidden`. Full width, one line at 100 % — bar names are capped at 16 characters in Settings
+for exactly this (§10.6), so the longest chip is `Weight in lb + Safety squat bar 25 kg` at 37
+characters ≈ 265 px at 1rem. At 200 % it may wrap to two lines from first paint.
+
+### 4.4b.2 The sheet
+
+Opens in `#modal`, the list variant of §9.9.3: `.sheet`, scrim, `role="dialog"`, `aria-modal`,
+heading focused on open.
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ Weight on Bent-over row                  │  h2, tabindex=-1
+│ WEIGHT ENTERED IN                        │  .lbl
+│ [ ● kg ]  [ ○ lb ]                       │  .seg, aria-pressed, ≥ 120 × 48 each
+│ ADDED TO                                 │  .lbl
+│ ┌──────────────────────────────────────┐ │
+│ │ ○ No bar                             │ │  row, full × 48
+│ ├──────────────────────────────────────┤ │
+│ │ ● Barbell                     20 kg  │ │
+│ ├──────────────────────────────────────┤ │
+│ │ ○ EZ bar                      10 kg  │ │
+│ ├──────────────────────────────────────┤ │
+│ │   Another bar…                       │ │
+│ └──────────────────────────────────────┘ │
+│ Last time: lb + Barbell 20 kg.           │  .det, only with history
+│ [                 Done                 ] │  full × 52, lowest, pinned
+└──────────────────────────────────────────┘
+```
+
+| Element | Rule |
+|---|---|
+| Heading | `Weight on {ex}` **NEW** |
+| Unit segment | `kg` / `lb`. **Applies on the tap**; sheet stays open (the bar is usually next). `aria-pressed`, the `.seg` two-form mark |
+| Bar rows | `No bar` first. Then every bar in `prefs.gym.bars` in list order, `{name}` left, `{w} {u}` right. **The card's current bar is always listed and marked**, named from the profile when a profile bar matches on `w` and `u`, otherwise as `Bar {w} {u}` **NEW** placed after the profile bars. Radio semantics (`role="radio"`, `aria-checked`) with a form mark, not a fill. **A bar row applies and closes the sheet** — it is the last choice in the common case |
+| `Another bar…` | Expands in place (below the list, above `Done`) into: a weight stepper (`−` / input / `+`, `± 2.5 kg` or `± 5 lb`, default `20`, `kg`), a unit segment `kg` / `lb`, and `Use this bar` **NEW** (full × 48). The result is a **one-off bar for this card** — `bar`/`bu` on every set — and is **not** written to the profile; helper under the button: `Kept for this exercise. Add it in Settings → Gym to have it on every card.` **NEW**. Refusals inline, §10.6's strings. This is also the first-run path: with an empty profile the list is `No bar` and `Another bar…`, and he does not leave the session to set a bar |
+| `Last time:` | Rendered only when the last logged session on this id has a set with `ld`: `Last time: lb + Barbell 20 kg.` / `Last time: lb + bar 20 kg.` / `Last time: kg · no bar.` **NEW** (the last only when a prior session exists and was kg-direct). `--dim` on `--surface`. This is where the *build* lives when the row's ghost had to fall back to a kg total |
+| `Done` | Full × 52, `.ghostbtn`, last, pinned. Closes. So do scrim and `Escape`. Nothing to cancel — every change was applied on its tap and is one tap to reverse, and typed weights are guarded below |
+| Substitution | **`[W1 Q3 SLOT — Chady decides]`** — if a mark is ruled, its one control lives in this sheet, under the bar list, as a single row. Nothing renders here until then. No other screen gets it |
+
+**Applies to every set on the card.** A mode is a property of the card; all rows re-caption together;
+the draft records `ld` on every set that holds an `add`.
+
+### 4.4b.3 Switching with numbers typed — never a silent re-value (D9)
+
+Two cases, because they are different facts.
+
+**Unit change with any weight field non-empty on this card.** The typed digits are in the old unit.
+Converting them produces a number he cannot load (`60 kg` on a 20 kg bar is `88.2 lb`); keeping the
+digits re-values `w`. Neither is honest. **Ruled: switching the unit clears the weight fields on the
+card, after a confirmation that names what goes, and reps stay.** The sheet swaps to its confirmation
+state:
+
+| Element | String |
+|---|---|
+| Headline, 1 set | `Set 1 holds 60 kg.` **NEW** |
+| Headline, ≥ 2 | `2 sets hold kg weights.` **NEW** |
+| Body | `Switching to lb clears them. Reps stay.` **NEW** (`kg` ↔ `lb`) |
+| Destructive | `Switch to lb and clear` **NEW** |
+| Safe, lowest | `Keep kg` **NEW** |
+
+Same guards as WO-001 §1F: safe lowest, destructive inert for 300 ms, `Escape` and scrim = keep.
+On confirm: the unit applies, every weight field on the card is emptied (reps and note untouched),
+the sheet returns to its picker state showing the new unit so the bar can be chosen next, toast
+`Switched to lb. Weights cleared.` **NEW** with `Undo`. Undo restores the mode and every weight
+string byte for byte through the existing single undo slot; the persistent control under the stack
+reads `Undo — put the kg weights back` **NEW** (one slot, latest action wins, as §9.9.3). Declining
+leaves everything, including `w`, untouched — D9's literal criterion.
+
+**Bar change with any weight field non-empty.** The plates are still the plates; only the total
+moves — but it moves `w`, so it is confirmed and both totals are named, one line per set that holds
+a weight:
+
+| Element | String |
+|---|---|
+| Headline | `The bar changes the totals.` **NEW** |
+| Body, per set | `Set 1: 90 lb is 60.8 kg on Barbell 20 kg, 50.8 kg on EZ bar 10 kg.` **NEW** |
+| Destructive | `Use EZ bar 10 kg` **NEW** |
+| Safe, lowest | `Keep Barbell 20 kg` **NEW** |
+
+On confirm the bar applies, `w` on each set is recomputed, the chip and every total update, sheet
+closes. No clearing, no undo needed — the reverse is the same two taps and nothing typed is lost.
+
+**Empty card** (no weight typed on any row): every change is silent and immediate.
+
+### 4.4b.4 Interactions, tap by tap
+
+| # | Tap | What changes |
+|---|---|---|
+| 1 | Chip `Weight in kg · no bar` (first session on a card, all rows empty) | Sheet opens. Focus on `Weight on Bent-over row`. `kg` pressed, `No bar` checked. No `Last time:` line |
+| 2 | `lb` | Segment flips. Behind the scrim every caption now reads `LB`. Sheet stays open |
+| 3 | `Barbell 20 kg` | Bar checked, **sheet closes**. Chip `Weight in lb + Barbell 20 kg`; captions `+ LB`. Focus returns to the chip. Draft's mode stamped on every set as it gains an `add` |
+| 4 | Chip again, then `kg`, with `90` in row 1 | Confirmation state: `Set 1 holds lb weights.`… `Switch to kg and clear` / `Keep lb` |
+| 5 | `Keep lb` | Picker state returns, `lb` still pressed, nothing changed |
+| 6 | Chip, then `EZ bar 10 kg`, with `90` in row 1 | `The bar changes the totals.` `Set 1: 90 lb is 60.8 kg on Barbell 20 kg, 50.8 kg on EZ bar 10 kg.` |
+| 7 | `Use EZ bar 10 kg` | Row 1 total `= 50.8 kg`; chip `Weight in lb + EZ bar 10 kg`; sheet closes |
+| 8 | Chip, `Another bar…`, `+` ×2 to `25`, `Use this bar` | Bar 25 kg applies (confirmation first if any weight is typed, as row 6), chip `Weight in lb + bar 25 kg`, sheet closes |
+
+### 4.4b.5 States
+
+| State | Present |
+|---|---|
+| No history, no draft | Chip `Weight in kg · no bar`; rows are §4.4 |
+| History with `ld` on this id | Card opens in that mode; chip names it; ghosts per §4.4a rule 4 |
+| Draft open | The draft's own `ld` wins over history (WO-010 §1) |
+| Empty profile | Sheet lists `No bar` and `Another bar…`; the card's own bar, if any, is listed unnamed |
+| Bar in history not in profile | Listed as `Bar 20 kg`, checked |
+| Profile bar edited since last session (Barbell now 15 kg) | The card still opens on the bar it *used* (20 kg), listed as `Bar 20 kg`; the profile's `Barbell 15 kg` is a separate row. Nothing is re-valued behind his back |
+| Weights typed, unit switched | Confirmation; clear + undo on confirm |
+| Weights typed, bar switched | Confirmation naming both totals per set |
+| `prefs` unreadable | The sheet still opens: `No bar`, the card's current bar, `Another bar…`, and the line `Could not read your bars. You can still set one here.` **NEW** in the refusal shape without `!`. Session logging is never blocked by the profile |
+| Error — `loadModeFor` throws | Card opens in `kg` mode with the chip; the throw is caught per card (§0.7) |
+| Offline | Identical. Nothing here reads the network |
+
+## 10.6 Settings → Gym
+
+Section order on Settings: Rest timer → **Gym** → Export → Backup. Bars only. No unit default, no
+per-implement anything, and **no default bar** — the PM's brief lists one, and I am striking it:
+under WO-010 §1 the first time on a card is kg with no bar, so nothing would ever consume a default,
+and the only thing it could do is be applied to a card silently, which is the "bar he did not lift"
+that §0.1 of the order forbids. The list order is the sheet's order; put the barbell first.
+
+```
+[REF]
+│ GYM                                               │  .lbl secrule
+│ Bars in your gym. Pick one per exercise from the  │  .tiny
+│ card. Each set records its own bar, so editing    │
+│ this list never changes your log.                 │
+│ ┌───────────────────────────────────────────────┐ │
+│ │ Barbell                            20 kg    › │ │  row, full × 48, <button>
+│ ├───────────────────────────────────────────────┤ │
+│ │ EZ bar                             10 kg    › │ │
+│ └───────────────────────────────────────────────┘ │
+│ [ + Add a bar ]                                   │  .ghostbtn, full × 48
+```
+
+| Element | Rule |
+|---|---|
+| Kicker | `Gym` **NEW** |
+| Helper | `Bars in your gym. Pick one per exercise from the card. Each set records its own bar, so editing this list never changes your log.` **NEW** |
+| Empty state | `No bars yet. Add the ones you load and they appear on every session card.` **NEW** — replaces the list, not the helper |
+| Row | `{name}` left, `--bone`; `{w} {u}` right, `--dim`, `tabular-nums`; `›`. Tap → the form expands **below that row**, prefilled. Full × 48 |
+| `+ Add a bar` | Full × 48, below the list. Opens the form empty: name blank, `20`, `kg` |
+| Form | `NAME` field (full × 48, `maxlength=16`, a real `<label>`) · `WEIGHT` stepper (`−` / input / `+`, 44 × 48 keys, `± 2.5 kg` / `± 5 lb`) beside a `kg` / `lb` segment (≥ 120 × 48 each, `aria-pressed`) · `Save bar` **NEW** full × 48 · `Remove bar` **NEW** full × 48 (edit only) · `Cancel` **NEW** full × 48, last |
+| Save | Through `PHAT.validateGymProfile`; writes `phat:v1:prefs` and nothing else (W6 criterion). Form collapses, row updates, toast `Barbell saved.` **NEW** |
+| Remove | Immediate, no confirmation — it destroys nothing in the log and the sheet still lists any bar a card is using. Toast `Barbell removed.` **NEW** with `Undo` (restores the entry at its index) |
+| Refusal, empty name | `Name the bar.` **NEW** |
+| Refusal, name over 16 | `Name too long. Up to 16 characters.` **NEW** |
+| Refusal, weight | `Bar weight must be over 0 and at most 50 kg.` / `… 110 lb.` **NEW** — `LIMITS`'s numbers, printed in the unit chosen |
+| Refusal, write failed | `Could not save the bar. Nothing changed.` **NEW**, refusal shape |
+| One form at a time | Opening a second row's form closes the first without saving; a typed-but-unsaved form is confirmed first (`Discard the bar you were editing?` **NEW** / `Keep editing` safe lowest) |
+
+**States:** empty · list · form open (add) · form open (edit) · refusal inline under the form ·
+`prefs` unreadable (the store notice outranks the section and the section renders its empty state
+with `Could not read your bars.` **NEW** above `+ Add a bar`; saving still attempts a write) ·
+demo mode (unchanged — the profile is per device, not per log; the band shows, the section works) ·
+offline (identical).
+
+**Why 16 characters.** The chip must be one line at 400 px (§4.4b.1). `Weight in lb + ` is 15
+characters and ` 110 lb` is 7; 16 leaves the chip at ≤ 38 characters, measured at ≈ 270 px at
+1rem with ~95 px to spare. `Safety squat bar` fits exactly.
+
+## 19.1 Strings — every new one, in one table
+
+| # | Where | String | Owner |
+|---|---|---|---|
+| 1 | Row caption | `LB` · `KG` · `+ LB` · `+ KG` | mine |
+| 2 | Ghost total | `= {w} kg` / `= bodyweight` — the word is Z2's | engine word, my frame |
+| 3 | Ghost, same build | `Last {add} {au} × {r}` | mine |
+| 4 | Ghost, different build | `Last {w} kg × {r}` | mine |
+| 5 | Live region | `Weight now {add} {au}, {w} kg.` | mine |
+| 6 | Refusal token | `over 500 kg` (in-range components, total over range) | mine; W3 emits the field |
+| 7 | Chip | `Weight in kg · no bar` · `Weight in lb · no bar` · `Weight in {au} + {name} {w} {u}` · `Weight in {au} + bar {w} {u}` | mine |
+| 8 | Sheet heading | `Weight on {ex}` | mine |
+| 9 | Sheet kickers | `Weight entered in` · `Added to` | mine |
+| 10 | Sheet rows | `No bar` · `{name}` `{w} {u}` · `Bar {w} {u}` · `Another bar…` · `Use this bar` · `Done` | mine |
+| 11 | Sheet helper | `Kept for this exercise. Add it in Settings → Gym to have it on every card.` | mine |
+| 12 | Sheet history | `Last time: {au} + {name} {w} {u}.` · `Last time: {au} + bar {w} {u}.` · `Last time: kg · no bar.` | mine |
+| 13 | Unit confirm | `Set {i} holds {u} weights.` · `{n} sets hold {u} weights.` · `Switching to {u2} clears them. Reps stay.` · `Switch to {u2} and clear` · `Keep {u}` · toast `Switched to {u2}. Weights cleared.` · `Undo — put the {u} weights back` | mine |
+| 14 | Bar confirm | `The bar changes the totals.` · `Set {i}: {add} {au} is {w1} kg on {bar1}, {w2} kg on {bar2}.` · `Use {bar2}` · `Keep {bar1}` | mine |
+| 15 | Sheet, prefs unreadable | `Could not read your bars. You can still set one here.` | mine |
+| 16 | Settings | `Gym` · helper · empty state · `+ Add a bar` · `Save bar` · `Remove bar` · `Cancel` · `{name} saved.` · `{name} removed.` · the four refusals · `Discard the bar you were editing?` · `Keep editing` · `Could not read your bars.` | mine |
+| — | **Not here** | Any verdict, `Go to`, `Drop to`, increment line, the ladder, whether the verdict prints the build — **W1 `strength-coach`, transcribed by W4**. `PHAT.buildWord(ld)` (W3) is the only build string, and only the sheet's `Last time:` line uses it | coach |
+
+Substitutions beyond §0.8: `{add}` the typed added weight as displayed · `{au}` `kg` / `lb` ·
+`{w}` the kg total · `{name}` a profile bar's name, escaped · `{u}` a bar's unit. Every string that
+carries user input goes through `esc()`.
+
+Voice check: no exclamation, no emoji, second person only where he acts (`Pick one`, `Add the ones
+you load`), no flattery, numbers undressed.
+
+## 19.2 Control inventory — rows added to §0.4.1
+
+| # | Screen | Control | Min hit area | Notes |
+|---|---|---|---|---|
+| 61 | session | Load chip | full × 44 | §4.4b.1. Above the set rows, fixed height, first paint |
+| 62 | load sheet | Unit segment `kg` / `lb` | ≥ 120 × 48 each | `aria-pressed` |
+| 63 | load sheet | Bar row (`No bar`, each bar, `Bar {w} {u}`) | full × 48 | `role="radio"` |
+| 64 | load sheet | `Another bar…` | full × 48 | expands in place |
+| 65 | load sheet | One-off bar `−` / `+` · input · unit segment · `Use this bar` | 44 × 48 · ≥ 48 × 48 · ≥ 120 × 48 · full × 48 | |
+| 66 | load sheet | `Done` | full × 52 | lowest, pinned |
+| 67 | load sheet, confirm | `Switch to {u} and clear` / `Keep {u}` | full × 48 / full × 52 | safe lowest, destructive inert 300 ms |
+| 68 | load sheet, confirm | `Use {bar}` / `Keep {bar}` | full × 48 / full × 52 | safe lowest |
+| 69 | settings | Bar row | full × 48 | opens the form |
+| 70 | settings | `+ Add a bar` | full × 48 | |
+| 71 | settings, bar form | Name field · weight `−` / `+` · input · unit segment | full × 48 · 44 × 48 · ≥ 48 × 48 · ≥ 120 × 48 | |
+| 72 | settings, bar form | `Save bar` / `Remove bar` / `Cancel` | full × 48 each | `Cancel` last |
+
+The kg total is text, not a control. The toast undo is row 23.
+
+## 19.3 A11y
+
+- **Weight input, `ld` mode:** `aria-label="Added weight in lb on Barbell 20 kg, Bent-over row set 1"`;
+  without a bar `Weight in lb, Bent-over row set 1`; kg-direct keeps `Weight in kg, …` byte for byte
+  (D8). `inputmode="decimal"` in both units.
+- **Steppers:** `Weight up 5 lb, …` / `Weight down 5 lb, …`; `Weight up 2.5 kg, …` on a kg bar card;
+  kg-direct keeps `Weight up 2.5,` unchanged. The unit is in the name because the tap size is the
+  fact a screen-reader user cannot see.
+- **The total token:** visible text, **not** `aria-hidden` — it is the ask. Not a live region; the
+  commit announcement carries it: `Weight now 90 lb, 60.8 kg.` through `#bs-live`, polite.
+- **Captions `.unit`** stay `aria-hidden` as today; the input's name carries the unit.
+- **Chip:** `<button>`; accessible name = its visible text + `. Change.` (`Weight in lb + Barbell 20 kg.
+  Change.`). `aria-haspopup="dialog"`. Focus returns to it on every close.
+- **Sheet:** `role="dialog" aria-modal="true" aria-labelledby=` the heading; heading `tabindex="-1"`,
+  focused on open; Tab order: segment → bar rows → `Another bar…` (→ its form when open) → `Done`.
+  Bar rows `role="radio"` inside `role="radiogroup" aria-labelledby=` the `Added to` kicker;
+  `aria-checked` is the carrier, the form mark is the visual one. Confirmation states move focus to
+  their headline. `Escape` closes (or keeps, in a confirmation).
+- **Refusal marks** on an `ld` row: `aria-invalid="true"` and `aria-describedby` → the token span,
+  as §2.6; the token is his string in his unit.
+- **Contrast:** total `--bone` 14.8 : 1 on `--bg`; ghost `.55`, 5.3 : 1, unchanged; sheet body and
+  bar weights `--dim` 7.0 : 1 on `--surface`, never `--faint` in a sheet (§0.5 rule 2); Settings row
+  weight `--dim` on `--bg`; captions `.unit` are `--faint` 10 px today and stay — they are
+  `aria-hidden` and redundant to the input's name, and raising them is a §0.5 item for every row,
+  not this one.
+- **Greyscale:** the mode is carried by the chip's words and the caption's letters; the bar by the
+  chip; a refusal by `!` and the border; the selected segment by its form mark. No hue anywhere.
+- **200 %:** the chip may become two lines from first paint; a switch between a one-line and a
+  two-line chip moves the rows by one line height after the sheet closes — his thumb is on the chip,
+  not a row, at that moment. The ghost row never wraps; the ghost text ellipsises (§19.6 item 2).
+  The sheet stacks every control full width.
+
+## 19.4 What is preserved when he backs out
+
+| Backing out of | Preserved |
+|---|---|
+| The sheet (scrim, `Escape`, `Done`) | Every change already applied; the draft on disk reflects it |
+| A unit confirmation with `Keep` | Everything, including `w`, byte for byte (D9) |
+| A bar confirmation with `Keep` | Everything |
+| The session (`DISCARD SESSION`) | As §4.12 — the confirmation names the set count; the mode dies with the draft; history's mode is untouched |
+| A Settings bar form (`Cancel`) | The profile as it was; the form's typing is dropped after the `Discard the bar you were editing?` guard only if it held anything |
+| A reload mid-entry | D3: `add`, `au`, `bar`, `bu` on every set of the draft, totals recomputed from them |
+
+## 19.5 Findings while writing this
+
+1. **`ghostText` (`index.html:2137`) reads `pv.w` only.** It has no path to `pv.ld` and will print a
+   kg number with no unit on an `ld` card. W6 replaces it with a call into `logic.js` that returns
+   the string for §4.4a rule 4 — the case logic (same build / different build) is pure and belongs
+   beside `loadModeFor`, so QA can table it. Nothing composes it in the view.
+2. **The `.unit` caption is `--faint` at 10 px, `aria-hidden`.** In `ld` mode it is the one visible
+   carrier of "this field is lb" at a glance. §0.5 rule 1 says text is `.55` minimum; `--faint` is
+   `.55` on `--bg` and passes, but the row sits on `.card` — if `.card` is `--surface`, the caption
+   is 4.9 : 1 at 10 px, which passes AA as a ratio and fails the arm's-length test by size. Not
+   changed here (it is every row, not this order), filed as a note for the PM: raise `.unit` to
+   11 px when the row is next touched.
+3. **`stepValue` hardcodes `2.5` and the aria-labels hardcode `Weight up 2.5`** (WO-010 §0.3 already
+   lists both). Both must read the card's mode; the kg-direct strings stay literal.
+
+## 19.6 What I could not settle
+
+1. **The token for a total over 500 kg with in-range components.** `add: 1100 lb` on a 20 kg bar is
+   519 kg. §1 keeps `w` at 0–500. I specified `over 500 kg`; **W3** decides whether `composeLoad`
+   returns `field: "w"` for it or the row refuses on `add` with `over 1100` — either way the token
+   is in his unit and ≤ 12 characters.
+2. **The ghost text at 200 %.** Rule 3 makes the ghost row one line always, so at 200 % the ghost
+   may ellipsise to `Last 90 l…`. The alternative — letting the ghost wrap in `ld` mode — breaks
+   rule 1. I hold rule 1: the total and the hazard both outrank the ghost's tail at 200 %. QA
+   measures what actually truncates in Archivo; if `Last 90 lb × 5` (14 characters) survives at
+   200 % with `EXTRA` absent, this is moot for every row but an `EXTRA` one.
+3. **Whether a one-off bar from the sheet should be offered to the profile.** I ruled no silent
+   writes to `prefs` from a session sheet and one button, not two. If he ends up typing the same
+   25 kg bar on five cards on day one, the fix is a second button `Use and keep in Settings`, not a
+   silent add.
+4. **Summary rows.** They print `{w} × {r}` in kg and I have not changed them; whether the build
+   (`90 lb`) belongs there is W8's screen and a second pass, not this one.
+5. **The 16-character bar name cap.** Mine, from the chip budget; `validateGymProfile` (W3) needs the
+   number, and if Chady's bars need more, the chip drops `Weight in ` to `In ` and buys 7.
+6. **Whether the verdict should print the build** (`Go to 83.5 kg — 20 kg bar + 140 lb`). Not mine:
+   W1 Q1. The verdict slot's reserved two-line body (§4.7 rule 3) holds a sentence of that length
+   at 400 px; at 200 % it may need three, which the slot may grow to once, at first paint of the
+   verdict, since it is below every input.
+
+## 19.7 Out of scope, deliberately
+
+Plate math per side (B-10 — the components now exist for it; it is not built) · a substitution mark
+(B-111, Chady's decision after W1 Q3; the slot is reserved in §4.4b.2) · any change to the Summary,
+Trend or the verdict copy · a unit default per implement, per plan or per gym · a default bar ·
+syncing the profile (B-113, accepted) · editing a saved session's `ld` (B-05) · converting history ·
+the Diet and Weight screens (bodyweight stays kg, 0.1 steps, untouched).

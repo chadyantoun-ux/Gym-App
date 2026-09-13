@@ -38,9 +38,17 @@
           prescription", and that reading is exactly true of every entry logged
           before this version, because no plan had been edited yet. The v5 pass
           writes the version and nothing else.
+       6  WO-010 W3 — the load's components. A SET written from here on may
+          carry `ld: {bar?, bu?, add, au}`, the bar and the added weight the kg
+          total `w` was built from, in the units he built it in. `w` stays
+          the kg total every engine reads; `ld` sits beside it, additive, and
+          an ABSENT ld MEANS "entered in kg, no bar" — which is exactly true of
+          every set logged before this version, including the first real one
+          (2026-09-12, client_id 1789264514484). The v6 pass writes the
+          version and nothing else: no set gains a key, no w moves.
      A store written by any earlier version must still load, forever.
-     WO-002's importer therefore owes schema 2, 3, 4 AND 5. */
-  var SCHEMA_VERSION = 5;
+     WO-002's importer therefore owes schema 2, 3, 4, 5 AND 6. */
+  var SCHEMA_VERSION = 6;
   /* EVERY migration pass gates on its OWN constant, never on SCHEMA_VERSION.
      The near-miss on record (decisions.md, "Schema 3, and what it obliges"):
      the dateBasis pass was gated on `logVer < SCHEMA_VERSION`, so bumping the
@@ -52,6 +60,7 @@
   var V_STATEKEYS = 3;   /* the four V1/D1/W1 keys — was `logVer < SCHEMA_VERSION` */
   var V_PLAN = 4;        /* the plan document */
   var V_RX = 5;          /* Rule PE1 — entries may carry `rx` */
+  var V_LD = 6;          /* WO-010 — sets may carry `ld`, the load's components */
   /* The keys schema 3 adds to the log store, and their defaults. Built fresh
      on every call — a shared {} default would be handed to two stores. */
   var V3_KEYS = ["reintro", "lastReintroDate", "calChangedAt", "deload"];
@@ -104,6 +113,41 @@
      and unweighted dips are real sets (B-21). */
   var W_MIN = 0, W_MAX = 500;
   var R_MIN = 1, R_MAX = 100;
+
+  /* ---- the load's components (WO-010 §1) ----
+     ONE TABLE. supabase/schema.sql's phat_validate_session_doc COPIES these
+     numbers (WO-010 W5); change one here and the SQL mirror moves with it, or
+     a set the app saved is refused on push. Exported as PHAT.LIMITS.
+
+     1 lb = 0.45359237 kg, exactly (the international pound). Never 0.45,
+     never 0.4536: 90 lb is 40.823 kg and rounds to 40.8, and a shortened
+     factor drifts the total at 200+ lb.
+
+     `add` is bounded in ITS OWN unit (0..500 kg / 0..1100 lb); `bar` is
+     0 < bar <= 50 kg / 110 lb. The composed total `w` is still bounded by
+     W_MIN..W_MAX. LD_TOL is how far a typed `w` may sit from the total its
+     own components compose to before it is a refusal (never a correction). */
+  var LB_KG = 0.45359237;
+  var LOAD_UNITS = ["kg", "lb"];
+  /* ---- the ladder (Rule L1, addendum §18.1) ----
+     Two grids, chosen by the WORKING-LOAD SET's ld and never by the slot:
+       KG-DIRECT  (no ld, or au "kg" with no bar)  2.5 kg on w   — unchanged
+       KG-ON-BAR  (au "kg" with a bar)             2.5 kg on add
+       LB         (au "lb", bar or no bar)         LB_STEP / LB_BAR_STEP on add
+     KG_STEP is the 2.5 every rule has always used. LB_STEP is the one step
+     every no-bar lb build can make: one dumbbell up the rack, one 5 lb plate
+     on a belt or a plate-loaded machine. LB_BAR_STEP is a 2.5 lb plate per
+     side — the coach's §18.8 #1 open item, [Likely] present in his gym. If
+     Chady says the smallest plate is 5 lb, this ONE constant becomes 10 and
+     every bar-built ladder, phrase and H1.4d figure moves with it; the
+     no-bar step stays 5. Nothing reads ex.inc (B-58). */
+  var KG_STEP = 2.5;
+  var LB_STEP = 5;
+  var LB_BAR_STEP = 5;
+  var ADD_MAX = { kg: 500, lb: 1100 };
+  var BAR_MAX = { kg: 50, lb: 110 };
+  var LD_TOL = 0.05;
+  var LD_KEYS = ["bar", "bu", "add", "au"];
 
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -235,6 +279,245 @@
     return { ok: true, value: n };
   }
 
+  /* ------------------------------------------- the load's components (WO-010)
+
+     A set's weight may be BUILT: a bar in kg or lb plus added weight in kg or
+     lb, with the kg total in `w` — the one number every engine reads — and
+     the build beside it in `ld`. §1 of the work order fixes the shape:
+
+       {w: 60.8, r: 5, ld: {bar: 20, bu: "kg", add: 90, au: "lb"}}
+
+     `add` and `au` required; `bar` and `bu` both present or both absent;
+     nothing else. Strings while drafting, numbers once saved, exactly as w
+     and r are. An ABSENT ld means entered in kg with no bar, which is what
+     every set logged before schema 6 was. */
+
+  function isUnit(u) { return u === "kg" || u === "lb"; }
+
+  /* toKg(v, unit) -> kg as a raw number (unrounded), or NaN for anything it
+     cannot convert. Rounding happens ONCE, at the total, in composeLoad. */
+  function toKg(v, unit) {
+    if (typeof v !== "number" || !isFinite(v)) return NaN;
+    if (unit === "kg") return v;
+    if (unit === "lb") return v * LB_KG;
+    return NaN;
+  }
+
+  /* One component, in its own unit: the same text rule as parseWeight (NUM_W:
+     digits, at most one dot; "-5" and "1e3" are malformed, never coerced) with
+     its own range. A number is checked as its string, so a saved -5 is
+     refused the same way a typed "-5" is. `value` is the trimmed text as
+     typed; `raw` the same, kept on the ok branch for a sentence to quote. */
+  function parsePart(v, lo, hi) {
+    var s = str(v).trim();
+    if (s === "") return { ok: false, reason: "empty", value: s };
+    if (!NUM_W.test(s)) return { ok: false, reason: "malformed", value: s };
+    var n = Number(s);
+    if (!isFinite(n)) return { ok: false, reason: "malformed", value: s };
+    if (n < lo || n > hi) return { ok: false, reason: "range", value: s };
+    return { ok: true, value: n, raw: s };
+  }
+
+  /* composeLoad(ld) -> { ok:true, w }  |  { ok:false, reason, field, value }
+
+     The kg total of a build, ROUNDED TO 0.1 kg ONCE AT THE TOTAL — never per
+     component. Every load token the app prints goes through r1, so the
+     number stored is the number on the screen (criterion D2), and two sets
+     built from the same plates always compose to the same w. Per-component
+     rounding would compound: r1(20) + r1(40.823) happens to agree with
+     r1(60.823) here and does NOT in general (a mutant W7 pins).
+
+     Refuses, naming the FIRST bad field in shape order, on:
+       reason "malformed"  ld is not an object, or carries a key outside
+                           {bar, bu, add, au} (field = that key), or add/bar
+                           is not a number in NUM_W's sense
+       reason "empty"      add absent or blank; or bu given with no bar
+       reason "unit"       au or bu not "kg"/"lb" (absent counts); bar given
+                           with no bu is field "bu"
+       reason "range"      add outside 0..ADD_MAX[au], bar outside
+                           0 < bar <= BAR_MAX[bu], or the composed total
+                           outside W_MIN..W_MAX (field "w")
+     `value` is the offending text verbatim when there is one. */
+  function composeLoad(ld) {
+    if (!isObj(ld)) return { ok: false, reason: "malformed", field: null, value: "" };
+    var k;
+    for (k in ld) {
+      if (Object.prototype.hasOwnProperty.call(ld, k) && LD_KEYS.indexOf(k) < 0) {
+        return { ok: false, reason: "malformed", field: k, value: str(ld[k]) };
+      }
+    }
+    var hasBar = ld.bar !== undefined, hasBu = ld.bu !== undefined;
+    var pa = parsePart(ld.add, 0, isUnit(ld.au) ? ADD_MAX[ld.au] : Infinity);
+    if (!pa.ok && pa.reason !== "range") return { ok: false, reason: pa.reason, field: "add", value: pa.value };
+    if (!isUnit(ld.au)) return { ok: false, reason: "unit", field: "au", value: str(ld.au) };
+    if (!pa.ok) return { ok: false, reason: "range", field: "add", value: pa.value };
+    var kgBar = 0;
+    if (hasBar || hasBu) {
+      if (!hasBar) return { ok: false, reason: "empty", field: "bar", value: "" };
+      var pb = parsePart(ld.bar, 0, isUnit(ld.bu) ? BAR_MAX[ld.bu] : Infinity);
+      if (!pb.ok && pb.reason !== "range") return { ok: false, reason: pb.reason, field: "bar", value: pb.value };
+      if (!isUnit(ld.bu)) return { ok: false, reason: "unit", field: "bu", value: str(ld.bu) };
+      if (!pb.ok) return { ok: false, reason: "range", field: "bar", value: pb.value };
+      if (pb.value <= 0) return { ok: false, reason: "range", field: "bar", value: pb.raw };
+      kgBar = toKg(pb.value, ld.bu);
+    }
+    var w = r1(kgBar + toKg(pa.value, ld.au));
+    if (!isFinite(w)) return { ok: false, reason: "malformed", field: "add", value: pa.raw };
+    if (w < W_MIN || w > W_MAX) return { ok: false, reason: "range", field: "w", value: String(w) };
+    return { ok: true, w: w };
+  }
+
+  /* The saved form of a build: numbers, keys in §1's order, bar/bu only when
+     the build has one. Only ever called on an ld composeLoad accepted. */
+  function ldNumbers(ld) {
+    var out = {};
+    if (ld.bar !== undefined) { out.bar = Number(str(ld.bar).trim()); out.bu = ld.bu; }
+    out.add = Number(str(ld.add).trim());
+    out.au = ld.au;
+    return out;
+  }
+
+  /* buildWord(ld, implement) -> "20 kg bar + 90 lb" | "45 lb" | "55 lb per DB"
+     | "bodyweight + 45 lb" | "" when the build does not compose.
+     The build in HIS units, for the ghost line and the verdict's build
+     phrase (Rule L2, addendum §18.2). Numbers print as typed-and-parsed,
+     never rounded: he typed 90, the word says 90. `implement` is OPTIONAL
+     and decides only the two words it has always decided — `per DB` and
+     `bodyweight +` — and only when no bar is present: a bar in ld overrides
+     a db slot (nobody puts a bar on a dumbbell; the set is dispositive, the
+     slot is a label). Without `implement` the phrase is the plain one, which
+     is what the ghost line printed before W4. */
+  function buildWord(ld, implement) {
+    var c = composeLoad(ld);
+    if (!c.ok) return "";
+    return buildPhrase(ldNumbers(ld), implement);
+  }
+
+  /* The phrase's one grammar, L2's table. `n` is numbers in §1's shape.
+       bar present            `{bar} {bu} bar + {add} {au}`
+       no bar, implement db   `{add} {au} per DB`
+       no bar, bodyweight     `bodyweight + {add} {au}`
+       no bar, any other      `{add} {au}` */
+  function buildPhrase(n, implement) {
+    var s = String(n.add) + " " + n.au;
+    if (n.bar !== undefined) return String(n.bar) + " " + n.bu + " bar + " + s;
+    if (implement === "db") return s + " per DB";
+    if (implement === "bodyweight") return "bodyweight + " + s;
+    return s;
+  }
+
+  /* buildOf(ld, w) -> the BUILD a rule may ladder on, or null for KG-DIRECT.
+     Rule L1's classifier. null when: ld is absent; ld does not compose; ld
+     composes to something other than `w` (an older store, a hand edit — the
+     set is read as kg-direct with no build phrase: silence over a wrong plate
+     count, validateEntry refuses such a set at save time and this is the
+     defence for one that got past it); or ld is kg with no bar, which IS
+     kg-direct and prints as one (18.1 example 9). `w` is optional — pass it
+     when you have the set's stored total.
+       { ld, add, au, hasBar, bar, bu, barKg, grid, w }
+     grid is the step in the unit of `add`. barKg is 0 with no bar. */
+  function buildOf(ld, w) {
+    if (ld === undefined || ld === null) return null;
+    var c = composeLoad(ld);
+    if (!c.ok) return null;
+    if (typeof w === "number" && isFinite(w) && Math.abs(c.w - w) > LD_TOL + 1e-9) return null;
+    var n = ldNumbers(ld), hasBar = n.bar !== undefined;
+    if (!hasBar && n.au === "kg") return null;
+    return {
+      ld: ld, add: n.add, au: n.au, hasBar: hasBar,
+      bar: hasBar ? n.bar : 0, bu: hasBar ? n.bu : null,
+      barKg: hasBar ? toKg(n.bar, n.bu) : 0,
+      grid: n.au === "lb" ? (hasBar ? LB_BAR_STEP : LB_STEP) : KG_STEP,
+      w: c.w
+    };
+  }
+  /* A kg quantity in the build's add-unit (the bar included when the
+     quantity includes it — G1 is a percentage of the load, not the plates). */
+  function inUnit(b, kgv) { return b.au === "lb" ? kgv / LB_KG : kgv; }
+  /* The kg total the same build stores with `add2` on it: r1 once, at the
+     total — composeLoad's own arithmetic, so the figure a verdict prints is
+     the number the row will show confirmed next session. */
+  function buildTotal(b, add2) { return r1(b.barKg + toKg(add2, b.au)); }
+  /* add + a step, with float noise stripped at 1e-3 (82.3 + 2.5 is
+     84.80000000000001 in IEEE). Not a rounding any plate can see. */
+  function addStep(add, step) { return Math.round((add + step) * 1000) / 1000; }
+  /* The phrase for a NEW add on this build. */
+  function buildAt(b, add2, implement) {
+    var n = { add: add2, au: b.au };
+    if (b.hasBar) { n.bar = b.bar; n.bu = b.bu; }
+    return buildPhrase(n, implement);
+  }
+  /* The working-load set's build: the FIRST set among the first `n`
+     completed sets, in logged order, whose w equals `load` (P1's min of C,
+     0.01-tolerant like P1 itself). Its ld, or its absence, is the build —
+     ties to the earliest set. Walks the RAW rows because completedSets
+     strips everything but w and r. */
+  function workingBuild(sets, n, load) {
+    if (!Array.isArray(sets)) return null;
+    var done = 0, i, s;
+    for (i = 0; i < sets.length && done < n; i++) {
+      s = numSet(sets[i]);
+      if (!s) continue;
+      done++;
+      if (Math.abs(s.w - load) <= 0.01) return buildOf(sets[i].ld, s.w);
+    }
+    return null;
+  }
+
+  /* loadModeFor(prevEntry) -> { au, bar?, bu? }
+
+     The card's default: how the load was built the LAST time this exercise
+     was logged, read from the last logged entry's first set that carries an
+     ld. No ld on any set — or no entry at all — is {au: "kg"}: kg direct, no
+     bar, today's row. Always an object, never null, so a caller reads
+     mode.au without a guard; `bar`/`bu` are present only when the build
+     had one. Nothing here is a default keyed by `implement` (his ruling: no
+     split by type) and nothing is remembered that he did not lift.
+
+     Also accepts (sessions, exId) or (exId, sessions) and resolves the entry
+     through lastFor — the dispatch named that form; the work order §1 named
+     this one. One function, one answer. */
+  function loadModeFor(a, b) {
+    var e = a;
+    if (Array.isArray(a) && typeof b === "string") e = lastFor(a, b);
+    else if (typeof a === "string" && Array.isArray(b)) e = lastFor(b, a);
+    var mode = { au: "kg" };
+    if (!isObj(e) || !Array.isArray(e.sets)) return mode;
+    for (var i = 0; i < e.sets.length; i++) {
+      var s = e.sets[i];
+      if (!isObj(s) || s.ld === undefined) continue;
+      if (!composeLoad(s.ld).ok) continue;
+      var n = ldNumbers(s.ld);
+      mode = { au: n.au };
+      if (n.bar !== undefined) { mode.bar = n.bar; mode.bu = n.bu; }
+      return mode;
+    }
+    return mode;
+  }
+
+  /* validateGymProfile(gym) -> { ok, problems:[{i, field, reason, value}] }
+     The Settings -> Gym list: { bars: [{n, w, u}] }. A bar needs a non-empty
+     name, a unit in {kg, lb} and a weight in (0, BAR_MAX[u]]. Per device, in
+     phat:v1:prefs, never pushed — the log is self-describing, so nothing
+     here is history and nothing reads it but the card's sheet. */
+  function validateGymProfile(gym) {
+    var out = { ok: false, problems: [] };
+    if (!isObj(gym)) { out.problems.push({ i: -1, field: null, reason: "malformed", value: "" }); return out; }
+    if (gym.bars !== undefined && !Array.isArray(gym.bars)) {
+      out.problems.push({ i: -1, field: "bars", reason: "malformed", value: "" }); return out;
+    }
+    (gym.bars || []).forEach(function (b, i) {
+      if (!isObj(b)) { out.problems.push({ i: i, field: null, reason: "malformed", value: "" }); return; }
+      if (typeof b.n !== "string" || b.n.trim() === "") out.problems.push({ i: i, field: "n", reason: "empty", value: str(b.n) });
+      if (!isUnit(b.u)) out.problems.push({ i: i, field: "u", reason: "unit", value: str(b.u) });
+      var pw = parsePart(b.w, 0, isUnit(b.u) ? BAR_MAX[b.u] : Infinity);
+      if (!pw.ok) out.problems.push({ i: i, field: "w", reason: pw.reason, value: pw.value });
+      else if (pw.value <= 0) out.problems.push({ i: i, field: "w", reason: "range", value: pw.raw });
+    });
+    out.ok = out.problems.length === 0;
+    return out;
+  }
+
   /* ------------------------------------------------------- classification */
 
   /* "blank"      both fields empty            → skipped on save, silently
@@ -272,15 +555,34 @@
      the `7.5.0` token). `value` is the trimmed raw string as typed — never a
      coerced number, so nothing here can leak a silently-fixed value.
      A row can be bad in the weight, in the reps, or in both; `problems` holds
-     one item per bad field, in w-then-r order, INCLUDING the merely-empty one
-     on a row that is also malformed. The status names the worst thing wrong
-     with the row; `problems` names everything wrong with it, so the user is
-     not sent back twice for the same row. */
+     one item per bad field, in w-then-r-then-ld order, INCLUDING the
+     merely-empty one on a row that is also malformed. The status names the
+     worst thing wrong with the row; `problems` names everything wrong with
+     it, so the user is not sent back twice for the same row.
+
+     THE BUILD (WO-010 §1, B-112). A set may carry `ld`; `out.ld` reports it:
+     null when the key is absent, else {ok, reason, sub, value, w} where `w`
+     is the kg total the components compose to. An ld problem is one item on
+     `problems` with field "ld", the SUB-field that is wrong (`sub`: "add",
+     "au", "bar", "bu", an unknown key, or null) and the token he typed. It is
+     always BLOCKING (status "malformed"): a set with a build the app cannot
+     read is not a set it may save half of.
+       - w and ld must agree: |w - composeLoad(ld).w| <= LD_TOL, else one
+         problem {field:"ld", reason:"mismatch", sub:null, value:<add as
+         typed>, kg:<composed>}. NEVER corrected in either direction — a
+         typed 61 stays 61 and the row is refused by name.
+       - a blank row (w and r empty) that carries an ld whose add is empty is
+         BLANK, skipped silently like any empty row (D6). An ld with add
+         typed on a row with nothing else is not blank: the number he typed
+         must not vanish, so it is "incomplete" naming w and r.
+       - ld: null is not absent. The key is present and it is not a build;
+         the frontend deletes the key to mean "kg direct". */
   function describeSet(s) {
     var out = {
       status: "malformed",
       w: { ok: false, reason: "malformed", value: "" },
       r: { ok: false, reason: "malformed", value: "" },
+      ld: null,
       problems: []
     };
     if (!isObj(s)) {
@@ -294,14 +596,31 @@
     out.w = { ok: pw.ok, reason: pw.ok ? null : pw.reason, value: w };
     out.r = { ok: pr.ok, reason: pr.ok ? null : pr.reason, value: r };
 
-    if (w === "" && r === "") { out.status = "blank"; return out; }
+    var hasLd = s.ld !== undefined;
+    var c = hasLd ? composeLoad(s.ld) : null;
+    var addTok = (hasLd && isObj(s.ld)) ? str(s.ld.add).trim() : "";
+    if (hasLd) out.ld = { ok: c.ok, reason: c.ok ? null : c.reason, sub: c.ok ? null : c.field,
+                          value: c.ok ? addTok : c.value, w: c.ok ? c.w : null };
+
+    if (w === "" && r === "" && (!hasLd || (isObj(s.ld) && addTok === ""))) { out.status = "blank"; return out; }
 
     if (!pw.ok) out.problems.push({ field: "w", reason: pw.reason, value: w });
     if (!pr.ok) out.problems.push({ field: "r", reason: pr.reason, value: r });
+    var ldBad = false;
+    if (hasLd) {
+      if (!c.ok) {
+        ldBad = true;
+        out.problems.push({ field: "ld", reason: c.reason, value: c.value, sub: c.field });
+      } else if (pw.ok && Math.abs(pw.value - c.w) > LD_TOL + 1e-9) {
+        ldBad = true;
+        out.ld.ok = false; out.ld.reason = "mismatch";
+        out.problems.push({ field: "ld", reason: "mismatch", value: addTok, sub: null, kg: c.w });
+      }
+    }
 
     /* Parseability first, completeness second. "empty" is not a parse failure —
        it is absence, and absence is what "incomplete" is for. */
-    var bad = (!pw.ok && pw.reason !== "empty") || (!pr.ok && pr.reason !== "empty");
+    var bad = (!pw.ok && pw.reason !== "empty") || (!pr.ok && pr.reason !== "empty") || ldBad;
     if (bad) out.status = "malformed";
     else if (w === "" || r === "") out.status = "incomplete";
     else out.status = "complete";
@@ -331,13 +650,24 @@
   /* --------------------------------------------------------- validation */
 
   /* validateEntry(sets)
-       → { sets:[{w:Number, r:Number}], problems:[{i, field, reason, value, status}] }
+       → { sets:[{w:Number, r:Number, ld?}], problems:[{i, field, reason, value, status}] }
      `sets` holds only complete sets, already coerced to numbers — never NaN,
      never a string. `problems` is non-empty when the caller must refuse to
      save. Nothing is ever dropped without appearing in one of the two.
      `value` (the offending text, verbatim) and `status` (the row's class, so
      the copy can differ between a malformed row and an unfinished one) are
-     additive — the {i, field, reason} contract is unchanged. */
+     additive — the {i, field, reason} contract is unchanged.
+
+     B-112 (WO-010 W3). A complete set that carries a valid `ld` is emitted as
+     {w, r, ld} with ld's numbers in §1's key order — bar, bu, add, au — and
+     a set without one is emitted as {w, r}, the byte-identical string this
+     function has always produced. Before this, the line below built {w, r}
+     from scratch and every other key on the set died here, silently, on
+     save; the moment a set had a third key that was a P0 loss path. An ld
+     problem is a problem like any other, carrying `sub` (the sub-field) and,
+     for a mismatch, `kg` (what the components compose to) — both only on
+     ld problems, so the {i, field, reason, value, status} rows for w and r
+     are what they were. */
   function validateEntry(sets) {
     var out = { sets: [], problems: [] };
     if (!Array.isArray(sets)) {
@@ -350,14 +680,18 @@
       var d = describeSet(sets[i]);
       if (d.status === "blank") continue;
       if (d.status === "complete") {
-        out.sets.push({ w: parseWeight(d.w.value).value, r: parseReps(d.r.value).value });
+        var set = { w: parseWeight(d.w.value).value, r: parseReps(d.r.value).value };
+        if (d.ld) set.ld = ldNumbers(sets[i].ld);
+        out.sets.push(set);
         continue;
       }
       /* Closure over i is safe: `var i` is function-scoped but the push happens
          synchronously in this iteration. */
       for (var j = 0; j < d.problems.length; j++) {
         var p = d.problems[j];
-        out.problems.push({ i: i, field: p.field, reason: p.reason, value: p.value, status: d.status });
+        var q = { i: i, field: p.field, reason: p.reason, value: p.value, status: d.status };
+        if (p.field === "ld") { q.sub = p.sub; if (p.reason === "mismatch") q.kg = p.kg; }
+        out.problems.push(q);
       }
     }
     return out;
@@ -379,10 +713,12 @@
       var e = draft.entries[exId];
       var v = validateEntry(isObj(e) ? e.sets : null);
       v.problems.forEach(function (p) {
-        res.problems.push({
+        var q = {
           exId: exId, setIndex: p.i, field: p.field, reason: p.reason,
           value: p.value, status: p.status
-        });
+        };
+        if (p.field === "ld") { q.sub = p.sub; if (p.reason === "mismatch") q.kg = p.kg; }
+        res.problems.push(q);
       });
       var note = isObj(e) ? str(e.note) : "";
       if (v.sets.length || note.trim() !== "") {
@@ -475,7 +811,11 @@
      mid-session the draft's copy is the true one.
 
      The plan's prescription, never a deloaded one: pass the PLAN document, not
-     a deloadEx()'d day. A deload is a week, not an epoch (Rule PE1). */
+     a deloadEx()'d day. A deload is a week, not an epoch (Rule PE1).
+
+     A SET'S `ld` (schema 6, WO-010) rides through untouched: the sets come
+     from validateDraft, which emits {w, r, ld} for a built set and {w, r} for
+     a kg-direct one, and nothing below re-reads or rebuilds a set. */
   function buildSession(draft, dayId, dateStr, id, planId, plan) {
     var v = validateDraft(draft);
     if (!v.ok) return null;
@@ -2611,6 +2951,34 @@
         }
       }
 
+      /* ---- schema 6: a set may carry ld (WO-010 W3) ----
+         The first shape change since the store held real data — his session
+         of 2026-09-12 (client_id 1789264514484), six entries, every set
+         {w, r} in kg. This pass does not touch it, or any set: an ABSENT ld
+         MEANS "entered in kg, no bar", which is exactly what every set logged
+         before schema 6 was, so stamping one would be inventing a build he
+         did not record. Every session, entry, set, note and rx comes out
+         byte-identical (the suite pins that session by id through v5 -> 6).
+         All it writes is the version, so the store stops understating its
+         shape to WO-002's importer (which now owes 2-6) and to sync.
+
+         Gated on V_LD, never on SCHEMA_VERSION; reports unconditionally, the
+         v5 idiom, not v4's. */
+      var v6Bumped = false;
+      if (logVer < V_LD && (nlog || logIsObj)) {
+        if (!nlog) {
+          nlog = {};
+          Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
+        }
+        v6Bumped = true;
+        nlog.schemaVersion = SCHEMA_VERSION;
+        notes.push({
+          level: "info", key: "log",
+          msg: "Schema " + V_LD + ": sets may now carry ld, the bar and added weight " +
+               "the kg total was built from. No set was touched and no key was added."
+        });
+      }
+
       /* ---- the plan store, if the caller has one ----
          Absent (undefined) is the normal case today and does nothing: an empty
          install still boots with zero writes. Repairs are additive only. */
@@ -2638,7 +3006,7 @@
          The bodyweight store carries no schema-3 key, so a v2 bw store is not
          rewritten just to restamp its version — bwPayload() stamps it on the
          next real bodyweight entry. One less boot write, no content at stake. */
-      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped || v5Bumped;
+      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped || v5Bumped || v6Bumped;
       out.bwChanged = markedBw > 0 || dropped.length > 0;
       out.plansChanged = pres.changed === true;
       out.changed = out.logChanged || out.bwChanged || out.plansChanged;
@@ -2781,12 +3149,67 @@
   function isDemo(v) { return isObj(v) && v.demo === true; }
   var DEMO_MSG = "marked demo:true; demo data is never backed up as history";
 
+  /* The ld half of validateSessionDoc. Pushes every problem it finds onto
+     `p` with the sentences tabled below, and returns the composed kg total
+     when the build is whole (so the caller can test it against w), else
+     null. Every fault is collected, not just the first: a document with a
+     bad unit AND a bad bar names both. */
+  function ldDocProblems(ld, who, p) {
+    if (!isObj(ld)) { p.push(who + "ld must be an object"); return null; }
+    var whole = true, k;
+    for (k in ld) if (Object.prototype.hasOwnProperty.call(ld, k) && LD_KEYS.indexOf(k) < 0) {
+      p.push(who + "ld has an unknown key: " + k); whole = false;
+    }
+    var gotAu = ld.au === undefined ? "(absent)" : str(ld.au);
+    if (!isUnit(ld.au)) { p.push(who + "ld.au must be kg or lb, got: " + gotAu); whole = false; }
+    var pa = parsePart(ld.add, 0, isUnit(ld.au) ? ADD_MAX[ld.au] : Infinity);
+    if (!pa.ok && pa.reason === "range") { p.push(who + "ld.add out of range (0..500 kg, 0..1100 lb): " + str(ld.add)); whole = false; }
+    else if (!pa.ok) { p.push(who + "has an unreadable ld.add: \"" + str(ld.add) + "\""); whole = false; }
+    var hasBar = ld.bar !== undefined, hasBu = ld.bu !== undefined;
+    if (hasBar && !hasBu) { p.push(who + "ld.bar without ld.bu"); whole = false; }
+    if (hasBu && !hasBar) { p.push(who + "ld.bu without ld.bar"); whole = false; }
+    if (hasBu && !isUnit(ld.bu)) { p.push(who + "ld.bu must be kg or lb, got: " + str(ld.bu)); whole = false; }
+    var pb = null;
+    if (hasBar) {
+      pb = parsePart(ld.bar, 0, isUnit(ld.bu) ? BAR_MAX[ld.bu] : Infinity);
+      if (pb.ok && pb.value <= 0) pb = { ok: false, reason: "range" };
+      if (!pb.ok && pb.reason === "range") { p.push(who + "ld.bar out of range (above 0, up to 50 kg or 110 lb): " + str(ld.bar)); whole = false; }
+      else if (!pb.ok) { p.push(who + "has an unreadable ld.bar: \"" + str(ld.bar) + "\""); whole = false; }
+    }
+    if (!whole) return null;
+    var c = composeLoad(ld);
+    return c.ok ? c.w : null;
+  }
+
   /* validateSessionDoc(doc) → { ok, problems:[string] }
      Mirrors schema.sql phat_validate_session_doc: id present (number or
      non-empty string), dayId a non-empty string, date YYYY-MM-DD and a real
      day, planId (when present) a non-empty string, entries an object whose
      sets carry w in 0..500 and whole r in 1..100, each as a number or a
-     numeric string. Every problem is collected, not just the first. */
+     numeric string. Every problem is collected, not just the first.
+
+     THE ld RULES (WO-010 §1) AND THEIR MESSAGES. The block below is the
+     message table; supabase/schema.sql copies it verbatim (W5) so the app
+     and the server refuse the same fault with the same sentence. {ex} is the
+     entry's exercise id, {n} the set's 1-based position, {v} the value as
+     stored (str()), {w}/{kg} the typed total and the composed one.
+
+       entry {ex} set {n} ld must be an object
+       entry {ex} set {n} ld has an unknown key: {k}
+       entry {ex} set {n} ld.au must be kg or lb, got: {v}
+       entry {ex} set {n} ld.bu must be kg or lb, got: {v}
+       entry {ex} set {n} ld.bar without ld.bu
+       entry {ex} set {n} ld.bu without ld.bar
+       entry {ex} set {n} has an unreadable ld.add: "{v}"
+       entry {ex} set {n} ld.add out of range (0..500 kg, 0..1100 lb): {v}
+       entry {ex} set {n} has an unreadable ld.bar: "{v}"
+       entry {ex} set {n} ld.bar out of range (above 0, up to 50 kg or 110 lb): {v}
+       entry {ex} set {n} w {w} disagrees with ld ({kg})
+
+     "unreadable" is NUM_W's refusal: not digits with at most one dot, so
+     -5, 1e3, "7.5.0" and a non-number all land there. An absent au/bu
+     prints got: (absent). The disagreement test is |w - kg| > 0.05, the
+     same LD_TOL the save path uses, and it is a refusal, never a rewrite. */
   function validateSessionDoc(doc) {
     var p = [];
     if (!isObj(doc)) return { ok: false, problems: ["session doc must be a JSON object"] };
@@ -2810,18 +3233,25 @@
         if (!isObj(e)) { p.push("entry " + exId + " must be an object"); return; }
         if (e.sets === undefined) return;
         if (!Array.isArray(e.sets)) { p.push("entry " + exId + ".sets must be an array"); return; }
-        e.sets.forEach(function (s) {
+        e.sets.forEach(function (s, si) {
           if (!isObj(s)) { p.push("entry " + exId + " has a set that is not an object"); return; }
           if (s.w === undefined || s.w === null || s.r === undefined || s.r === null) {
             p.push("entry " + exId + " has a set missing w or r"); return;
           }
           var tw = typeof s.w, tr = typeof s.r;
+          var pw = null;
           if (tw !== "number" && tw !== "string")
             p.push("entry " + exId + " has a weight that is neither a number nor a numeric string");
           else {
-            var pw = parseWeight(s.w);
+            pw = parseWeight(s.w);
             if (!pw.ok && pw.reason === "range") p.push("entry " + exId + " weight out of range (0..500): " + str(s.w));
             else if (!pw.ok) p.push("entry " + exId + " has an unreadable weight: \"" + str(s.w) + "\"");
+          }
+          if (s.ld !== undefined) {
+            var who = "entry " + exId + " set " + (si + 1) + " ";
+            var kg = ldDocProblems(s.ld, who, p);
+            if (kg !== null && pw && pw.ok && Math.abs(pw.value - kg) > LD_TOL + 1e-9)
+              p.push(who + "w " + str(s.w) + " disagrees with ld (" + String(kg) + ")");
           }
           if (tr !== "number" && tr !== "string")
             p.push("entry " + exId + " has reps that are neither a number nor a numeric string");
@@ -3061,7 +3491,11 @@
       var ents = {};
       Object.keys(s.entries).forEach(function (exId) {
         var e = orderKeys(s.entries[exId], ["sets", "note", "rx"]);
-        if (Array.isArray(e.sets)) e.sets = e.sets.map(function (x) { return orderKeys(x, ["w", "r"]); });
+        if (Array.isArray(e.sets)) e.sets = e.sets.map(function (x) {
+          var y = orderKeys(x, ["w", "r", "ld"]);
+          if (isObj(y.ld)) y.ld = orderKeys(y.ld, LD_KEYS);   /* §1's order: bar, bu, add, au */
+          return y;
+        });
         if (isObj(e.rx)) e.rx = orderKeys(e.rx, ["s", "lo", "hi", "k"]);
         ents[exId] = e;
       });
@@ -3536,6 +3970,15 @@
     if (!isFinite(n)) return NaN;
     return Math.ceil(n / 2.5 - 0.5) * 2.5;
   }
+  /* The same shape on any grid, ties down (Rule L1, addendum §18.7 —
+     round2p5's sibling for the 5 lb grid): roundGrid(x, 5) = ceil(x/5 − 0.5) × 5.
+     roundGrid(x, 2.5) is round2p5(x) to the bit; the kg-direct path keeps
+     calling round2p5 by name so the baseline reads as the baseline. */
+  function roundGrid(x, g) {
+    var n = (typeof x === "number") ? x : Number(str(x));
+    if (!isFinite(n) || typeof g !== "number" || !(g > 0)) return NaN;
+    return Math.ceil(n / g - 0.5) * g + 0;   /* + 0: never -0 */
+  }
 
   /* Rule P1's working load: the weight he held for EVERY set — min, not max.
      `topSet` recommends off a weight hit once and missed twice (B-08).
@@ -3696,7 +4139,7 @@
      3–5 slot and two reps BELOW the range on a 6–10 one. Hypertrophy carries
      no number: H1 case 2 triggers on `every r > hi` with no ceiling, and
      inventing one would be prescribing a rep range. */
-  function incrementLine(ex) {
+  function incrementLine(ex, ld) {
     if (!isObj(ex)) return "";
     /* THE ROLE GATE, addendum §9.12 ruling 1 — the §9.11 rider extends here.
        An unrecognised `k` ("tempo", "", 7, missing) gets NO line. This used to
@@ -3716,8 +4159,26 @@
     if (PLAN_KINDS.indexOf(ex.k) < 0) return "";
     if (ex.k === "speed") return "";
     var im = ex.implement;
-    if (im !== "db" && im !== "machine" && im !== "cable" && im !== "bodyweight") return "";
-    var unit = (im === "db") ? "2.5 kg per DB" : "2.5 kg";
+    /* Rule L2 (addendum §18.2), the I2 line by BUILD. `ld` is the
+       working-load set's; absent or kg-with-no-bar is kg-direct and the
+       table below is exactly what it always was.
+         any build with a bar     NONE — the 2.5 lb pair is the 1.25 kg pair,
+                                  and I2's premise ("the smallest step is on
+                                  the bar") is decided by ld, not implement
+         LB, no bar, db           `If 5 lb per DB is not available, …`
+         LB, no bar, any other    `If 5 lb is not available, …` — INCLUDING
+                                  a bb slot: he built something without a
+                                  bar, and a spurious line is noise where a
+                                  missing one is a jump he cannot make. */
+    var b = buildOf(ld);
+    var unit;
+    if (b) {
+      if (b.hasBar) return "";
+      unit = String(b.grid) + " " + b.au + (im === "db" ? " per DB" : "");
+    } else {
+      if (im !== "db" && im !== "machine" && im !== "cable" && im !== "bodyweight") return "";
+      unit = (im === "db") ? "2.5 kg per DB" : "2.5 kg";
+    }
     if (ex.k === "power") return "If " + unit + " is not available, add reps up to " + (ex.hi + 2) + " first, then jump.";
     return "If " + unit + " is not available, add reps first, then jump.";
   }
@@ -3731,14 +4192,29 @@
        load 0 -> every multiplicative term is 0 -> 2.5
      The cap is rounded to the 2.5 grid as well, so no rule can print an
      off-grid kg (Decision 4). That only binds where the alternative was an
-     unroundable number, and it binds downward. */
-  function g1Step(load, mr, hi) {
+     unroundable number, and it binds downward.
+
+     Rule L1 (addendum §18.1, §18.7): `grid` is the build's step and `load`
+     is the working load EXPRESSED IN THE BUILD'S UNIT, bar included — G1 is
+     a percentage of the load, not of the plates. Omitted, grid is 2.5 and
+     the three lines below are the kg-direct path, byte for byte (roundGrid
+     on 2.5 is round2p5; the kg path calls round2p5 by name on purpose).
+       135 lb on a 20 kg bar, hi 5, min r 7: L 179.02 lb -> 8.95 -> 10, cap
+       35 -> 10 lb (18.1 example 2; kg-direct would say 5 kg = 145.9 lb)
+       45 lb belt, hi 10, min r 12: 2.25 -> 0, floor -> 5 lb (18.4 example 2) */
+  function g1Step(load, mr, hi, grid) {
     if (typeof load !== "number" || !isFinite(load) || load < 0) return NaN;
     var excess = mr - hi;
     if (!(excess > 0)) excess = 0;
-    var raw = round2p5(load * 0.025 * excess);
-    var cap = round2p5(load * 0.20);
-    return Math.max(2.5, Math.min(raw, cap));
+    var g = (typeof grid === "number" && isFinite(grid) && grid > 0) ? grid : KG_STEP;
+    if (g === KG_STEP) {
+      var raw = round2p5(load * 0.025 * excess);
+      var cap = round2p5(load * 0.20);
+      return Math.max(2.5, Math.min(raw, cap));
+    }
+    var rawG = roundGrid(load * 0.025 * excess, g);
+    var capG = roundGrid(load * 0.20, g);
+    return Math.max(g, Math.min(rawG, capG));
   }
 
   /* ------------------------------------------------------- verdict copy */
@@ -3758,9 +4234,10 @@
   }
   function cap1(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function mk(t, x, x2, rule) { return { t: t, x: x, x2: x2 || "", rule: rule }; }
-  function incOf(ex) {
-    return (isObj(ex) && typeof ex.inc === "number" && isFinite(ex.inc) && ex.inc > 0) ? ex.inc : 2.5;
-  }
+  /* Rule L1: the step is the BUILD's, never the slot's and never a setting's
+     (B-58). This replaced incOf(ex), which read an `ex.inc` no plan ever
+     carried; ex.inc stays unread. null (kg-direct) is 2.5 kg on w. */
+  function stepOf(b) { return b ? b.grid : KG_STEP; }
   function allZero(C) {
     if (!C.length) return false;
     for (var i = 0; i < C.length; i++) if (C[i].w !== 0) return false;
@@ -4147,15 +4624,41 @@
      easier: no band, no rack height, no substitute exercise. It holds.
      Returns the sentence WITHOUT its final punctuation on the drop branch, so
      P1 can end it "next session." and H1 can end it "." — the two rules print
-     different tails off the same arithmetic. */
-  function tooHeavy(ex, C, rangeWord) {
+     different tails off the same arithmetic. The build phrase (L2) rides in
+     `p` (" — 20 kg bar + 125 lb" or ""), and the caller puts it AFTER its
+     tail word and before the full stop: `Drop to 76.7 kg next session — 20
+     kg bar + 125 lb.`
+
+     Rule L1's drop (addendum §18.1), on the build's grid, with the guard on
+     EVERY build: nearest, then — if that is not STRICTLY below the current
+     load — exactly one grid step below it. Below zero, the hold form; exactly
+     zero, Z2's word and no phrase. `[Certain]` the 5 % drop is under half a
+     grid step whenever the load is under about 22.7 kg (the empty bar, a belt
+     with a 45 lb plate, a 55 lb dumbbell) and plain nearest rounds it back
+     to the load he just failed at, printed as `Drop to`. Floor would
+     over-drop at ordinary loads. This guard also closes the kg-direct
+     degenerate §18.6 #1 found: a 20 kg dumbbell missed at 2 reps printed
+     `Drop to 20 kg next session.` — at every kg-direct load ≤ 22.5 kg. It
+     is the ONLY kg-direct output §18 changes. */
+  function tooHeavy(ex, C, rangeWord, b) {
     var im = ex.implement, w0 = C[0].w;
-    var drop = round2p5(w0 * 0.95);
     var head = repWord(C[0].r) + " at " + loadWord(w0, im) + ". Below the " + rangeWord + ".";
-    if (!(drop > 0)) {
-      return mk("", head + " Hold here until all " + ex.s + " sets reach " + ex.lo + " reps.", "", "1z");
+    var hold = mk("", head + " Hold here until all " + ex.s + " sets reach " + ex.lo + " reps.", "", "1z");
+    var drop, p = "";
+    if (!b) {
+      drop = round2p5(w0 * 0.95);
+      if (!(drop < w0)) drop = w0 - KG_STEP;
+    } else {
+      var add2 = roundGrid(inUnit(b, w0 * 0.95) - inUnit(b, b.barKg), b.grid);
+      if (!(add2 < b.add)) add2 = addStep(b.add, -b.grid);
+      if (add2 < 0) { hold.p = ""; return hold; }
+      drop = buildTotal(b, add2);
+      if (drop > 0) p = " — " + buildAt(b, add2, im);
     }
-    return mk("down", head + " Drop to " + kg(drop) + " kg", "", "1");
+    if (drop < 0) { hold.p = ""; return hold; }
+    var out = mk("down", head + " Drop to " + (drop > 0 ? kg(drop) + " kg" : loadWord(0, im)), "", "1");
+    out.p = p;
+    return out;
   }
 
   /* -------------------------------------------------------------- P1 */
@@ -4178,7 +4681,7 @@
      sentence makes a claim about every set and has to stay true.
 
      Float-tolerant on 0.01: 2.5 kg steps arriving as parsed strings. */
-  function verdictPower(ex, C, pain) {
+  function verdictPower(ex, C, pain, b) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var load = minW(C), top = maxW(C), R = repeatLoad(C);
@@ -4186,12 +4689,17 @@
     var mixed = (top - load) > 0.01;
     var word = loadWord(load, im);
     var hold = mk("", "Stay at " + word + " until all " + s + " sets reach " + hi + " reps.", "", "P1.5");
+    /* `b` is the working-load set's build (Rule L1) or null for kg-direct.
+       It reaches cases 1, 3 and 4 — the cases that name a NEW load — and
+       never 2 or 5, which name a load he built this session and is on his
+       own rows (no phrase, ever: 18.1 example 11). */
+    var ld = b ? b.ld : undefined;
 
     /* 1 — too heavy. Beats case 2 deliberately: a mismatch is a symptom of the
        load being wrong, and the useful instruction is about the load. */
     if (C[0].r < lo) {
-      var th = tooHeavy(ex, C, "range");
-      return mk(th.t, th.rule === "1" ? th.x + " next session." : th.x, "", "P1." + th.rule);
+      var th = tooHeavy(ex, C, "range", b);
+      return mk(th.t, th.rule === "1" ? th.x + " next session" + th.p + "." : th.x, "", "P1." + th.rule);
     }
 
     /* 2 — the sets were not matched. Fires on `backoff` only: a set fell
@@ -4227,10 +4735,22 @@
        still computed off the working load — only the claim widens. */
     if (mr >= hi + 2) {
       if (pain) return hold;
-      var step = g1Step(load, mr, hi);
       var head3 = repWord(mr) + " at " + word + (mixed ? " or above" : "") + " on every set. Too light. ";
-      return mk("up", head3 + (load === 0 ? "Add " + kg(step) + " kg." : "Go to " + kg(load + step) + " kg."),
-        incrementLine(ex), "P1.3");
+      if (!b) {
+        var step = g1Step(load, mr, hi);
+        return mk("up", head3 + (load === 0 ? "Add " + kg(step) + " kg." : "Go to " + kg(load + step) + " kg."),
+          incrementLine(ex), "P1.3");
+      }
+      /* Rule L1, TOO LIGHT on a build: G1 in the build's unit, bar included;
+         the step lands on `add`; the kg total is what those plates compose to.
+         At zero load in lb (a belt with nothing on it): `Add 5 lb.` — Z2
+         delta 2's verb, the step in the build's unit, no total to explain. */
+      var step3 = g1Step(inUnit(b, load), mr, hi, b.grid);
+      var add3 = addStep(b.add, step3);
+      return mk("up", head3 + (load === 0
+          ? "Add " + String(step3) + " " + b.au + "."
+          : "Go to " + kg(buildTotal(b, add3)) + " kg — " + buildAt(b, add3, im) + "."),
+        incrementLine(ex, ld), "P1.3");
     }
 
     /* 4 — top of the range on every set. Also suppressed by a pain note.
@@ -4239,11 +4759,21 @@
        set, so only it takes ` or above` (§13.1). */
     if (mr >= hi) {
       if (pain) return hold;
-      var inc = incOf(ex);
+      var inc = stepOf(b);
+      if (!b) {
+        return mk("up", load === 0
+          ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + kg(inc) + " kg next session."
+          : "Top of range on all " + s + " sets. Go to " + kg(load + inc) + " kg next session.",
+          incrementLine(ex), "P1.4");
+      }
+      /* Rule L1, INCREASE on a build: add' = add + one grid step; the printed
+         kg is buildTotal, deliberately OFF the 2.5 grid (83.5, not 83.7),
+         and the build follows the em dash (L2). */
+      var add4 = addStep(b.add, inc);
       return mk("up", load === 0
-        ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + kg(inc) + " kg next session."
-        : "Top of range on all " + s + " sets. Go to " + kg(load + inc) + " kg next session.",
-        incrementLine(ex), "P1.4");
+        ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + String(inc) + " " + b.au + " next session."
+        : "Top of range on all " + s + " sets. Go to " + kg(buildTotal(b, add4)) + " kg next session — " + buildAt(b, add4, im) + ".",
+        incrementLine(ex, ld), "P1.4");
     }
 
     /* 5 — hold. One rep short is not a rounding error. */
@@ -4254,16 +4784,20 @@
 
   /* Rule H1 — hypertrophy verdict (audit §9), with Z1/Z2/Z3/G1/I2/S1.
      Cprev is the previous entry's first ex.s completed sets, or null. */
-  function verdictHyp(ex, C, Cprev, pain, epochChanged) {
+  function verdictHyp(ex, C, Cprev, pain, epochChanged, b) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var range = lo + "–" + hi + " range";
     var load = minW(C), mr = minRep(C);
+    /* `b`: the working-load set's build (Rule L1), null for kg-direct.
+       Read by cases 1, 2 and 4d only — the ones that name a new load or a
+       step. 3a–3c and 4a–4c name nothing new. */
+    var ld = b ? b.ld : undefined;
 
     /* 1 — too heavy. */
     if (C[0].r < lo) {
-      var th = tooHeavy(ex, C, range);
-      return mk(th.t, th.rule === "1" ? th.x + "." : th.x, "", "H1." + th.rule);
+      var th = tooHeavy(ex, C, range, b);
+      return mk(th.t, th.rule === "1" ? th.x + th.p + "." : th.x, "", "H1." + th.rule);
     }
 
     /* 2 — every set ABOVE the top of the range (12 is inside 8–12, so it does
@@ -4273,11 +4807,21 @@
        which falls through to the comparison rather than inventing hold copy
        for a branch the audit gives none for. */
     if (mr > hi && !pain) {
-      var step = g1Step(load, mr, hi);
+      if (!b) {
+        var step = g1Step(load, mr, hi);
+        return mk("up", load === 0
+          ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + kg(step) + " kg next session."
+          : "All sets above " + hi + ". Go to " + kg(load + step) + " kg next session.",
+          incrementLine(ex), "H1.2");
+      }
+      /* Rule L1 on a build — G1 in the build's unit, the phrase after the
+         em dash: `All sets above 12. Go to 27.2 kg next session — 60 lb per DB.` */
+      var step2 = g1Step(inUnit(b, load), mr, hi, b.grid);
+      var add2 = addStep(b.add, step2);
       return mk("up", load === 0
-        ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + kg(step) + " kg next session."
-        : "All sets above " + hi + ". Go to " + kg(load + step) + " kg next session.",
-        incrementLine(ex), "H1.2");
+        ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + String(step2) + " " + b.au + " next session."
+        : "All sets above " + hi + ". Go to " + kg(buildTotal(b, add2)) + " kg next session — " + buildAt(b, add2, im) + ".",
+        incrementLine(ex, ld), "H1.2");
     }
 
     /* 3 — no comparable previous entry, split by WHY (addendum §7.7 N3).
@@ -4347,7 +4891,9 @@
     var va = volOf(C), vb = volOf(Cprev);                 /* 4d — tonnage */
     var p = vb > 0 ? Math.round((va - vb) / vb * 100) : 0;
     if (va > vb) return mk("up", "Volume up " + p + "% — " + grp(va) + " kg against " + grp(vb) + " kg.", "", "H1.4d");
-    if (va < vb) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or 2.5 kg next time.", "", "H1.4d");
+    /* H1.4d's step is the working-load set's (L1): `5 lb` on an lb build,
+       `2.5 kg` otherwise — a kg-on-bar build steps 2.5 kg too. */
+    if (va < vb) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or " + String(stepOf(b)) + " " + (b ? b.au : "kg") + " next time.", "", "H1.4d");
     return mk("", "Volume matched. One more rep next session.", "", "H1.4d");
   }
 
@@ -4539,7 +5085,13 @@
 
     var pain = (typeof ctx.painFlag === "boolean") ? ctx.painFlag : painFlag(ctx.note);
 
-    if (ex.k === "power") return notAbsent(verdictPower(ex, C, pain));
+    /* Rule L1 — the WORKING-LOAD SET's build, computed once here from the
+       raw rows (completedSets strips ld) and threaded into both engines like
+       `pain` is: a fact about today's sets that the rule reads, never a
+       storage read. null is kg-direct, and kg-direct is the baseline. */
+    var b = workingBuild(ctx.sets, s, minW(C));
+
+    if (ex.k === "power") return notAbsent(verdictPower(ex, C, pain, b));
 
     /* Rule PE1. Computed HERE from the entry rather than trusted from the
        caller, so a view that forgets to pass anything still cannot compare
@@ -4556,7 +5108,7 @@
     var praw = ctx.prev;
     if (isObj(praw) && Array.isArray(praw.sets)) praw = praw.sets;
     var Cprev = Array.isArray(praw) ? completedSets(praw).slice(0, s) : null;
-    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch));
+    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch, b));
   }
 
   /* ==================================================== Rule W1 - W7
@@ -5576,6 +6128,10 @@
         if (!(n.w > 0)) continue;
         if (best === null || n.w > best.w || (n.w === best.w && d > best.date)) {
           best = { w: n.w, r: n.r, date: d };
+          /* Rule L3: the source SET's build rides along, so speedLoad can fit
+             the target to the plates R was lifted on. Only when the set
+             carries one; a kg-direct source has no key here. */
+          if (e.sets[j].ld !== undefined) best.ld = e.sets[j].ld;
         }
       }
     }
@@ -5672,11 +6228,65 @@
 
     out.source = { w: src.w, r: src.r, date: src.date };
     out.srcWindow = win;
-    out.target = round2p5(src.w * SP1_MID);
-    out.lo = round2p5(src.w * SP1_BAND_LO);
-    out.hi = round2p5(src.w * SP1_BAND_HI);
-    out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
-               " kg triple. Rest 60–90 s. Fast, never grinding.";
+
+    /* Rule L3 (addendum §18.1) — the target fitted to the SOURCE SET's build.
+       The speed card's own mode is not read; the source set is the only
+       build the engine can see. A kg-direct source (no ld, or a build that
+       does not recompose to R, or kg with no bar) is the path below,
+       unchanged to the byte. */
+    var b = buildOf(src.ld, src.w);
+    if (!b) {
+      out.target = round2p5(src.w * SP1_MID);
+      out.lo = round2p5(src.w * SP1_BAND_LO);
+      out.hi = round2p5(src.w * SP1_BAND_HI);
+      out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
+                 " kg triple. Rest 60–90 s. Fast, never grinding.";
+      return out;
+    }
+    /* lo/hi are r1 BAND EDGES, not grid-fitted: the band is a fact about R,
+       the grid is a fact about the plates, and the `65–70%` claim is only
+       printed when it is true of the number beside it. */
+    var lo = r1(src.w * SP1_BAND_LO), hi = r1(src.w * SP1_BAND_HI);
+    var mid = src.w * SP1_MID;
+    var cand = roundGrid(inUnit(b, mid) - inUnit(b, b.barKg), b.grid);
+    var pick = null, inBand = false, k, a2, w2, bestD = Infinity;
+    /* the grid point inside [lo, hi] nearest R × 0.675 — cand itself when it
+       fits, else a neighbour on the same grid */
+    for (k = -2; k <= 2; k++) {
+      a2 = addStep(cand, k * b.grid);
+      if (a2 < 0) continue;
+      w2 = buildTotal(b, a2);
+      if (w2 >= lo && w2 <= hi && Math.abs(w2 - mid) < bestD) { pick = a2; bestD = Math.abs(w2 - mid); inBand = true; }
+    }
+    if (pick === null) {
+      /* no grid point inside the band: the nearest one BELOW lo. Too light
+         is still speed work; too heavy is not. */
+      a2 = cand;
+      while (a2 >= 0 && buildTotal(b, a2) >= lo) a2 = addStep(a2, -b.grid);
+      if (a2 >= 0) pick = a2;
+    }
+    if (pick === null) {
+      /* The bar alone is above the band (a triple under ~31 kg on a 20 kg
+         bar): nothing on this build reaches under 65–70%, so the build is
+         IGNORED and the source is read as kg-direct with no phrase — L1's
+         "silence over a wrong plate count" — rather than naming a load
+         above the band as speed work. Not in §18's examples; flagged in the
+         W4 report. */
+      out.target = round2p5(src.w * SP1_MID);
+      out.lo = round2p5(src.w * SP1_BAND_LO);
+      out.hi = round2p5(src.w * SP1_BAND_HI);
+      out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
+                 " kg triple. Rest 60–90 s. Fast, never grinding.";
+      return out;
+    }
+    var sx2 = exById(p, out.srcId);
+    var srcIm = isObj(sx2) ? sx2.implement : undefined;
+    out.target = buildTotal(b, pick);
+    out.lo = lo;
+    out.hi = hi;
+    out.text = kg(out.target) + " kg — " + buildAt(b, pick, srcIm) + ". " +
+               (inBand ? "65–70% of your " : "The nearest you can build under 65–70% of your ") +
+               kg(src.w) + " kg triple. Rest 60–90 s. Fast, never grinding.";
     return out;
   }
 
@@ -8226,7 +8836,37 @@
 
   window.PHAT = {
     SCHEMA_VERSION: SCHEMA_VERSION,
-    LIMITS: { wMin: W_MIN, wMax: W_MAX, rMin: R_MIN, rMax: R_MAX },
+    /* ONE TABLE (WO-010 §1): the SQL validator copies these. add/bar are
+       bounded in their own unit; ldTol is the w-vs-components tolerance. */
+    LIMITS: { wMin: W_MIN, wMax: W_MAX, rMin: R_MIN, rMax: R_MAX,
+              addMax: { kg: ADD_MAX.kg, lb: ADD_MAX.lb },
+              barMax: { kg: BAR_MAX.kg, lb: BAR_MAX.lb },
+              ldTol: LD_TOL, lbKg: LB_KG },
+    /* WO-010 W3 — the load's components. composeLoad is the ONE place a kg
+       total is built from a bar and added weight (rounded once, at the
+       total); loadModeFor is the card's remembered mode; buildWord the build
+       in his units for the ghost line. validateGymProfile guards
+       phat:v1:prefs.gym. No verdict reads any of these yet — that is W4,
+       after the coach's §18. */
+    LB_KG: LB_KG,
+    LOAD_UNITS: LOAD_UNITS.slice(0),
+    toKg: toKg,
+    composeLoad: composeLoad,
+    buildWord: buildWord,
+    /* WO-010 W4 — the ladder (Rules L1–L4, addendum §18). Two grids chosen
+       by the working-load set's build, never the slot: KG_STEP on w for
+       kg-direct, LB_STEP / LB_BAR_STEP on `add` for an lb build. buildOf is
+       the classifier (null = kg-direct), roundGrid the ties-down sibling of
+       round2p5, workingBuild the set P1/H1 ladder on. LB_BAR_STEP is the one
+       constant that moves if his gym has no 2.5 lb plates (§18.8 #1). */
+    KG_STEP: KG_STEP,
+    LB_STEP: LB_STEP,
+    LB_BAR_STEP: LB_BAR_STEP,
+    roundGrid: roundGrid,
+    buildOf: buildOf,
+    workingBuild: workingBuild,
+    loadModeFor: loadModeFor,
+    validateGymProfile: validateGymProfile,
     localDate: localDate,
     draftAge: draftAge,
     parseWeight: parseWeight,
