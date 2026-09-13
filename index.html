@@ -6833,24 +6833,11 @@ const inputFocused=()=>{
 /* THE REPAINT RULE, spec 20.4, verbatim. One screen, one predicate. */
 const mayPaint=()=>sheetState===null&&S.tab==="train"&&S.sub===""&&S.draft===null&&!inputFocused();
 /* "1 session" / "3 sessions and 2 weights" / "3 sessions, 2 weights and 1
-   plan" - non-zero parts only, in that order (spec 20.2 rule 2). "" when
-   every count is zero; restoreCounts prints zeros and is not used here. */
-function mergeCounts(a){
-  const A=a||{}, parts=[];
-  if(A.sessions>0) parts.push(plural(A.sessions,"session"));
-  if(A.bodyweight>0) parts.push(plural(A.bodyweight,"weight"));
-  if(A.plans>0) parts.push(plural(A.plans,"plan"));
-  if(!parts.length) return "";
-  return parts.length===1?parts[0]:parts.slice(0,-1).join(", ")+" and "+parts[parts.length-1];
-}
-/* R-d, spec 20.3, verbatim - the sentence is UX's. PHAT.ownerRefusal("merge")
-   carries backend's placeholder wording and is not used on screen. */
-function mergeRefusal(owner,me){
-  const o=(owner&&typeof owner.email==="string"&&owner.email!=="")?owner.email:null;
-  const who=o===null?"another account":o, way=o===null?"that account":o;
-  const m=(typeof me==="string"&&me.trim()!=="")?me:"this account";
-  return "This device's log belongs to "+who+". The backup under "+m+" was not read and nothing here changed. Sign in as "+way+" to restore what is missing.";
-}
+   plan" - non-zero parts only (spec 20.2 rule 2), "" when every count is
+   zero. Lives in logic.js (WO-011 W5) so tests.html can pin all seven. */
+const mergeCounts=a=>PHAT.mergeCounts(a);
+/* R-d, spec 20.3 - the one string is PHAT.ownerRefusal("merge") (W5). */
+const mergeRefusal=(owner,me)=>PHAT.ownerRefusal("merge",owner,me);
 /* Hold the sentence for the next paintable render (spec 20.4 rule 4). A
    second merge before the flush REPLACES it with the sum (P13). */
 function mergeHold(added,k){

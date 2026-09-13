@@ -3840,15 +3840,34 @@
       return "Not restored. This device's log belongs to " + who + ". The backup under " + m +
              " was not read and nothing on this device changed. Sign in as " + way + " to restore.";
     }
-    /* WO-011 W3: the merge on open, refused for the same reason as R-c.
-       Same structure as "restore"; the wording is W2's (ux-designer) to
-       settle, and it changes here and nowhere else. */
+    /* WO-011 R-d, spec 20.3, verbatim - the sentence is UX's. Unlike R-a/R-b/
+       R-c it opens on the fact, not on a verdict word, and per 20.1 the words
+       "merge" and "pull" appear nowhere in it. One string, one owner: this
+       function. index.html's mergeRefusal() is a caller of it. */
     if (kind === "merge") {
-      return "Not merged. This device's log belongs to " + who + ". The backup under " + m +
-             " was not read and nothing on this device changed. Sign in as " + way + " to bring it back.";
+      return "This device's log belongs to " + who + ". The backup under " + m +
+             " was not read and nothing here changed. Sign in as " + way + " to restore what is missing.";
     }
     return "This device's log belongs to " + who + ". Nothing was backed up to " + m +
            ". Sign in as " + way + " to back it up.";
+  }
+
+  /* mergeCounts(added) -> "1 session" / "3 sessions and 2 weights" /
+       "3 sessions, 2 weights and 1 plan" - the non-zero parts only, in that
+       order, joined ", " then " and " (spec 20.2 rule 2). "" when every count
+       is zero or the argument is missing: a merge that added nothing is not
+       an event (rule 1). Never prints a "0 weights"; restoreCounts does, and
+       is not used for the merge. One function behind the toast, #bk-check
+       and the record line (spec 20.5: "12 sessions and 30 weights"). */
+  function mergeCounts(added) {
+    var A = isObj(added) ? added : {};
+    var plural = function (n, w) { return n + " " + w + (n === 1 ? "" : "s"); };
+    var parts = [];
+    if (A.sessions > 0) parts.push(plural(A.sessions, "session"));
+    if (A.bodyweight > 0) parts.push(plural(A.bodyweight, "weight"));
+    if (A.plans > 0) parts.push(plural(A.plans, "plan"));
+    if (!parts.length) return "";
+    return parts.length === 1 ? parts[0] : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
   }
 
   /* restoreSteps(rp, local, keys, ts)
@@ -9572,6 +9591,8 @@
     backupOwner: backupOwner,
     storeOwner: storeOwner,
     ownerRefusal: ownerRefusal,
+    /* WO-011 — the merge on open's one counts sentence (spec 20.2 rule 2). */
+    mergeCounts: mergeCounts,
     /* E-3 — backup and restore, the pure half of sync.js. backupPayload
        serialises the three stores into the rows the server upserts and NAMES
        every document it will not send; restorePayload rebuilds the stores from
