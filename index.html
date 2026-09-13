@@ -1382,6 +1382,9 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
             next Gym write so a bad bar list never costs the decided unit or
             an override. gymUnitErr: the `I lift in` refusal, in memory. */
          gymKeep:null, gymUnitErr:null,
+         /* WO-012b. ovMigrated: how many overrides the boot's one-time pass
+            rewrote (au dropped, v:2 stamped) - the count for its one write. */
+         ovMigrated:0,
          prefsMeta:{},exp:null,
          /* E-3. The backup client's state, IN MEMORY. `mod` is whether sync.js
             loaded: "off" (never attempted - file://, or offline at boot),
@@ -2303,7 +2306,8 @@ async function setGymUnit(u){
   const cur=gymUnit();
   if(cur===u) return;
   const next=Object.assign(gymBase(),{unit:u});
-  let rg=null; try{ rg=PHAT.readGymProfile(next); }catch(err){ rg=null; }
+  /* WO-012b: validated composed, committed as records (gymAdopt). */
+  const rg=gymAdopt(next);
   if(!rg||!rg.ok){ S.gymUnitErr="Could not save the unit. Nothing changed."; paintGymUnit(); return; }
   const wasBad=S.gymBad; S.gymBad=false;
   const ok=await gymCommit(rg.gym);
@@ -2334,9 +2338,153 @@ function paintGymUnit(){
    toast's, and the generic one would tell him his SETS failed, which is
    false. */
 let ovSaid=false;
-async function writeOverride(id,mode){
+/* ============================================================ WO-012b:
+   THE OVERRIDE RECORDS ONLY WHAT HE TAPPED (P1, 2026-09-13). 34f0a68 and
+   1262e6a wrote the card's WHOLE mode - {au, bar, bu} - on every tap, so
+   picking `Barbell 20 kg` while the unit was still kg locked kg on that
+   exercise; when he then set `I lift in: lb` the override beat his default
+   and the card read `Weight in kg + barbell 20 kg` on a unit he never chose.
+
+   prefs.gym.ex[id] is now a RECORD OF TAPS, one key per control:
+     au    "kg" | "lb"    only if he tapped the unit segment
+     bar   number | null  only if he tapped a bar row (null = No bar)
+     bu    "kg" | "lb"    with a numeric bar
+     v     2              written by this build; the migration's marker
+   A key he did not tap is ABSENT and inherits from the default when read,
+   so a bar picked on a kg card follows the unit when the unit changes, and
+   only a tapped unit is a unit override.
+
+   PHAT.overrideMode / readGymProfile (logic.js - not in this order) require
+   `au` and refuse any key outside {au, bar, bu}. So the record is COMPOSED
+   HERE before anything reaches the engine: recEngine fills a missing `au`
+   from prefs.gym.unit (absent -> kg), reads a null bar as no bar and drops
+   `v`; engPrefs() is what every engine call receives, and gymAdopt puts the
+   records back on what readGymProfile kept, so disk and memory hold the
+   record and never the composed mode. BACKEND: this rule belongs in
+   overrideMode (au optional -> the default's unit; bar null -> no bar; v
+   ignored), MODE_KEYS gains "v", and readGymProfile keeps the record; then
+   gymEngine and gymAdopt collapse to the engine's own calls. */
+const isRec=r=>!!r&&typeof r==="object"&&!Array.isArray(r);
+/* A record in its saved form: only the keys this build understands, `v`
+   only as a number >= 2 (anything else reads as pre-migration, no marker). */
+function recCopy(r){
+  const o={};
+  if(r.au==="kg"||r.au==="lb") o.au=r.au;
+  if(r.bar===null) o.bar=null;
+  else if(r.bar!==undefined){ o.bar=(typeof r.bar==="number")?r.bar:Number(String(r.bar).trim()); o.bu=r.bu==="lb"?"lb":"kg"; }
+  if(typeof r.v==="number"&&r.v>=2) o.v=r.v;
+  return o;
+}
+/* One record as the engine reads it: {au, bar?, bu?}. Every other key
+   passes through UNCHANGED so modeProblem still refuses a record this build
+   cannot read (D4: dropped by name at boot, never silently adopted). null
+   for a record that holds no tap at all ({} or {v:2}) - read as absent. */
+function recEngine(r,unit){
+  if(!isRec(r)) return r;
+  const o={}; let any=false;
+  Object.keys(r).forEach(k=>{
+    if(k==="v") return;
+    if((k==="bar"||k==="bu")&&r.bar===null) return;
+    o[k]=r[k]; any=true;
+  });
+  if(!any&&r.bar!==null) return null;
+  if(o.au===undefined) o.au=unit;
+  return o;
+}
+/* The profile as the engine reads it. Not an object, or no `ex` map: the
+   value itself, so readGymProfile refuses exactly what it refused before
+   and a kg profile with no overrides is passed through untouched (D6). */
+function gymEngine(g){
+  if(!isRec(g)||!isRec(g.ex)) return g;
+  const unit=g.unit==="lb"?"lb":"kg", ex={};
+  Object.keys(g.ex).forEach(k=>{ const m=recEngine(g.ex[k],unit); if(m!==null) ex[k]=m; });
+  return Object.assign({},g,{ex:ex});
+}
+const engPrefs=()=>S.gymBad?null:gymEngine(S.prefs.gym);
+/* The record this build keeps for an override the engine accepted: the
+   raw's own `au` and null bar (his taps), the adopted numbers, the marker. */
+function recFrom(raw,m){
+  if(!isRec(raw)) return recCopy(m);
+  const o={};
+  if(raw.au==="kg"||raw.au==="lb") o.au=raw.au;
+  if(raw.bar===null) o.bar=null;
+  else if(m.bar!==undefined){ o.bar=m.bar; o.bu=m.bu; }
+  if(typeof raw.v==="number"&&raw.v>=2) o.v=raw.v;
+  return o;
+}
+/* readGymProfile over the composed profile, then the RECORDS re-attached
+   for every override it kept. What lands in S.prefs.gym and on disk is the
+   record: committing the adopted form would write the default's unit into
+   every bar-only record, which is the bug this build removes. Same return
+   shape as readGymProfile; null when it threw. */
+function gymAdopt(raw){
+  let rg=null; try{ rg=PHAT.readGymProfile(gymEngine(raw)); }catch(err){ rg=null; }
+  if(!rg||!rg.ok||!rg.gym||!rg.gym.ex) return rg;
+  const ex={};
+  Object.keys(rg.gym.ex).forEach(k=>{ ex[k]=recFrom(isRec(raw.ex)?raw.ex[k]:null,rg.gym.ex[k]); });
+  rg.gym.ex=ex;
+  return rg;
+}
+/* THE ONE-TIME PASS over records written before this build (no marker).
+   Those builds wrote the whole mode on every tap, so a kg override on a lb
+   account is far likelier a bar tap made while the unit was still kg than
+   a deliberate kg - and the cost of being wrong is one chip tap back. The
+   rule, recorded by the PM: unit "lb", record without `v`, au "kg" -> `au`
+   dropped, bar kept, stamped v:2; a record left with nothing tapped is
+   removed. Every other record is left exactly as it is - an unmarked kg
+   record on a kg account stays a candidate for the day the unit becomes lb,
+   which is the order this bug happened in. Runs on the raw store before
+   validation. Returns the count for the boot's one write; it never fires
+   twice on one record because the write stamps v:2. */
+function migrateOverrides(g){
+  const out={gym:g,n:0};
+  if(!isRec(g)||g.unit!=="lb"||!isRec(g.ex)) return out;
+  const ex=Object.assign({},g.ex);
+  Object.keys(ex).forEach(k=>{
+    const r=ex[k];
+    if(!isRec(r)||(typeof r.v==="number"&&r.v>=2)||r.au!=="kg") return;
+    const nr={}; Object.keys(r).forEach(kk=>{ if(kk!=="au") nr[kk]=r[kk]; });
+    if(nr.bar===undefined) delete ex[k]; else{ nr.v=2; ex[k]=nr; }
+    out.n++;
+  });
+  if(out.n){ out.gym=Object.assign({},g,{ex:ex}); if(!Object.keys(ex).length) delete out.gym.ex; }
+  return out;
+}
+/* The record for this card as this build holds it (a copy), or null. */
+function ovRec(id){
+  if(S.gymBad) return null;
+  const g=S.prefs.gym;
+  if(!g||!isRec(g.ex)||!Object.prototype.hasOwnProperty.call(g.ex,id)||!isRec(g.ex[id])) return null;
+  return recCopy(g.ex[id]);
+}
+/* Which half of the record is his (spec 21.2 extended, WO-012b): a tapped
+   unit is `Set for this exercise`; a tapped bar under the default's unit is
+   `Your default · bar set for this exercise` (NEW, pending ux-designer);
+   no record -> null. */
+function ovLevel(id){
+  const r=ovRec(id); if(!r) return null;
+  if(r.au!==undefined) return "Set for this exercise";
+  if(r.bar!==undefined) return "Your default · bar set for this exercise";
+  return null;
+}
+/* Merge ONE TAP into the record and commit. `patch` is {au} from the unit
+   segment, {bar, bu} or {bar: null} from a bar row - never the whole mode.
+   Stamped v:2. */
+async function writeOverride(id,patch){
+  const cur=ovRec(id)||{}, rec={};
+  ["au","bar","bu"].forEach(k=>{ if(cur[k]!==undefined) rec[k]=cur[k]; });
+  if(patch.au!==undefined) rec.au=patch.au==="lb"?"lb":"kg";
+  if(patch.bar!==undefined){
+    if(patch.bar===null){ rec.bar=null; delete rec.bu; }
+    else{ rec.bar=Number(patch.bar); rec.bu=patch.bu==="lb"?"lb":"kg"; }
+  }
+  rec.v=2;
+  return writeRec(id,rec);
+}
+/* A record verbatim (the unit switch's undo puts back what stood before). */
+async function writeRec(id,rec){
   const base=gymBase(), ex=Object.assign({},base.ex||{});
-  ex[id]=modeCopy(mode);
+  ex[id]=recCopy(rec);
   return overrideCommit(Object.assign(base,{ex:ex}));
 }
 async function clearOverride(id){
@@ -2355,8 +2503,6 @@ async function overrideCommit(next){
   }
   return ok;
 }
-/* The override on disk for this card, or null. */
-const overrideOf=id=>{ try{ return S.gymBad?null:PHAT.overrideMode(S.prefs,id); }catch(err){ return null; } };
 async function gymSave(){
   const ui=S.gymUi; if(!ui||!ui.form) return;
   const f=ui.form, n=String(f.n).trim();
@@ -2545,7 +2691,7 @@ function cardModeFull(id,prev){
   try{
     const en=S.draft&&S.draft.entries[id];
     const r=PHAT.cardModeFor({exId:id, ex:exAnywhere(id), entry:en||undefined,
-      prefs:S.gymBad?null:S.prefs, plan:sp(),
+      prefs:engPrefs(), plan:sp(),
       prev:prev===undefined?PHAT.lastFor(S.sessions,id):prev});
     return {mode:modeCopy(r.mode), tier:r.tier};
   }catch(err){ return {mode:{au:"kg"},tier:"kg"}; }
@@ -2554,7 +2700,7 @@ function cardMode(id,prev){ return cardModeFull(id,prev).mode; }
 /* Level 1 for this card, as the sheet names it (`Use my default · lb +
    Barbell 20 kg`) even while an override is in force. */
 function defaultModeFor(id){
-  try{ return modeCopy(PHAT.defaultMode(S.gymBad?null:S.prefs,exAnywhere(id),sp())); }
+  try{ return modeCopy(PHAT.defaultMode(engPrefs(),exAnywhere(id),sp())); }
   catch(err){ return {au:"kg"}; }
 }
 /* Is a default KNOWN on this device - a unit chosen in Settings and readable?
@@ -2573,7 +2719,16 @@ const defaultKnown=()=>gymUnit()!==null;
    "" means NO second line: a device that has never chosen a unit and holds
    no override sees today's chip, byte for byte (D6, UX 21.12 #4). */
 function chipLevel(id,cm,prev){
-  const t=cm.tier, ov=!!overrideOf(id);
+  /* WO-012b: the record says which half is his - a tapped unit reads `Set
+     for this exercise`, a tapped bar alone `Your default · bar set for this
+     exercise`. The chip tier with no record (the write failed, D7) keeps
+     `Set for this exercise`: for this workout it is. */
+  const t=cm.tier;
+  /* `Your default · …` is only true while the card's unit IS the default's.
+     A session mode or a draft from before the unit changed in Settings is
+     on its own unit for this workout: `Set for this exercise`. */
+  let ol=ovLevel(id);
+  if(ol&&ol.indexOf("Your default")===0&&cm.mode.au!==defaultModeFor(id).au) ol="Set for this exercise";
   const unreadable=S.prefsBad||S.gymBad;
   const hasLd=p=>!!(p&&Array.isArray(p.sets)&&p.sets.some(s=>s&&s.ld&&typeof s.ld==="object"));
   const dflt=()=>{
@@ -2582,9 +2737,9 @@ function chipLevel(id,cm,prev){
       return (Array.isArray(g.bars)&&g.bars.length)?"Your default · first bar in your gym":"Your default · no bars in your gym yet";
     return "Your default";
   };
-  if(t==="chip"||t==="override") return "Set for this exercise";
+  if(t==="chip"||t==="override") return ol||"Set for this exercise";
   if(t==="draft"||t==="typed"){
-    if(ov) return "Set for this exercise";
+    if(ol) return ol;
     if(unreadable) return "Could not read Settings · kg for now";
     if(defaultKnown()) return dflt();
     if(prev===undefined) prev=PHAT.lastFor(S.sessions,id);
@@ -3264,7 +3419,7 @@ function liftRow(l){
   let au="kg";
   try{
     let ex=null; try{ ex=PHAT.exById(S.plan,l.id); }catch(err){ ex=null; }
-    au=PHAT.cardModeFor({exId:l.id, ex:ex||undefined, prefs:S.gymBad?null:S.prefs, plan:S.plan,
+    au=PHAT.cardModeFor({exId:l.id, ex:ex||undefined, prefs:engPrefs(), plan:S.plan,
       prev:PHAT.lastFor(S.sessions,l.id)}).mode.au;
   }catch(err){ au="kg"; }
   const lb=au==="lb";
@@ -5776,7 +5931,10 @@ function openLoadSheet(keep){
      show what the default is, and a row that does nothing is a row a tired
      thumb will tap. */
   const lvl=chipLevel(id,cm,prev);
-  const onDefault=lvl.indexOf("Your default")===0;
+  /* WO-012b: a bar-only record reads `Your default · bar set for this
+     exercise` and still needs the row - it is the way back to the default's
+     bar - so the row follows the RECORD, not the line's first word. */
+  const onDefault=lvl.indexOf("Your default")===0&&!ovRec(id);
   const showDflt=defaultKnown()&&!onDefault;
   const bars=sheetBars();
   const cur=(mode.bar!==undefined)?{w:mode.bar,u:mode.bu}:null;
@@ -5851,10 +6009,15 @@ function loadSheetTap(b){
     const u=b.dataset.u; if(u===mode.au) return;
     const typed=typedSets(id);
     const nm=modeCopy(mode); nm.au=u;
-    if(typed.length){ askUnitSwitch(id,mode,nm,typed); return; }
+    /* WO-012b: the record gets the UNIT - and the bar the card shows, so the
+       checked bar row does not jump on a unit tap and the next session
+       opens as this one closes. Not the mode wholesale: a bar the card does
+       not have is not written as null. */
+    const patch={au:u}; if(nm.bar!==undefined){ patch.bar=nm.bar; patch.bu=nm.bu; }
+    if(typed.length){ askUnitSwitch(id,mode,nm,typed,false,patch); return; }
     /* WO-012 W4: the draft write first (applyMode), then the override -
        written ON THIS TAP, a set logged or not. Independent writes. */
-    applyMode(id,nm,false); writeOverride(id,nm); paintMode(id); paintAdvice(false);
+    applyMode(id,nm,false); writeOverride(id,patch); paintMode(id); paintAdvice(false);
     openLoadSheet(true);
     const again=document.querySelector('#modal [data-ld="unit"][data-u="'+u+'"]'); if(again) again.focus();
     return;
@@ -5898,10 +6061,10 @@ function loadSheetTap(b){
    the override (a chosen unit or bar, level 2) or its removal (`Use my
    default`). `asDefault` picks which; both are their own save() and neither
    blocks the draft write that already happened. */
-function applyChoice(id,nm,clearW,asDefault){
+function applyChoice(id,nm,clearW,asDefault,patch){
   applyMode(id,nm,clearW,asDefault);
   if(asDefault){ clearOverride(id); announce("On your default: "+modeWord(nm)+"."); }
-  else writeOverride(id,nm);
+  else writeOverride(id,patch||{});
 }
 function pickBar(id,mode,nb,asDefault){
   const same=nb?(mode.bar!==undefined&&Number(mode.bar)===nb.w&&mode.bu===nb.u):(mode.bar===undefined);
@@ -5912,8 +6075,11 @@ function pickBar(id,mode,nb,asDefault){
     closeSheet(); return;
   }
   const nm={au:mode.au}; if(nb){ nm.bar=nb.w; nm.bu=nb.u; }
+  /* WO-012b: a bar row writes the BAR only - no `au` - so the unit stays
+     the default's and follows it. `No bar` is a tap too: bar null. */
+  const patch=nb?{bar:nb.w,bu:nb.u}:{bar:null};
   const typed=typedSets(id).filter(x=>{ const l={add:typedW(x.st),au:mode.au}; if(nb){ l.bar=nb.w; l.bu=nb.u; } return PHAT.composeLoad(l).ok; });
-  if(!typed.length){ applyChoice(id,nm,false,asDefault); closeSheet(); paintMode(id); paintAdvice(false); return; }
+  if(!typed.length){ applyChoice(id,nm,false,asDefault,patch); closeSheet(); paintMode(id); paintAdvice(false); return; }
   const b1=barLabel(mode), b2=barLabel(nm);
   const on=b=>b?"on "+b:"with no bar";
   const lines=typed.map(x=>{
@@ -5926,7 +6092,7 @@ function pickBar(id,mode,nb,asDefault){
   askSheet({headline:"The bar changes the totals.", body:lines.join(" "),
     danger:"Use "+(b2||"no bar"), safe:"Keep "+(b1||"no bar"), back:"ldchip", load:id,
     onSafe:()=>openLoadSheet(false),
-    onDanger:()=>{ applyChoice(id,nm,false,asDefault); closeSheet(); paintMode(id); paintAdvice(false); }});
+    onDanger:()=>{ applyChoice(id,nm,false,asDefault,patch); closeSheet(); paintMode(id); paintAdvice(false); }});
 }
 /* Unit switch with typed weights (4.4b.3): the digits are in the old unit,
    converting them makes an unloadable number and keeping them re-values w.
@@ -5934,7 +6100,7 @@ function pickBar(id,mode,nb,asDefault){
    mode to switch to (WO-012: `Use my default` arrives here with the
    default's bar on it); `asDefault` clears the override instead of writing
    one. The undo remembers the override as it was, so it goes back too. */
-function askUnitSwitch(id,mode,nm,typed,asDefault){
+function askUnitSwitch(id,mode,nm,typed,asDefault,patch){
   const u=nm.au;
   const head=typed.length===1?"Set "+(typed[0].i+1)+" holds "+mode.au+" weights.":typed.length+" sets hold "+mode.au+" weights.";
   askSheet({headline:head, body:"Switching to "+u+" clears them. Reps stay.",
@@ -5943,9 +6109,9 @@ function askUnitSwitch(id,mode,nm,typed,asDefault){
     onDanger:()=>{
       const en=S.draft.entries[id];
       S.undo={kind:"unit",exId:id,fromAu:mode.au,mode:en.mode?modeCopy(en.mode):null,
-              ov:overrideOf(id),
+              ov:ovRec(id),
               sets:en.sets.map(st=>{ const o={w:String(st.w==null?"":st.w)}; if(st.ld&&typeof st.ld==="object") o.ld=ldCopy(st.ld); return o; })};
-      applyChoice(id,modeCopy(nm),true,asDefault);
+      applyChoice(id,modeCopy(nm),true,asDefault,patch);
       /* Nothing is displaced on the card: the fields are emptied in place. */
       const card=document.getElementById("excard");
       if(card&&card.dataset.ex===id) card.querySelectorAll("input.w").forEach(inp=>{ inp.value=""; });
@@ -5964,7 +6130,7 @@ function undoUnit(){
   u.sets.forEach((o,i)=>{ const st=en.sets[i]; if(!st) return; st.w=o.w; if(o.ld) st.ld=ldCopy(o.ld); else delete st.ld; });
   S.undo=null; hideToast();
   flushDraft();
-  if(u.ov) writeOverride(u.exId,u.ov); else clearOverride(u.exId);
+  if(u.ov) writeRec(u.exId,u.ov); else clearOverride(u.exId);
   if(sheetState&&sheetState.load===u.exId) closeSheet();
   paintMode(u.exId); paintAdvice(false); paintUndo(u.exId);
   toast("Weights restored.");
@@ -7828,22 +7994,27 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
        console.warn naming it), never a reason to refuse the bars. Nothing
        is rewritten here; the next Gym write from Settings or a card writes
        the clean profile over it. */
+    /* WO-012b. The override pass first, on the raw store (see
+       migrateOverrides), then gymAdopt: readGymProfile over the COMPOSED
+       profile, the records re-attached. The pass's count is the boot's one
+       prefs write, below, next to the log's own migration writes. */
     if(rp.value.gym!==undefined&&rp.value.gym!==null){
-      let rg=null; try{ rg=PHAT.readGymProfile(rp.value.gym); }catch(err){ rg=null; }
+      const mig=migrateOverrides(rp.value.gym), raw=mig.gym;
+      const rg=gymAdopt(raw);
       if(rg&&rg.drop.length) console.warn("[phat] prefs.gym: dropped "+rg.drop.join(", "));
-      if(rg&&rg.ok) S.prefs.gym=rg.gym;
+      if(rg&&rg.ok){ S.prefs.gym=rg.gym; S.ovMigrated=mig.n; }
       else{
         S.gymBad=true; console.warn("[phat] prefs.gym did not validate");
         /* The bars are refused; the unit and every override that reads are
            NOT thrown away with them (§3.3). Kept aside, merged back under
            the next write. Cards meanwhile are on kg (spec 21.2). */
-        const raw=rp.value.gym, keep={};
+        const keep={};
         try{
           const drop=rg?rg.drop:[];
           if(typeof raw==="object"&&(raw.unit==="kg"||raw.unit==="lb")&&drop.indexOf("unit")<0) keep.unit=raw.unit;
           if(typeof raw==="object"&&raw.ex&&typeof raw.ex==="object"&&drop.indexOf("ex")<0){
-            const ex={};
-            Object.keys(raw.ex).forEach(k=>{ const m=PHAT.overrideMode({gym:raw},k); if(m) ex[k]=m; });
+            const ex={}, eg=gymEngine(raw);
+            Object.keys(raw.ex).forEach(k=>{ const m=PHAT.overrideMode(eg,k); if(m) ex[k]=recFrom(raw.ex[k],m); });
             if(Object.keys(ex).length) keep.ex=ex;
           }
         }catch(err){}
@@ -7913,6 +8084,15 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   if(m.logChanged||pp.changed) await save(LOG,logPayload());
   if(m.bwChanged) await save(BWK,bwPayload());
   if(m.notes&&m.notes.length) console.info("[phat] migration:",m.notes);
+  /* WO-012b. The override pass landed in memory above; this is its one
+     write, after every prefs key has been read into S.prefs (prefsPayload
+     writes them all). A failed write costs nothing - the pass re-runs on
+     the raw store next boot to the same result - so it is silent: save()'s
+     generic S.err is put back, as overrideCommit does. */
+  if(S.ovMigrated&&!S.gymBad&&!S.prefsBad){
+    const e0=S.err; const okp=await save(PREFS,prefsPayload()); if(!okp) S.err=e0;
+    console.info("[phat] override pass: "+S.ovMigrated+" rewritten"+(okp?"":", not written"));
+  }
   /* Read the draft here, before the first render and before any day can be
      tapped, so startDay() knows whether one exists. W5 turns "ok" into the
      restore offer; "error" already makes startDay() fail closed. */
