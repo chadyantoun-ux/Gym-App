@@ -52,7 +52,7 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 
 ---
 
-## 2. Current state — 2026-09-13, after WO-011 (`main @ bbcdac3`)
+## 2. Current state — 2026-09-13, after WO-012 (`main @ 4b144a0`)
 
 **The app is live, offline-capable, backed up, and holds one real session.** `https://gym-app-psi-eight.vercel.app`
 
@@ -66,17 +66,34 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 - **Screens built:** Train/Home (onboarding, Settings — Backup, Account with `Change password`, Gym), Session, Summary,
   Trend, Weight, Diet, **Plans list + Plan Editor** (WO-006) with the cross-day **re-split** that keeps an exercise's id
   (WO-007). Photographs replace the stick figures on 32 of 42 slots; 10 are cue-only (B-105, B-106).
-- **Units (WO-010):** a set is entered as **bar + added weight, in kg or lb, as a total**; the kg total prints on every
-  row. `w` is always the kg total every engine reads; `ld: {bar, bu, add, au}` beside it holds the components and
+- **Units (WO-010 + WO-012):** a set is entered as **bar + added weight, in kg or lb, as a total**; the kg total prints on
+  every row. `w` is always the kg total every engine reads; `ld: {bar, bu, add, au}` beside it holds the components and
   **absent means kg**. The increment ladder (coach §18, Rules L1–L4) is chosen by the set's `ld`, never the slot: 2.5 kg
-  kg-direct, 5 lb on a lb build, and the verdict prints the kg total then the build. Settings → Gym holds bars only,
-  per device, in `prefs`.
+  kg-direct, 5 lb on a lb build, and the verdict prints the kg total then the build. **The unit is decided at two
+  levels, both per device in `prefs.gym` (WO-012):** the **default** `prefs.gym.unit` (`"kg" | "lb"`, absent = kg;
+  Settings → Gym, *I lift in*) is where every card starts, with the profile's first bar on `bb` slots only; the
+  **override** `prefs.gym.ex[exId]` = `{au, bar?, bu?}` is written **the moment the chip's sheet applies it** (a set
+  need never be logged) and cleared by *Use my default*. Precedence (`PHAT.cardModeFor`, which also returns the tier
+  so the chip can say `Your default` / `Set for this exercise`): chip this session → the draft's own `ld` → kg if a
+  kg-direct set is typed → override → **default when `prefs.gym.unit` is present** → history (`loadModeFor`) **only
+  while it is absent** → kg. **A default that a later change cannot reach is not a default** — that is why history
+  yields. Display follows the card's unit on every surface through `PHAT.displayLoad(w, unit)` (kg = `r1`, lb = nearest
+  0.5 lb, ties down); `w` is never rewritten; a number in the weight column is always the column's terms (the added
+  weight, in the card's unit — `Last 125.5 lb × 5` on a bar card for a 77 kg prior, never the 170 lb total). Rule U1: a
+  kg-direct set's verdict on a lb card keeps the kg grid and brackets the lb reading on the load token
+  (`Go to 79.5 kg (175.5 lb) next session.`); report tokens stay kg; a lb-built set's L1 form never gains a bracket.
+  Rule EQ1: `LOAD_EQ` 0.25 kg — two stored loads within it are the same load, at exactly four sites (P1 `backoff`/
+  `mixed`, `workingBuild`, T1 clause c); H1.4d branches on the printed percentage, so `Volume up 0%` is unreachable.
+  Rule SD1: the `+` seed on a converted prior lands on the grid it will be stored on (`seedFor`); the ghost shows what
+  was lifted, the seed what can be built. A kg-default device with no overrides is byte-identical to before WO-012.
+  Bodyweight stays kg (B-127 is his word). `gymWrite` spreads the profile — a bar save must never drop `unit` or an
+  override (it did, once, on the branch).
 - **Storage:** `localStorage` under `phat:v1:log`, `bw`, `draft`, `prefs`, `plans`, `planedit`; auth session under
   `phat:auth`; `phat:v1:recover:*` written before any restore replaces a log. `SCHEMA_VERSION` is **6**. Migrations
   are gated on their own version constants (`V_DATEBASIS`, `V_STATEKEYS`, `V_PLAN`, `V_RX`, `V_LD`), never on
   `SCHEMA_VERSION`; the v6 pass stamps the version and moves zero bytes. The importer owes 2–6.
-- **Tests:** `tests.html` from `file://`, no Node. **Read the file for the count** — on `main` at `bbcdac3` it is
-  `842 / 842 / 0`. Three meta-tripwires forbid any named or expected failure, any skip without a reason, and any
+- **Tests:** `tests.html` from `file://`, no Node. **Read the file for the count** — on `main` at `4b144a0` it is
+  `905 / 905 / 0`. Three meta-tripwires forbid any named or expected failure, any skip without a reason, and any
   fixture writing a `phat:*` key. Every rule change since WO-005 was pinned by running the new tests against the
   *pre-fix* `logic.js` and confirming they go red. Chady's first logged session is a fixture, by id, on his real export.
 - **Backup (E-3, amended by WO-011):** Supabase project `nkebsoqjtkcdiswrmely`, `us-west-2`, Postgres 17. **Push after
@@ -114,15 +131,23 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
   source, `PHAT.PHAT_PLAN`**; and until WO-010 a kg-direct miss at ≤ 22.5 kg printed `Drop to {the same load}`.
 - **Open, on the record:** **B-116 — warm-up sets**: his first session logged a five-set ramp (20 → 70 kg) on a
   3 × 3–5 slot and every engine read it as prescribed work; logged, marked, or omitted is the PM's first question for
-  the next planning pass, unanswered. B-111 (`Swapped` mark — coach recommends it, Chady's yes/no owed), B-117 (his
-  bars by name; does the gym have 2.5 lb plates), **B-76** (a stale tab's `finish()` writes memory over disk — QA wrote
-  one session over ten in WO-011; the merge restored them from the server, which is mitigation not fix, and a session
-  never pushed before the overwrite is on no row anywhere; B-123 and B-124 are the same class, filed with it — the
-  first backend item on the store layer), B-121 (local-wins on a same-id collision, accepted until a second device),
-  B-05 (no edit or delete of a saved session), B-04 (file importer, owes schema 2–6), B-98 (an account cannot
-  hard-delete its own server row — P1 the day a delete syncs), B-97 (Home fold at 393 × 852), B-114 (`+ 0 lb` drop
-  phrase), B-11, B-19, B-36, B-45. **Chady's, once:** close the page on his phone so the v6 worker activates (B-122).
-  `docs/backlog.md` is the list.
+  the next planning pass, unanswered. **B-131 — two of his first session's loads do not mean what their slot reads**:
+  `d1b` 86 kg on a bodyweight slot (`w` there is the *added* load, so the app reads a 171 kg pull-up and tells him to
+  hang 182 lb from a belt) and `d1d` 81 kg on a dumbbell slot (per hand, so a 178 lb dumbbell; `[Likely]` the pair).
+  Every verdict on those two slots is correct arithmetic on a wrong fact and no test can catch it; his one sentence,
+  then B-05 to edit. B-111 (`Swapped` mark — coach recommends it, Chady's yes/no owed), B-117 (his bars by name; does
+  the gym have 2.5 lb plates), B-127 (bodyweight in lb — which scale), **B-76** (a stale tab's `finish()` writes memory
+  over disk — QA wrote one session over ten in WO-011; the merge restored them from the server, which is mitigation
+  not fix, and a session never pushed before the overwrite is on no row anywhere; B-123, B-124 and **B-128** (a stale
+  tab's Settings write wipes the unit and every override — reproduced by WO-012 QA) are the same class, filed with it
+  — the first backend item on the store layer), B-129 (`Last bar only × N` shipped on QA's word, UX's owed), B-121
+  (local-wins on a same-id collision, accepted until a second device), B-05 (no edit or delete of a saved session),
+  B-04 (file importer, owes schema 2–6), B-98 (an account cannot hard-delete its own server row — P1 the day a delete
+  syncs), B-97 (Home fold at 393 × 852), B-114 (`+ 0 lb` drop phrase), B-11, B-19, B-36, B-45. **Chady's, once:**
+  close the page on his phone so the v6 worker activates (B-122) — and then **the phone-only check for WO-012**: its
+  next launch should show *I lift in* under Settings → Gym; WO-012 is the first same-list deploy that relies on v6's
+  refresh to carry the shell, and `sw.js` was deliberately not bumped. If it does not appear after one page close,
+  that is a P1 on the v6 rule. `docs/backlog.md` is the list.
 
 ### Stack — built
 

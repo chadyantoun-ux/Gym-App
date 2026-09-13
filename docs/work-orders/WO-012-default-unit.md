@@ -1,6 +1,6 @@
 # WO-012 — Decide once: the default unit, the per-exercise override, and every surface speaking it
 
-Owner: `project-manager` · Filed: 2026-09-13 · Status: **specified** · Branch: `wo-012-default-unit`
+Owner: `project-manager` · Filed: 2026-09-13 · Status: **closed 2026-09-13** — `main @ 4b144a0`, deployed and verified; closure record in §8. Two things in this file were corrected during the chain and are marked in place: the **precedence** in §0.1 (history now yields to a chosen default — the main session's ruling, on UX's disagreement) and the **D1 literal** in §4 (`Last 170 lb × 5` was a total on a card that takes plates — UX). Branch: `wo-012-default-unit` (merged)
 Supersedes nothing; corrects WO-010's *initial state*. WO-010's shape (`w` kg, `ld` beside it,
 schema 6) is untouched.
 
@@ -47,11 +47,22 @@ the chip is flipped he reads kg and converts again.
 | **1 · Default** | `prefs.gym.unit` = `"kg" \| "lb"`, absent = `"kg"` | Where every card starts before any per-exercise choice exists | Settings → Gym, *I lift in* |
 | **2 · Override** | `prefs.gym.ex[exId]` = `{au, bar?, bu?}` | A deliberate per-exercise choice, persisted **the moment the chip's sheet applies it**, whether or not a set is ever logged in that mode | The card's chip; cleared by the sheet's *Use my default* |
 
-Precedence on a card, top wins:
+Precedence on a card, top wins — **as filed** (superseded, kept for the record):
 `entry.mode` (chip this session, on the draft) → the draft's own `ld` → kg if a kg-direct set is
 already typed → **`prefs.gym.ex[id]` (override)** → **`PHAT.loadModeFor(prev)` (history, WO-010's
 memory — kept as a tier so a WO-010-era choice is not lost)** → **default** (`prefs.gym.unit` plus the
 bar rule below) → `{au: "kg"}`.
+
+> **Amended 2026-09-13 at W2 — the ruling that shipped.** UX (§21.12 #1) disagreed: every set logged on a
+> lb card carries `ld`, so with history above the default every *logged* card's mode comes from history
+> and a later change in Settings moves only cards he has never logged — the segment would be a
+> first-session-only control. The main session ruled for UX. **The default governs; history fires only
+> while `prefs.gym.unit` is absent.** Precedence as built (`cardModeFor`, S47): session → draft `ld` →
+> typed kg → override → **default (when `prefs.gym.unit` is present)** → **history (only while it is
+> absent)** → `{au: "kg"}`. Principle: a default that a later change cannot reach is not a default. Cost:
+> a WO-010-era bar choice on a device that then picks a default is one re-pick in the sheet, which
+> writes it as an override. D3's "a never-touched card now opens in kg" becomes "every card without an
+> override now opens in kg". Recorded in `docs/decisions.md`.
 
 A chip tap writes **both** `entry.mode` (as today) **and** `prefs.gym.ex[id]`. History never writes
 the override; only a tap does. Both stores are per device (B-113's ruling stands).
@@ -68,7 +79,8 @@ ruled out. No profile bar and `implement: "bb"` → no bar, and the chip says so
 overturn this with one sentence; it is one branch in `defaultMode`.
 
 **Display follows the card's unit.** A kg-entered set on a lb card renders converted for display,
-`w` untouched: `Last 170 lb × 5`. The `= 60.8 kg` total on the row stays — he asked for it as the
+`w` untouched: `Last 125.5 lb × 5` on a card with the 20 kg bar (the *added* weight, in the card's unit —
+see the D1 correction in §4), `Last 170 lb × 5` only on a card with no bar. The `= 60.8 kg` total on the row stays — he asked for it as the
 label. The surfaces, enumerated so QA can tick them: the ghost hint; the stepper's step and its
 aria-labels; the `+`-on-empty seed; the live region; the remove-set confirmation; the sheet's
 *Last time:* line; the Summary's per-set line; the Trend lift rows' delta and endpoints; the verdict's
@@ -307,8 +319,14 @@ sets the branch `wo-012-default-unit` before the first dispatch (B-107's rule); 
 
 - **D1 · His session is untouched.** Load the fixture holding `1789264514484`; set `prefs.gym.unit =
   "lb"`; open Train, Session, Summary, Trend. `JSON.stringify(phat:v1:log)` is byte-identical before
-  and after; no set gains `ld`; the ghost on d1a reads `Last 170 lb × 5`-style (W1's rounding) with
-  `w: 77` unchanged on disk.
+  and after; no set gains `ld`; the ghost on d1a reads ~~`Last 170 lb × 5`-style~~ **`Last 125.5 lb × 5`-style**
+  (W1's rounding) with `w: 77` unchanged on disk.
+  **Corrected by UX at W2 (§21):** `170 lb` is the *total* of a 77 kg set; under §0.1's bar rule d1a on a
+  lb device opens with the 20 kg bar on it and the weight column is the *added* weight, so a seed of 170
+  into that field stores 20 + 77.1 = 97.1 kg for a lift that was 77 — the silent-wrong-number class this
+  order ranks first, produced by its own example. **Rule:** a number in the weight column is always in the
+  column's terms — the added weight, in the card's unit. Observed by QA on his session: d1a reads
+  `Last 44 lb total × 12` / `Last 44 lb × 12` / `Last 68.5 lb × 15` (the third set is 51 kg − 20 kg bar).
 - **D2 · Display never writes.** Switching the default lb ↔ kg, and flipping any chip, with no set
   typed: `phat:v1:log`, `bw`, `draft`, `plans` byte-identical; only `phat:v1:prefs` changes.
 - **D3 · The override is stored on the tap, not the log.** Flip d3c to kg via the chip, log nothing,
@@ -384,3 +402,62 @@ before any dispatch. Agents commit named paths only.
    byte-verify, `sw.js` per header rule, `docs/deploy.md` run log, remind Chady of the one-time
    page close.
 7. **`project-manager`** closes: statuses on B-125/B-126/B-118, decision recorded, §8 closure record.
+
+---
+
+## 8. Closure record — 2026-09-13
+
+**Closed on `main @ 4b144a0`** (merge of `wo-012-default-unit`, `--no-ff`). Deployed by the main session: **60 files
+byte-verified** on production; `/logic.js` 200 `application/javascript`, byte-identical to `git cat-file blob
+4b144a0:logic.js`, carries `displayLoad`, `cardModeFor`, `LOAD_EQ`; `/index.html` carries *I lift in* and *Use my
+default*. Live `sw.js` **`v6`, not bumped**: the file list is unchanged and no cached entry must be discarded. This is
+the **first same-list deploy that relies on v6's refresh** (WO-011 P1) to carry the shell to his phone — whether the
+next launch shows *I lift in* is the phone-only check; if it does not after one page close, the v6 rule is wrong and
+that is a P1, not a reason to bump. Suite **905 / 905 / 0** at `4b144a0`.
+
+### What shipped
+
+| Item | Commit | Note |
+|---|---|---|
+| W1 coach §21 | `811ad29` | **Rule U1**: the lb reading in brackets on the *load token* (`Go to 79.5 kg (175.5 lb) next session.`), `displayLoad` of the same number — the PM's `(175 lb)` corrected to `(175.5 lb)`; report tokens stay kg; L1's lb-built form unchanged; 0.5 lb confirmed, ties down; no ghost marker. `speedFlagText` added to the site list. **Flagged, not fixed:** `d1b` 86 kg and `d1d` 81 kg do not read as the slot's load (§21.7 #2–#3) → B-131 |
+| W2 UX §21 | `7486fa7` | The segment, the two-line chip, *Use my default*, the caption at 11 px, the rendering rule (a number in the weight column is always in the column's terms), the seed rule. **Found the order's D1 literal wrong** (`170 lb` is a total; a bar card ghosts `125.5 lb`). **Found `gymWrite` wiping the unit** on every bar save. **Disagreed with §0.1's precedence** — adopted |
+| W3 engine | `d70438a` | `displayLoad` at 0.5 lb, `defaultMode` / `overrideMode` / `cardModeFor` with tiers, `validateGymProfile` per-key refusal, U1 in the verdicts, `priorInUnit`; S45; 865 / 865 / 0 |
+| Coach §21.13 | `e94ac74` | **Rule EQ1** (`LOAD_EQ` 0.25 kg — the 0.1 kg drift of a converted seed reached H1.4d's `Volume down 0%` and T1's `1e-9`), **H1.4d on the printed percentage**, **Rule SD1** (the converted seed lands on the grid) |
+| W3b engine | `fd24342` | `LOAD_EQ` at exactly four sites, `seedFor`, H1.4d on `p`; S46; 897 / 897 / 0. 284 spurious `0%` verdicts in 3,200 → 0; 580,608 kg-direct verdicts byte-identical |
+| W4 frontend | `34f0a68` | The segment; the chip's two lines; override written on the tap; *Use my default*; **`gymWrite` fixed** (spreads the profile, `gymKeep`); every surface through `displayLoad`; caption 11 px (B-118) |
+| W4b frontend | `1262e6a` | QA's three: `kg` pressed while the unit is absent (`gymShown`); `Last bar only × N` for a prior at the empty bar (view rule, pending UX's word — B-129); `.ghost min-width: 0` at 200 %; the chip's height reserved at 200 % |
+| W5 QA | `3bbd90c` | **Pass.** S47; D1–D8 observed on his session `1789264514484` on a Playwright rig at 400 × 850 with CDN and Supabase blocked; the D6 DOM diff against `main @ 81fc0b8` byte-identical with `unit` absent; six attacks; nine mutants killed. Found: the two-tab stale `prefs` write (B-128), the unpressed segment and the 200 % overflow (both fixed in `1262e6a`), `44 lb total` illegible (B-129), `chipLevel` extraction asked (B-20). 905 / 905 / 0 |
+| W6 release | `4b144a0` | Merge, upload, verification by the main session. No `docs/deploy.md` run-log entry: that file has no run-log section and no order has written one; the record is this section |
+
+### Acceptance, by criterion
+
+D1 observed (with the corrected literal); D2 observed (a chip tap writes `prefs` and `entry.mode`; no number in the
+draft moves); D3 observed exactly (the override on the tap with nothing logged, across discard + reload; *Use my
+default* removes the key and the empty map); D4 observed (`{au: "stone"}` dropped by name, bars and the good override
+intact, no boot write); D5 observed (draft numbers and both `ld` byte-identical across a reload; only `savedAt` moves,
+by the `pagehide` flush); D6 observed (`#excard .sets`, `#ldchip`, `#slot-verdict`, Summary, Trend, `phat:v1:prefs`
+byte-identical to `main @ 81fc0b8`); D7 observed (prefs write stubbed to throw — one toast, the card holds the
+choice, the session saves with the right `ld`); D8 observed (lb survives a context kill; prefs outside the backup and
+the merge, pinned pure). W4's 44 px and the row-geometry re-run: pass. W3's kg path byte-identical: the 580,608
+differential.
+
+### Rulings that moved during the chain
+
+1. **Precedence** — history yields to a chosen default (§0.1 amendment; decisions 2026-09-13).
+2. **The D1 literal** — `Last 125.5 lb × 5` on a bar card (§4 D1 correction).
+3. **`(175 lb)` → `(175.5 lb)`** — the bracket is `displayLoad` of the same number, ties down.
+4. **Two coaching rules the order did not ask for** — EQ1 and SD1 — because the seed the order asked for stores
+   ±0.1 kg and the engines compared at 0.01.
+
+### Filed by the close
+
+B-128 (two-tab `prefs` wipe, B-76's class, P3 with the cluster) · B-129 (`Last bar only`, UX's word, P3) · B-130
+(coach prose `79.0` is `79` on screen, docs) · **B-131 (his `d1b` 86 kg and `d1d` 81 kg — the slot reads them as
+something else; his one sentence, then B-05)** · `chipLevel` on B-20's list.
+
+### Still Chady's
+
+B-131 (what were 86 and 81) · B-127 (bodyweight in lb — which scale) · B-117 (2.5 lb plates; the 20 kg bar) ·
+B-111 (`Swapped`) · B-116 (warm-ups — the PM's first question, still) · the phone: does the next launch show
+*I lift in* (v6, same-list deploy). Logged sessions: one, in kg, by hand. The next session through a lb card retires
+§21 slot by slot.

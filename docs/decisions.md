@@ -3117,3 +3117,108 @@ twelve lines.
 
 **Not a coach item beyond what §21 / §21.13 already ruled.** EQ1, SD1, H1.4d and U1 are observed as ruled. B-116
 (his d1a warm-ups feeding the verdict) is unchanged by this order and still the first coaching question.
+
+## 2026-09-13 — WO-012 closed: the default governs and history yields to it; U1 puts the lb reading on the load token; EQ1 makes 0.25 kg the same load at four sites; SD1 seeds what can be built; the order's own D1 literal was a wrong number; `sw.js` stays `v6` on a same-list deploy
+
+**Context.** `main @ 4b144a0`, merge of `wo-012-default-unit` (`--no-ff`), deployed by the main session, **60 files
+byte-verified** on production (`/logic.js` 200 `application/javascript`, byte-identical to `git cat-file blob
+4b144a0:logic.js`; `/index.html` carries *I lift in* and *Use my default*; live `sw.js` `v6`). Suite **905 / 905 / 0**.
+The chain: W1 coach §21 `811ad29` ∥ W2 UX §21 `7486fa7` → W3 `d70438a` (865) → coach §21.13 `e94ac74` → W3b
+`fd24342` (897) → W4 `34f0a68` + `1262e6a` → W5 QA `3bbd90c` (905, pass) → merge. Closes B-125, B-126, B-118. Files
+B-128–B-131.
+
+**Decisions — what a future session would otherwise re-litigate.**
+
+1. **The two levels, final.** `prefs.gym.unit` (`"kg" | "lb"`, absent = kg; Settings → Gym, *I lift in*) is where
+   every card starts. `prefs.gym.ex[exId]` = `{au, bar?, bu?}` is the override, written **on the tap** in the chip's
+   sheet — whether or not a set is ever logged in that mode — and removed by *Use my default* (the empty map goes
+   too). History never writes an override. The engine returns the tier that chose (`cardModeFor(...).tier`) and the
+   chip's second line names it: `Your default …` / `Set for this exercise`. Both stores are per device (B-113 stands).
+2. **Precedence — the ruling moved from the order, and why.** WO-012 §0.1 as filed put the history tier
+   (`loadModeFor`, WO-010's memory through a logged set's `ld`) **above** the default, so a WO-010-era choice was not
+   lost. UX (§21.12 #1) disagreed with structure: every set logged on a lb card carries `ld`, so after one session
+   every logged card's mode comes from history and changing the default in Settings moves only cards he has never
+   logged — the segment becomes a first-session-only control, and the one setting he asked for appears not to work.
+   **The main session ruled for UX; the PM's §0.1 is amended.** The rule now: chip this session → the draft's own `ld`
+   → kg if a kg-direct set is typed → override → **default, when `prefs.gym.unit` is present** → history, **only
+   while `prefs.gym.unit` is absent** → `{au: "kg"}`. Stated as a principle so it is not re-argued: **a default that a
+   later change cannot reach is not a default.** The cost is one re-pick in the sheet for a WO-010-era bar choice on
+   a device that then chooses a default, which writes it as an override. Observed by QA under the ruling (S47, D3:
+   the default to kg moves d3b, leaves d3c's override alone). How much WO-010 `ld` history exists on his phone: none
+   — his session is kg-direct throughout.
+3. **Rule U1 — the kg-direct verdict on a lb card (coach §21, B-126).** Option (a), refined twice. The kg grid is
+   untouched; the load token the rule tells him to build gains the lb reading in brackets **immediately after the
+   kg**: `Go to 79.5 kg (175.5 lb) next session.`, `Stay at 77 kg (170 lb) until all 3 sets reach 5 reps.` The
+   bracket is `displayLoad(x, "lb")` of the **same number printed** — never a second rounding, never a 5 lb snap;
+   the PM's `(175 lb)` was wrong and is `(175.5 lb)`. Report tokens (`7 reps at 77 kg`, the `Sets not matched`
+   list, `your 77 kg triple`, `81 kg is not speed work`) stay kg — they are on his rows in lb already. L1's lb-built
+   form (`Go to 83.5 kg next session — 20 kg bar + 140 lb.`) never gains a bracket: the build phrase already is the
+   lb reading. A kg card is byte-identical to `main`. `speedFlagText` is a verdict site the order missed; added.
+   Rejected: the lb ladder (a 5 lb grid on a total is meaningless on a kg bar — 44.09 + 5n is never a multiple of 5
+   — and it would make the ladder a function of a display setting, which B-58 and L1 forbid); the card's default bar
+   as the build (a default nobody confirmed is not a fact about the set). **On-screen reach today:** every set typed
+   on a lb card carries `ld`, so the bracket appears only through the speed slot (`55 kg (121.5 lb). 65–70% of your
+   81 kg triple.`) until his next lb-logged set on each slot, then it is gone from that slot. A fact, not a defect.
+4. **`displayLoad` at 0.5 lb, ties down, one constant** (`roundGrid(w / LB_KG, 0.5)`): 0.227 kg, coarser than the
+   0.1 kg stored, finer than any plate, and the only rounding a lb-bar total (`137.5 lb`) survives intact. The
+   verdict bracket calls the same function — two roundings on one screen is a defect. No conversion marker on the
+   ghost: the row's `= 77 kg` total is the marker, and a glyph he learns to ignore is worse than none.
+5. **Rule EQ1 — when two loads are the same load (coach §21.13, `fd24342`).** A converted seed stores ±0.1 kg
+   (77 kg reproduced as 125.5 lb on a 20 kg bar is 76.9). That drift reached two cross-session engines: P1's
+   `backoff`/`mixed` printed `Sets not matched` on an identical session, and T1's deload trigger was blind to a stall
+   at 77.1. `LOAD_EQ = 0.25 kg`, one exported constant beside `LD_TOL` (not merged with it — a comment says which of
+   the two each test uses and why they differ), at **exactly four sites**: `verdictPower`'s `backoff` and `mixed`
+   (were `> 0.01`), `workingBuild` (was `<= 0.01`), `d1T1` clause (c) (was `+ 1e-9`). Nothing else. What it swallows:
+   any two stored loads within 0.25 kg read as one load — half a 0.5 lb step, a quarter of the smallest kg plate
+   step — so no real plate change is ever swallowed. `[Certain]` no pinned example moves: every §13/§18/§21 fixture
+   and the 580,608-verdict kg-direct differential sit on 2.5 kg or 5 lb grids. Measured: 284 spurious `0%` verdicts
+   in 3,200 generated H1 sessions → 0; the 580,608 kg-direct verdicts byte-identical before and after.
+6. **H1.4d branches on the printed percentage.** `p === 0` → `Volume matched.`; `p > 0` up; `p < 0` down. `Volume
+   up 0%` / `Volume down 0%` are unreachable strings, pinned as such by a meta-test. This was reachable on `main`
+   before WO-012 (a kg-direct 77 → 77.1 typed by hand); closed for every path, not only the seeded one.
+7. **Rule SD1 — ghost = what was lifted, seed = what can be built.** The ghost's reading is the truth at 0.5 lb
+   (`Last 125.5 lb × 5` from a 77 kg prior on the 20 kg bar); the `+`-on-empty seed on a *converted* prior lands on
+   the grid of the build it will be stored as — the heaviest grid load whose `buildTotal` is not above the prior by
+   more than `LOAD_EQ` (125, storing 76.7, not 125.5 and not 130 = 79.0, a kilo above). A same-build seed is
+   verbatim, as today. Floor over nearest: a seed a plate above a load whose verdict may have been `Stay at 78` is a
+   wrong instruction. `seedFor(priorW, mode)` is pure in `logic.js`; `seedValue` calls it on the converted path only.
+8. **The order's own D1 literal was a wrong number (UX §21).** WO-012 §4 D1 said the ghost on d1a reads `Last 170
+   lb × 5`. 170 lb is the *total* of a 77 kg set; under the bar rule d1a on a lb device opens with the 20 kg bar on
+   it, and the weight column is the *added* weight — so a seed of 170 into that field stores 20 + 77.1 = 97.1 kg for
+   a lift that was 77. The silent-wrong-number class this project ranks first, produced by the order's own example.
+   **The rule:** a number in the weight column is always in the column's terms — the added weight, in the card's
+   unit. `Last 125.5 lb × 5` on a bar card; `Last 170 lb × 5` only on a card with no bar. Observed by QA: d1a prints
+   `Last 44 lb total × 12` / `Last 44 lb × 12` / `Last 68.5 lb × 15`. **Corrected in the order by this close.**
+9. **`gymWrite` was one line from undoing the whole order.** `S.prefs.gym = {bars: bars}` on every bar save would
+   have deleted `unit` and every override — "decide once" becoming "decide once per bar edit". Found by UX from the
+   tree, fixed in W4 (`34f0a68` spreads the profile, replaces `bars` only; `gymKeep`), pinned by QA's attack 1 (lb,
+   three overrides, a bar saved and removed: all survive). The same class remains open across tabs — B-128.
+10. **The default bar on a lb `bb` card** — the profile's first bar, no bar elsewhere — shipped as ruled in the order's
+    §0.1 (a lb Bench with no bar stores 61.2 kg for an 81.2 kg lift). Chady has not overturned it. UX §21.7 accepted
+    it with the caption `+ lb` and the chip's line 2 as the visible carriers.
+11. **Bodyweight stays kg.** The setting is *I lift in*, not *units*; B-127 is still his word.
+12. **`sw.js` stays `v6`.** The file list is unchanged and no cached entry must be discarded; the header rule's third
+    clause (a shell the refresh cannot replace) was the v5 case and does not apply to a v6 cache. This is the **first
+    same-list deploy that relies on v6's refresh path** to carry new `index.html` + `logic.js` to his phone. What
+    only the phone can answer: does the next launch show *I lift in* — if it does not after the page is closed once,
+    the v6 rule is wrong and it becomes a P1 on the record, not a bump-and-hope.
+
+**Filed by the close.** B-128 (the two-tab `prefs` wipe — B-76's class, P3 with the cluster; fix with B-76, not
+alone). B-129 (`Last bar only × N` shipped as a view rule on QA's recommendation, pending UX's word; Chady's eye
+decides, checklist item 12). B-130 (coach prose `79.0 kg` is `79 kg` on screen — docs). **B-131 — his `d1b` 86 kg on a
+bodyweight slot and `d1d` 81 kg on a dumbbell slot are, by the coach's reading, not the added load and not a
+per-hand load** (`[Likely]` bodyweight ± a plate; `[Likely]` a pair total); every verdict on those two slots is
+correct arithmetic on a number the rule reads as something else, and no test can catch it. His one sentence; the
+edit is B-05's. Not fixed here and not ticked by W5 as advice.
+
+**Two QA findings fixed before the merge (`1262e6a`):** the segment showed neither unit pressed while
+`prefs.gym.unit` was absent (`gymShown` — `kg` pressed, as UX 21.1 says); at 200 % text the lb ghost overflowed the
+viewport by 29 px and the chip changed height on a tap (`.ghost min-width: 0`, chip `min-height: max(56px, 6.5rem -
+48px)`).
+
+**Not done, on the record.** W6's "`docs/deploy.md` run log entry" — `deploy.md` has no run log section and no
+order has written one there; the deploy record for every WO lives in its closure record and the backlog's WO row.
+Stated so nobody hunts for it, not created here.
+
+**The standing diagnosis.** WO-010 gave him lb on the bar; WO-012 gave him lb on every card without a tap. One
+session logged, in kg, by hand. The app now needs nothing from tooling to log a lb session; it needs the session.
