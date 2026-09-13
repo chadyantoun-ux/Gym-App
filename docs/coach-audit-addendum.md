@@ -6096,3 +6096,325 @@ settle anything here that needed settling — it fixes stored kg, and this is di
 two of the three are numbers I cannot read as the lift they are logged under. The app now shows
 him lb; the next thing it needs is a second session logged through a lb card, at which point every
 slot he touches leaves this section behind.
+
+---
+
+## 21.13 Rule EQ1 — when two loads are the same load; Rule SD1 — the converted seed lands on the grid — 2026-09-13
+
+**Added 2026-09-13.** Answers the WO-012 W1 follow-up on the ±0.1 kg a seeded conversion stores —
+UX spec §21.12 item 2 (`docs/specs/wo-004-screens.md`), and item 3 with it, because the PM's option
+(b) *is* item 3. Numbered 21.13 to sit after those items; this file has no 21.11 or 21.12 and none is
+missing. Read with §13.1 (P1.2a — the `> 0.01` tests this section widens), §7.10 (E1 clause (c)),
+§21.3 (the 0.5 lb display constant, which stands) and §18.1 (L1 — the grid the seed now lands on).
+
+**The uncomfortable answer first.** The sentence the question was built on cannot happen. Every set
+on one card is typed in one unit on one bar — D9 clears the weights on a unit switch and confirms a
+bar switch, and a draft with sets pins the card's mode — so `Sets not matched: 76.9 / 77 / 77 kg` is
+an engine fixture, not a thing his phone can print. `[Likely]` on the unreachability (I read the
+spec, not every path in `index.html`; QA can pin it). If that were the whole of it I would rule (c)
+and move on. It is not the whole of it. The same 0.1 kg reaches two engines that **compare across
+sessions**, and both are reachable on his very next session:
+
+- **H1.4d** compares tonnage with `<` and `>` and no tolerance. Prior `77 × 10/10/10` kg-direct on a
+  hypertrophy barbell slot; this session seeded `125.5 lb` on the 20 kg bar → `76.9 × 10/10/10` →
+  2307 against 2310 → **`Volume down 0%. Add a rep or 5 lb next time.`** A session identical to
+  the one he was told to repeat earns a `down` verdict. That is the B-07 class — the app punishing
+  him for doing what it said — and it fires on **every** barbell hypertrophy slot with a kg-direct
+  prior the first time he logs it in lb. No bar: `77.1` → `Volume up 0% — 2,313 kg against 2,310 kg.`
+  A fake up is the same defect with a nicer face.
+- **T1's clause (c)** (`d1T1`, `r.failLoad > best + 1e-9` → MISS-NEW) treats a failure 0.1 kg above
+  a completed load as an attempt at a new load. Completed 77 kg; fails `170 lb` = 77.1 twice; both
+  read as MISS-NEW; the run never starts; **the deload trigger is blind to the stall** until he
+  completes 77.1 once. This one is the conservative-looking failure that is not conservative: the
+  whole point of T1 is to catch two failures at a weight he has already demonstrated, and a 0.1 kg
+  he did not choose switches it off.
+
+**Ruling: (a).** One constant, `LOAD_EQ = 0.25 kg`, at the four places the engine asks "is this the
+same load", and H1.4d's own rule that the percentage it prints is the decision it makes. (b) is
+rejected *as the fix for this* — it does not remove the drift (170 lb is on the ladder already and
+still stores 77.1; on a bar it swaps a ≤ 0.2 kg drift for a ≤ 2.27 kg one) — and then **adopted for
+the different problem it actually solves**, as Rule SD1 below: a seed of `125.5 lb` puts a load in
+the field that no 2.5 lb plate builds, and L1 then ladders it forever — `Go to 79.2 kg next session
+— 20 kg bar + 130.5 lb.` names a plate that does not exist, which breaks the one promise the build
+phrase makes (§21.5). (c) is rejected because the two reachable cases above are not "true once";
+H1.4d's is false and T1's is silent for as long as the chain lasts.
+
+### 21.13.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | Does 76.9 kg read as 77 kg? | **Yes. Rule EQ1.** `LOAD_EQ = 0.25 kg`; two stored loads within it are the same load. Applied at P1's `backoff` and `mixed` (today `> 0.01`), `workingBuild` (today `<= 0.01`), T1's clause (c) (today `+ 1e-9`). Nothing else. |
+| 2 | H1.4d at a tonnage difference that rounds to 0% | **`Volume matched.`** The printed percentage is the decision: `p === 0` takes the matched branch. `Volume down 0%` and `Volume up 0%` become unreachable strings. |
+| 3 | Option (b), the seed on the ladder | **Not the fix for #1; adopted as Rule SD1 for UX §21.12 item 3.** A *converted* seed lands on the grid of the build it will be stored as — the heaviest grid load whose `buildTotal` is not above the prior by more than `LOAD_EQ`. A same-build seed is verbatim, as today. |
+| 4 | Option (c), leave it | **Rejected.** The in-session sentence is unreachable; the cross-session ones are reachable and wrong. |
+| 5 | The 0.5 lb display constant, given #1 | **Stands, unchanged.** The display is a reading; EQ1 covers its rounding. A finer display (`125.66 lb`) puts a non-plate in the field and the ghost; UX said so and is right. |
+| 6 | Pinned examples | **None move.** `[Certain]` every §13, §18, §21 fixture and the 580,608-verdict differential sit on 2.5 kg or 5 lb grids; no two loads in any of them are within 0.25 kg unless equal. |
+
+### 21.13.1 Rule EQ1 — the same load
+
+```
+Rule: EQ1 — when two stored loads are the same load
+Applies to:   Every engine that asks whether one load equals, exceeds or falls
+              below another. Every role. Every screen those engines feed.
+              Sites, exhaustively:
+                P1  backoff = (R − load) > LOAD_EQ        (§13.1; today 0.01)
+                P1  mixed   = (top − load) > LOAD_EQ      (§13.1; today 0.01)
+                workingBuild: |s.w − load| <= LOAD_EQ     (§18.1; today 0.01)
+                T1 clause (c): failLoad > best + LOAD_EQ  → MISS-NEW  (§7.10; today 1e-9)
+              NOT: LD_TOL (0.05 — w-vs-ld agreement, a data-integrity check
+              on one set, not a comparison of two loads); the zero tests
+              (`w === 0`, `anyZero`, `allZero` — zero is a fact about the
+              set, not a load near another); ST1 (a 2.5% ratio); SP1's band
+              and cap (ranges, not equalities); the Trend delta (UX §21.12
+              item 6 — a chart of what happened, not a verdict); H1.4d,
+              which gets its own criterion in 21.13.2.
+Inputs:       Two loads in kg as stored (r1, 0.1 kg). No history, no minimum.
+Logic:        LOAD_EQ = 0.25
+              sameLoad(a, b)  = |a − b| <= LOAD_EQ + 1e-9
+              a above b       = a − b   >  LOAD_EQ + 1e-9
+              Stored loads are multiples of 0.1, so in practice: a difference
+              of 0.2 kg or less is the same load; 0.3 kg or more is not.
+              The WORKING LOAD IS STILL min(w in C). EQ1 changes which branch
+              fires, never which number is named: the instruction still names
+              the min, P1.4/P1.3 still ladder from the min's build, P1.2's R
+              is still the upper median.
+Output copy:  No new string. The strings that stop appearing:
+                `Sets not matched: 76.9 / 77 / 77 kg. …`   (any list whose
+                spread is <= 0.2 kg)
+              The `or above` variant (§13.1) is not printed when the spread
+              is within LOAD_EQ: `7 reps at 76.9 kg on every set` with two
+              sets at 77 is a claim off by 0.1 kg, accepted — and the fixture
+              is unreachable from the card in any case.
+Not enough data: not applicable.
+```
+
+**Why 0.25 and not 0.2, 0.23 or 0.5.** `[Certain]` the worst drift a seeded conversion can store
+is 0.2 kg: `displayLoad` rounds to 0.5 lb, so the seed is within 0.25 lb = 0.113 kg of the prior's
+added weight, `composeLoad` rounds once at the total (≤ 0.05 kg), and the two stored figures are
+multiples of 0.1 — so their difference is 0.1 or 0.2, never 0.3. The PM's "0.2 over 0.2–250 kg" is
+that bound observed. `[Certain]` the finest fractional plates sold are 0.125 kg (0.25 kg the pair);
+his gym's smallest steps are 5 lb on a bar (2.27 kg, B-117 assumption 1) and 2.5 kg on a stack.
+`[Opinion]` 0.25 is the largest number that is *below* every real plate step and *above* the drift
+with a margin, and it is half of the 0.5 kg step that 0.25 kg plates make — the one increment
+someone, somewhere, might genuinely log. 0.2 would sit on the drift's boundary; 0.5 would swallow a
+real microload. A half-pound (0.227) is the display grid dressed up as physiology and I would not
+cite it.
+
+**What it swallows, stated so nobody has to guess.** `[Certain]`: a 0.25 kg microload jump
+(0.125 kg plates) is the same load in three places — P1's `backoff` (a set 0.25 kg light is not a
+failed prescription: correct), `workingBuild` (the earliest set within 0.25 kg names the build:
+harmless), and T1 (a failure at +0.25 kg counts as a failure at the completed load: **correct
+coaching** — two failures after a 0.25 kg jump are a stall, not an attempt). No number printed
+anywhere changes; only branches do. **Is there a real training case where 0.2 kg should register?**
+No. `[Certain]` no rule in this file prescribes a step under 2.5 kg or 5 lb, no plate he owns makes
+0.2 kg, and the 0.1 kg store exists so lb totals round-trip (WO-010 §1), not so he can log 0.1 kg
+jumps. Bodyweight's 0.1 kg step is a different store and a different rule (W1's calorie windows) and
+is untouched.
+
+**Why this is still conservative.** The one place EQ1 makes the app *more* willing to act is
+P1.2 → P1.4 on a session whose loads differ by 0.1 kg — which the card cannot produce. The place it
+makes the app *less* willing is T1, where it now fires on a stall it was missing. Wrong "hold" costs
+a week; wrong "no deload" costs the weeks the stall runs.
+
+### 21.13.2 H1.4d — the printed percentage is the decision
+
+```
+Rule: H1.4d amendment — matched means the number he sees is 0
+Applies to:   k:"hyp" only. Session screen verdict. Case 4d, tonnage.
+Inputs:       va, vb as today; p = Math.round((va − vb) / vb × 100) as today.
+Logic:        p === 0 (or −0)  ->  `Volume matched. One more rep next session.`   (H1.4d)
+              p > 0            ->  `Volume up {p}% — …`                             (unchanged)
+              p < 0            ->  `Volume down {−p}%. Add a rep or …`             (unchanged)
+              Not LOAD_EQ: a tonnage has reps in it and the honest tolerance
+              is "does the figure I print say anything changed". |Δ| < 0.5% of
+              vb is what p === 0 means.
+Output copy:  No new string. `Volume up 0%` and `Volume down 0%` are unreachable.
+Not enough data: unchanged (3a/3b).
+```
+
+`[Certain]` 0.5% can never hide a real change on a hypertrophy slot: one rep at the highest rep
+count any slot reaches (3 × 25 = 75 reps) is 1.3%; one 2.5 kg step at `W_MAX` 500 kg is 0.5% and
+rounds to 1; every real slot is coarser than both. `[Certain]` `Volume down 0%. Add a rep` is a
+sentence that contradicts itself, and the fix is the sentence's, not a constant's.
+
+### 21.13.3 Worked examples — EQ1
+
+Every fixture is `d1a` Bent-over row `{s:3, lo:3, hi:5, k:"power", implement:"bb"}` unless stated;
+`L` is the lb build `{bar: 20, bu: "kg", add: 125.5, au: "lb"}` (w 76.9); `unit` is `"lb"`.
+
+1. **The fixture the question was built on.** `{w: 76.9, ld: L} × 5`, `77 × 5`, `77 × 5` → load
+   76.9, R 77, `77 − 76.9 = 0.1 <= 0.25` → backoff **false**, mixed **false**, mr 5 → P1.4 off
+   set 1's build: add 125.5 + 5 = 130.5 → 20 + 59.19 = 79.19 →
+   `Top of range on all 3 sets. Go to 79.2 kg next session — 20 kg bar + 130.5 lb.`
+   **Must not print** `Sets not matched`, `Repeat`. (The `130.5 lb` is exactly why SD1 exists;
+   under SD1 this fixture's set 1 is `add: 125`, w 76.7, and the line is `Go to 79.0 kg next session
+   — 20 kg bar + 130 lb.` — see 21.13.5 #1.)
+2. **Boundary — 0.3 kg is a different load.** `{w: 76.7, ld: {…add: 125…}} × 5`, `77 × 5`, `77 × 5`
+   → `77 − 76.7 = 0.3 > 0.25` → backoff → P1.2, `b` present so no bracket →
+   `Sets not matched: 76.7 / 77 / 77 kg. Repeat 77 kg until all 3 sets reach 5 reps.` Unchanged
+   from today. (And correct: 125 lb against 77 kg is a plate's worth short — 2.5 lb — not a rounding.)
+3. **Mixed copy suppressed.** Fixture 1 at `7/7/7` → mixed false → G1 on the lb build: 76.9 kg =
+   169.53 lb, raw `roundGrid(169.53 × 0.05, 5)` = 10, cap `roundGrid(33.9, 5)` = 35 → step 10 →
+   add 135.5 → 81.46 → `7 reps at 76.9 kg on every set. Too light. Go to 81.5 kg — 20 kg bar +
+   135.5 lb.` **Must not print** ` or above`. QA recomputes the figure from `g1Step`; the assertion
+   that matters is the absent phrase.
+4. **`workingBuild` ties to the earliest set within tolerance.** `77 × 5` (kg-direct), `{w: 76.9,
+   ld: L} × 5`, `{w: 76.9, ld: L} × 5` → load 76.9; set 1 is within 0.1 → its build (none) wins →
+   P1.4 kg-direct: `Top of range on all 3 sets. Go to 79.4 kg (175 lb) next session.` Deliberate:
+   earliest set wins, as §18.1 rules. Unreachable from the card; pin it so the tie rule is stated.
+5. **T1 — the blind spot, closed.** Key lift `d1a`. Day −30: `77 × 5/5/5` kg-direct → COMPLETE,
+   fullLoad 77. Day −10: `{w: 77.1, ld: {add: 170, au: "lb"}} × 3/2/2` → fail, failLoad 77.1.
+   Day −3: same load `× 3/3/2` → fail. `bestWithin` = 77. **Today:** `77.1 > 77 + 1e-9` → MISS-NEW
+   twice → `d1T1` returns null. **Ruled:** `77.1 > 77.25` is false → FAIL, FAIL, run 2, day −3 is
+   within 20 → `{date: day −3}` → T1 fires. Pin both: the null under `1e-9` is the bug.
+6. **T1 — failing case, a real jump.** Same as 5 with the failing loads at 77.3 → `77.3 > 77.25` →
+   MISS-NEW → null. A 0.3 kg he cannot have loaded by accident is treated as a load he chose.
+7. **T1 — the bar direction.** Completed 77; fails at 76.9 (`125.5 lb` on the bar) twice → today
+   `76.9 > 77` is false → FAIL already; ruled: the same. Nothing moves in the direction the drift
+   goes down; only the no-bar (round-up) direction was broken.
+8. **H1.4d — identical session, down.** Any `k:"hyp"` slot with `implement:"bb"`, `{s:3, lo:8,
+   hi:12}`. Prior `77 × 10/10/10` (vb 2310); now `{w: 76.9, ld: L} × 10/10/10` (va 2307) → today
+   `Volume down 0%. Add a rep or 5 lb next time.` → ruled `Volume matched. One more rep next
+   session.` **Must not print** `down 0%`.
+9. **H1.4d — identical session, up.** Prior 2310; now `77.1 × 10/10/10` (2313) → today `Volume up
+   0% — 2,313 kg against 2,310 kg.` → ruled `Volume matched. One more rep next session.`
+10. **H1.4d — one rep short still fires.** Now `{w: 76.9, ld: L} × 10/10/9` (2230.1) → p = −3 →
+    `Volume down 3%. Add a rep or 5 lb next time.` Unchanged.
+11. **The differential.** Every fixture in the kg-direct differential and every §13.2, §18.1, §21.2
+    example, byte for byte. Any of them moving is a defect in the implementation, not a consequence
+    of the rule.
+
+### 21.13.4 Rule SD1 — a converted seed lands on the grid (UX §21.12 item 3)
+
+**This is option (b), on the question it answers.** UX §21.5 confirmed "seed what the ghost
+shows", with the amendment that on a bar card the ghost shows the *added* weight, and left to me
+whether that seed should sit on the half-pound or the ladder. `[Certain]` the half-pound produces a
+load no plate builds — `125.5 lb` is 62.75 lb a side — and because a same-build ghost is verbatim
+(`p.ld.add`), the next session ghosts `125.5`, seeds `125.5`, and L1 ladders `130.5`, `135.5`, each
+one an instruction naming plates he does not have. The field's seed is not a display; it is the
+load the app is proposing he build, and a proposal is an instruction with a softer verb. It gets
+the instruction's standard: buildable, or absent.
+
+```
+Rule: SD1 — the converted seed
+Applies to:   The first `+` on an empty weight field (UX §4.4a.3 / §21.5) when
+              the ghost's figure is a CONVERSION — the prior set's build is
+              not this card's build (kg-direct prior on a lb card; lb prior on
+              a kg-on-bar card; a different bar). Every role. Session screen.
+              NOT: a same-build seed (`p.ld.add` verbatim, as today — he typed
+              127, the seed is 127); a kg-direct card with a kg-direct prior
+              (no conversion happens; the kg total is the figure, as today);
+              the second `+` (steps from the field, never snaps, as today);
+              a zero-load prior (does not seed, as today).
+Inputs:       prior.w (kg, stored); the card's mode as cardModeFor resolves it
+              — au, bar/bu when present; the grid of that build (L1: LB_BAR_STEP
+              with a bar in lb, LB_STEP without, KG_STEP for kg on a bar).
+Logic:        b       = the card's build with add unknown (bar, bu, au → grid)
+              seed    = the LARGEST n × grid (n >= 1) such that
+                        buildTotal(b, n × grid) <= prior.w + LOAD_EQ
+              i.e. the heaviest load on this card's grid that is not above the
+              prior by more than the same-load tolerance. Never the nearest:
+              nearest can land a plate above a load he held 5/5/4 and was told
+              to stay at.
+              n < 1 (the grid step alone is already above prior + LOAD_EQ)
+                      -> no seed; `+` gives one step, as the `total` fallback
+                         does today.
+Output copy:  No new string. The field holds `125`; the total reads `= 76.7 kg`;
+              the live region is the existing `Weight now 125 lb, 76.7 kg.`
+              The ghost is UX's: `Last 125.5 lb × 5` beside a field reading 125
+              is a fact beside a proposal, and I have no objection to it; if
+              UX wants the ghost to carry the grid figure instead, that is a
+              display call and not mine.
+Not enough data: no prior → no seed, as today.
+```
+
+**Why the heaviest load not above the prior, and not nearest.** `[Opinion]`, reasoned. Prior
+78 kg on the 20 kg bar is 127.87 lb of plates; nearest-ties-down is 130 lb = 79.0 kg, one kilo
+above a load whose verdict may have been `Stay at 78 kg (172 lb)`. The seed would contradict the
+sentence above it. 125 lb = 76.7 kg contradicts it too, in the direction that costs one session
+(`Top of range → Go to 130 lb`) rather than a failed rep. Neither builds 78 — nothing on a kg bar
+with lb plates does — and the conservative choice between two wrong loads is the lighter one. The
+`+ LOAD_EQ` in the test is so that 170 lb (77.1) still seeds for a 77 kg prior: floor without the
+tolerance would send that to 165 lb = 74.8 kg, 2.2 kg under for a load 0.24 lb off the ladder.
+
+### 21.13.5 Worked examples — SD1
+
+Profile bar Barbell 20 kg on `bb` slots; `LB_BAR_STEP` 5, `LB_STEP` 5, `KG_STEP` 2.5.
+
+1. **77 kg, `d1a`, lb + 20 kg bar.** 57 kg of plates = 125.66 lb. 125 lb → 76.7 ≤ 77.25 ✓;
+   130 lb → 79.0 ✗. **Seed 125.** `= 76.7 kg`. Next session's P1.4: `Go to 79.0 kg next session —
+   20 kg bar + 130 lb.` — every figure a plate load. **Must not seed** `125.5`, `126`, `130`.
+2. **77 kg, no bar (profile has no bar), lb.** 169.76 lb. 170 → 77.1 ≤ 77.25 ✓; 175 → 79.4 ✗.
+   **Seed 170.** The same figure the half-pound gave; the tolerance clause is what keeps it.
+3. **78 kg, lb + 20 kg bar — the nearest-rejecting case.** 127.87 lb. 130 → 79.0 > 78.25 ✗; 125 →
+   76.7 ✓. **Seed 125.** Must not seed 130.
+4. **86 kg, `d1b`, no bar, lb** (added load on a belt, taking the number as logged — §21.7 #2 still
+   stands). 189.6 lb. 190 → 86.2 ≤ 86.25 ✓. **Seed 190.** (185 → 83.9 would be the floor without
+   the tolerance clause; wrong by a plate.)
+5. **51 kg, `d1d`, `db`, lb, no bar.** 112.44 lb. 110 → 49.9 ✓; 115 → 52.2 ✗. **Seed 110** (per DB).
+6. **21 kg prior, lb + 20 kg bar — nothing to seed.** 2.2 lb of plates; 5 lb → 22.3 > 21.25 ✗;
+   n < 1 → **no seed.** `+` gives 5. Must not seed 0 (L4/B-114 territory) and must not seed 5.
+7. **Same build — verbatim, untouched.** Prior `{bar: 20, bu: "kg", add: 127, au: "lb"}` (he typed
+   127), lb + 20 kg bar → **seed 127**, not 125. SD1 never touches a number he typed; UX §21.5
+   stands for the same-build case.
+8. **lb prior, kg-on-bar card.** Prior w 76.9 (`125.5 lb` on the 20 kg bar), card kg + 20 kg bar →
+   56.9 kg of plates; 55 → 75.0 ✓; 57.5 → 77.5 ✗. **Seed 55.** `= 75 kg`.
+9. **lb prior, kg-direct card (§21.8 step 6).** Ghost `Last 76.9 × 5`; kg-direct has no build and
+   no grid; **seed 76.9**, as today. Then P1.4 prints `Go to 79.4 kg next session.` — an off-grid
+   kg-direct instruction, honest to what he typed. Named in 21.13.7 #2, not ruled.
+10. **Failing — the second `+`.** After seed 125, `+` → 130, `+` → 135. Never re-snaps (it is on the
+    grid already); after a typed 127, `+` → 132, as today. SD1 is the first tap only.
+
+### 21.13.6 What stays as it is, and why
+
+- **`displayLoad` at 0.5 lb (§21.3) — confirmed again.** UX asked whether EQ1 changes it. No: the
+  display is a reading of a stored number and a finer reading is a worse one. EQ1 exists so the
+  engine is indifferent to which half-pound a reading lands on; SD1 exists so the seed never lands
+  on a half-pound at all. Between them the constant has nothing left to answer for.
+- **`LD_TOL` 0.05.** A different question — does this set's `w` agree with its own `ld` — and a
+  tighter one on purpose. Do not merge the constants.
+- **The Trend delta (UX §21.12 item 6).** `+0.5 lb` / `Up` on a 76.9 → 77 pair is a chart telling
+  the truth about two stored numbers. Not a verdict, not EQ1's. If it grates, it is UX's word to
+  change, and I would accept `No change` under the same 0.25 without asking to see it first.
+- **ST1, SP1, the stall report.** Ratios and bands; 0.1 kg at 77 kg is 0.13%, forty times under
+  `ST1_RATIO`'s margin. Nothing to do.
+
+### 21.13.7 Found while in here
+
+1. **H1.4d's `0%` was reachable before WO-012.** A kg-direct microload (77 → 77.1 typed by hand)
+   printed `Volume up 0%` on `main` today. 21.13.2 closes it for every path, not only the seeded one.
+2. **The kg-direct ladder on an off-grid load.** `Last 76.9 × 5` seeded on a kg-direct card (SD1 #9)
+   gives `Go to 79.4 kg next session.` — L1's kg-direct path adds 2.5 to whatever is stored and has
+   never claimed the result is a plate load (§21.5). It is honest and he will round it at the rack.
+   Not ruling it; it belongs with B-117 when the gym's kg plates are known, and a snap on the
+   kg-direct path would be the ladder reading a display setting, which B-58 forbids.
+3. **`workingBuild`'s earliest-set tie (example 4).** Only visible on a session the card cannot
+   produce. Stated so the test that pins it is not read as a bug report.
+
+### 21.13.8 What changes, by work item
+
+| Site | Owner | Moves? | What |
+|---|---|---|---|
+| `LOAD_EQ = 0.25` | W3 | **new** | One constant beside `LD_TOL`, with a comment that says which of the two each test uses and why they differ. Exported, so W5 asserts the sites against it and not against a literal. |
+| `verdictPower` `backoff`, `mixed` | W3 | **move** | `> 0.01` → `> LOAD_EQ + 1e-9`. §13.1's rule text reads `> LOAD_EQ` from now on; its examples do not move. |
+| `workingBuild` | W3 | **move** | `<= 0.01` → `<= LOAD_EQ + 1e-9`. |
+| `d1T1` clause (c) | W3 | **move** | `r.failLoad > best + 1e-9` → `> best + LOAD_EQ + 1e-9`. §7.10's prose gains one sentence: "at or within LOAD_EQ of". |
+| `verdictHyp` 4d | W3 | **move** | Branch on `p`: `p === 0` → the matched string; `p > 0` up; `p < 0` down. `va`/`vb`/`p` unchanged. |
+| Seed arithmetic | W3 | **new** | A pure `seedFor(priorW, mode)` in `logic.js` returning the grid figure or `null`, using `buildTotal` and the mode's grid — so W5 can test it without a DOM. |
+| `seedValue` | W4 | **move** | Calls `seedFor` on the converted-seed path only; the same-build path is verbatim as today. The live region string is the existing one with the new figure. |
+| Suite | W5 | — | 21.13.3 #1–#11 and 21.13.5 #1–#10 as tests, every `Must not` its own assertion; a meta-test that the strings `Volume up 0%` and `Volume down 0%` are unreachable over the H1 differential; the kg-direct differential byte-identical; `d1T1` #5 pinned null-then-date so the `1e-9` regression has a name. |
+
+Not in this order, restated: B-116 (warm-ups — still the first question), B-117 (the plate
+constants SD1 inherits through `buildTotal` and the grids; a wrong answer moves the seed with the
+ladder, which is the point), B-114, B-111, B-127, the ghost caption beside an SD1 seed (UX's).
+
+### 21.13.9 Verdict
+
+**Option (a), one constant, `LOAD_EQ = 0.25 kg`, at exactly four equality sites; H1.4d takes its
+printed percentage as its decision; and option (b) is adopted as Rule SD1 for the question it
+answers, which is UX §21.12 item 3 and not item 2.** `[Certain]` on the drift bound, the plate
+steps, and that no pinned example moves. `[Opinion]` on 0.25 over its neighbours and on floor over
+nearest for the seed, both reasoned above and both held. The in-session mismatch the order opened
+with is unreachable and stays as a fixture; the two cross-session faults it led to — a `down`
+verdict on an identical hypertrophy session and a deload trigger blind to a stall at 77.1 kg — are
+the reason this is a ruling and not a shrug.
