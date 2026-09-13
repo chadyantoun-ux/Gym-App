@@ -410,19 +410,44 @@ re-upload the one that failed" — see §1.
 ### 5.1 Then the two things curl cannot answer
 
 1. **The installed app updates.** On the phone: open the installed PWA, close it, open it again.
-   `sw.js` refreshes the whole shell once per launch and commits nothing unless every core file
-   returned a clean 200, so the new build lands on the **second** open. Worst-case staleness is one
-   launch, by design.
+   `sw.js` (v6+) refreshes the whole shell on every launch that finds its cache stamp older than
+   **five minutes**, commits nothing unless every core file returned a clean 200, and so the new
+   build lands on the **second** open. Worst-case staleness is one launch plus five minutes, by
+   design. If the first open was within five minutes of the previous one, it is throttled and the
+   check is three opens, not two — wait five minutes, then open twice.
+   **If `sw.js` itself changed** (a `VERSION` bump), the new worker installs on the first open and
+   takes over when the page reports idle (Train home, no draft, nothing focused) or when the app
+   is closed; the shell it serves arrives on the open after that. If the phone is still on a
+   worker **older than v6**, none of this applies: those workers never refresh after their first
+   launch (the 2026-09-13 P1), so the *only* thing that reaches them is a byte-different `sw.js`,
+   and the *only* thing that lets the new worker activate is closing the page once — kill the
+   in-app view or Safari, then reopen. One-time cost, and the reason v6 exists.
 2. **Offline still works.** Airplane mode, open the installed app, log a full session, kill the
    browser, reopen. This is a release requirement, not a feature.
 
 ### 5.2 When `sw.js`'s `VERSION` must be bumped
 
-`sw.js` says it and it is right: **routine content deploys need no bump.** The per-launch refresh is
-not gated on the version. Bump `VERSION` only when
+**The old claim here — "routine content deploys need no bump" — was true only while the refresh
+worked, and from v2 to v5 it did not.** Found on the phone 2026-09-13: the refresh was gated on a
+worker-lifetime variable, an iOS worker lives across launches, so every worker refreshed exactly
+once and then served its cache forever. WO-010 shipped schema 6 as a content deploy under `v5` on
+that assumption, and the phone never saw it. The rule now:
+
+**A content deploy needs no bump only on a worker whose refresh is known to work — v6 and later.**
+v6's refresh runs on every navigation, throttled by a timestamp *in the cache* (never in worker
+memory), so a same-version deploy reaches an installed phone on the launch after the first launch
+that is five minutes past the previous refresh. That is proven by `scripts/offline-check.mjs`
+section 9 on every run (the origin swaps `index.html` and `logic.js` between two navigations; the
+next navigation must serve the new pair from cache with zero origin hits and no reload), and the
+same section **fails against the v5 worker** — that is the test this bug would have failed. Do not
+ship a `sw.js` that fails it.
+
+Bump `VERSION` when
 
 - the **file list** in `CORE`/`OPTIONAL`/`PHOTOS` changes, or
-- a cached entry must be actively discarded (a file was renamed or removed), or
+- a cached entry must be actively discarded (a file was renamed or removed — **or the deployed
+  worker is one that will never replace what it holds**, which is what v6 was bumped for: the v5
+  cache held a stale shell that v5's refresh would never fetch again), or
 - **a photograph changed bytes under the same path.** `PHOTOS` are filled in, never re-fetched:
   the per-launch refresh downloads a photo the cache lacks and leaves one it holds, because 48
   downloads over mobile data on every open is the wrong trade for files that change only when the
@@ -432,6 +457,18 @@ not gated on the version. Bump `VERSION` only when
 
 Bumping it needlessly forces every installed app to rebuild its shell from the network — which, for
 someone standing in a gym with no signal, is the opposite of what this file is for.
+
+**How a bumped worker takes over (v6+).** It installs in the background on the first launch that
+sees the new `sw.js`, fills its own cache completely, and then waits — there is still no
+unconditional `skipWaiting()`, and there is still no reload, ever (decisions.md 2026-09-10). Two
+exits from the wait, both safe: the page posts `phat-idle` to `registration.waiting` at a paint where
+nothing is in flight (Train home, no draft, no focused input), or the worker installed with no
+client open at all. Taking over an idle page changes nothing that page has loaded; the next launch
+gets the new shell. A page holding a draft never posts idle, so a lifter mid-session is never
+switched under. Proven by `offline-check.mjs` 9e/9f on every run.
+
+**The cache holds one entry that is not a file:** `/__phat-refreshed`, the throttle stamp. A v6
+cache is 2 + 7 + 48 + 1 = **58** entries, not 57. `offline-check.mjs` reports it separately.
 
 ---
 
@@ -584,6 +621,7 @@ trusting any step above.
 | §5 against production | Exit 1: 3 stale files, 7 × 404 — correct for the old three-file build |
 | §2/§5 photo set (2026-09-12, W3) | Against a stand-in origin serving the tree: `PASS 59/59 (eleven + 48 photographs)`, exit 0. With one JPEG removed from the tree: exit 2, `in manifest, not on disk : assets/ex/Leg_Press-1.jpg`. With one entry deleted from `sw.js` by hand: exit 2, `in manifest, not in sw.js : assets/ex/Spider_Curl-0.jpg`. With the origin 404ing one photo: exit 1, `FAIL assets/ex/Seated_Leg_Curl-1.jpg HTTP 404` |
 | `sw.js` v5 install and gap-fill (2026-09-12) | Playwright: `phat-shell-v5` holds 57 entries (2 + 7 + 48) after install; all 48 decode offline from cache; one photo evicted by hand is back after the next navigation with exactly one origin fetch, and a present photo is fetched zero times |
+| `sw.js` v6 update path (2026-09-13, WO-011 P1) | `offline-check.mjs` §9, Playwright over `http://127.0.0.1`: install v6 (57 files + stamp); stamp aged by hand; origin swaps `index.html` and `logic.js`; N1 serves the old pair and fetches the new pair exactly once each; N2 serves the new pair from cache with zero origin hits; N3 zero hits, no reload (3 gotos = 3 navigations); a byte-different `sw.js` installs behind a page holding a draft and stays WAITING; `phat-idle` to `registration.waiting` activates it, old cache gone, page not reloaded, draft intact. **Same section against the v5 worker: 7 FAIL lines** — N1 fetched nothing, N2 served the old shell, `phat-idle` ignored — the phone's failure reproduced on the desk |
 
 ### NOT proven — no Vercel token was available, so no API call was made
 

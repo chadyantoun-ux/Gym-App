@@ -3407,3 +3407,476 @@ Plate math per side (B-10 — the components now exist for it; it is not built) 
 Trend or the verdict copy · a unit default per implement, per plan or per gym · a default bar ·
 syncing the profile (B-113, accepted) · editing a saved session's `ld` (B-05) · converting history ·
 the Diet and Weight screens (bodyweight stays kg, 0.1 steps, untouched).
+
+---
+
+# 20. Pull-and-merge on every open — what he sees (WO-011 W2, 2026-09-13)
+
+Author: `ux-designer` · Implements: WO-011 §2 W2 · Consumed by: W4 (`frontend-engineer`), W3
+(`backend-engineer`, for `ownerRefusal` kind `"merge"` and the `added` counts shape), W5 (QA) ·
+Reads: `index.html` `loadSync` (6537), `onSync` (6572), `runBackup` (6594), `restoreStart` (6779),
+`restoreApply` (6842), `bkStampLine` (6926), `bkStatusLine` (6933), `vBackupBody` (6963),
+`paintBackup` (7025), `vObChoose` (2017), `obPull` (6404), `toast` (1422), `announce` (5131),
+`render` (4317), `askSheet` (5941); `logic.js` `storeOwner` (3777), `ownerRefusal` (3801),
+`restoreRefusal` (3718).
+
+**The uncomfortable answer first.** The merge is invisible when it works, and that is the design. A
+phone that has everything shows nothing new; a phone that was missing a session shows one toast and
+a higher count. The only screen that ever *describes* the merge is Settings → Backup, and it does so
+in one persistent line so that "why isn't it pulled" has a place to be answered. Nothing here adds a
+control to the session screen, a line to Home, or a step to logging a set.
+
+**What this section does not decide.** Whether the phone's copy or the server's wins on a same-id
+collision (B-121 — the work order rules local wins, and every sentence below is written for that), and
+how long a hidden app must be hidden before coming back to the foreground counts as an "open"
+(§20.7 item 1). No advice copy appears here; no `strength-coach` item.
+
+## 20.1 Vocabulary — one verb per direction, app-wide
+
+| Direction | Verb in copy | Never |
+|---|---|---|
+| Phone → server | **back up** / *Backed up* | sync, push, upload |
+| Server → phone, adding what is missing | **restore** / *Restored … from your backup* | merge, pull, download, sync |
+| The act of reading the server to find out | **check** / *Checked the backup* | fetch, pull, refresh |
+| Server → phone, throwing the phone's copy away | **replace** / *Replace this phone's log* | restore (it no longer means this — §20.6) |
+
+"Merge" is a code word and appears in no string. He does not merge; the app restores what is
+missing. "Pull" is Chady's word in the ruling and is honoured by the behaviour, not repeated on
+screen.
+
+## 20.2 The announcement
+
+```
+Flow:    Announce a merge that added something
+Entry:   mergeOnOpen() resolved with added.sessions + added.bodyweight + added.plans ≥ 1
+Exit:    One toast on Home. Nothing else on Home changes shape. Settings carries the record (§20.3).
+```
+
+**Rule 1 — one sentence, once, only when something was added.** `added` all zero → nothing on Home,
+nothing in the live region, no toast. A merge that changed nothing is not an event.
+
+**Rule 2 — the sentence.** Non-zero counts only, in the order sessions · weights · plans, joined
+`, ` and ` and `, plurals via `plural()`:
+
+```
+Restored 1 session from your backup.
+Restored 3 sessions and 2 weights from your backup.
+Restored 2 weights from your backup.
+Restored 1 plan from your backup.
+Restored 3 sessions, 2 weights and 1 plan from your backup.
+Restored 1 session and 1 plan from your backup.
+```
+
+Never `0 weights`. `restoreCounts()` prints zeros and is **not** used here; W4 adds `mergeCounts(a)`
+beside it (or W3 exports one — either, one function, tested for all seven non-empty combinations).
+
+**Rule 3 — where it renders.** The **toast**, and through it the live region (`toast()` already
+calls `announce()` polite — one carrier, no second `announce()`, §2.6). Duration 4200 ms, the
+failure length, not the 2100 ms receipt: it is the first time the app tells him the database is in
+play, there is nothing to tap, and he reads it once. **Not the owner row** (§18.11 item 5 stands: the
+row names a fact about the log, not an event on the network). **Not a Home line** (§13.4 — the count
+in the header is the evidence; `12 sessions logged` is the receipt that persists).
+
+**Rule 4 — when it renders: with the repaint, never before it.** The toast is delivered by the same
+paint that shows the merged data (§20.4). A toast saying *Restored 1 session* over a header that still
+reads `Nothing logged yet` is a lie for as long as the two disagree, and a toast under his thumb
+mid-set is a distraction with no action. So: if `mayPaint()` (§20.4) is true when the merge lands,
+`render(true)` then `toast(...)`, in that order, same tick. If false, the sentence is held in
+`S.merge.pending` and delivered by the first `render()` at which `mayPaint()` is true. Delivered once;
+a second merge that adds before delivery **replaces** the held sentence with the sum
+(`Restored 2 sessions…`), it does not queue two.
+
+**Rule 5 — with refusals.** Added ≥ 1 and `refused.length` ≥ 1:
+`Restored 2 sessions from your backup. 1 item could not be restored. See Settings.` (plural via
+`plural(refused.length, "item")`). The reason is Settings' (§20.3), not the toast's — a reason
+sentence from the validator does not fit a toast at 400 px and he cannot act on it at the rack.
+Added 0 and refused ≥ 1: **silent on Home**, named in Settings. A server document the app cannot
+read is a defect for the backlog, not a thing he can do anything about between sets; Settings and the
+W5 rig will see it.
+
+**Rule 6 — no focus move, ever.** The merge never calls `.focus()`. The toast is not focusable
+(`aria-hidden` on `.msg`, the live region carries the words).
+
+## 20.3 Settings → Backup — the record
+
+Two changes to the signed-in branch of `vBackupBody()`: the intro sentence gains a clause, and a new
+persistent line `#bk-check` sits directly under `#bk-status`. Everything else is in place.
+
+```
+[REF] Settings → Backup, signed in as the owner, after an open that restored something
+
+│  BACKUP                                                       │
+│  Signed in as chady@b-script.com. Backs up after every saved  │  intro, amended
+│  session and weight. Checks the backup when the app opens.    │
+│  ┌ BACKED UP ─────────────────────────────────────────────┐   │  #bk-status — the push that
+│  │ 12 sessions and 30 weights, just now.                  │   │  followed the merge (existing)
+│  └────────────────────────────────────────────────────────┘   │
+│  Checked the backup just now and restored 1 session.          │  #bk-check — NEW, .tiny, persists
+│  [                    BACK UP NOW                          ]   │  48
+│  [               CHECK THE BACKUP NOW                      ]   │  48, NEW — replaces Restore (§20.6)
+│  [                     SIGN OUT                            ]   │  48
+│  The backup is checked when the app opens and anything        │  helper, amended
+│  missing here is restored. Nothing on this phone is ever      │
+│  removed by that.                                             │
+│  Replace this phone's log with the backup…                    │  48, ghost, text trigger — §20.6
+│  PASSWORD …                                                   │  unchanged
+```
+
+**Why a separate line and not the `#bk-status` block.** The merge is followed within ~2 s by the push
+(`backupSoon("merge")`), and the push's outcome takes `#bk-status`. If the merge lived there too, the
+one thing he opened Settings to see would be overwritten before he got there. The push is an event;
+the check is a **standing fact about this phone** (*when did it last look, and what did it find*), and
+a fact gets a line that no later event erases. It also cannot collide with a Restore or an auth
+message, which share `S.sync.last`.
+
+**State.** `prefs.merge = {keptAt, at, n, m, p}` — `keptAt` per the work order (keep-once);
+`at` the last **completed** check on this device, whatever it added; `n, m, p` what that check added.
+Written by W4 in the same `save(PREFS)` as the stamp when there is one. `S.sync.merge` — this open's
+outcome, in memory: `{busy:true}` · `{ok:true, added, refused}` · `{ok:false, reason, message}`.
+`S.sync.last` is **not** used for a merge except the owner refusal (row M-c — one sentence, one
+carrier, see below).
+
+**`#bk-check` — every state, in precedence order (first match renders).** `{ago}` = `agoText(at)`.
+`{counts}` = `mergeCounts(...)` as §20.2. Viewer = the signed-in account.
+
+| # | Condition | `#bk-check` | Shape |
+|---|---|---|---|
+| M-busy | `S.sync.merge.busy` | `Checking the backup.` | `.tiny`. The three buttons are disabled for its span (the existing `busy` gate) |
+| M-a | this open added ≥ 1, no refusals | `Checked the backup {ago} and restored {counts}.` | `.tiny` |
+| M-a′ | this open added ≥ 1, refused ≥ 1 | `Restored {counts}. {k} item(s) could not be restored:` then one `<p>` per refusal (`{reason}`) up to 5, then `and {k−5} more.` | `.refuse`, `role="alert"` — the existing push-problem block shape (`bkStatusLine` 6949) |
+| M-b′ | this open added 0, refused ≥ 1 | `Checked the backup {ago}. {k} item(s) could not be restored:` + the list as M-a′ | `.refuse`, `role="alert"` |
+| M-f | pull failed (module error / server) | `Could not check the backup: {module message} Nothing here changed.` then a second `<p>` `Last checked {ago}.` if `prefs.merge.at` exists, else `Never checked.` | `.refuse`, `role="alert"` |
+| M-g | `restorePayload` refused the whole payload | as M-f with `{first problem}` + ` (and {k−1} more)` when k > 1 | `.refuse` |
+| M-i | a keep failed | `Could not keep a copy of this device's {label}. Nothing was restored.` + the last-checked `<p>` | `.refuse` |
+| M-j | the log write failed | `Could not write the restored sessions. Nothing changed. {S.err}` + last-checked | `.refuse` |
+| M-j′ | log written, a later store's write failed | `Restored {counts of what landed}. Could not write {plural(m,"weight") \| plural(p,"plan")}. Check the backup now to retry.` | `.refuse` |
+| M-e | demo store (`mergeStores` → `refused:["demo"]`, or the caller's guard) | `Not checked: this device holds demo data. Nothing was read from the backup.` | `.tiny` — it stops nothing real |
+| M-k | `S.blockWrites[LOG\|BWK\|PLANS]` (the H2 boot) | **nothing** — the store notice already holds the slot above (B-40, F9); a second sentence about the same store is noise | — |
+| M-b | nothing to do this open; `prefs.merge.at` exists | `Checked the backup {ago}. Nothing was missing here.` | `.tiny` |
+| M-0 | never checked on this device (`prefs.merge` absent), no outcome this open | **nothing** — the line is absent, not `Never checked.`; the intro sentence already says it checks on open | — |
+
+**Owner refusal — M-c.** `ownerRefusal("merge", owner, me)`, W3 adds the kind. The sentence, in the
+§18.5 shape (names the owner, names what did not happen, one way out):
+
+```
+R-d  This device's log belongs to {owner}. The backup under {me} was not read and nothing here changed. Sign in as {owner} to restore what is missing.
+```
+
+With `email:null` on the stamp: `another account` / `Sign in as that account`, the §18.5
+substitution. **Carrier: `S.sync.last` with `reason:"owner"`, so `bkStatusLine` prints it verbatim in
+`#bk-status` with the owner's stamp line under it — exactly R-a/R-b/R-c.** `#bk-check` renders
+nothing for a viewer who is not the owner (the check history belongs to the owner's log). Announced
+once, assertive, under the **same latch as R-a** (`S.sync.refused === me.id`): on an open where the
+merge refuses, the `"open"` push is **skipped, not attempted** — it would refuse with R-a and he would
+hear two sentences about one fact. A later save's push refusal is already latched silent. The Home
+owner row reads H3.
+
+**Offline — M-d.** The module does not load (`loadSync` returns on `navigator.onLine===false`), the
+signed-in branch does not render, the existing sentence `Backup needs a connection. None right now.
+Your log is on this device and saves as normal.` stands, unchanged. `prefs.merge.at` is untouched, so
+the next online Settings paint shows the last real check. Signed out, `file://`, not ready: likewise
+nothing — those branches have no `#bk-check` and gain none.
+
+**The intro sentence**, amended (H1/H4 only; H3's is §18.6 and unchanged):
+`Signed in as {me}. Backs up after every saved session and weight. Checks the backup when the app opens.`
+
+**The helper under the buttons**, replacing `Restore replaces what is on this device with the backup.
+It asks first, and never touches an unfinished session.`:
+`The backup is checked when the app opens and anything missing here is restored. Nothing on this phone is ever removed by that.`
+
+**Signed-out intro (H2)**: unchanged. It names the owner and the last backup; a signed-out phone is
+not checking anything and the sentence must not imply it is.
+
+## 20.4 When a merge may `render()` — the rule, written for QA
+
+**Adopt always; paint conditionally; never run memory ahead of disk.**
+
+```
+ADOPT   The merged documents are written through save() log-first (the restoreApply order). After
+        each write SUCCEEDS, S.sessions / S.bw / S.plans take that store's merged document
+        (adoptLog / adoptBw / adoptPlans). A store whose write fails is NOT adopted (§18's B-74 in
+        reverse: memory never shows what disk does not hold). Adoption does not depend on the screen.
+
+mayPaint() ⇔   sheetState === null                                 (no confirm sheet open)
+            && S.tab === "train" && S.sub === "" && S.draft === null  (Home — populated or empty)
+            && !inputFocused()                                     (document.activeElement is not
+                                                                    INPUT / TEXTAREA / SELECT /
+                                                                    [contenteditable])
+
+PAINT   if mayPaint():  render(true)  — keepScroll; a jump to the top of Home is B-19 by another
+                        name — then toast(sentence, false, 4200) if added ≥ 1.
+        else:           S.merge.pending = sentence (or null if added 0). No render(). No toast.
+                        paintBackup() runs regardless — it is in place, by id, carries the auth
+                        fields across, and is gated on S.sub === "settings" already.
+
+FLUSH   Every render() call, after the view is built: if S.merge.pending && mayPaint() → toast it,
+        clear it. mayPaint() is re-evaluated at that moment, not remembered from the merge.
+```
+
+`S.draft === null` is the whole of "not on the Train tab mid-session": the Session screen, the
+Summary, a running rest band, an open V1 offer and a resumed draft all exist only while `S.draft` is
+set. Settings, Plans, the plan editor, Weight, Diet, Trend and every onboarding sub-view are excluded
+by `S.tab`/`S.sub` — not because each is dangerous, but because **one screen, one predicate** is what
+QA can assert without a matrix. The Weight tab in particular has an input whose typed value lives only
+in the DOM: `inputFocused()` misses it once he taps whitespace, `S.tab === "weight"` does not.
+
+**Why Home only and not Trend.** Trend has no inputs and a repaint there would be safe. It is excluded
+so the predicate has one positive case. He sees the merged chart the next time he opens Trend, which
+is one tap; the toast waits for Home, which is where every session ends.
+
+**Geometry invariant on the Home repaint.** The next-session block keeps its box; if the merged log
+changes which day is next (`3 days since this day` → a different day, or `Done today`), the label
+changes and `START SESSION` does not move. The owner row is fixed at 48 (§18.2 rule 1). A tap that
+lands during the repaint lands on the same control by position.
+
+**Timing.** The merge starts after `Y.ready()` resolves — which is after first paint by construction
+(`loadSync` is async, the first `render()` is from disk). **First paint never waits on the network**
+(§3.2). Then `mergeOnOpen()` → then `backupSoon("open")`, in that order.
+
+**QA table — F7 and its siblings.** Each row: set up the state, resolve a pull that adds one
+session, assert.
+
+| # | State when the merge lands | `render()` called | Toast now | `S.merge.pending` | Disk + `S` |
+|---|---|---|---|---|---|
+| P1 | Home, nothing focused | yes, `render(true)`, scroll unchanged | yes | null | adopted |
+| P2 | Home, empty log (`Nothing logged yet`) | yes | yes; header now `1 session logged` | null | adopted |
+| P3 | Session screen, weight field focused, three sets typed | **no** | no | sentence | adopted; `phat:v1:draft` byte-identical; the three sets still on screen |
+| P4 | Session screen, nothing focused (rest band running) | no | no | sentence | adopted |
+| P5 | Summary | no | no | sentence | adopted |
+| P6 | Home with the Discard sheet open (`sheetState !== null`) | no | no | sentence | adopted; sheet still open, focus still on its heading |
+| P7 | Weight tab, `85.3` typed, focus on whitespace | no | no | sentence | adopted; `85.3` still in the field |
+| P8 | Settings, password field focused | no; `paintBackup()` only | no | sentence | adopted; the field's value and focus survive (the existing carry) |
+| P9 | Plan editor with a working copy | no | no | sentence | adopted |
+| P10 | Onboarding screen C (first run) | handled by §20.5, not this rule | — | — | — |
+| P11 | After P3, he taps `SAVE SESSION` → Summary → save → Home renders | the Home render | **yes, now** | null | — |
+| P12 | After P7, he taps the Train tab with the field still holding `85.3` | Home render | yes | null | — |
+| P13 | Two merges land before a flush (open, then `online`), each adding one | as the state dictates | one toast, `Restored 2 sessions…` | one sentence | adopted twice, idempotent |
+| P14 | Merge adds 0 on Home | **no render at all** | no | null | nothing written, nothing adopted, `phat:v1:log` byte-identical |
+
+P14 is the one to hold onto: a merge that adds nothing must not even repaint. `render()` on Home with
+nothing focused is *safe*, but a repaint with no cause is how a flicker gets into the one screen he
+looks at between sets.
+
+## 20.5 First run — screen C collapses to a transit
+
+```
+Flow:    Claim a fresh phone with an existing account (§18.4, amended)
+Entry:   Screen A → Sign in → screen B → a successful sign-in.
+Exit:    Home with the account's log on the phone, `onboarded` written by the merge that landed;
+         or screen C in its C2 / C3 state, `onboarded` still false.
+```
+
+**Ruled: C1 — `Restore {n} sessions` — is deleted.** On an empty device the merge *is* the restore
+(`restoreSteps` on `empty:true` keeps nothing and writes everything), and after Chady's ruling a
+sign-in from Settings on an already-onboarded empty phone would merge with no confirmation. First run
+was going to be the one place the app asked *"are you sure you want your own log?"* The sign-in —
+the email and the password he typed — is the consent. An account with rows lands; an account with none
+is asked what to do, because there is something to decide.
+
+**Screen C, amended** (`vObChoose`, `S.ob.status`):
+
+| # | Status | Screen | Actions |
+|---|---|---|---|
+| C-t | `pulling` (transit) | `Signed in as {me}.` / `Reading the backup.` — unchanged. **This is now the whole of the happy path**, on screen for the length of one pull on gym signal | `Sign out` ghost 48 — the way out if the read hangs. Unchanged |
+| C1 | — | **deleted.** `rows` is not a status that renders: the merge lands and routes | — |
+| C2 | `empty` | `Signed in as {me}.` / `Nothing is backed up under this account yet.` — unchanged | `Start with an empty log` primary 52 · `Sign out` ghost 48. Unchanged |
+| C3 | `failed` | `Signed in as {me}.` / refusal enclosure with the message — unchanged; the messages now include §20.3's M-i / M-j sentences when the failure was the write, not the read | `Try again` · `Start with an empty log` · `Sign out`, ghost 48 each. Unchanged |
+
+**The happy path, tap by tap.** B: `SIGN IN` → `Signing in.` → C-t `Reading the backup.` (focus on
+the heading, unchanged) → the pull returns rows → `mergeStores(empty, remote)` → keeps (none), writes
+(all) → **`onboarded=true` and the backup stamp in one `save(PREFS)`** → `S.ob=null; S.sub="";
+render()` → Home → `toast("Restored 12 sessions and 30 weights from your backup.")`. `announce("Signed in.")`
+already fires at the sign-in (6684) and stays; the merge toast is the second and last sentence.
+`finishOnboarding()` is not on this path; its `Ready.` is not said.
+
+**What a fresh phone shows on its first signed-in open, after the merge:**
+
+```
+│  12 SESSIONS LOGGED                        SETTINGS  │  header — the count is the receipt
+│ ┌ 3 DAYS SINCE THIS DAY ─────────────────────────┐   │
+│ │ Upper power                                    │   │  computed from the merged log
+│ │ [           START SESSION                   ›] │   │
+│ └────────────────────────────────────────────────┘   │
+│  THIS LOG                                            │
+│  chady@b-script.com · last backup just now        ›  │  owner row H1 — REQUIRES the stamp (below)
+│  Week 3 of real training. Reduced volume holds.      │  cycle line from the merged log
+│  …                                                   │
+│         ┌──────────────────────────────────────┐     │
+│         │ Restored 12 sessions and 30 weights  │     │  toast, 4200 ms
+│         │ from your backup.                    │     │
+│         └──────────────────────────────────────┘     │
+```
+
+**The stamp.** The owner row reads H1 on the first paint only if the merge writes `prefs.backup`
+the way `restoreApply` does (6898: `at`, `sig` of the merged payload, `user`, counts), so the push
+that follows is a signature no-op. If W4 leaves the stamp to the push, the row reads H4
+`On this device only. Backs up to {me} after the next save.` for ~2 s plus a round trip and then flips
+— a false sentence on the first screen of a new phone. **Ruled: the merge stamps, on the empty-device
+path and on the non-empty path alike, whenever the merged set equals what the push would send.** W4
+implements; W5 asserts the row is H1 on the first Home paint of F1.
+
+**C-t's repaint rule.** Screen C is exempt from §20.4 (P10): it is *the* screen for this pull, it has
+no inputs, and it routes to Home as the paint. The existing guard stands — the result paints only if
+`S.tab==="train"` (obPull 6416) and only if `S.sub==="onboard-choose"` still (he may have signed out
+mid-read; then nothing is written — unchanged).
+
+**A signed-in, not-onboarded open** (he killed the app during the read; or a session persisted in
+`phat:auth` from an earlier attempt): screen A → `paintBackup` sees `S.sync.user` → `obToC()` →
+C-t → merge → Home. Same path, no new state. **A merge on a not-onboarded device is not gated on
+`onboarded`** — it is how first run ends. The push still is (B-76).
+
+**Preserved across every path**, as §18.4: the stores are absent before and after anything but a
+landed merge or `START WITH AN EMPTY LOG`. `Sign out` on C-t while a read is in flight writes nothing
+(6412).
+
+## 20.6 `Restore from backup` — replaced, and the REPLACE path demoted
+
+**Ruled: renamed and demoted, not deleted.** Its two jobs split:
+
+1. **The empty-device restore** — gone; that is the merge on open and on sign-in.
+2. **The manual pull** — becomes **`Check the backup now`** (ghost, full × 48), in `Restore from
+   backup`'s slot. It runs `mergeOnOpen()`'s exact path with `reason:"manual"` — same guards, same
+   keep-once, same `#bk-check` outcomes, same toast (on Home; in Settings it is deferred by §20.4,
+   which is correct: `#bk-check` in front of him says it first). **It does not refuse on an open
+   draft** — the merge never reads or writes `phat:v1:draft` and `restoreRefusal`'s `SESSION_OPEN_MSG`
+   is not applied to it. It **does** refuse on a plan working copy the same way (`edits` non-empty →
+   `Save or discard your changes to {plan} first.`) because a merged plan store under an unsaved edit
+   is the hazard `restoreRefusal` exists for. Disabled while `busy`. This is the control that makes
+   Chady's ruling legible: tap, and the line reads `Checked the backup just now. Nothing was missing
+   here.` — the app has visibly looked.
+3. **The wholesale replace** — stays for exactly one reason: B-121. While local wins, a phone holding
+   a *worse* copy of a session than the server has no other way to take the server's. It moves to the
+   **bottom of the Backup section**, under the helper, as a text trigger on its own line
+   (§9.9.7's pattern): `Replace this phone's log with the backup…` — ghost, full × 48, `--dim` text,
+   no border, the ellipsis because it opens a sheet. It renders **only when the device holds data**
+   (`S.sessions.length || S.bw.length || planStoreHolds` — a render gate; `restoreStart` still reads
+   disk, B-74) — on an empty device it would be the merge with a scarier name. Its path is
+   `restoreStart` → the typed-`REPLACE` sheet → `restoreApply`, **unchanged**: export first, keeps,
+   `SESSION_OPEN_MSG` on a draft, the plan-edit refusal. The one-tap `Restore from backup?` sheet
+   (empty-device branch, 6822) is unreachable and W4 may delete it.
+
+```
+[REF] the sheet, unchanged in behaviour, headline as today
+
+│  Replace this device's log?                                     │
+│  This replaces 12 sessions and 30 weights on this device with   │
+│  11 and 30 from the backup. What is on this device is exported  │
+│  first, and a copy is kept here.                                │
+│  TYPE REPLACE TO CONTINUE                                       │
+│  [                                                          ]   │
+│  [ Replace 12 sessions ]   ← danger, ghost, inert 300 ms        │
+│  [        Keep this device's log        ]   ← safe, primary, lowest │
+```
+
+The count sentence already tells him the truth that matters after a merge: the phone can hold *more*
+than the backup (`12` here, `11` there — the one logged offline and not yet pushed). It is the one
+control in the app that shrinks `phat:v1:log`, it is behind a typed word, an export and a keep, and
+it is now at the bottom of the last section of the last screen. §2.4 gains no row: it is item 9's
+neighbour, not item 9 — the log is replaced by a copy of itself from an hour ago, not emptied.
+
+**Copy for the demoted control's helper**, one line above it, `.tiny`:
+`Replacing throws away this phone's copy in favour of the backup. Exports first, keeps a copy here, asks you to type REPLACE, and never touches an unfinished session.`
+
+## 20.7 Strings — every new one, in one table
+
+`{counts}` = `mergeCounts()` (non-zero parts) · `{ago}` = `agoText(prefs.merge.at)` · `{owner}` /
+`{me}` as §18.2 · `{k}` a count · `{reason}` a validator sentence from `refused[]`. All NEW, all
+status or refusal copy; no training claim.
+
+```
+Restored {counts} from your backup.
+Restored {counts} from your backup. {k} item(s) could not be restored. See Settings.
+Checking the backup.
+Checked the backup {ago} and restored {counts}.
+Checked the backup {ago}. Nothing was missing here.
+Restored {counts}. {k} item(s) could not be restored:
+Checked the backup {ago}. {k} item(s) could not be restored:
+and {k} more.
+Could not check the backup: {message} Nothing here changed.
+Last checked {ago}.
+Never checked.
+Could not keep a copy of this device's {label}. Nothing was restored.
+Could not write the restored sessions. Nothing changed. {S.err}
+Restored {counts}. Could not write {k} weights|plans. Check the backup now to retry.
+Not checked: this device holds demo data. Nothing was read from the backup.
+This device's log belongs to {owner}. The backup under {me} was not read and nothing here changed. Sign in as {owner} to restore what is missing.
+Signed in as {me}. Backs up after every saved session and weight. Checks the backup when the app opens.
+The backup is checked when the app opens and anything missing here is restored. Nothing on this phone is ever removed by that.
+Check the backup now
+Replace this phone's log with the backup…
+Replacing throws away this phone's copy in favour of the backup. Exports first, keeps a copy here, asks you to type REPLACE, and never touches an unfinished session.
+```
+
+`{k} item(s)` is `plural(k,"item")` — the parenthesis is this table's, never on screen.
+
+Deleted: `Restore from backup` (the button) · `Restore replaces what is on this device with the
+backup. It asks first, and never touches an unfinished session.` · `Restore {n} sessions` (screen C1)
+· `{n} sessions and {m} weights are backed up under this account.` (C1's sub-line) · the one-tap
+`Restore from backup?` / `{counts} land on this device. It holds nothing now.` sheet.
+
+Unchanged and relied on: `Reading the backup.` · `Signed in.` · `Signed in as {me}.` · `Nothing is
+backed up under this account yet.` · `Could not read the backup.` · `Try again` · `Start with an
+empty log` · `Sign out` · `Back up now` · `Backed up {n} sessions and {m} weights.` · `Replace this
+device's log?` and its body · `Keep this device's log` · `Save or discard your changes to {plan}
+first.` · every §18.5 sentence · `Backup needs a connection. None right now. Your log is on this
+device and saves as normal.`
+
+## 20.8 Control inventory — rows added to §0.4.1
+
+| # | Screen | Control | Min hit area | Notes |
+|---|---|---|---|---|
+| 73 | settings | `Check the backup now` | full × 48 | ghost; in `Restore from backup`'s slot; disabled while busy |
+| 74 | settings | `Replace this phone's log with the backup…` | full × 48 | ghost text trigger, `--dim`, bottom of the section; rendered only when the device holds data |
+
+Removed: `Restore from backup` (settings) and `Restore {n} sessions` (first run, §18.10's row). The
+toast carries no control here (no undo — nothing was removed, there is nothing to undo).
+
+## 20.9 A11y
+
+- **The toast** is the one carrier: `toast()` sets the live region polite. No second `announce()`.
+  Assertive is reserved for R-d (a write that did not happen), once, under the R-a latch.
+- **`#bk-check`**: `.tiny` states are plain text, not live. The `.refuse` states carry `role="alert"`
+  as every `.refuse` does; they are the only alert in the section besides `#bk-status`, and the two
+  never say the same thing (M-c goes to `#bk-status` only).
+- **Focus** never moves on a merge, on Home, on Settings or on screen C-t (which already holds the
+  heading). `Check the backup now` keeps focus on itself through the in-place repaint (the
+  `paintBackup` carry must include the three buttons' focus, not only the fields — W4).
+- **Greyscale / no colour**: every state reads from words. `Restored`, `Checked`, `Could not`, `Not
+  checked` open the sentence; the `!` and the border are the second and third signal on refusals.
+- **Contrast**: `#bk-check` at `.tiny` is `--dim` on `--bg` (the section is on `--bg`, not
+  `--surface`), which is the existing stamp line's ratio — passes. The text trigger at `--dim`, 48 px
+  row, 15 px text: passes AA. Nothing new on `--surface`.
+- **200 %**: `#bk-check` wraps freely (it is under the block, above the buttons, and pushes nothing
+  he is about to tap); the toast wraps to three lines at 4200 ms, which is long enough to read three
+  lines once.
+
+## 20.10 What I could not settle
+
+1. **What "open" means for a resident home-screen app.** iOS keeps the PWA alive for days; his 12 Sep
+   session vanished from a context that may never have "opened" in the `loadSync` sense again. The
+   work order's triggers are boot, sign-in and `online`. I recommend a fourth: `visibilitychange` →
+   `visible` after ≥ 5 minutes hidden, with the same guards and the same silence-on-nothing. Not mine
+   to add to W4's scope — **PM rules**; the copy and the paint rule above already cover it if added.
+2. **Whether the merge should stamp `prefs.backup` on the non-empty path.** §20.5 rules it for the
+   empty device (the owner row's first sentence depends on it). On a non-empty device the merged set
+   may exceed the server's (the offline session), so the stamp would claim a backup that has not
+   landed — there the push must stamp. W4 decides the exact predicate ("merged equals what the push
+   would send"); I have said what the row must read either way.
+3. **`Check the backup now` while a draft is open.** I allow it (the merge does not touch the draft).
+   If W3's `mergeStores` ever gains a reason to read the draft's day, this becomes a refusal with
+   `SESSION_OPEN_MSG`. Flagging so it is a decision, not a drift.
+4. **The demo sentence.** §20.3 M-e does not reuse `backupPayload`'s `…nothing sent` verbatim
+   because "sent" is a push fact. If QA wants one literal for both directions, W3 exports a
+   direction-neutral `DEMO_STORE_MSG` and both use it.
+5. **B-121.** Every sentence here says *restored what was missing* and *nothing removed*, which is
+   true under local-wins. If B-121 later rules newer-wins, `Nothing on this phone is ever removed by
+   that.` becomes false and §20.3's helper and M-a need a second pass. The replace trigger (§20.6
+   item 3) exists to make that discussion less urgent, not to pre-empt it.
+
+## 20.11 Out of scope, deliberately
+
+The design complaint (B-120) · any change to the session screen, Summary, Trend or Home's layout ·
+the owner row's states (§18.2 stands) · a line on Home about the last check · a sync indicator
+anywhere but Settings · an undo for a merge (nothing was removed) · `diag.html`'s copy (W1, a tool,
+not a screen he uses between sets) · same-id conflict presentation (B-121) · a "sync now" gesture
+(pull-to-refresh — a gesture that fires by accident on a scrolled list, under a chalky thumb).

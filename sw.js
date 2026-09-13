@@ -12,7 +12,8 @@
    below. It caches the app. It does not cache the data, and it cannot reach the
    data: localStorage is not exposed to a worker scope at all.
 
-   STRATEGY: cache-first, then one atomic background refresh per launch.
+   STRATEGY: cache-first, then one atomic background refresh per navigation,
+   throttled to one every five minutes by a timestamp IN THE CACHE.
      - Cache-first, so opening the app never waits on a network that is not
        there. One bar of signal must not cost him a 30 s stare at a blank
        screen.
@@ -20,10 +21,27 @@
        EVERY core file came back a real 200. A half-succeeded refresh leaves the
        previous, consistent pair in place. index.html and logic.js are one unit;
        a new index.html over a stale logic.js is the black-screen failure mode.
-     - Worst case staleness: ONE launch. A deploy lands in the cache while he is
-       using the old copy, and is what he gets the next time he opens the app.
-       There is no path where a bad cache serves a stale app forever, because
-       the refresh runs every launch and is not gated on the version below.
+       The refresh also does not START until the page that triggered it has
+       been handed its logic.js (the pair gate below), so a page never reads
+       the old index.html and the new logic.js in one load.
+     - Worst case staleness: ONE launch, plus five minutes. A deploy lands in
+       the cache on the first navigation at least five minutes after the last
+       refresh, and is what he gets on the next one. There is no path where a
+       bad cache serves a stale app forever: the throttle lives in the cache,
+       not in this worker's memory, so it cannot be "already done" for the
+       life of a worker. THAT WAS THE v5 BUG (2026-09-13, found on the phone):
+       `var refreshed = false` was documented as once per launch and is once
+       per WORKER, and on iOS the worker outlives launches by days. After its
+       first refresh it never fetched the shell again, and a same-version
+       content deploy (WO-010, schema 6) never reached the phone.
+     - A new worker does not wait forever either. It waits, by the atomic
+       ruling (decisions.md 2026-09-10: no skipWaiting, no reload under a
+       lifter mid-set) - but the page tells it when nothing is in flight
+       (`phat-idle`, posted by index.html at a paint where mayPaint() holds),
+       and it takes over then. Fallback, safe by construction: a worker that
+       installs with ZERO clients open activates at once. Taking over an
+       idle page changes nothing that page has loaded; the next launch gets
+       the new pair.
 
    NEVER CACHE A FAILURE: usable() requires status exactly 200 (so a 404 body, a
    206 partial and a 30x are all rejected), a non-opaque response, and a
@@ -33,10 +51,13 @@
    VERSION: bump VERSION to force every installed app to rebuild its shell from
    the network on the next launch and delete the old cache. Only needed if the
    shell FILE LIST changes or a cached entry must be discarded - routine content
-   deploys are handled by the per-launch refresh and need no bump.
+   deploys are handled by the per-navigation refresh and need no bump, ON A
+   WORKER WHOSE REFRESH WORKS (v6 and later; v2-v5 do not, see v6 below).
    ONE EXCEPTION, the photographs: PHOTOS are filled in, never re-fetched (see
    the PHOTOS comment), so a photo that changes bytes under the SAME path is
-   only ever delivered by a VERSION bump. A new photo set = a bump. Always. */
+   only ever delivered by a VERSION bump. A new photo set = a bump. Always.
+   THE CACHE ALSO HOLDS ONE ENTRY THAT IS NOT A FILE: `/__phat-refreshed`, the
+   throttle stamp. Count it when comparing entry totals (2 + 7 + 48 + 1). */
 
 'use strict';
 
@@ -66,7 +87,26 @@
    .jpg rule (B-103 - until now a 404 page served as 200 text/html would have
    been cached as a photograph, and every real photo would have been refused
    under a stricter reading), and PHOTOS get their own refresh policy. */
-var VERSION = 'v5';
+/* v6 (2026-09-13, WO-011 P1): the update path was broken, found by diag on
+   Chady's phone (iOS 18.7): `phat-shell-v4` active with the pre-WO-010 shell,
+   `phat-shell-v5` installed and waiting, a fetch through the worker returning
+   the OLD index.html and logic.js at SCHEMA_VERSION 5 while production had
+   been 6 since the night before. Two defects, both here: (1) the refresh was
+   gated on `var refreshed`, a worker-lifetime flag, and an iOS worker lives
+   across launches, so after one refresh it never fetched again - the WO-010
+   deploy stayed at v5 and relied on exactly that refresh to carry a
+   same-version content change, and it did not; (2) with no skipWaiting and a
+   page kept alive by an in-app view, v5 waited indefinitely behind v4.
+   Fix: the throttle is a timestamp stored in the cache; the refresh runs on
+   every navigation that finds it older than five minutes; a waiting worker
+   takes over on `phat-idle` from the page, or at install if no client is
+   open. THE FILE LIST IS UNCHANGED. Bumped on the header rule's second
+   trigger: the v5 cache holds a stale shell that the broken refresh will
+   never replace, and the only way to discard it is a new cache. The FIRST
+   transition to v6 on the phone still needs the page closed once (kill the
+   in-app view or Safari, reopen): the page on the phone is the old shell,
+   which does not post `phat-idle`, and v4 cannot be told to step aside. */
+var VERSION = 'v6';
 var PREFIX  = 'phat-shell-';
 var CACHE   = PREFIX + VERSION;
 
@@ -237,11 +277,22 @@ self.addEventListener('install', function(e){
               return fetchFresh(u).then(function(r){ return cache.put(u, r); })
                                   .catch(function(){ /* not fatal */ });
             }));
-          });
+          })
+          /* This shell is as fresh as it gets: start the five-minute clock
+             here, so the first navigation under a new worker does not fetch
+             the same two files a second time. */
+          .then(function(){ return stampRefreshed(cache); });
       });
+    }).then(function(){
+      /* No unconditional skipWaiting(). A new worker waits for the old pages
+         to go, so a fresh shell can never activate underneath a page running
+         the old logic.js. Two exits from the wait, both safe:
+           (a) here - nobody is open, so there is nobody to activate under;
+           (b) `phat-idle` from the page (message handler below). */
+      return self.clients.matchAll({ includeUncontrolled: true }).then(function(cs){
+        if (cs.length === 0) return self.skipWaiting();
+      }).catch(function(){});
     })
-    /* No skipWaiting(). A new worker waits for the old pages to go, so a fresh
-       shell can never activate underneath a page running the old logic.js. */
   );
 });
 
@@ -267,21 +318,86 @@ self.addEventListener('activate', function(e){
 
 /* ----------------------------------------------------------------- fetch */
 
-var refreshed = false;   /* once per worker lifetime, i.e. roughly once per launch */
+/* THE THROTTLE LIVES IN THE CACHE, NOT IN THIS WORKER. `/__phat-refreshed`
+   is a synthetic entry holding the ms timestamp of the last refresh that
+   COMMITTED. A module variable was the v5 bug: it is reset when the worker is
+   killed, and on iOS the worker is not killed between launches, so "once per
+   worker" meant "once, ever". The cache is per VERSION, so a bump starts
+   with no stamp and refreshes on its first navigation (install writes one).
+   The stamp is written only on success: with the radio off the attempt fails
+   fast and costs nothing; on one bar it is a background fetch with a 20 s
+   abort that never delays the cached answer, and the next navigation may
+   try again. */
+var REFRESH_KEY   = abs('./__phat-refreshed');
+var REFRESH_EVERY = 5 * 60 * 1000;
 
-function scheduleRefresh(e){
-  if (refreshed) return;
-  refreshed = true;
-  e.waitUntil(refreshShell());
+function stampRefreshed(cache){
+  return cache.put(REFRESH_KEY, new Response(String(Date.now()),
+    { headers: { 'Content-Type': 'text/plain' } }));
 }
 
-/* The whole core shell, or nothing. */
+/* True when there is no stamp, the stamp is unreadable, or five minutes have
+   passed. A clock that went backwards reads as due, not as "recent". */
+function refreshDue(){
+  return caches.open(CACHE).then(function(cache){
+    return cache.match(REFRESH_KEY).then(function(hit){
+      if (!hit) return true;
+      return hit.text().then(function(t){
+        var at = Number(t), age = Date.now() - at;
+        return !(at > 0) || age < 0 || age >= REFRESH_EVERY;
+      });
+    });
+  }).catch(function(){ return true; });
+}
+
+/* THE PAIR GATE. A refresh kicked off by a navigation must not commit a new
+   index.html + logic.js while the page that navigated is still between
+   receiving its (old) index.html and asking for its logic.js - that page
+   would load the old markup over the new engine, the exact mismatch the
+   atomic refresh exists to prevent. So the refresh waits until this page's
+   logic.js has been handed over (handleShell fires the gate), or 4 s, for a
+   page that never asks (the offline-shell-missing message, a tab that dies).
+   A module variable is fine HERE: it orders two events of one page load and
+   is held alive by the navigation's own waitUntil; it holds no state that
+   must outlive a worker. */
+var pairGate = null;
+
+function armPairGate(){
+  var fire, p = new Promise(function(resolve){ fire = resolve; });
+  var timer = setTimeout(fire, 4000);
+  pairGate = function(){ clearTimeout(timer); fire(); };
+  return p;
+}
+
+function firePairGate(){
+  var g = pairGate; pairGate = null;
+  if (g) g();
+}
+
+/* Called from the navigation handler. Reads the stamp, and if due, refreshes
+   once the pair gate opens. Never blocks the response - the cached shell has
+   already been handed back by the time any of this runs. */
+function scheduleRefresh(e){
+  var gate = armPairGate();
+  e.waitUntil(refreshDue().then(function(due){
+    if (!due){ firePairGate(); return; }
+    return gate.then(refreshShell);
+  }).catch(function(){}));
+}
+
+/* The whole core shell, or nothing. One in flight at a time: a second caller
+   (PHAT_CHECK_UPDATE during a navigation's refresh) joins the same promise
+   rather than fetching the pair twice. */
+var inflight = null;
+
 function refreshShell(){
-  return Promise.all(CORE.map(function(u){
+  if (inflight) return inflight;
+  inflight = Promise.all(CORE.map(function(u){
     return fetchFresh(u).then(function(r){ return [u, r]; });
   })).then(function(pairs){
     return caches.open(CACHE).then(function(cache){
       return Promise.all(pairs.map(function(p){ return cache.put(p[0], p[1]); }))
+        .then(function(){ return stampRefreshed(cache); })
         .then(function(){
           return Promise.all(OPTIONAL.map(function(u){
             return fetchFresh(u).then(function(r){ return cache.put(u, r); })
@@ -293,8 +409,10 @@ function refreshShell(){
     });
   }).catch(function(){
     /* Offline, or one core file did not come back clean. The previously cached
-       pair stays exactly as it was. Nothing partial is ever committed. */
-  });
+       pair stays exactly as it was, and so does the stamp: nothing partial is
+       ever committed, and the next navigation may try again. */
+  }).then(function(){ inflight = null; });
+  return inflight;
 }
 
 /* Fetch only the photographs the cache does not hold. See the PHOTOS comment
@@ -332,7 +450,7 @@ self.addEventListener('fetch', function(e){
 });
 
 function handleNav(e){
-  scheduleRefresh(e);
+  scheduleRefresh(e);                                  /* every navigation; the cache stamp throttles */
   return caches.match(SHELL_HTML).then(function(cached){
     if (cached) return cached;
     return fetch(e.request).then(function(res){
@@ -345,9 +463,16 @@ function handleNav(e){
 }
 
 function handleShell(e, key){
+  /* logic.js is the second half of the pair. Once its Response is in hand -
+     from the cache, or from the network - the page has both halves from one
+     shell and a pending refresh may start. Fired AFTER the match resolves,
+     so a commit cannot land between the lookup and the answer. Subresources
+     never trigger a refresh themselves. */
+  var isEngine = (key === CORE[1]);
   return caches.match(key).then(function(cached){
-    if (cached){ scheduleRefresh(e); return cached; }
+    if (cached){ if (isEngine) firePairGate(); return cached; }
     return fetch(e.request).then(function(res){
+      if (isEngine) firePairGate();
       if (!usable(res, key)) return res;
       var copy = res.clone();
       e.waitUntil(caches.open(CACHE).then(function(c){ return c.put(key, copy); }));
@@ -375,9 +500,20 @@ function offlineShellMissing(){
 
 /* --------------------------------------------------------------- message */
 
+/* `phat-idle`: the page says nothing is in flight - no sheet open, no draft,
+   no focused input, Train home on screen (index.html's mayPaint()). It posts
+   this to `registration.waiting`, never to the controller, so only a worker
+   that is actually waiting hears it; on an active worker skipWaiting() is a
+   no-op anyway. Taking over an idle page reloads nothing and changes nothing
+   the page has loaded - index.html and logic.js are never re-requested by a
+   running page - so the ruling holds: no reload, ever, under a lifter.
+   The former unconditional `SKIP_WAITING` handler is gone: nothing sent it,
+   and a handler nobody guards is a handler somebody will one day send from
+   the wrong place.
+   `PHAT_CHECK_UPDATE`: an explicit ask, so it ignores the five-minute stamp. */
 self.addEventListener('message', function(e){
   var d = e.data;
   if (!d) return;
-  if (d === 'SKIP_WAITING' || d.type === 'SKIP_WAITING'){ self.skipWaiting(); return; }
+  if (d === 'phat-idle' || d.type === 'phat-idle'){ self.skipWaiting(); return; }
   if (d.type === 'PHAT_CHECK_UPDATE'){ e.waitUntil(refreshShell()); }
 });
