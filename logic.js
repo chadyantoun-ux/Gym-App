@@ -147,6 +147,27 @@
   var ADD_MAX = { kg: 500, lb: 1100 };
   var BAR_MAX = { kg: 50, lb: 110 };
   var LD_TOL = 0.05;
+  /* Rule EQ1 (addendum §21.13.1) — when two STORED loads are the same load.
+     |a − b| <= LOAD_EQ is the same load; a − b > LOAD_EQ is a heavier one.
+     Stored loads are multiples of 0.1, so a spread of 0.2 kg or less is one
+     load and 0.3 kg or more is two. 0.25 is above the worst drift a seeded
+     lb conversion can store (0.2 kg: the 0.5 lb display, r1 once at the
+     total) and below every plate step he owns (0.25 kg plates the pair,
+     5 lb on a bar, 2.5 kg on a stack). Exactly four sites read it, and the
+     working load is still min(C) at every one — EQ1 moves which branch
+     fires, never which number is printed:
+       verdictPower  backoff  (R − load) > LOAD_EQ        (was 0.01)
+       verdictPower  mixed    (top − load) > LOAD_EQ      (was 0.01)
+       workingBuild  |s.w − load| <= LOAD_EQ              (was 0.01)
+       d1T1 (c)      failLoad > best + LOAD_EQ → MISS-NEW (was 1e-9)
+     NOT LD_TOL, which is a different question: does THIS set's typed w
+     agree with the total its OWN components compose to — one set, a
+     data-integrity check, tighter on purpose. Do not merge the two.
+     NOT H1.4d either: a tonnage has reps in it, and its own criterion is
+     the printed percentage (§21.13.2). Also the grid SD1's seed snaps to
+     (seedFor): the heaviest grid load not above the prior by more than
+     LOAD_EQ. */
+  var LOAD_EQ = 0.25;
   var LD_KEYS = ["bar", "bu", "add", "au"];
 
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -449,7 +470,8 @@
   }
   /* The working-load set's build: the FIRST set among the first `n`
      completed sets, in logged order, whose w equals `load` (P1's min of C,
-     0.01-tolerant like P1 itself). Its ld, or its absence, is the build —
+     the same load under Rule EQ1 — within LOAD_EQ, like P1 itself). Its
+     ld, or its absence, is the build —
      ties to the earliest set. Walks the RAW rows because completedSets
      strips everything but w and r. */
   function workingBuild(sets, n, load) {
@@ -459,7 +481,7 @@
       s = numSet(sets[i]);
       if (!s) continue;
       done++;
-      if (Math.abs(s.w - load) <= 0.01) return buildOf(sets[i].ld, s.w);
+      if (Math.abs(s.w - load) <= LOAD_EQ + 1e-9) return buildOf(sets[i].ld, s.w);
     }
     return null;
   }
@@ -806,6 +828,75 @@
     var n = priorInUnit(prevSet, m);
     if (n !== null) return "Last " + String(n) + " " + m.au + " × " + pr.value;
     return "Last " + displayLoad(pw.value, m.au, implement) + " total × " + pr.value;
+  }
+
+  /* ---- Rule SD1 (addendum §21.13.4): the CONVERTED seed lands on the grid ----
+
+     seedFor(priorW, mode) -> number | null
+     The figure the first `+` puts in an EMPTY weight field when the prior
+     set was built some OTHER way than this card builds (kg-direct prior on
+     a lb card, a lb prior on a kg-on-bar card, a different bar). priorInUnit
+     is the READING (0.5 lb, what the ghost prints); this is the PROPOSAL,
+     and a proposal is an instruction with a softer verb: it must name a
+     load the plates build. `125.5 lb` is 62.75 a side, and L1 would ladder
+     it to 130.5, 135.5 — plates he does not have — forever.
+       kg-direct card (au kg, no bar)   r1(priorW) — no build, no grid, the
+                                        kg total as today (§21.13.5 #9)
+       any built card                   the LARGEST n × grid (n >= 1) with
+                                        buildTotal(b, n × grid) <= priorW + LOAD_EQ
+                                        — the heaviest load on this card's
+                                        grid not above the prior by more
+                                        than the same-load tolerance.
+                                        FLOOR WITH TOLERANCE, NEVER NEAREST:
+                                        78 kg on a 20 kg bar is 127.87 lb of
+                                        plates; nearest is 130 = 79.0, a
+                                        kilo above a load he may have been
+                                        told to stay at. 125 = 76.7 costs
+                                        one session; 130 can cost a rep.
+                                        The tolerance is what keeps 170 lb
+                                        (77.1) for a 77 kg prior.
+       n < 1, priorW <= 0, garbage      null — nothing belongs in the field;
+                                        `+` gives one step, as today
+     The grid is the build's (L1): LB_BAR_STEP on a bar in lb, LB_STEP with
+     no bar, KG_STEP for kg on a bar. The tie test is EQ1's, so a wrong
+     plate constant (B-117) moves the seed WITH the ladder, which is the
+     point. Pure: no history, no DOM. The SAME-BUILD seed is not this
+     function's — it is ld.add verbatim (he typed 127, the seed is 127);
+     seedInUnit below does the split the way priorInUnit does. */
+  function seedFor(priorW, mode) {
+    var pw = parseWeight(priorW);
+    if (!pw.ok || !(pw.value > 0)) return null;
+    var m = isObj(mode) ? modeFromLd(mode) : { au: "kg" };
+    if (m.au === "kg" && m.bar === undefined) return r1(pw.value);
+    var hasBar = m.bar !== undefined;
+    var b = { au: m.au, barKg: hasBar ? toKg(m.bar, m.bu) : 0 };
+    var grid = m.au === "lb" ? (hasBar ? LB_BAR_STEP : LB_STEP) : KG_STEP;
+    var cap = pw.value + LOAD_EQ + 1e-9;
+    /* start from the arithmetic floor, then walk to the exact boundary
+       through buildTotal itself (r1 at the total can pull a figure onto
+       either side of the cap: 190 lb is 86.18 raw, 86.2 stored) */
+    var n = Math.floor(inUnit(b, cap - b.barKg) / grid);
+    if (!isFinite(n)) return null;
+    while (n >= 1 && buildTotal(b, addStep(0, n * grid)) > cap) n--;
+    while (buildTotal(b, addStep(0, (n + 1) * grid)) <= cap) n++;
+    if (n < 1) return null;
+    return addStep(0, n * grid);
+  }
+  /* seedInUnit(prevSet, mode) -> number | null
+     priorInUnit's split with SD1 on the converted branch — the one call the
+     view makes on the first `+`:
+       same build          ld.add verbatim (priorInUnit's answer, untouched)
+       kg-direct card      r1(w), as today
+       converted           seedFor(w, mode) — the grid figure
+       zero / unreadable   null */
+  function seedInUnit(prevSet, mode) {
+    var m = isObj(mode) ? modeFromLd(mode) : { au: "kg" };
+    if (!isObj(prevSet)) return null;
+    var pw = parseWeight(prevSet.w);
+    if (!pw.ok || !(pw.value > 0)) return null;
+    var b = buildOf(prevSet.ld, pw.value);
+    if (b && sameMode({ au: b.au, bar: b.hasBar ? b.bar : undefined, bu: b.hasBar ? b.bu : undefined }, m)) return b.add;
+    return seedFor(pw.value, m);
   }
 
   /* ------------------------------------------------------- classification */
@@ -5473,13 +5564,16 @@
      `mixed` survives only as a COPY variant in cases 3 and 4, where the
      sentence makes a claim about every set and has to stay true.
 
-     Float-tolerant on 0.01: 2.5 kg steps arriving as parsed strings. */
+     `backoff` and `mixed` are Rule EQ1 tests (§21.13.1): a spread within
+     LOAD_EQ is one load, so a seeded 76.9 beside a typed 77 is not a
+     mismatch. Was 0.01 (float noise on parsed 2.5 kg steps); the working
+     load is still min(C) and every printed figure is what it was. */
   function verdictPower(ex, C, pain, b, unit) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var load = minW(C), top = maxW(C), R = repeatLoad(C);
-    var backoff = (R - load) > 0.01;
-    var mixed = (top - load) > 0.01;
+    var backoff = (R - load) > LOAD_EQ + 1e-9;
+    var mixed = (top - load) > LOAD_EQ + 1e-9;
     var word = loadWord(load, im);
     /* `word` is the REPORT token (P1.3's head, kg on every card); the hold
        is an INSTRUCTION and takes Rule U1's bracket on a lb card when the
@@ -5686,10 +5780,16 @@
 
     var va = volOf(C), vb = volOf(Cprev);                 /* 4d — tonnage */
     var p = vb > 0 ? Math.round((va - vb) / vb * 100) : 0;
-    if (va > vb) return mk("up", "Volume up " + p + "% — " + grp(va) + " kg against " + grp(vb) + " kg.", "", "H1.4d");
+    /* §21.13.2: THE PRINTED PERCENTAGE IS THE DECISION. A difference that
+       rounds to 0% (a seeded 76.9 against a typed 77: 2307 against 2310)
+       is a matched session; `Volume down 0%. Add a rep` contradicted
+       itself and `Volume up 0%` was the same defect with a nicer face.
+       Both strings are now unreachable. Not LOAD_EQ: a tonnage has reps
+       in it, and |Δ| < 0.5% of vb is what p === 0 means. */
+    if (p > 0) return mk("up", "Volume up " + p + "% — " + grp(va) + " kg against " + grp(vb) + " kg.", "", "H1.4d");
     /* H1.4d's step is the working-load set's (L1): `5 lb` on an lb build,
        `2.5 kg` otherwise — a kg-on-bar build steps 2.5 kg too. */
-    if (va < vb) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or " + (b ? String(b.grid) + " " + b.au : instr(KG_STEP, unit)) + " next time.", "", "H1.4d");
+    if (p < 0) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or " + (b ? String(b.grid) + " " + b.au : instr(KG_STEP, unit)) + " next time.", "", "H1.4d");
     return mk("", "Volume matched. One more rep next session.", "", "H1.4d");
   }
 
@@ -8511,7 +8611,11 @@
       if (r.failLoad === null) { run = 0; prevFail = null; continue; }
 
       best = bestWithin(done, r.date, ST1_PRIOR_FROM);          /* clause (c) */
-      if (best === null || r.failLoad > best + 1e-9) {          /* MISS-NEW */
+      /* Rule EQ1: a failure AT OR WITHIN LOAD_EQ of the completed load is
+         a failure at that load. Was `best + 1e-9`, which read a seeded
+         77.1 (170 lb) against a completed 77 as an attempt at a NEW load
+         and left the trigger blind to the stall (§21.13.3 #5). */
+      if (best === null || r.failLoad > best + LOAD_EQ + 1e-9) { /* MISS-NEW */
         run = 0; prevFail = null; continue;
       }
 
@@ -9691,6 +9795,12 @@
     instr: instr,
     priorInUnit: priorInUnit,
     priorGhost: priorGhost,
+    /* WO-012 §21.13 — Rule EQ1's constant (the four sites assert against
+       it, not a literal) and Rule SD1's seed: seedFor is the pure grid
+       arithmetic, seedInUnit the split the view calls on the first `+`. */
+    LOAD_EQ: LOAD_EQ,
+    seedFor: seedFor,
+    seedInUnit: seedInUnit,
     localDate: localDate,
     draftAge: draftAge,
     parseWeight: parseWeight,
