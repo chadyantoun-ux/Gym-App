@@ -12,17 +12,53 @@
 <p>This page reads storage and writes nothing. Screenshot it and send it.</p>
 <pre id="out">reading…</pre>
 <script>
-/* WO-011 W1. Read-only. Not in the service worker shell list. */
-(async function(){
-  var L=[];
+/* WO-011 W1. Read-only. Not in the service worker shell list.
+   WO-012b: PRINTS PROGRESSIVELY. On his phone this page sat at "reading…"
+   for two reasons: bbd0dcd left a raw newline inside a string literal (a
+   SyntaxError, so nothing ran), and every await sat in one try - a hung
+   caches.keys() / getRegistration() / fetch held every line before it.
+   Now: #out is repainted after EVERY section, each await is raced against a
+   4 s timeout and wrapped on its own, so a hang prints "(timed out)" and the
+   rest still shows. */
+(function(){
+  var L=[], out=document.getElementById("out");
   function line(s){ L.push(s); }
+  function show(){ out.textContent = L.join("\n"); }
   function size(v){ return v==null?0:String(v).length; }
+  function within(p,ms){
+    return new Promise(function(res){
+      var done=false, t=setTimeout(function(){ if(!done){ done=true; res({timeout:true}); } },ms);
+      Promise.resolve(p).then(function(v){ if(!done){ done=true; clearTimeout(t); res({value:v}); } },
+                              function(e){ if(!done){ done=true; clearTimeout(t); res({error:e}); } });
+    });
+  }
+  /* One section: label, a function returning a promise, a function that
+     prints its value. Its own try, its own 4 s, its own repaint. */
+  function section(label,run,print){
+    var p; try{ p=run(); }catch(e){ line(label+": ERROR "+(e&&e.message||e)); show(); return Promise.resolve(); }
+    return within(p,4000).then(function(r){
+      try{
+        if(r.timeout) line(label+": (timed out)");
+        else if(r.error) line(label+": ERROR "+(r.error&&r.error.message||r.error));
+        else print(r.value);
+      }catch(e){ line(label+": ERROR "+(e&&e.message||e)); }
+      show();
+    });
+  }
+  function text(path){ return fetch(path,{cache:"no-store"}).then(function(r){ return r.text(); }); }
+
+  /* 1. the environment - synchronous, prints at once */
   try{
     line("origin   " + location.origin);
     line("ua       " + navigator.userAgent.replace(/^Mozilla\/5\.0 /,""));
     line("standalone " + (window.navigator.standalone===true ? "yes (home-screen app)" : "no (browser tab)"));
     line("online   " + navigator.onLine);
     line("");
+  }catch(e){ line("env: ERROR " + (e&&e.message||e)); }
+  show();
+
+  /* 2. localStorage keys - synchronous, prints at once */
+  try{
     var keys=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(/^phat/.test(k)) keys.push(k); }
     keys.sort();
     line("localStorage keys (" + keys.length + "):");
@@ -38,9 +74,9 @@
         } else if(k==="phat:v1:draft"){
           note = "  day=" + j.dayId + " date=" + j.date + " entries=" + (j.entries?Object.keys(j.entries).length:"?") + " savedAt=" + (j.savedAt?new Date(j.savedAt).toISOString():"-");
         } else if(k==="phat:v1:prefs"){
-          note = "  onboarded=" + j.onboarded + " backup=" + JSON.stringify(j.backup) + "
-      gym=" + JSON.stringify(j.gym) + "
-      merge=" + JSON.stringify(j.merge);
+          note = "  onboarded=" + j.onboarded + " backup=" + JSON.stringify(j.backup)
+               + "\n      gym=" + JSON.stringify(j.gym)
+               + "\n      merge=" + JSON.stringify(j.merge);
         } else if(/^phat:v1:recover:/.test(k)){
           var inner=null; try{ inner = j.value && typeof j.value==="object" ? j.value : (typeof j.raw==="string" ? JSON.parse(j.raw) : null); }catch(e){}
           note = "  reason=" + j.reason + " savedAt=" + (j.savedAt?new Date(j.savedAt).toISOString():"-") + (inner&&inner.sessions ? " sessions=" + inner.sessions.length : "") + (j.raw?" raw=" + String(j.raw).slice(0,80):"");
@@ -51,25 +87,48 @@
       line("  " + k + "  (" + size(v) + " bytes)" + note);
     });
     line("");
-    if(window.caches){
-      var names=await caches.keys();
-      line("caches: " + (names.join(", ")||"none"));
-      for(var n=0;n<names.length;n++){ var c=await caches.open(names[n]); var reqs=await c.keys(); line("  " + names[n] + " entries=" + reqs.length); }
-    }
-    if(navigator.serviceWorker){
-      var reg=await navigator.serviceWorker.getRegistration();
+  }catch(e){ line("localStorage: ERROR " + (e&&e.message||e)); line(""); }
+  show();
+
+  /* 3..7 the awaited sections, one after another, each printed as it lands */
+  var chain=Promise.resolve();
+  chain=chain.then(function(){
+    if(!window.caches){ line("caches: (no Cache API)"); show(); return; }
+    var names=[];
+    return section("caches",function(){ return caches.keys(); },function(ns){
+      names=ns; line("caches: " + (ns.join(", ")||"none"));
+    }).then(function(){
+      var q=Promise.resolve();
+      names.forEach(function(n){
+        q=q.then(function(){ return section("  "+n,function(){ return caches.open(n).then(function(c){ return c.keys(); }); },function(reqs){ line("  " + n + " entries=" + reqs.length); }); });
+      });
+      return q;
+    });
+  });
+  chain=chain.then(function(){
+    if(!navigator.serviceWorker){ line("sw: (no serviceWorker)"); show(); return; }
+    return section("sw",function(){ return navigator.serviceWorker.getRegistration(); },function(reg){
       line("sw: " + (reg ? (reg.active?"active":"registered, not active") + " scope=" + reg.scope : "none"));
-    }
-    var idx=await fetch("index.html",{cache:"no-store"}).then(function(r){return r.text();}).catch(function(){return "";});
-    var lg=await fetch("logic.js",{cache:"no-store"}).then(function(r){return r.text();}).catch(function(){return "";});
-    line("");
-    line("served index.html : chip=" + (idx.indexOf("Weight in lb")>=0) + " iLiftIn=" + (idx.indexOf("I lift in")>=0) + " mergeOnOpen=" + (idx.indexOf("mergeOnOpen")>=0));
-    line("served logic.js   : SCHEMA=" + ((lg.match(/SCHEMA_VERSION\s*=\s*(\d+)/)||[])[1]||"?") + " cardModeFor=" + (lg.indexOf("cardModeFor")>=0) + " LOAD_EQ=" + (lg.indexOf("LOAD_EQ")>=0) + " mergeStores=" + (lg.indexOf("mergeStores")>=0));
-    var swt=await fetch("sw.js",{cache:"no-store"}).then(function(r){return r.text();}).catch(function(){return "";});
-    line("served sw.js      : VERSION=" + ((swt.match(/VERSION\s*=\s*['"]([^'"]+)/)||[])[1]||"?"));
-    line("now " + new Date().toISOString());
-  }catch(e){ line("ERROR " + e.message); }
-  document.getElementById("out").textContent = L.join("\n");
+    });
+  });
+  chain=chain.then(function(){ line(""); show(); });
+  chain=chain.then(function(){
+    return section("served index.html ",function(){ return text("index.html"); },function(idx){
+      line("served index.html : chip=" + (idx.indexOf("Weight in lb")>=0) + " iLiftIn=" + (idx.indexOf("I lift in")>=0) + " mergeOnOpen=" + (idx.indexOf("mergeOnOpen")>=0) + " ovRecord=" + (idx.indexOf("migrateOverrides")>=0));
+    });
+  });
+  chain=chain.then(function(){
+    return section("served logic.js   ",function(){ return text("logic.js"); },function(lg){
+      line("served logic.js   : SCHEMA=" + ((lg.match(/SCHEMA_VERSION\s*=\s*(\d+)/)||[])[1]||"?") + " cardModeFor=" + (lg.indexOf("cardModeFor")>=0) + " LOAD_EQ=" + (lg.indexOf("LOAD_EQ")>=0) + " mergeStores=" + (lg.indexOf("mergeStores")>=0));
+    });
+  });
+  chain=chain.then(function(){
+    return section("served sw.js      ",function(){ return text("sw.js"); },function(swt){
+      line("served sw.js      : VERSION=" + ((swt.match(/VERSION\s*=\s*['"]([^'"]+)/)||[])[1]||"?"));
+    });
+  });
+  chain=chain.then(function(){ line("now " + new Date().toISOString()); show(); });
+  chain.catch(function(e){ line("ERROR " + (e&&e.message||e)); show(); });
 })();
 </script>
 </body></html>
