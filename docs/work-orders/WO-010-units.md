@@ -1,7 +1,9 @@
 # WO-010 — Load in the unit it is built in: bar + plates, kg or lb, kg total per set
 
 Written 2026-09-12 by `project-manager` against `main @ f555322`. One branch, `wo-010-units`.
-**Status: specified.** Written on the day the standing diagnosis moved: **the first session was logged
+**Status: closed 2026-09-12** — on `main` @ `9f06d98`, §3.5 amended on `11c44ff`, deployed and byte-verified;
+suite 802 / 802 / 0. The closure record is §9; the sections below are as written, so the criteria can be read against
+the evidence. Written on the day the standing diagnosis moved: **the first session was logged
 today**, and this ask comes from lifting with it. Everything below is judged against that session
 staying byte-identical.
 
@@ -399,6 +401,8 @@ until W7 has pinned his logged session through the migration.**
 
 ## 5. Needs from Chady
 
+*Resolved at the close — see §9.2 for each one's outcome. Left as written so the ask is on the record.*
+
 1. **His bar weights, by name**: the barbell (20 kg? confirm), the EZ bar, any others (trap bar, a
    fixed bar, a 15 kg bar). Unit per bar.
 2. **Per phone or per account** for the profile. PM's answer is per phone (§0.2). Say if Diana's
@@ -474,3 +478,56 @@ backup, accepted).
 8. `release-engineer` → **W8**, brief: *W5 applied and recorded; merge, deploy, byte-verify,
    `sw.js` header rule, `/logic.js` body contains `V_LD`; re-push of his session leaves the row
    byte-identical.*
+
+---
+
+## 9. Closure record — 2026-09-12, by `project-manager`
+
+### 9.1 Where it is
+
+**`main` @ `9f06d98`** (`--no-ff` merge of `wo-010-units`, W1–W7), then **`11c44ff`** (CLAUDE.md §3.5, on Chady's
+reaffirmation). Deployed by the main session: **59 files byte-verified** on the production origin (11 shell + 48
+photographs); live `/logic.js` fetched and carries `V_LD = 6` and `SCHEMA_VERSION = 6` in the body; the chip and
+Settings → Gym on the live screen. `sw.js` stayed **`v5`** by its header rule — the file list did not change and the
+per-launch refresh carries `index.html` + `logic.js` as one unit. `migrate-006-ld.sql` applied to the project and probed:
+same refusal sentence as `logic.js`; 60.75 lands, 60.86 is refused, against a 60.8 build. Server after the close: 2 users,
+Chady's 1 session, 0 conflicts (QA's soft-deleted probe row and its two `conflicts` rows removed from the dashboard).
+Suite **802 / 802 / 0**.
+
+### 9.2 The chain, item by item
+
+| Item | Owner | Commit | Outcome |
+|---|---|---|---|
+| W1 | `strength-coach` | `dee6fe4` | Addendum §18. L1 (two grids chosen by the working-load set's `ld`, never the slot; 5 lb on `add`, nearest ties down in lb; the verdict prints kg *and* the build), L2 (`ld` owns the ladder and the build phrase; `implement` owns only `per DB` / `bodyweight`; a bar overrides `db`), L3 (SP1 fits the source set's grid), L4 (bodyweight + lb). PM's proposal accepted with one change: the too-heavy drop is nearest-then-at-least-one-step. **§18.6 #1 found the kg-direct bug** — at ≤ 22.5 kg `Drop to {same load}` was a hold, at 1.4 kg an increase. Q3: recommends the one-tap `Swapped`, does not rule. §18.8 asks two gym facts (B-117). 0.1 kg rounding and the 5 lb / 2.5 kg stepper confirmed |
+| W2 | `ux-designer` | `5ff1173` | Spec §19: §4.4a the row in `ld` mode, §4.4b the chip and sheet, Settings → Gym; every string tabled, control inventory rows, budgets measured. Findings: `ghostText` reads `pv.w` only (moved into `logic.js`), the 10 px `.unit` caption (B-118) |
+| W3 | `backend-engineer` | `c0714d8` | `LIMITS`, `toKg`, `composeLoad`, `buildWord`, `loadModeFor`, `validateGymProfile`; `validateEntry` / `validateDraft` / `validateSessionDoc` carry and refuse `ld` by name; `canonSession` orders `ld`; `SCHEMA_VERSION` 6 on `V_LD`, the pass a stamp only; importer 2–6. **B-112 save side closed.** Suite 740, twelve mutants killed |
+| W6 | `frontend-engineer` | `48b88a4` | **B-112 reload side closed first — and it had two halves: `saveDraft` as well as `hydrateDraft` rebuilt `{w, r}`.** The row in lb with the kg row's geometry (measured identical at 400 px and 200 %, card 474 px in both modes); `= 60.8 kg` on the ghost line; steppers 5 lb / 2.5 kg that never snap; the chip and sheet; a unit switch with typed weights asks and is undoable, a bar switch names both totals; Settings → Gym through `validateGymProfile` to `prefs.gym` and nothing else. **D8: the kg-direct row DOM is `main`'s byte for byte** |
+| W4 + W5 | `backend-engineer` | `5a64064` | §18 transcribed at the sites §18.7 marks as moving and no others; the one kg-direct change is the §18.6 #1 drop; a 60,030-verdict differential against `c0714d8` found nothing else. SQL: `phat_validate_ld` mirrors `ldDocProblems` sentence for sentence, tolerance 0.05 + 1e-9, `migrate-006-ld.sql` function-only; selftest section F, nine probes. Suite 785 |
+| W7 | `qa-engineer` | `16b613d` | **Pass for release** at `5a64064`. D1–D9 each with evidence in `docs/decisions.md` (2026-09-12, W7). D1 on his real export (hash 1528318698), his six verdicts identical under `5d9525c` / `c0714d8` / `5a64064`; D4 live against the project as Diana with the eight refusal sentences pinned, rows cleaned afterwards; the ladder re-derived by hand on numbers S41 does not use; a 580,608-verdict differential; eleven `logic.js` mutants killed by the suite, the SQL tolerance mutant killed live, the `hydrateDraft` mutant killed in the browser rig. Suite 802. Pinned as observed: the `+ 0 lb` drop (B-114), the `no weight` token (B-115); found outside the order: B-98 re-observed |
+| W8 | `release-engineer` + main session | `9f06d98`, `11c44ff` | Merge, deploy, byte-verify (59), `V_LD` in the live body, `sw.js` `v5` unchanged, SQL applied and probed, server state confirmed. Upload by the main session |
+
+**§5's six needs, resolved.** (1) Bar weights — **still his**; shipped on the 20 kg assumption with Settings → Gym to
+hold the rest, B-117. (2) Per phone or per account — **the PM's**, per phone, accepted as B-113; not asked to change.
+(3) His session for the pin — **fetched from the server by the main session**; S42's D1 is on those bytes. (4) §3.5
+wording — **amended on `11c44ff` on his reaffirmation**: stored kg, entered as bar + added in kg or lb, step in the
+entry unit, bodyweight untouched. (5) Q3 — **open**, B-111, the yes/no on the row. (6) The SQL editor — **the main session
+applied it** and probed the boundary.
+
+### 9.3 Backlog at the close
+
+B-109, B-110, B-112 **done** with evidence on their rows; B-113 **accepted as filed**; B-111 **open** on the coach's
+recommendation, Chady's yes/no owed. Filed by the close: **B-114** the `+ 0 lb` drop phrase (P2, coach to rule);
+**B-115** the `no weight` token on a hand-edited row (P3); **B-116 the warm-up sets question** (P1 table, the PM's,
+deliberately not answered here — his first session logged five ramping sets on `d1a`, 20 → 70 kg at
+12 / 12 / 15 / 14 / 10, on a 3 × 3–5 slot, and every engine read them as prescribed work); **B-117** the two gym facts the
+ladder assumes (P2, Chady's: 2.5 lb plates; bars by name); **B-118** the 10 px unit caption (P3). B-98 carries W7's
+second observation and stays one row.
+
+### 9.4 What only his phone answers
+
+Manual item 10 in `tests.html`: the chip one-handed with chalk, the sheet, the `= 60.8 kg` token under gym light.
+Everything else on D1–D9 has its evidence cited.
+
+### 9.5 Standing diagnosis
+
+One session logged; this order was the first made from lifting with the app. The next number is the second session.

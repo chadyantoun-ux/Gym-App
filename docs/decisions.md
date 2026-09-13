@@ -2733,3 +2733,81 @@ needs the dashboard (service role) to remove: one soft-deleted `sessions` row, `
 
 **Not done here, on purpose:** `docs/backlog.md` (the PM's), CLAUDE.md's count sentence (it already says to read the file),
 and any product code.
+
+## 2026-09-12 — WO-010 closed: the mixed-unit gym is on `main` @ `9f06d98`, §3.5 amended on `11c44ff`; the grid comes from the set, never the slot; a drop is always a drop; `Swapped` and the warm-up question are both filed, neither answered
+
+**Closed on `main` @ `9f06d98`** (`--no-ff` merge of `wo-010-units`, W1–W7), with CLAUDE.md §3.5 amended on `11c44ff` after
+Chady reaffirmed the substance twice. Production evidence, observed not inferred: **59 files byte-verified** on the production
+origin (11 shell + 48 photographs), live `/logic.js` served with `V_LD = 6` and `SCHEMA_VERSION = 6` in the body, the load
+chip and Settings → Gym on the live screen, `sw.js` at **`v5`, unchanged** — the file list did not move and the per-launch
+refresh carries `index.html` + `logic.js` as one unit, so the header rule said no bump, for the third close running.
+`migrate-006-ld.sql` was applied to the project by the main session and probed: the same refusal sentence as `logic.js`,
+and the boundary lands 60.75 and refuses 60.86 against a 60.8 build. Server after the close: **2 users, Chady's 1 session,
+0 conflicts** — QA's soft-deleted probe row and its two `conflicts` rows were removed from the dashboard. Suite
+**802 / 802 / 0** at `11c44ff`. The chain and each item's commit are on the WO-010 row in `docs/backlog.md` and in the
+closure record in `docs/work-orders/WO-010-units.md` §9.
+
+**What shipped, in one line each.** A set is entered as bar + added weight, in kg or lb, as a total; the kg total is printed
+on every row with no tap; `w` is still the kg total every engine reads and `ld` beside it holds the components, absent
+meaning kg, so every set logged before today reads exactly as it did. Schema 6 on `V_LD`, a version stamp and nothing
+else. Rules L1–L4 (coach §18): the increment ladder for a mixed-unit gym, transcribed at the sites §18.7 marks as moving and at
+no others. B-112 closed on both halves. The SQL validator carries the same `ld` rules and the same sentences. Settings →
+Gym, bars only, per device. His first session pinned by id, byte-identical through v5 → 6, on his real export.
+
+**Decision 1 — the grid is chosen by the working-load set's `ld`, never by the slot's tag.** L1/L2 as ruled and as built:
+kg-direct stays 2.5 kg on `w`; any lb build steps 5 lb on `add`, nearest ties down in lb, the bar a constant; the verdict
+prints the kg total *and* the build (`Go to 83.5 kg next session — 20 kg bar + 140 lb.`) and can never name a load the
+components beside it cannot rebuild — W4's meta-test recomputes every printed figure, so that is a property of the code.
+`implement` is demoted to the two words it was always only good for (`per DB`, `bodyweight`); a bar in `ld` overrides a
+`db` slot. This is Decision 4 of the advice audit ("no rule prints an off-grid kg") restated as *off-grid in the unit the
+load was built in*. **Rules out:** a unit or increment setting that changes what an engine reads (B-58 stands); reading
+`implement` to choose a ladder; converting history.
+
+**Decision 2 — a drop is always a drop, on every build, including the kg gym.** The too-heavy fit is nearest, then at least
+one grid step strictly below the current load, then Z2's hold form under zero. This changed exactly one kg-direct output,
+on purpose: at ≤ 22.5 kg `Drop to {same load}` — a hold wearing a drop's clothes, and at 1.4 kg an *increase* — now
+drops one step (`Drop to 17.5 kg` from 20 kg). The 580,608-verdict differential between `c0714d8` and `5a64064` found no
+other kg-direct movement; `speedLoad`, `g1Step`, `incrementLine` zero diffs. Its residue is B-114: at a 20 kg bar + 5 lb
+the guard lands on `+ 0 lb` and the phrase is the coach's to rule, one string.
+
+**Decision 3 — `Swapped` is recommended, not ruled, and nothing is built until Chady answers.** §18.3 recommends the
+one-tap mark on the card (ST1 skips the session, H1 says `Swapped exercise. Not compared to last session.`, the next
+unswapped session's ghost and `loadModeFor` read past it; forgetting the tap costs exactly today). The PM does not
+convert a recommendation into a ruling on his behalf. B-111 stays open with the yes/no on the row; the spec reserves the
+slot (§4.4b.2). If yes, it rides with B-116, which wants the same chip.
+
+**Decision 4 — the warm-up question is filed, owned by the PM, and deliberately not answered in this close.** The fact,
+recorded so no session rediscovers it: his first session logged **five ramping sets on `d1a`, 20 → 70 kg at
+12 / 12 / 15 / 14 / 10, on a 3 × 3–5 slot**, and every engine read every one of them as prescribed work — P1's working
+load is the `min` of the first `ex.s` completed sets, so the verdict on his only real session was computed from a 20 kg
+warm-up. Not a bug; the app was never told what a warm-up is. Three shapes (log working sets only; log all and mark;
+log all and infer), a coaching ruling before a data-shape one, and any mark is a third key on a set — which B-112 now
+carries. **B-116**, P1 table, first question for the next planning pass. Nothing in this close changed a verdict to suit
+it.
+
+**Decision 5 — a finding re-observed is a note on its row, not a new id.** QA's "a client cannot hard-delete its own
+`sessions` row" is B-98 (WO-008 W7) seen a second time, live, as the account that wrote the probe row. One row, the
+second observation and the escalation trigger on it (P1 the day B-05's delete syncs). Two ids for one fault is how a
+fix closes one and leaves the other open.
+
+**The six needs from §5, resolved.** (1) Bar weights — still his; shipped on the 20 kg assumption with Settings → Gym
+to hold the rest (B-117). (2) Per phone or per account — the PM's ruling, per phone, accepted as B-113; not asked to
+change. (3) His session for the pin — fetched from the server by the main session; S42's D1 is on those bytes (hash
+1528318698). (4) §3.5 wording — amended on `11c44ff` on his reaffirmation; stored kg, entered as bar + added in kg or
+lb, step in the entry unit, bodyweight untouched. (5) Q3 — open, B-111. (6) The SQL editor — the main session applied
+`migrate-006-ld.sql` and probed it. Two coach facts (§18.8: 2.5 lb plates; the dumbbell rack past 100 lb) are B-117.
+
+**Minor, recorded so nobody re-opens them.** The order's schedule held: W1 ∥ W2 ∥ W3, then W6 before W4 + W5 (the row
+did not wait for the verdict, as §3 said), then W7, then W8. `hydrateDraft` turned out to be two functions
+(`saveDraft` too); the criterion was written against the behaviour, so it caught both. A hand-edited draft row with
+`ld.add` and no `w` reads `no weight` beside a visible lb number — no app path writes it, B-115, P3. The 10 px `.unit`
+caption is B-118, a ride-along. The first session was logged in kg-direct, so the next session on the same slot in lb
+will differ by under a kilo from it and H1.4d may print `Volume up 1%` for identical plates — true, harmless, ends the
+session after (§18.6 #4).
+
+**Not proven by this close, and said so:** the chip one-handed with chalk, the sheet, and the `= 60.8 kg` token under gym
+light — manual item 10, only his phone answers. Every other criterion has its evidence on the row.
+
+**Standing diagnosis.** Moved, and stays moved: one session logged, and this order was the first in the project's history
+that came from lifting with the app. The next number is the second session. The tooling now matches his gym; nothing
+below asks for more tooling before it is logged.

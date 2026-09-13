@@ -52,56 +52,60 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 
 ---
 
-## 2. Current state — 2026-09-11, after WO-004, WO-005 and E-3
+## 2. Current state — 2026-09-12, after WO-010 (`main @ 11c44ff`)
 
-**The app is live, offline-capable, and backed up.** `https://gym-app-psi-eight.vercel.app`
+**The app is live, offline-capable, backed up, and holds one real session.** `https://gym-app-psi-eight.vercel.app`
 
-- **Files that ship — eleven.** `index.html` (shell, six screens, ~4,500 lines), `logic.js` (every rule
-  engine and every pure function behind `window.PHAT`, a classic script so `tests.html` runs from
-  `file://`), `sync.js` (the backup client, an ES module, injected after first render and only on
-  `http(s)` when online), `tests.html`, `sw.js`, `manifest.webmanifest`, `assets/archivo-inline.css`
-  (the typeface, inlined), and four PNG icons. **A deploy is all eleven or nothing** — a Vercel
-  deployment is an immutable snapshot, not a patch; a file left out ceases to exist at that
-  deployment. `docs/deploy.md` is the procedure; `scripts/verify-deploy.sh` fetches the bytes and
-  compares them to the tree.
-- **Screens built:** Train/Home (with onboarding and Settings), Session, Summary, Trend, Weight, Diet.
-  **Plan is a deliberate placeholder** — the Plan Editor (WO-004 W14–W15) was cut; the design's own
-  copy calls it *"the easiest thing in this app to do instead of training."*
-- **Storage:** `localStorage` under `phat:v1:log`, `phat:v1:bw`, `phat:v1:draft`, `phat:v1:prefs`,
-  `phat:v1:plans`; auth session under `phat:auth`. `SCHEMA_VERSION` is **5**. Migrations are gated on
-  their own version constants, never on `SCHEMA_VERSION`.
-- **Tests:** `tests.html` from `file://`, no Node. **Read the file for the count** — on `main` at
-  `4d69225` it is `593 / 593 / 0`. Two meta-tripwires forbid any named or expected failure. Every
-  rule change since WO-005 was pinned by running the new tests against the *pre-fix* `logic.js` and
-  confirming they go red — a test that passes in both regimes is a guard, and is named as one.
-- **Backup (E-3):** Supabase project `nkebsoqjtkcdiswrmely`, `us-west-2`, Postgres 17. **Backup and
-  restore, not two-way sync** — push-only; the server never writes to the device except on an explicit
-  Restore tap, which on a non-empty log requires typing `REPLACE`, exports first, and writes a
-  `phat:v1:recover:*` copy before replacing anything. RLS on all five tables, 18 policies, verified from
-  outside: the publishable key returns zero rows everywhere and an anon insert fails `42501`. Demo
-  data (`demo:true`) is refused and named on push and refused whole on restore (C-14). The draft and
-  preferences do not back up. Schema in `supabase/`; **the Management API runs a submission as one
-  transaction**, so `rls-selftest.sql` is separate — its trailing `rollback` once discarded all the
-  policies.
-- **Auth:** email + password, created from Settings. Magic links were rejected: a link from an email
-  opens in the browser, not the installed PWA. `mailer_autoconfirm` is on. **Sign-ups are still enabled
-  until Chady's own account exists; then disable them** (`Authentication → Providers → Email`) — RLS
-  scopes rows to a user, it does not stop a stranger creating an account in the project.
-- **Deploy:** manual Vercel API, **team-scoped** (`teamId` required on every call). The GitHub App is
-  still not installed; installing it on `chadyantoun-ux/Gym-App` makes a push to `main` deploy itself
-  and retires the manual upload. **Bytes come from `git cat-file blob`, never the working tree** —
-  `core.autocrlf` is on here and would inflate every text file.
-- **Live wrong-advice bugs closed in WO-005** — worth knowing because each shipped for a while: Rule
-  P1.2 fired on `!equal`, so a set *above* the working load counted as a failed prescription
-  (`100/100/120` earned a worse verdict than `100/100/100`); the diet screen had no day type, a
-  700 kcal error on rest days; `index.html` carried a duplicate 42-slot `PROGRAM` that had drifted
-  from the plan document, so none of the 43 signed-off cues could render. **There is one programme
-  source: `PHAT.PHAT_PLAN`.** `index.html`'s `PROGRAM` is a derived read of it.
-- **Open, on the record:** B-11 (chart points spaced by index), B-19 (render/timer seam), B-36 (fixed
-  dock with the software keyboard up — only a phone can answer), B-45 (S1's third line, deliberately
-  unwritten), `hydrateDraft()` drops entries whose exercise is not in the day (unreachable until the
-  Plan Editor or an importer exists), the `MANUAL` rest label means `OFF`, and the WO-002 importer.
-  `docs/backlog.md` is the list.
+- **Files that ship — 59.** Eleven shell files: `index.html` (~7,300 lines, every screen), `logic.js` (~9,200 lines,
+  every rule engine and pure function behind `window.PHAT`, a classic script so `tests.html` runs from `file://`),
+  `sync.js` (the backup client, an ES module, injected after first render and only on `http(s)` when online),
+  `tests.html`, `sw.js`, `manifest.webmanifest`, `assets/archivo-inline.css`, four PNG icons — plus **48 exercise
+  photographs** under `assets/ex/` from one generated manifest. **A deploy is all 59 or nothing** — a Vercel deployment
+  is an immutable snapshot, not a patch; a file left out ceases to exist at that deployment. `docs/deploy.md` is the
+  procedure; `scripts/verify-deploy.sh` fetches the bytes and compares them to the tree.
+- **Screens built:** Train/Home (onboarding, Settings — Backup, Account with `Change password`, Gym), Session, Summary,
+  Trend, Weight, Diet, **Plans list + Plan Editor** (WO-006) with the cross-day **re-split** that keeps an exercise's id
+  (WO-007). Photographs replace the stick figures on 32 of 42 slots; 10 are cue-only (B-105, B-106).
+- **Units (WO-010):** a set is entered as **bar + added weight, in kg or lb, as a total**; the kg total prints on every
+  row. `w` is always the kg total every engine reads; `ld: {bar, bu, add, au}` beside it holds the components and
+  **absent means kg**. The increment ladder (coach §18, Rules L1–L4) is chosen by the set's `ld`, never the slot: 2.5 kg
+  kg-direct, 5 lb on a lb build, and the verdict prints the kg total then the build. Settings → Gym holds bars only,
+  per device, in `prefs`.
+- **Storage:** `localStorage` under `phat:v1:log`, `bw`, `draft`, `prefs`, `plans`, `planedit`; auth session under
+  `phat:auth`; `phat:v1:recover:*` written before any restore replaces a log. `SCHEMA_VERSION` is **6**. Migrations
+  are gated on their own version constants (`V_DATEBASIS`, `V_STATEKEYS`, `V_PLAN`, `V_RX`, `V_LD`), never on
+  `SCHEMA_VERSION`; the v6 pass stamps the version and moves zero bytes. The importer owes 2–6.
+- **Tests:** `tests.html` from `file://`, no Node. **Read the file for the count** — on `main` at `11c44ff` it is
+  `802 / 802 / 0`. Three meta-tripwires forbid any named or expected failure, any skip without a reason, and any
+  fixture writing a `phat:*` key. Every rule change since WO-005 was pinned by running the new tests against the
+  *pre-fix* `logic.js` and confirming they go red. Chady's first logged session is a fixture, by id, on his real export.
+- **Backup (E-3):** Supabase project `nkebsoqjtkcdiswrmely`, `us-west-2`, Postgres 17. **Backup and restore, not
+  two-way sync** — push-only; the server never writes to the device except on an explicit Restore tap, which on a
+  non-empty log requires typing `REPLACE`, exports first, and writes the `recover` copy before replacing anything. RLS
+  on all five tables, verified from outside. Demo data (`demo:true`) is refused on push and refused whole on restore
+  (C-14). The draft and preferences do not back up. Schema in `supabase/`; the SQL validator mirrors
+  `validateSessionDoc` sentence for sentence (`migrate-006-ld.sql` applied). **The Management API runs a submission
+  as one transaction**, so `rls-selftest.sql` is separate — its trailing `rollback` once discarded all the policies.
+- **Auth:** email + password, **two accounts, Chady and Diana, one per phone** (WO-008); **sign-ups are locked**. Magic
+  links were rejected: a link from an email opens in the browser, not the installed PWA. A device's stores belong to
+  the account that first backed them up; a sign-in to a different account is refused, not merged. Server state at the
+  last close: 2 users, 1 session, 0 conflicts.
+- **Deploy:** manual Vercel API, **team-scoped** (`teamId` required on every call). The GitHub App is still not
+  installed; installing it on `chadyantoun-ux/Gym-App` makes a push to `main` deploy itself and retires the manual
+  upload. **Bytes come from `git cat-file blob`, never the working tree** — `core.autocrlf` is on here. Verify a deploy
+  by fetching `/logic.js` and requiring the current version constant in the body, never a build status. `sw.js` is
+  `v5`; its VERSION moves only when the shell file list changes or a cached entry must be discarded, and photographs
+  are gap-filled, never re-fetched — **a re-shot photo under an existing path ships only by a VERSION bump.**
+- **Live wrong-advice bugs closed, worth knowing because each shipped for a while:** Rule P1.2 fired on `!equal`
+  (`100/100/120` earned a worse verdict than `100/100/100`); the diet screen had no day type, a 700 kcal error on rest
+  days; `index.html` carried a duplicate `PROGRAM` that had drifted from the plan document — **there is one programme
+  source, `PHAT.PHAT_PLAN`**; and until WO-010 a kg-direct miss at ≤ 22.5 kg printed `Drop to {the same load}`.
+- **Open, on the record:** **B-116 — warm-up sets**: his first session logged a five-set ramp (20 → 70 kg) on a
+  3 × 3–5 slot and every engine read it as prescribed work; logged, marked, or omitted is the PM's first question for
+  the next planning pass, unanswered. B-111 (`Swapped` mark — coach recommends it, Chady's yes/no owed), B-117 (his
+  bars by name; does the gym have 2.5 lb plates), B-05 (no edit or delete of a saved session), B-04 (file importer,
+  owes schema 2–6), B-98 (an account cannot hard-delete its own server row — P1 the day a delete syncs), B-97 (Home
+  fold at 393 × 852), B-114 (`+ 0 lb` drop phrase), B-11, B-19, B-36, B-45. `docs/backlog.md` is the list.
 
 ### Stack — built
 
@@ -109,13 +113,14 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
 |---|---|
 | Source control | GitHub, `main` is deployable at all times |
 | Hosting | Vercel, static, **no build step**, manual API deploy until the GitHub App is installed |
-| Database | Supabase Postgres 17 with RLS on every table |
-| Auth | Supabase Auth, email + password, two accounts, one per phone, RLS per user |
+| Database | Supabase Postgres 17 with RLS on every table; the set validator mirrored in SQL |
+| Auth | Supabase Auth, email + password, two accounts, one per phone, sign-ups locked, RLS per user |
 | Client | Vanilla JS; `@supabase/supabase-js@2.116.0` from jsDelivr as ESM, in `sync.js` only |
 | Offline | `localStorage` is the source of truth during a workout; Supabase is backup, never a precondition |
 
 Rationale in `docs/architecture.md`. Decisions in `docs/decisions.md`. Coaching rules and every
-sign-off in `docs/coach-audit.md` and `docs/coach-audit-addendum.md` (§12–§14 are WO-005's).
+sign-off in `docs/coach-audit.md` and `docs/coach-audit-addendum.md` (§12–§18; §18 is the mixed-unit ladder).
+Screen specs in `docs/specs/wo-004-screens.md` (§19 is the units row, chip and Gym settings).
 
 ---
 
