@@ -5262,3 +5262,498 @@ rule was read for its purpose — no overlay, no arrow, no watermark, no second 
 bystanders are recorded here for the coach to overrule if he wants the literal reading. The one photo
 where the second person *is* part of the lift (`Donkey_Calf_Raises`, the partner) was permitted by
 its own row and failed on the block.
+
+---
+
+# 18. WO-010 W1 — the ladder in a mixed-unit gym — 2026-09-12
+
+**Added 2026-09-12.** Answers `docs/work-orders/WO-010-units.md` §W1. The data shape in WO-010 §1 is
+fixed and is not reopened here: `w` is the kg total, `ld: {bar, bu, add, au}` sits beside it, `ld`
+absent means kg-direct. What is ruled here is the **ladder** — which loads a rule may name — and the
+**sentence**. Read with audit §3 (P1), addendum §1 (Z2), §2 (I2), §4 (G1) and §13.1 (P1.2a).
+
+**The uncomfortable answer first.** Every load the app has ever told him to put on a bar was on a
+2.5 kg grid, and his bar is loaded in pounds. `Go to 83.7 kg` from 20 kg + 135 lb is not an
+approximation he can round — there is no plate combination for it, and the nearest two (83.5 and
+85.8) are a full plate pair apart. The fix is not a conversion. The fix is that **a rule may only name
+a load it can also say how to build**, and the way it was built is a fact about the *set*, not about
+the slot. That is why the ladder reads `ld` and never `implement`, why the verdict prints the build
+after the kg, and why the one assumption I cannot verify from here — that his gym has 2.5 lb plates —
+is in 18.8 as a question and not buried in a constant.
+
+Rule ids introduced here: **L1** (the ladder per build), **L2** (the build phrase, and which of `ld`
+and `implement` each rule reads), **L3** (SP1's target fitted to the source's build), **L4**
+(bodyweight-implement slots with added lb). Q3 (substitution) is a recommendation, not a rule, and
+carries no id until Chady answers.
+
+`[Certain]` on every conversion below: 1 lb = 0.45359237 kg, the WO's constant. 20 kg = 44.09 lb.
+
+## 18.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | The increment ladder | **Two grids, chosen by the working-load set's `ld`, never by the slot.** kg-direct (no `ld`, or `au: "kg"` with no bar): 2.5 kg on the total, unchanged. Any build with `au: "lb"`: **5 lb on `add`**, the bar a constant. Rounding is nearest, ties down, *in the unit of `add`*. The verdict prints the kg total **and** the build: `Go to 83.5 kg next session — 20 kg bar + 140 lb.` Decision 4 restated: no rule prints a load that cannot be built from the components it names. Rule **L1**, 18.1. |
+| 1 | The PM's proposal | **Accepted**, with one change: the too-heavy drop is nearest-then-at-least-one-step, not plain nearest, because on a 45 lb belt load plain nearest rounds the 5% drop to nothing. Applies to every build, including kg-direct at ≤ 22.5 kg where today's `Drop to 20 kg` at 20 kg is a hold wearing a drop's clothes. 18.1, 18.6. |
+| 2 | Z2 / I2's source | **Both, with a fixed precedence.** `ld` decides the ladder, the build phrase and whether I2's premise holds; `implement` decides only the two words it already decides (`per DB`, `bodyweight`/`zero load`). **A `bar` in `ld` overrides `db`**: no `per DB` anywhere, no I2 line. A lb set with no bar on a `bb` slot gets the generic I2 line. Rule **L2**, 18.2. |
+| 3 | Substitution | **Recommend the one-tap mark; do not rule.** One tap on the card, not per set; ST1 skips the session, P1/H1 and the ghost read past it, nothing else changes. Forgetting the tap costs exactly what he has today. The yes/no question is at the end of 18.3. |
+| 4 | Bodyweight + lb | The load token stays the kg total (Z2 unchanged, `20.4 kg`); the build phrase says `bodyweight + 50 lb`; the step is 5 lb; at zero, `Add 5 lb next session.` All five P1 cases in 18.4. Rule **L4**. |
+| — | SP1 in lb | Target fitted to the **source set's** grid, inside the 65–70% band where the grid allows, one grid point *below* the band when it does not. Rule **L3**, 18.1. |
+| — | 0.1 kg rounding of `w` | **Confirmed.** The finest plate is 1.13 kg; 0.1 kg is an order finer, and identical builds must produce identical `w` for P1's 0.01 tolerance. Do not go finer. 18.5. |
+| — | Stepper 5 lb / 2.5 kg | **Confirmed.** One 2.5 lb plate per side, or one dumbbell up the rack. 18.5. |
+
+---
+
+## 18.1 Rule L1 — the ladder per way of building the load
+
+```
+Rule: L1 — the load a rule may name, per build
+Applies to:   P1 cases 1, 3, 4 · H1 cases 1, 2 · H1.4d's copy · G1's step · SP1's
+              target (through L3). Session screen verdict, speed-work card.
+              NOT P1 case 2 (`Repeat`) or case 5 (`Stay at`) — those name a load
+              he built this session, and it is on his own rows.
+Inputs:       C as P1/H1 define it. The WORKING-LOAD SET = the first set in C,
+              in logged order, whose w equals load (P1's min-of-C). Its `ld`, or
+              its absence, is the build. ex.implement for the two words in L2.
+              No history, no minimum beyond P1/H1's own `ex.s`.
+Logic:        build(ld):
+                ld absent, or ld.au === "kg" with no bar   -> KG-DIRECT
+                ld.au === "kg" with a bar                  -> KG-ON-BAR
+                ld.au === "lb"                             -> LB (bar or no bar)
+
+              grid and step:
+                KG-DIRECT   grid 2.5 kg on w        step 2.5 kg    round2p5 (nearest, ties down)
+                KG-ON-BAR   grid 2.5 kg on add      step 2.5 kg    nearest on add, ties down
+                LB          grid 5 lb on add        step 5 lb      round5(x) = ceil(x/5 - 0.5) * 5
+
+              The bar is a constant. Every rounding is on `add`, in the unit of
+              `add`. The kg total printed is r1(kg(bar) + kg(add')) — the same
+              number composeLoad would store for those components.
+
+              INCREASE (P1.4):   add' = add + step.
+              TOO LIGHT (P1.3, H1.2 — G1 in the build's unit):
+                L      = the working load expressed in the build's unit
+                         (KG: w · LB: w / 0.45359237, bar included — G1 is a
+                         percentage of the load, not of the plates)
+                excess = min(r in C) - ex.hi
+                step   = max(one grid step, roundGrid(L * 0.025 * excess))
+                step   = min(step, roundGrid(L * 0.20)), then max(one grid step, step)
+                add'   = add + step        (KG-DIRECT: w' = w + step, as today)
+              TOO HEAVY (P1.1, H1.1):
+                target = 0.95 * w, expressed on the grid of the build:
+                  KG-DIRECT  w'   = round2p5(target)                       (unchanged)
+                  else       add' = roundGrid(unitOf(target) - unitOf(bar))
+                GUARD, all builds: if the result is not STRICTLY below the
+                current load, go exactly one grid step below it instead. If
+                that is below zero, print Z2 delta 1's hold form. If it is
+                exactly zero, the load word is Z2's (`bodyweight` / `zero load`)
+                and there is no build phrase.
+              ZERO LOAD in an LB build (w === 0, ld.au === "lb"):
+                P1.4 -> `Add 5 lb next session.`   P1.3 / H1.2 -> `Add 5 lb.`
+                Z2 delta 2's verb, the step in the build's unit, no kg total —
+                there is no total to explain; the row will show `= 2.3 kg`.
+Output copy:  KG-DIRECT: byte-identical to today. This is the regression baseline.
+              LB / KG-ON-BAR, the build phrase appended after an em dash (L2):
+                P1.4  `Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb.`
+                P1.3  `7 reps at 81.2 kg on every set. Too light. Go to 85.8 kg — 20 kg bar + 145 lb.`
+                P1.1  `2 reps at 81.2 kg. Below the range. Drop to 76.7 kg next session — 20 kg bar + 125 lb.`
+                H1.2  `All sets above 12. Go to 27.2 kg next session — 60 lb per DB.`
+                H1.1  `6 reps at 24.9 kg. Below the 8–12 range. Drop to 22.7 kg — 50 lb per DB.`
+                H1.4d `Volume down 10%. Add a rep or 5 lb next time.`
+                P1.2 / P1.5 / H1.4a–c: unchanged strings; the kg figures are loads he built.
+Not enough data: an `ld` that does not recompose to `w` within 0.05 kg (an older
+              store, a hand edit) is IGNORED by every rule here and the set is
+              read as kg-direct with no build phrase. Silence over a wrong plate
+              count. validateEntry refuses such a set at save time; this is the
+              defence for one that got past it.
+```
+
+**Decision 4, restated.** WO-003 Decision 4 says "no rule prints an unrounded kg". Its *intent* was
+buildability, and in a kg gym the 2.5 kg grid and buildability are the same thing. They are not in
+his. Restated: **no rule prints a load that cannot be built from the components it names.** Kg-direct
+stays on the 2.5 kg grid, ties down, unchanged. An lb build has `add` on the 5 lb grid, ties down, the
+bar as entered, and the kg total it prints (83.5, 76.7, 22.7) is deliberately *off* the 2.5 grid.
+W4's meta-test is the enforcement: every `Go to` / `Drop to` figure recomputed from the components in
+the same sentence.
+
+**Why one grid for every lb build.** `[Certain]` a 2.5 lb plate per side is 5 lb on a bar. `[Convention]`
+a lb dumbbell rack steps 5 lb per dumbbell to about 100 lb and often 10 lb above it. `[Certain]` a
+5 lb plate exists for a belt and for one side of a plate-loaded machine. So 5 lb is the one step
+every lb build can make, and the I2 line (L2) covers the rack that cannot. A single 2.5 lb plate on a
+belt is a real, smaller step; the app never *prescribes* it and never refuses it — he can type it, and
+the stepper never snaps a typed number (WO §1).
+
+**Why the drop is nearest-then-one-step and not plain nearest or floor.** `[Certain]` the 5 % drop is
+smaller than half a grid step whenever the working load is under about 22.7 kg — the empty bar, a
+belt with a 45 lb plate, a 55 lb dumbbell — and plain nearest rounds it back to the load he just
+failed at, printed as `Drop to`. Floor would over-drop at ordinary loads (20 kg + 60 lb: 9.5 % instead
+of 4.9 %). Nearest tracks 5 % where the grid allows and guarantees a real drop where it does not. This
+guard also closes today's kg-direct degenerate (18.6).
+
+**Worked examples.** Slot `d1a Bent-over / Pendlay row {s:3, lo:3, hi:5, k:"power"}`, implement `bb`,
+sets built `{bar: 20, bu: "kg", add: N, au: "lb"}` unless stated. Every kg figure is the stored `w`
+for the plates named.
+
+1. **The discriminating case (P1.4).** `135 lb × 5/5/5` → `w` 81.2 on every set → equal, every
+   r ≥ 5 → case 4 → add' 140 lb → 20 + 63.503 = 83.503 →
+   `Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb.` No second line.
+   **Must not print** `Go to 83.7 kg` (81.2 + 2.5; would need 140.4 lb) and must not print `If 5 lb`.
+2. **G1 in lb (P1.3).** `135 lb × 7/7/7` → excess 2; L = 81.2 / 0.45359237 = 179.02 lb;
+   179.02 × 0.05 = 8.95 → round5 → 10; cap round5(35.80) = 35; step 10 lb → 145 lb → 85.771 →
+   `7 reps at 81.2 kg on every set. Too light. Go to 85.8 kg — 20 kg bar + 145 lb.`
+   **Must not print** `86.2 kg` (kg-direct G1: step 5 kg; would need 145.9 lb).
+3. **The drop (P1.1).** `135 lb × 2`, `130 lb × 4`, `130 lb × 5` → C[0].r 2 < lo 3 → case 1 wins over
+   the mismatch, as in audit §3 example 4 → 0.95 × 81.2 = 77.14 kg → (77.14 − 20) / 0.45359237 =
+   125.98 lb → round5 → 125, strictly below 135 ✓ → 76.699 →
+   `2 reps at 81.2 kg. Below the range. Drop to 76.7 kg next session — 20 kg bar + 125 lb.`
+   **Must not print** `77.5 kg` (round2p5(77.14); would need 126.8 lb).
+4. **Mismatch (P1.2), unchanged grammar.** `135 lb × 5`, `135 lb × 5`, `130 lb × 5` → w 81.2 / 81.2 /
+   79.0; R (P1.2a upper median, 2 of 3) = 81.2 > load 79.0 → backoff →
+   `Sets not matched: 81.2 / 81.2 / 79 kg. Repeat 81.2 kg until all 3 sets reach 5 reps.`
+   No build phrase: 81.2 is on two of his own rows.
+5. **Hold (P1.5), unchanged.** `135 lb × 5/5/4` → `Stay at 81.2 kg until all 3 sets reach 5 reps.`
+6. **A lb bar.** `{bar: 45, bu: "lb", add: 90, au: "lb"}` × 5/5/5 → 135 lb total → 61.235 → w 61.2 →
+   case 4 → 95 lb → 140 lb total → 63.503 → `Top of range on all 3 sets. Go to 63.5 kg next session
+   — 45 lb bar + 95 lb.`
+7. **Kg plates on the bar.** `{bar: 20, bu: "kg", add: 80, au: "kg"}` × 5/5/5 → w 100 → case 4 → add'
+   82.5 → `Top of range on all 3 sets. Go to 102.5 kg next session — 20 kg bar + 82.5 kg.` The same
+   number kg-direct gives, plus the build (L2: a bar is present).
+8. **Kg-direct, the baseline.** `{w: 100, r: 5}` × 3, no `ld` → `Top of range on all 3 sets. Go to
+   102.5 kg next session.` Byte-identical to today's suite.
+9. **A kg cable stack carrying `ld`.** `d3c Seated cable row {s:3, lo:8, hi:12, k:"hyp"}`, `cable`,
+   `{w: 35, r: 13, ld: {add: 35, au: "kg"}}` × 3 → KG-DIRECT build → H1.2, G1 as today: raw
+   round2p5(0.875) = 0, floor 2.5 → `All sets above 12. Go to 37.5 kg next session.` then
+   `If 2.5 kg is not available, add reps first, then jump.` No build phrase (no bar, kg). Identical
+   to the same set without `ld` — assert the two strings equal.
+10. **Lb dumbbell (H1.4d).** `d5b Incline DB press {s:3, lo:8, hi:12, k:"hyp"}`, `db`. Last session
+    `55 lb × 10/10/10` (w 24.9, tonnage 747); this session `55 lb × 9/9/9` (672.3) → −10 % →
+    `Volume down 10%. Add a rep or 5 lb next time.` **Must not print** `2.5 kg`.
+11. **Failing case — the phrase on a repeat.** Example 4's session must not render `Repeat 81.2 kg —
+    20 kg bar + 135 lb`. Assert the em dash is absent from every P1.2 and P1.5 string.
+
+```
+Rule: L3 — SP1's target on a lb-built source
+Applies to:   k:"speed" card. speedLoad's target only; speedTooHeavy and
+              speedFlagText are unchanged (no lattice in either).
+Inputs:       R = the source set's w (SP1's heaviest qualifying 3–5 set, R > 0
+              per Z2's guard); that SET's ld. The speed card's own mode is not
+              read — the source set is the only build the engine can see.
+Logic:        source kg-direct -> target = round2p5(R * 0.675); lo/hi as today. UNCHANGED.
+              source LB / KG-ON-BAR:
+                lo = r1(R * 0.65), hi = r1(R * 0.70)   (band edges, NOT grid-fitted)
+                candidate = roundGrid on add of (R * 0.675 - bar), the source's grid
+                if lo <= w(candidate) <= hi         -> target = candidate
+                else the grid point inside [lo, hi] nearest R * 0.675
+                else (no grid point inside)         -> the nearest grid point BELOW lo
+              Direction when the band is missed: below. Too light is still
+              speed work; too heavy is not.
+Output copy:  in band:  `54 kg — 20 kg bar + 75 lb. 65–70% of your 81.2 kg triple. Rest 60–90 s. Fast, never grinding.`
+              below:    `24.9 kg — 55 lb per DB. The nearest you can build under 65–70% of your 38.6 kg triple. Rest 60–90 s. Fast, never grinding.`
+              The `65–70%` claim is only printed when it is true of the number beside it.
+Not enough data: unchanged — SP1's own fallbacks. A source without `ld` is kg-direct.
+```
+
+12. **SP1, lb bar.** Source `d1a` `{w: 81.2, r: 3, ld: {bar: 20, bu: "kg", add: 135, au: "lb"}}`
+    within 28 days → 0.675 × 81.2 = 54.81 → (54.81 − 20) / 0.45359237 = 76.74 lb → round5 → 75 →
+    54.019 → w 54.0; band 52.8–56.8 ✓ →
+    `54 kg — 20 kg bar + 75 lb. 65–70% of your 81.2 kg triple. Rest 60–90 s. Fast, never grinding.`
+    **Must not print** `55 kg` (round2p5(54.81); would need 77.2 lb).
+13. **SP1, lb dumbbell, band missed.** `d5a` from source `d1d` `{w: 38.6, r: 3, ld: {add: 85, au:
+    "lb"}}` → mid 26.06 kg = 57.44 lb → nearest 55 → 24.9; band 25.1–27.0; 55 lb = 24.9 < 25.1 and
+    60 lb = 27.2 > 27.0, so no grid point is inside → below → 55 lb →
+    `24.9 kg — 55 lb per DB. The nearest you can build under 65–70% of your 38.6 kg triple. Rest
+    60–90 s. Fast, never grinding.` **Must not print** `27.2 kg — 60 lb per DB` (70.5 %, above the
+    band) and must not print `65–70% of your` beside 24.9.
+14. **SP1, lb dumbbell, in band.** Source `{w: 36.3, r: 3, ld: {add: 80, au: "lb"}}` → mid 24.50 kg
+    = 54.02 lb → 55 → 24.9; band 23.6–25.4 ✓ → `24.9 kg — 55 lb per DB. 65–70% of your 36.3 kg triple.
+    Rest 60–90 s. Fast, never grinding.`
+
+**Rationale.** `[Certain]` a load that cannot be built is a wrong instruction, whatever the arithmetic
+behind it; the lifter's only reading of `83.7 kg` at a rack of lb plates is that the app is guessing.
+`[Certain]` the step must be applied in the unit the plates come in and rounded there once — adding
+2.268 kg to a kg total and rounding to 0.1 compounds across sessions and lands on numbers no plate
+combination matches. `[Opinion]` the kg total leads the sentence and the build follows: every other
+surface (the row's `= 83.5 kg`, the ghost, Trend) speaks kg, and the sentence has to be the number he
+will see confirmed on the row next session.
+
+---
+
+## 18.2 Rule L2 — the build phrase, and which of `ld` and `implement` each rule reads
+
+```
+Rule: L2 — sources of truth for the load's words
+Applies to:   loadWord (Z2), incrementLine (I2), the ` · per DB` suffix (I1 /
+              B-22), and the build phrase appended by L1 / L3 / L4.
+Inputs:       the working-load set's ld (or its absence); ex.implement; ex.k.
+Logic:        WHO READS WHAT
+                ladder, step, rounding, build phrase   -> ld only. Never implement.
+                `bodyweight` / `zero load` at w === 0   -> implement (Z2, unchanged)
+                ` · per DB` on the target line          -> implement, UNLESS the
+                                                           card's mode has a bar
+                I2's premise ("the smallest step is on the bar")
+                                                       -> ld: a bar present = true
+              PRECEDENCE: a `bar` in ld overrides `db`. Nobody puts a bar on a
+              dumbbell; the set is dispositive and the slot is a label.
+
+              BUILD PHRASE buildWord(ld, implement), appended ` — {phrase}` to
+              any sentence that names a NEW load (L1's cases). Printed iff ld is
+              present AND (a bar is present OR ld.au === "lb") — the two facts
+              the kg total hides. A kg `ld` with no bar is a kg-direct set and
+              prints as one.
+                bar present            `{bar} {bu} bar + {add'} {au}`   `20 kg bar + 140 lb` · `45 lb bar + 95 lb` · `20 kg bar + 82.5 kg`
+                no bar, implement db   `{add'} lb per DB`                `60 lb per DB`
+                no bar, bodyweight     `bodyweight + {add'} lb`          `bodyweight + 50 lb`
+                no bar, any other      `{add'} lb`                       `95 lb`
+              Never on a zero target (the word is Z2's). Never on P1.2 / P1.5.
+
+              I2 LINE, by build (k:"speed" -> never; unrecognised k -> never; unchanged)
+                KG-DIRECT                       as today, by implement (bb -> none)
+                any build with a bar            NONE. The 2.5 lb pair is the 1.25 kg pair.
+                LB, no bar, implement db        `If 5 lb per DB is not available, add reps up to {hi+2} first, then jump.`
+                LB, no bar, any other implement `If 5 lb is not available, add reps up to {hi+2} first, then jump.`
+                                                (hyp: `…add reps first, then jump.` — no number, as I2)
+              A lb set with no bar on a `bb` slot GETS the generic line: he built
+              something without a bar, and the cost of a spurious line is noise
+              where the cost of a missing one is a jump he cannot make (I1's own
+              rationale).
+Output copy:  as tabled. `per DB` appears in the build phrase and the I2 line
+              only when implement === "db" AND no bar is present.
+Not enough data: not applicable — ld and implement are both on hand or absent.
+```
+
+**Worked examples.**
+
+1. **Precedence — a bar on a `db` slot.** `d1d Flat DB press {s:3, lo:3, hi:5}`, `db`, built
+   `{bar: 20, bu: "kg", add: 90, au: "lb"}` (the dumbbells were taken; he benched a bar) → w 60.8 ×
+   5/5/5 → `Top of range on all 3 sets. Go to 63.1 kg next session — 20 kg bar + 95 lb.` No I2 line.
+   The target line reads `3 × 3–5`, not `3 × 3–5 · per DB`.
+   **Must not print** `— 95 lb per DB`, `If 5 lb per DB`, or ` · per DB`.
+2. **A `bb` slot built without a bar.** `d1a`, `{add: 90, au: "lb"}` (a plate-loaded row, or a
+   dumbbell) → w 40.8 × 5/5/5 → `Top of range on all 3 sets. Go to 43.1 kg next session — 95 lb.`
+   then `If 5 lb is not available, add reps up to 7 first, then jump.` Today a `bb` slot never gets
+   the line; this one does because `ld` says there was no bar.
+3. **Lb dumbbell on a `db` slot (the ordinary case).** `d1d`, `{add: 55, au: "lb"}` × 5/5/5 → w 24.9 →
+   `Top of range on all 3 sets. Go to 27.2 kg next session — 60 lb per DB.` then
+   `If 5 lb per DB is not available, add reps up to 7 first, then jump.`
+   **Must not print** `27.4 kg` (24.9 + 2.5) or `If 2.5 kg per DB`.
+4. **Kg-direct on `db`, unchanged.** `d1d`, `{w: 25, r: 5}` × 3 → `Top of range on all 3 sets. Go to
+   27.5 kg next session.` then `If 2.5 kg per DB is not available, add reps up to 7 first, then jump.`
+   Byte-identical to today.
+5. **Failing case — the build phrase on a hold.** `d1d`, `{add: 55, au: "lb"}` × 5/5/4 → `Stay at
+   24.9 kg until all 3 sets reach 5 reps.` and nothing after it. Assert no ` — ` and no `per DB`.
+6. **Speed work never gets the line, any build.** `d3a`, source lb-built → the L3 sentence and no
+   `If 5 lb`.
+
+**Rationale.** `[Certain]` the set knows how it was built and the slot only knows what was planned;
+when they disagree the set is the fact. `[Certain]` a bar in `ld` contradicts `db` outright, so it is
+the one case where `ld` is allowed to silence an `implement`-driven word. `[Opinion]` `ld` is *not*
+allowed to change the zero-load word — a lb set at 0 on a `machine` slot is still a mis-log and still
+reads `zero load`, and I am not inventing a third word.
+
+---
+
+## 18.3 Substitution — a recommendation, not a ruling (B-111)
+
+**What is actually at stake, in his terms.** The brief made one promise he is meant to keep: at week
+6, are the top sets on row, bench, squat and deadlift above week 1. ST1 runs that test on `d1a`,
+`d1d`, `d2a`, `d2d` by id. When the barbells are taken and he does a chest-supported machine row
+under `d1a`, the app cannot tell, and on the day the test runs:
+
+- `[Likely]` a chest-supported or plate-loaded row lets him move **more** load than a bent-over row
+  (no hinge to hold, no lower back in the chain) → the recent block's best e1RM is inflated → **a
+  real stall on the barbell row is hidden.**
+- `[Likely]` a machine loaded lighter, or a cable row, moves **less** → **a stall is manufactured**,
+  and the copy that prints is *"either the sets aren't close enough to failure, or you aren't eating
+  enough"* — his effort or his diet blamed for a piece of equipment.
+
+He would know which it was. He has thirteen years. But it is the one test he agreed to, on the one
+day it fires, reading a number he has to correct in his head.
+
+**The everyday cost is smaller and weekly.** The session after a swap, the `d1a` card opens as the
+machine left it (`loadModeFor` reads the last logged entry — WO §1), the ghost says `Last 140 lb × 5`
+from a machine, and H1 on a `hyp` slot compares tonnage across two implements and prints `Volume
+down 30%` for changing a machine back to a bar. None of that is a wrong *load* — P1 is within-session
+and the step is off what he lifted today — but it is advice he has to read past.
+
+**Option (b), read history as-is.** Zero taps. Costs the above. He interprets. B-05 (edit a saved
+session), when it exists, lets him fix a number, but there is nothing to fix here — the number is
+true, it is the *exercise* that differs, and B-05 does not carry that.
+
+**Option (a), a one-tap mark.** `sub: true` on the entry (the card, not each set — he swaps an
+exercise, not a set), one tap, optional. When set:
+
+- ST1 excludes the session from both blocks. If that leaves a block under its 2-session minimum, the
+  existing thin-data line prints, one word added: `Not enough unswapped sessions on Row to judge.
+  Log it weekly.` Honest, and it is the only new ST1 string.
+- P1 on the swapped session runs unchanged — it is within-session. H1's comparison (4a–4d) is
+  replaced by one line: `Swapped exercise. Not compared to last session.` H1 cases 1 and 2 (range
+  compliance) still run — they are about today's sets.
+- The next unswapped session's `Cprev`, ghost and `loadModeFor` read the last **unswapped** entry.
+- **Nothing else moves.** The session counts for volume, TW1, D1's fatigue evidence, S1's pain window,
+  the calorie decision and the Trend line. A swap is not a missed session. The mark never gates a save
+  and never changes `w`.
+- Forgetting the tap costs exactly option (b) for that session. Nothing is worse than today.
+
+**The cost of (a) is one tap with chalk on his thumb, on a card he is already on, on the weeks he
+swaps — and the risk that a `Swapped` chip becomes one more thing on the screen he is used to ignoring.**
+It is not policing: it does not stop, warn about or comment on the swap. It is him telling the app a
+fact it cannot see, so that the one test he asked for reads barbell against barbell.
+
+**Recommendation: (a).** `[Opinion]`, and I would hold it under "but it's just one week": the
+six-week test is a two-block comparison and one inflated session in a block *is* the block's max.
+
+**The question for Chady, yes or no:** *When you swap an exercise for the one on the card, will you
+tap `Swapped` on that card? Yes — the mark gets built and the six-week test and next week's ghost
+ignore the swap. No — the app reads history as-is, a swapped week can print `no progress on Row` or
+hide one, and you correct it in your head.*
+
+**If yes, the literals above are the only new copy**, and the chip's placement is `ux-designer`'s. The
+Trend line's treatment of a swapped point (hollow, or omitted) is a separate small question; I would
+omit it from the four key-lift lines and keep it everywhere else, but that is not needed to answer this.
+
+---
+
+## 18.4 Rule L4 — bodyweight-implement slots with added lb
+
+```
+Rule: L4 — bodyweight + lb
+Applies to:   implement === "bodyweight" (d1b, d1c, d1e, d2e, d3b), any k except
+              speed, when the working-load set is built {add: N, au: "lb"} with
+              no bar. The five P1 cases and H1's.
+Inputs:       as L1. `w` is the ADDED load in kg, as Z1/Z2 define it: w 0 =
+              bodyweight, w 20.4 = bodyweight + 45 lb.
+Logic:        the ladder is L1's LB build: grid 5 lb on add, step 5 lb.
+              the load TOKEN is Z2's, unchanged: w > 0 -> `20.4 kg`; w 0 -> `bodyweight`.
+              the build phrase (L2) is `bodyweight + {add'} lb` on any new load.
+              at w 0 in lb: `Add 5 lb next session.` / `Add 5 lb.` (L1's zero case).
+              the drop: L1's guard. From +45 lb the 5 % drop (2.25 lb) rounds
+              back to 45; the guard makes it 40. From +5 lb it goes to 0 and
+              prints `Drop to bodyweight next session.` with no phrase. From
+              bodyweight itself there is nothing to remove -> Z2 delta 1's hold.
+              I2 line: `If 5 lb is not available, add reps up to {hi+2} first, then jump.`
+              (a belt takes any plate; the line is for the day the 5s are gone).
+Output copy:  d1c Rack chin {s:2, lo:6, hi:10, k:"power"}, built {add: 45, au: "lb"} -> w 20.4:
+              Case 1: `4 reps at 20.4 kg. Below the range. Drop to 18.1 kg next session — bodyweight + 40 lb.`
+              Case 2: `Sets not matched: 20.4 / 18.1 kg. Repeat 20.4 kg until all 2 sets reach 10 reps.`
+              Case 3: `12 reps at 20.4 kg on every set. Too light. Go to 22.7 kg — bodyweight + 50 lb.`
+                      + `If 5 lb is not available, add reps up to 12 first, then jump.`
+              Case 4: `Top of range on all 2 sets. Go to 22.7 kg next session — bodyweight + 50 lb.`
+                      + the same I2 line.
+              Case 5: `Stay at 20.4 kg until all 2 sets reach 10 reps.`
+              Zero:   `Top of range on all 2 sets at bodyweight. Add 5 lb next session.` + the I2 line.
+Not enough data: as P1.
+```
+
+**Why the token stays `20.4 kg` and does not become `bodyweight + 45 lb` everywhere.** `[Opinion]`,
+reasoned: Z2 made the kg total the one load token so that every rule, the row's `= 20.4 kg`, the ghost
+and Trend agree on one number; putting the build *into* the token would give the rack chin a different
+grammar from every other slot and would push `Stay at bodyweight + 45 lb until all 2 sets reach 10
+reps.` past the phone's line. The build phrase carries the plates exactly where he needs them — on a
+new load — and the ghost carries them on a repeat.
+
+**Worked examples** — `d1c`, `{add: N, au: "lb"}`.
+
+1. **Case 4.** `45 lb × 10/10` → w 20.4 → equal, every r ≥ 10 → add' 50 → 22.680 →
+   `Top of range on all 2 sets. Go to 22.7 kg next session — bodyweight + 50 lb.` then
+   `If 5 lb is not available, add reps up to 12 first, then jump.`
+   **Must not print** `22.9 kg` (20.4 + 2.5; there is no 50.5 lb plate).
+2. **Case 3, G1 at a light load.** `45 lb × 12/12` → excess 2; L = 44.97 lb; 44.97 × 0.05 = 2.25 →
+   round5 → 0; cap round5(8.99) = 10; step max(5, min(0, 10)) = 5 → 50 lb →
+   `12 reps at 20.4 kg on every set. Too light. Go to 22.7 kg — bodyweight + 50 lb.` + the I2 line.
+   Note the 5 lb floor is 11 % of the load — the P1.4b/G1b light-load item in §16.4 applies here
+   as it does in kg, and this section does not fix it.
+3. **Case 1, the guard doing its job.** `45 lb × 4`, `45 lb × 6` → C[0].r 4 < lo 6 → 0.95 × 20.4 =
+   19.38 kg = 42.73 lb → round5 → 45 = current, not strictly below → one step → 40 lb → 18.144 →
+   `4 reps at 20.4 kg. Below the range. Drop to 18.1 kg next session — bodyweight + 40 lb.`
+   **Must not print** `Drop to 20 kg` (kg-direct's round2p5(19.38); a 0.4 kg drop no plate makes) and
+   must not print `Hold here` — there is a plate to remove.
+4. **Case 1 to bodyweight.** `5 lb × 4/6` → 0.95 × 2.3 = 2.19 kg = 4.82 lb → round5 → 5 = current →
+   one step → 0 → `4 reps at 2.3 kg. Below the range. Drop to bodyweight next session.` No phrase.
+5. **Case 1 at bodyweight, unchanged (Z2 delta 1).** `{w: 0, r: 4, ld: {add: 0, au: "lb"}}`, `0 × 6` →
+   `4 reps at bodyweight. Below the range. Hold here until all 2 sets reach 6 reps.`
+6. **Zero in lb (Z2 delta 2, lb form).** `{add: 0, au: "lb"} × 10/10` →
+   `Top of range on all 2 sets at bodyweight. Add 5 lb next session.` + the I2 line.
+   **Must not print** `Add 2.5 kg`.
+7. **Failing case — case 2 with a phrase.** `45 lb × 10`, `40 lb × 10` → w 20.4 / 18.1; R = 20.4 →
+   `Sets not matched: 20.4 / 18.1 kg. Repeat 20.4 kg until all 2 sets reach 10 reps.` Assert no
+   ` — bodyweight`.
+8. **Kg-direct rack chin, the baseline.** `{w: 20, r: 10}` × 2 → `Top of range on all 2 sets. Go to
+   22.5 kg next session.` + `If 2.5 kg is not available, add reps up to 12 first, then jump.`
+   Byte-identical to today.
+
+---
+
+## 18.5 Confirmed as specified in WO-010 §1
+
+- **`w` rounded to 0.1 kg, once, at the total.** Confirmed. `[Certain]` the finest lb step is 1.13 kg
+  and the finest kg step 1.25; 0.1 kg is an order below either, no two grid loads collide, and the
+  same plates give the same `w` bit for bit — which `repeatLoad`, `minW` and P1's 0.01 tolerance need.
+  Finer would make the stored number disagree with every displayed one (D2). Do not.
+- **Stepper taps 5 lb / 2.5 kg in the entry unit; never snaps a typed value.** Confirmed. The stepper
+  walks the ladder L1 prescribes; typing is free and may leave the grid — the app never *prescribes*
+  off-grid, it never *refuses* it.
+- **The step is the rule's, not a setting's (B-58).** Still true. L1 derives it from the set's build;
+  nothing in Settings and nothing on the slot chooses it. `ex.inc` stays unread.
+
+## 18.6 Found while in here
+
+1. **The drop that is not one, kg-direct, today.** `tooHeavy` prints `Drop to {round2p5(0.95 w0)} kg`
+   and at every load ≤ 22.5 kg that rounds back to `w0`: a 20 kg dumbbell press missed at 2 reps
+   prints `Drop to 20 kg next session.` `[Certain]`, arithmetic. L1's guard closes it: nearest, then
+   one grid step if not strictly below, then the hold form below zero. Example: `d1d` kg-direct
+   `20 × 2`, `20 × 4`, `20 × 5` → `2 reps at 20 kg. Below the range. Drop to 17.5 kg next session.`
+   **Must not print** `Drop to 20 kg`. No test on `main` pins the degenerate string (grepped); W7
+   adds this one. It is the only kg-direct output this section changes, and only at ≤ 22.5 kg.
+2. **`· per DB` under a bar** (18.2 example 1) is a display defect the moment substitution and a
+   remembered bar coexist. One condition in the target line, W6.
+3. **The row's total token at zero.** W2/W6's, not mine, flagged only: on a `bodyweight` slot with
+   `add: 0` the row should read `= bodyweight`, not `= 0 kg`, for the same reason Z2 bans the string
+   from the verdict. A preference, not a rule.
+4. **His first session was logged in kg-direct.** Whatever he typed was a conversion done at the rack.
+   The next session on the same slot in lb will differ by under a kilo from it, and H1.4d may say
+   `Volume up 1%` for identical plates. True, harmless, and it ends the session after. Not a defect.
+
+## 18.7 What changes, by work item — the nine lattice sites, and three more
+
+| Site (WO §0.3) | Owner | Moves? | What |
+|---|---|---|---|
+| `round2p5` | W4 | **stays** | Gains a sibling for the 5 lb grid, same shape, ties down: `ceil(x / 5 − 0.5) × 5`. Name it `round5lb` or `roundGrid(x, g)`; not `round`. |
+| `g1Step` | W4 | **moves** | Takes the build's grid: floor one grid step, cap rounded to the grid, the load expressed in the build's unit (bar included). Kg-direct path byte-identical. 18.1 examples 2, 9; 18.4 example 2. |
+| `incOf` / `ex.inc` | W4 | **moves** | Replaced by the build's step: 2.5 kg or 5 lb, from `ld`. `ex.inc` stays unread (B-58). |
+| `incrementLine` | W4 | **moves** | Signature `(ex, ld)`; the table in 18.2. Kg-direct rows unchanged. |
+| `tooHeavy` | W4 | **moves** | Fit on the build's grid; the strictly-below guard on **every** build; a zero target goes through `loadWord`, no phrase. 18.1 example 3, 18.4 examples 3–5, 18.6 #1. |
+| H1.4d copy | W4 | **moves** | `2.5 kg` → `5 lb` when the working-load set is an LB build. 18.1 example 10. |
+| `speedLoad` target / lo / hi | W4 | **moves** | L3. Kg-direct source unchanged. `lo`/`hi` on a lb source are `r1` band edges, not grid-fitted. 18.1 examples 12–14. |
+| `stepValue` + aria-labels | W6 | **moves** | Steps in the entry unit; `Weight up 5 lb` / `Weight up 2.5`. Confirmed, 18.5. |
+| `DEMO_STEP` + demo loads | — | **stays** | Demo sessions are kg-direct with no `ld`, by construction. |
+| `loadWord` (Z2) | — | **stays** | Unchanged. The build phrase is `buildWord(ld, implement)` — W3 builds it (WO §W3 names it; it needs `implement` for `per DB` and `bodyweight +`), W4 appends it per L2. |
+| `speedFlagText`, P1.2, P1.5, H1.3, H1.4a–c, DL1, T1, ST1's measure | — | **stay** | No new load named, or a load he built. ST1's 2.5 **%** is a ratio, not a lattice — do not touch. |
+| ` · per DB` suffix | W6 | **moves** | Suppressed when the card's mode carries a bar (18.2, 18.6 #2). |
+| Suite | W7 | — | Every numbered example above as a test, each `Must not print` as its own assertion, the meta-test recomputing every `Go to` / `Drop to` / speed target from the components in the same string, and the two byte-identity assertions (18.1 example 9, 18.2 example 4). |
+
+**Not in this order, restated so nobody builds it by instinct:** the substitution mark (18.3, Chady's
+call); the P1.4b/G1b light-load rule (§16.4, its own order — 18.4 example 2 shows it is now visible on
+the rack chin in lb as it was in kg); plate-per-side maths (B-10 — the components are now stored;
+the maths is not built).
+
+## 18.8 Needs from Chady — two facts this section assumes
+
+1. **Does the gym have 2.5 lb plates?** `[Likely]` yes — they are standard in a lb gym — and L1's
+   5 lb step and the "no I2 line on a bar" rule both rest on it. If the smallest plate is 5 lb, the bar
+   step is 10 lb (4.5 kg), the I2 line comes back on every bar-built load, and the change is one
+   constant plus that rule; say so before W4 transcribes.
+2. **Does the dumbbell rack step 5 lb all the way up?** `[Convention]` 5 lb to 100, then 10. The I2
+   line covers a 10 lb gap; nothing else depends on the answer.
+3. **Q3**, after reading 18.3: `Swapped` tap, yes or no.
+
+## 18.9 Verdict
+
+**Sign off the PM's reading with the changes above.** The shape in WO-010 §1 is right and I have not
+touched it. The ladder is two grids chosen by the set's `ld`, the sentence carries the kg and the
+build, the drop is guaranteed to be a drop, SP1 fits to the source's plates and says so when it
+cannot reach the band, and the slot's tag is demoted to the two words it was always only good for.
+Every figure above is buildable from the plates named beside it, and W4's meta-test is what makes that
+a property of the code rather than of this document.
+
+**And the standing item, which has moved.** One session is logged. This order came from lifting with
+the app, which is the first request in this project's history that did — it is the tooling asking to
+match the gym, not the gym waiting on the tooling. Build it; then log the second session.
