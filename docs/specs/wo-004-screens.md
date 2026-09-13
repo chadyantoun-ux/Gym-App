@@ -3880,3 +3880,423 @@ the owner row's states (§18.2 stands) · a line on Home about the last check ·
 anywhere but Settings · an undo for a merge (nothing was removed) · `diag.html`'s copy (W1, a tool,
 not a screen he uses between sets) · same-id conflict presentation (B-121) · a "sync now" gesture
 (pull-to-refresh — a gesture that fires by accident on a scrolled list, under a chalky thumb).
+
+---
+
+# 21. The default unit, the per-exercise override, and every number in the card's unit (WO-012 W2, 2026-09-13)
+
+Author: `ux-designer` · Implements: WO-012 §1 W2 · Bound by: WO-012 §0.1 (the two-level rule, the
+precedence, the bar rule, `displayLoad`, the surface list) · Consumed by: W4 (`frontend-engineer`),
+W3 (`backend-engineer`, for what `cardModeFor`'s `tier` must let the chip say), W5 (QA) · Reads:
+`index.html` `vSettings` (2082), `vGym` (2146), `gymWrite` (2201), `ghostText` (2321), `cardMode`
+(2376), `chipText` (2396), `paintMode` (2452), the set row (2614–2658), `sumRow` (2762), `liftRow`
+(3010), the stepper handler (4850–4889), `askRemoveSet` (5455), `openLoadSheet` (5501),
+`loadSheetTap` (5562), `seedValue` (5708); `.unit` (184), `.ldchip` (205), `.seg` (795).
+
+**Supersedes, inside this file:** §4.4a rule 4 (the ghost's different-build fallback to kg) · the
+chip table in §4.4b.1 (the chip gains a second line) · §10.6's opening sentence ("No unit default …
+no default bar") and §19.7's out-of-scope of a unit default and a default bar. §4.4a rules 1–3, the
+total token, §4.4b.3 (D9) and everything else in §19 stand.
+
+**The uncomfortable answer first.** The PM's D1 literal is a wrong number on the card it names.
+`Last 170 lb × 5` is the *total* of a 77 kg set. Under §0.1's bar rule, d1a on a lb-default device
+opens with **Barbell 20 kg** already on it, and the weight field on that row is the *added* weight —
+so the `+` seed the order asks for (170) lands in a field that means "on top of the bar" and stores
+`20 + 77.1 = 97.1 kg` for a lift that was 77. That is the silent-wrong-number class WO-012 §0.1
+ranks first, produced by WO-012's own example. The rule below fixes it without touching the order's
+architecture: **a number in the weight column is always in the column's terms** — the added weight,
+in the card's unit — so the ghost on d1a reads `Last 125.5 lb × 5` (77 − 20 = 57 kg = 125.5 lb) and
+the seed reproduces 77 kg to within the half-pound. `Last 170 lb × 5` is right only on a card with
+no bar. D1's literal moves; nothing else in the order does.
+
+**Second, a finding W4 must fix before anything here is real.** `gymWrite` (`index.html:2203`) does
+`S.prefs.gym={bars:bars}`. Every bar save would delete `unit` and every override. The write must
+spread the existing object and replace `bars` only. Not a design point; it is the one line that would
+turn "decide once" into "decide once per bar edit".
+
+**What this section does not decide.** The verdict sentence for a kg-direct set on a lb card, the
+0.5 lb rounding, and whether a seed that reproduces last time's load to ±0.1 kg reads as a *hold* to
+the progression rule — all W1 (`strength-coach`), and §21.12 names the dependency. No advice copy
+appears below.
+
+## 21.1 Settings → Gym — `I lift in`
+
+```
+Flow:   Choose the unit every exercise starts in
+Entry:  Home → SETTINGS → Gym section. Set once; revisited rarely.
+Exit:   Back. Nothing to save — the tap is the write.
+```
+
+**Position — normative.** First thing in the Gym section, above the bars. Section order on Settings
+is unchanged (Rest timer → Gym → Export → Backup). The segment is the Gym section's first control
+because the bars are subordinate to it (a bar is a thing you add to a lb number). The bars' helper
+gains a sub-kicker so the two helpers do not read as one wall.
+
+```
+[REF]
+│ GYM                                               │  .lbl secrule
+│ I LIFT IN                                         │  .lbl, id="gym-unit-l"
+│ [ ○ kg ]  [ ● lb ]                                │  .seg, role=group, ≥ 120 × 48 each, aria-pressed
+│ Every exercise starts in this. Pick another unit  │  .tiny
+│ on an exercise's card and it keeps that one.      │
+│ Bodyweight stays in kg.                           │
+│ BARS                                              │  .lbl
+│ Bars in your gym. Pick one per exercise from the  │  .tiny (existing) …
+│ card. Each set records its own bar, so editing    │
+│ this list never changes your log. In lb, the      │  … plus this sentence, lb only
+│ first bar here goes on every barbell exercise     │
+│ you have not set yourself.                        │
+│ ┌───────────────────────────────────────────────┐ │
+│ │ Barbell                            20 kg    › │ │  unchanged from §10.6
+```
+
+| Element | Rule |
+|---|---|
+| Kicker | `I lift in` **NEW** — `.lbl`, above the segment, `id` so the group is labelled by it |
+| Segment | `kg` / `lb`, in that order — the same order as the sheet's segment and the bar form's, so the thumb learns one layout. `.seg` unchanged: ≥ 120 × 48 each, `aria-pressed`, the two-form mark. Reads `prefs.gym.unit`; absent → `kg` pressed |
+| Tap | **Applies on the tap.** `save(PREFS, prefsPayload())` through `gymWrite`'s path with `unit` set and everything else in `prefs.gym` preserved. No toast — the pressed mark is the receipt. Live region `I lift in lb.` **NEW** (`#bs-live`, polite; the Rest timer's pattern) |
+| Tap on the pressed option | Nothing. No write, no announcement |
+| Helper | `Every exercise starts in this. Pick another unit on an exercise's card and it keeps that one. Bodyweight stays in kg.` **NEW** — `.tiny`. Three sentences, ~110 characters, three lines at 400 px. The second sentence is how "changing it never touches an override" is said: by describing the override, not the exception |
+| Bars sub-kicker | `Bars` **NEW** — `.lbl`, above the existing bars helper |
+| Bars helper, lb only | The existing helper plus `In lb, the first bar here goes on every barbell exercise you have not set yourself.` **NEW** — rendered only while `unit === "lb"`, because the bar rule only fires in lb (§0.1) and a sentence about a rule that is off is noise. This is also the one place the list *order* is told to matter |
+| Write failed | Segment reverts to the stored value; refusal under the segment, four-sided with `!`: `Could not save the unit. Nothing changed.` **NEW** |
+| `prefs` unreadable | Neither option pressed; refusal above the segment `Could not read your unit. Pick one to set it again.` **NEW**; a tap still attempts the write (as the bars section does). Cards meanwhile are on kg (§21.2, the unreadable state) |
+| Session open | Allowed. A card with nothing typed follows the new default on its next paint; a card with a typed number is pinned by the draft's own `ld` (or by the typed-kg tier) and does not move — no number ever re-values from Settings |
+
+**Thumb reach at 393 × 852.** The segment lands at roughly y ≈ 300 px from the top of the document at
+100 % (header 56, Rest timer section ≈ 200, two kickers ≈ 50), full width, so `lb` sits right of
+centre under a right thumb. That is reachable with the thumb extended and the screen scrolls; and it
+is a once-set control — neither destructive nor frequent, which is §0.4's test for anything above
+the fold. QA measures at 393 × 852 and at 200 %.
+
+**States:** default (unit absent, `kg` pressed) · `lb` pressed · write failed · `prefs` unreadable ·
+demo mode (works; per device, B-113) · offline (identical). No empty state — a unit always exists.
+
+## 21.2 The chip — two lines, and the second names the level
+
+§4.4b.1's chip stays where it is, full width, present from first paint, text changed only by a tap in
+its own sheet. It gains **a second line** and a fixed height of **56 px** `[REF]` (line 1 at 1rem
+800 as today; line 2 at `.75rem` 400, bone `.55`). Why two lines and not a suffix: the longest
+line-1 string is already 37 characters (`Weight in lb + Safety squat bar 25 kg`) against a budget of
+about 40 at 1rem 800, and ` · set for this exercise` is 24 more. A suffix would wrap on the cards
+that matter most and the rows below would move when it did. Two lines cost 12 px on every card
+once, and the rows never move on a tap.
+
+Why the second line exists at all, in gym terms: the first line answers *what do I type*; the second
+answers *why is this card in kg when I set lb* — which is the question he will ask on d3c the day
+after he changes the default and finds it unmoved. Without the line the app looks broken; with it
+the app is telling the truth in four words.
+
+```
+[REF]
+│ ▸ movement & cue                                   │  44
+│ Weight in lb + Barbell 20 kg                     › │  line 1, 1rem 800, --bone
+│ Your default · first bar in your gym               │  line 2, .75rem, bone .55        } 56 total
+│ ┌────────────────────────────────────────────────┐ │
+│ │ 1  + LB                REPS                    │ │  caption 11 px (§21.6)
+```
+
+**Line 1** is §4.4b.1's table, unchanged: `Weight in {au} · no bar` / `Weight in {au} + {name} {w} {u}`
+/ `Weight in {au} + bar {w} {u}`.
+
+**Line 2 — the level.** Computed from `cardModeFor(...).tier` and two facts the view already has:
+whether `prefs.gym.ex[id]` exists, and whether the prior session on this id carries `ld`.
+
+| Tier from `cardModeFor` | Condition | Line 2 |
+|---|---|---|
+| `override` · `session` | — | `Set for this exercise` **NEW** |
+| `draft` · `typed` | `prefs.gym.ex[id]` exists | `Set for this exercise` |
+| `draft` · `typed` | no override; the last logged session on this id has a set with `ld` | `From last time` **NEW** |
+| `draft` · `typed` | otherwise | the `default` row below, per its own conditions |
+| `history` | — | `From last time` |
+| `default` | `unit` is `lb`, `implement` is `bb`, the profile has a bar | `Your default · first bar in your gym` **NEW** |
+| `default` | `unit` is `lb`, `implement` is `bb`, the profile has no bar | `Your default · no bars in your gym yet` **NEW** |
+| `default` | any other | `Your default` **NEW** |
+| any, `prefs` unreadable | `S.prefsBad` or the profile refused whole | `Could not read Settings · kg for now` **NEW** |
+
+Three rulings inside that table:
+
+1. **`draft` and `typed` never get their own words.** They are what the card is doing *because of
+   numbers in it*, and the tier flips from `default` to `typed` on the first keystroke. §4.4b.1 says
+   the chip's text changes only on a tap in its sheet; a chip that changed as he typed a `7` would
+   break that. So the line reports the level *underneath* the numbers, which the two facts above
+   recover without asking W3 for a second tier.
+2. **`session` reads as `Set for this exercise` even when the prefs write failed (D7).** For this
+   workout it is set for this exercise — the draft holds it. The toast in §21.3 has already said it
+   will not be there tomorrow.
+3. **The history tier is its own state, `From last time`, not the default.** It is neither the unit
+   he chose in Settings nor a choice he made under the two-level rule, and calling it either would
+   be false on the day the default and the history disagree. See §21.12 item 1 for the precedence
+   problem this tier creates.
+
+**Budget.** Line 2's longest string is 38 characters (`Your default · no bars in your gym yet`) at
+12 px ≈ 250 px; the chip's text box at 400 px is ≈ 304 px (366 content − 32 padding − 8 gap −
+22 chevron) `[REF]`. One line at 100 %. At 200 % both lines may wrap (line 1 already may, §19.3); the
+chip is then up to four lines from first paint and the rows sit below it from first paint — nothing
+moves on a tap. W4 measures in Archivo (B-67).
+
+**Accessible name** (§19.3 amended): line 1 + `. ` + line 2 + `. Change.` —
+`Weight in lb + Barbell 20 kg. Your default, first bar in your gym. Change.` The ` · ` in line 2
+becomes a comma in the name.
+
+## 21.3 The sheet — `Use my default`
+
+§4.4b.2's sheet, one row added. Applying any choice in the sheet — a unit, a bar, `Use this bar` —
+now writes `prefs.gym.ex[id]` as well as `entry.mode`, on that tap, whether or not a set is ever
+logged (§0.1). Nothing else in the sheet changes.
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ Weight on Bench press                    │  h2, tabindex=-1
+│ WEIGHT ENTERED IN                        │
+│ [ ● kg ]  [ ○ lb ]                       │
+│ ADDED TO                                 │
+│ ┌──────────────────────────────────────┐ │
+│ │ ● No bar                             │ │
+│ │ ○ Barbell                     20 kg  │ │
+│ │ ○ EZ bar                      10 kg  │ │
+│ │   Another bar…                       │ │
+│ └──────────────────────────────────────┘ │
+│ [ Use my default · lb + Barbell 20 kg  ] │  .ghostbtn, full × 48 — only when NOT on the default
+│ Last time: kg · no bar.                  │  .det
+│ [                 Done                 ] │  full × 52, pinned
+└──────────────────────────────────────────┘
+```
+
+| Element | Rule |
+|---|---|
+| Position | Below the bar list (and below `Another bar…`'s form when open), above `Last time:`. After the two choices, because it is the way out of both |
+| Presence | **Rendered only when the card is not on the default tier** — i.e. line 2 of the chip does not read `Your default…`. On a default card the segment and the checked bar already show what the default is, and a row that does nothing is a row a tired thumb will tap. Not a radio; a `.ghostbtn` — it is an action, and the radios above it already carry "which is current" |
+| Text | `Use my default · {mode}` **NEW** where `{mode}` is the default's build in the chip's own grammar: `lb + Barbell 20 kg` · `lb · no bar` · `kg · no bar` · `lb + bar 20 kg`. Naming the target is what makes the tap predictable, and it is where the bar rule's consequence is visible *before* it applies |
+| Size | Full × 48 minimum; may grow to two lines in the sheet (`Use my default · lb + Safety squat bar 25 kg` is 44 characters) — a sheet row may wrap, a set row may not |
+| Tap, card empty | Deletes `prefs.gym.ex[id]`, sets `entry.mode = defaultMode(prefs, ex)`, repaints the card (`paintMode`), **closes the sheet** (it is a final choice, like a bar row). Focus returns to the chip. Live region `On your default: lb + Barbell 20 kg.` **NEW** |
+| Tap, unit differs and a weight is typed | §4.4b.3's unit confirmation, verbatim: `Set 1 holds kg weights.` · `Switching to lb clears them. Reps stay.` · `Switch to lb and clear` / `Keep kg`. On confirm the override is deleted and the default applies with its bar; fields clear; toast `Switched to lb. Weights cleared.` with `Undo`. **Undo puts the override key back** as well as the weights — it is part of "put the kg weights back". `Keep kg` leaves the override on disk |
+| Tap, unit same, bar differs, a weight is typed | §4.4b.3's bar confirmation, verbatim, with the default's bar as `{bar2}`: `Use Barbell 20 kg` / `Keep EZ bar 10 kg`. On confirm the override is deleted; `Keep` leaves it |
+| Tap, nothing differs | Silent: the key is deleted, the chip's line 2 changes, the sheet closes. (An override equal to the default is the common result of picking the bar the rule would have picked) |
+| Prefs write failed — on this row or on any sheet tap | The session keeps the choice (the draft is the source of truth mid-workout); the chip reflects it; toast, **once per session**, `Could not save the unit for next time. It holds for this session.` **NEW**. The persistent refusal shape is not used — nothing he typed is at risk |
+| History tier, no chosen default | See §21.12 item 1. On the precedence I recommend there, a history-tier card exists only while `prefs.gym.unit` is absent; on such a card the row is **not rendered** and the `.det` line reads `From last time. Set your default in Settings → Gym.` **NEW** — the real control is named instead of a session sheet writing a global setting |
+| `prefs` unreadable | Row absent (no default is known). The existing line `Could not read your bars. You can still set one here.` becomes `Could not read your settings. You can still set the unit and bar here.` **NEW**; a tap still writes `entry.mode` and attempts the override write |
+
+## 21.4 The rendering rule — one sentence, then the surfaces
+
+**Every load a card or its screens print is in the card's unit — what he typed, in its unit, where
+the set was typed on this card (rows, remove confirmation, Summary); the prior set's added weight for
+this card's bar where it was not (ghost, seed, live region); the converted total where only a total
+exists (Trend endpoints and delta, the one-date reading); and the only number ever printed in kg on a
+non-kg card is the `= {w} kg` total token.**
+
+Apply it per surface. `M` is `cardModeFor(...)` for the card (no draft on Trend); `p` is the prior
+set at the same index; `addKg(p, M) = p.w − kg(M.bar)` with no bar meaning `p.w`.
+
+| Surface | kg-direct card (D6) | Non-kg-direct card | Notes |
+|---|---|---|---|
+| Ghost, prior is the same build | `Last 77 × 5` | `Last 90 lb × 5` — `p.ld.add` verbatim | §4.4a rule 4 case 1, unchanged |
+| Ghost, prior is a different build, `addKg > 0` | `Last 60.8 × 5` — `r1(p.w)`, unitless, as `main` | `Last {displayLoad(addKg, M.au)} × 5` **NEW** — d1a: `Last 125.5 lb × 5` on Barbell 20 kg; `Last 170 lb × 5` with no bar | **Replaces** rule 4's `Last 60.8 kg × 5` fallback. The number is what he types on this card to reproduce the load |
+| Ghost, prior is a different build, `addKg ≤ 0` | as above | `Last {displayLoad(p.w, M.au)} total × 5` **NEW** — `Last 33 lb total × 5` | Prior lighter than this bar. 20 characters, inside the 29 budget. Does not seed |
+| Ghost, `p.w = 0` | `Last bodyweight × 10` | same | Z2 |
+| Stepper step and aria-labels | `2.5`, `Weight up 2.5,` | `5 lb` / `2.5 kg`, `Weight up 5 lb,` | Already the card's unit (§19.3). Unchanged |
+| `+` seed on an empty field | `77` | the ghost's figure when it is a column value (cases 1 and 2); the step otherwise | §21.5 |
+| Live region on commit | `Weight now 77.` | `Weight now 125.5 lb, 76.9 kg.` | §19.1 #5, unchanged form |
+| Remove-set confirmation | `It holds 77 × 5.` | `It holds 125.5 lb × 5.` — `typedW + au` as today | Already the card's unit by construction: a set in the draft was typed on this card in this mode (D9 clears on a unit switch). No change; QA ticks it |
+| Sheet `Last time:` | `Last time: kg · no bar.` | same words | **Not converted.** It is the provenance line — the one line that says what unit the prior was *entered* in — and its bar weight is the bar's own unit (a name, not a load). On a lb card, `Last time: kg · no bar.` is what tells him the ghost's `125.5 lb` is a conversion. That is my answer to W1's marker question: the marker lives here, not on the row |
+| Summary per-set line | `77 × 5 · 77 × 5` | `125.5 lb × 5 · 125.5 lb × 5` — `typedW + au` per set, the unit on every number | The number he can check against the bar, in the same words the remove confirmation uses. The `Volume kg` counter above it stays kg — its label says so |
+| Trend lift row, delta | `+2.5 kg` | `+5.5 lb` — **endpoint minus endpoint after rounding**, in the displayed unit; sign and the word (`Up` / `Down` / `No change`) from that displayed difference | So the two numbers he can see subtract to the number he is shown. A 0.5 lb disagreement with the kg delta is accepted; a delta that his own subtraction contradicts is not |
+| Trend lift row, endpoints | `82.5 kg · 12 Sep` | `182 lb · 12 Sep` — `displayLoad(e, M.au)` | `M` from `cardModeFor({prefs, ex, prev})`, no draft |
+| Trend, one date | `82.5 kg on 12 Sep.` | `182 lb on 12 Sep.` | |
+| `= {w} kg` total token | absent | `= 76.9 kg` | Always kg. His label |
+| Verdict | coach's | coach's (W1 §21 of the addendum) | Transcribed by W4, not written here |
+
+**Not converted, so QA does not guess:** the `Volume kg` counter · the stall card (`stallAdvice`'s
+strings, kg, coach's) · the speed-work instruction (coach's) · Home's next-session block · bodyweight,
+Diet, Weight (B-127) · the bars' own weights anywhere (`Barbell 20 kg` is a name).
+
+**The reverse case, stated.** A cable stack he moved back to kg (override `{au: "kg"}`) with lb
+history: the card is kg-direct, so every row is `main`'s row byte for byte — ghost `Last 60.8 × 5`,
+seed `60.8`, Summary `60.8 × 5`. The kg-direct path never converts and never prints a unit; that is
+D6 and it is why the reverse costs nothing.
+
+## 21.5 The `+` seed — confirmed, with one amendment
+
+**The PM's rule holds: seed what the ghost shows.** The amendment is what the ghost shows on a bar
+card (§21.4): the prior's *added* weight for this bar, not its total. So on d1a in lb with Barbell
+20 kg, `+` on the empty field seeds `125.5`, the total reads `= 76.9 kg`, and the live region says
+`Weight now 125.5 lb, 76.9 kg.` — the existing string. With no bar it seeds `170` → `= 77.1 kg`.
+
+The seed rule in §4.4a.3, restated to match:
+
+- First `+` on an empty weight field adopts the ghost's figure **whenever the ghost's figure is a
+  column value** — same build (`p.ld.add` verbatim, as today) or converted added weight (§21.4 case
+  2). The `total` fallback (case 3) and `bodyweight` do not seed; `+` gives the step.
+- The second `+` steps from it, never snapping (`130.5` after `125.5`). Whether the seed should land
+  on the lb ladder instead of the half-pound is the coach's (§21.12 item 3).
+- `−` from empty stays empty. Reps are never seeded. Across a prescription change, no seed (today).
+- The seeded set is a **new** set: `w` recomputes from `ld` (77 → 125.5 lb → 76.9 kg). The stored
+  prior is untouched (D2). The ±0.1 kg drift is the half-pound's resolution and is named for W1
+  (§21.12 item 2).
+
+## 21.6 The row caption — 11 px, four words (B-118 folded in)
+
+| Card | Caption | DOM text |
+|---|---|---|
+| kg-direct | `KG` | `kg` — unchanged bytes, uppercase by CSS (D6) |
+| lb, no bar | `LB` | `lb` |
+| kg on a bar | `+ KG` | `+ kg` |
+| lb on a bar | `+ LB` | `+ lb` |
+
+`.unit` rises from `.625rem` to **`.6875rem` (11 px)**, weight 800, tracking `.1em`, `--faint`,
+`aria-hidden` — **every `.unit` in the app**, set rows and the plan editor's `Reps from` / `Reps to`
+alike (B-118's wording: every row). Contrast: `--faint` on `.card` is 4.9 : 1 (§19.3), AA for text at
+any size; the size was the failure, not the ratio. Geometry: the caption line grows by at most 2 px
+in **both** modes equally, so §4.4a rule 1 (identical box model kg ↔ ld) holds; W4's measurement is
+re-run against itself, not against `main`.
+
+## 21.7 The default bar on a lb card — a bar he did not pick
+
+The PM's rule stands (first profile bar on `bb` slots, in lb, default tier only). The chip carries
+it in words on the line that already says which level the card is on:
+
+| Case | Line 1 | Line 2 |
+|---|---|---|
+| `bb`, lb default, profile has a bar | `Weight in lb + Barbell 20 kg` | `Your default · first bar in your gym` |
+| `bb`, lb default, no profile bar | `Weight in lb · no bar` | `Your default · no bars in your gym yet` |
+| not `bb`, lb default | `Weight in lb · no bar` | `Your default` |
+| he picks the same Barbell in the sheet | `Weight in lb + Barbell 20 kg` | `Set for this exercise` — the override is now his |
+
+Why the words `first bar in your gym` and not `bar assumed`: it states the rule, so when he reorders
+the bars in Settings he knows what moves, and it is not a warning — a warning on every barbell card
+forever would be ignored by the second session. The row caption `+ LB` and the `= {w} kg` total are
+the two other carriers that the number he types is *added*. Together with the Settings sentence in
+§21.1 that is three places the bar rule is visible before a number is stored. If he wants no bar
+ever by default, it is one branch in `defaultMode` and line 2's third row.
+
+## 21.8 Interactions, tap by tap
+
+His bench, first session in lb. Log holds d1a set 1 `{w: 77, r: 5}` kg-direct. Profile: Barbell
+20 kg first. Settings → Gym just set to `lb`.
+
+| # | Tap | What changes |
+|---|---|---|
+| 0 | Card paints | Chip `Weight in lb + Barbell 20 kg` / `Your default · first bar in your gym`. Row 1 caption `+ LB`, field empty, total slot empty, ghost `Last 125.5 lb × 5`. Tier `default` |
+| 1 | `+` on row 1 | Seeds `125.5`. `= 76.9 kg`. Live `Weight now 125.5 lb, 76.9 kg.` Draft written with `ld {bar: 20, bu: "kg", add: "125.5", au: "lb"}`. Chip unchanged (tier is now `draft`, line 2 still `Your default …` by §21.2 ruling 1) |
+| 2 | Chip | Sheet. `lb` pressed, `Barbell` checked, no `Use my default` row (card is on the default). `Last time: kg · no bar.` |
+| 3 | `EZ bar 10 kg` | Bar confirmation (`The bar changes the totals.` `Set 1: 125.5 lb is 76.9 kg on Barbell 20 kg, 66.9 kg on EZ bar 10 kg.`). `Use EZ bar 10 kg` → override written `{au: "lb", bar: 10, bu: "kg"}`, sheet closes, chip `Weight in lb + EZ bar 10 kg` / `Set for this exercise`, total `= 66.9 kg` |
+| 4 | Chip again | Sheet now shows `Use my default · lb + Barbell 20 kg` under the list |
+| 5 | `Use my default · lb + Barbell 20 kg` | Unit same, bar differs, weight typed → bar confirmation with `Use Barbell 20 kg` / `Keep EZ bar 10 kg`. Confirm → override deleted, chip back to `Your default · first bar in your gym`, `= 76.9 kg`, sheet closes, live `On your default: lb + Barbell 20 kg.` |
+| 6 | Settings → Gym → `kg` (later, session closed) | Live `I lift in kg.` Next time d1a opens `Weight in kg · no bar` / `Your default` — kg-direct, `main`'s row; ghost `Last 76.9 × 5`. A card he set in the sheet (`Set for this exercise`) is unmoved |
+
+## 21.9 Strings — every new one, in one table, with case grammar
+
+| # | Where | Case | String | Owner |
+|---|---|---|---|---|
+| 1 | Settings, kicker | — | `I lift in` | mine |
+| 2 | Settings, helper | — | `Every exercise starts in this. Pick another unit on an exercise's card and it keeps that one. Bodyweight stays in kg.` | mine |
+| 3 | Settings, bars kicker | — | `Bars` | mine |
+| 4 | Settings, bars helper | lb only | `In lb, the first bar here goes on every barbell exercise you have not set yourself.` | mine |
+| 5 | Settings, live | on tap | `I lift in {au}.` | mine |
+| 6 | Settings, refusal | write failed | `Could not save the unit. Nothing changed.` | mine |
+| 7 | Settings, refusal | prefs unreadable | `Could not read your unit. Pick one to set it again.` | mine |
+| 8 | Chip, line 2 | default | `Your default` | mine |
+| 9 | Chip, line 2 | default, `bb`, lb, profile bar | `Your default · first bar in your gym` | mine |
+| 10 | Chip, line 2 | default, `bb`, lb, no profile bar | `Your default · no bars in your gym yet` | mine |
+| 11 | Chip, line 2 | override, or session | `Set for this exercise` | mine |
+| 12 | Chip, line 2 | history | `From last time` | mine |
+| 13 | Chip, line 2 | prefs unreadable | `Could not read Settings · kg for now` | mine |
+| 14 | Chip, name | all | `{line 1}. {line 2, · → ,}. Change.` | mine |
+| 15 | Sheet, row | not on default | `Use my default · {mode}` — `{mode}` ∈ `lb + Barbell 20 kg` · `lb · no bar` · `kg · no bar` · `lb + bar 20 kg` | mine |
+| 16 | Sheet, live | after the row applies | `On your default: {mode}.` | mine |
+| 17 | Sheet, `.det` | history tier, no chosen default | `From last time. Set your default in Settings → Gym.` | mine |
+| 18 | Sheet, notice | prefs unreadable | `Could not read your settings. You can still set the unit and bar here.` (replaces §19.1 #15) | mine |
+| 19 | Toast, once per session | prefs write failed on any sheet tap | `Could not save the unit for next time. It holds for this session.` | mine |
+| 20 | Ghost | different build, `addKg > 0` | `Last {displayLoad(addKg, au)} × {r}` | mine; W3's `displayLoad` |
+| 21 | Ghost | different build, `addKg ≤ 0` | `Last {displayLoad(w, au)} total × {r}` | mine |
+| 22 | Summary, per set | non-kg-direct | `{add} {au} × {r}` joined by ` · ` | mine |
+| 23 | Trend | non-kg-direct | `{+|−}{d} {au}` · `{Up|Down|No change} {d} {au} since {date}` · `{displayLoad(e, au)} · {date}` · `{displayLoad(e, au)} on {date}.` | mine; the words are today's |
+| 24 | Caption | all four | `KG` · `LB` · `+ KG` · `+ LB` at 11 px | mine (§19.1 #1 re-sized) |
+| — | **Not here** | — | The verdict for a kg-direct set on a lb card; the lb-build verdict; the 0.5 lb constant; whether 76.9 reads as a hold of 77 — **W1 `strength-coach`**, transcribed by W4 | coach |
+
+Substitutions beyond §0.8 and §19.1: `{mode}` the build in the chip's grammar without `Weight in ` ·
+`{addKg}` the prior's kg total less this card's bar in kg. Every string carrying a bar name goes
+through `esc()`.
+
+Voice check: no exclamation, no emoji, second person only where he acts (`Pick another unit`, `Set
+your default`), no flattery; `Could not …` refusals end in what is true (`Nothing changed.`, `It holds
+for this session.`).
+
+## 21.10 Control inventory — rows added to §0.4.1
+
+| # | Screen | Control | Min hit area | Notes |
+|---|---|---|---|---|
+| 61 (amended) | session | Load chip | full × **56** | two lines from first paint; name per §21.9 #14 |
+| 75 | settings | `I lift in` segment `kg` / `lb` | ≥ 120 × 48 each | `.seg`, `aria-pressed`, group labelled by the kicker |
+| 76 | load sheet | `Use my default · {mode}` | full × 48, may grow | `.ghostbtn`; rendered only off the default tier; closes the sheet |
+| 77 | settings | (none new) | — | `Bars` is a kicker, not a control |
+
+Rows 62–74 unchanged. Line 2 of the chip is text inside row 61, not a control.
+
+## 21.11 A11y
+
+- **Segment:** `role="group" aria-labelledby="gym-unit-l"`; `aria-pressed` is the carrier; the
+  two-form mark is the visual one. Focus stays on the tapped option. Announcement §21.9 #5.
+- **Chip:** `<button>` as today; accessible name §21.9 #14; `aria-haspopup="dialog"`; focus returns
+  to it on every close, including after `Use my default`. Line 2 is inside the button, not a sibling,
+  so it is one target and one name.
+- **`Use my default`:** `<button>`, name = visible text. Tab order in the sheet: segment → bar rows →
+  `Another bar…` (→ its form) → **`Use my default`** → `Done`. Confirmation states as §19.3.
+- **Live regions:** §21.9 #5 and #16 through `#bs-live`, polite. Toast #19 is the toast region.
+- **Captions** stay `aria-hidden`; the input's name carries the unit (§19.3), unchanged.
+- **Contrast:** chip line 2 bone `.55` on `--bg` = 5.3 : 1 at 12 px, pass; caption `--faint` 11 px
+  on `.card` 4.9 : 1, pass; the Settings refusals are the four-sided shape at `--bone`.
+- **Greyscale:** the level is words (`Your default` / `Set for this exercise` / `From last time`);
+  the pressed segment is its form mark; no hue carries anything here.
+- **200 %:** the chip may reach four lines from first paint; the `Use my default` row wraps in the
+  sheet; the Settings helpers wrap freely. Nothing here is a set row.
+
+## 21.12 What I could not settle
+
+1. **The history tier outranks the default forever, and that makes the Settings sentence false.**
+   §0.1's precedence puts `loadModeFor(prev)` above `prefs.gym.unit`. Every set he logs on a lb-default
+   card carries `ld`; so after one session, every logged card's mode comes from history, not from
+   Settings, and changing the default later moves only cards he has *never logged*. D3's own wording
+   ("a never-touched card now opens in kg") is that carve-out surfacing. **I disagree with the order
+   because** it makes the segment a first-session-only control. **What I would do instead:** the
+   history tier fires only while `prefs.gym.unit` is absent — a device that has never chosen a default
+   keeps WO-010's memory; the moment a default is chosen, precedence is override → default, and a
+   WO-010-era bar choice costs one re-pick in the sheet, which writes it as an override. **The risk in
+   the order's approach** is not data (nothing re-values) but trust: the one setting he asked for
+   appears not to work. The chip and the sheet above are written to be correct under either
+   precedence; §21.3's history-tier row is the only branch that differs. **PM rules; W3 implements
+   one branch either way.** How much WO-010-era `ld` data exists on his phone is, as far as the ask
+   suggests ("you're still giving me kilogram"), none.
+2. **±0.1 kg on a seeded conversion.** 77 kg reproduced as 125.5 lb on a 20 kg bar stores 76.9;
+   with no bar, 170 lb stores 77.1. Whether the progression rule reads 76.9 as a hold of 77, and
+   whether the display constant should be 0.5 lb given that — **W1 `strength-coach`**. If the coach
+   wants the engine tolerant to the display rounding, that is a W3 constant; if the coach wants the
+   seed exact, the seed prints `125.66` and the stepper walks from it, which I think is worse.
+3. **Whether the seed should land on the lb ladder** (125 or 130, not 125.5). The half-pound is the
+   display truth; the ladder is the coach's (B-117 still open). The stepper never snaps, so a
+   half-pound seed leaves a half-pound trail. Coach's call; one line in `seedValue`.
+4. **D6 and the chip.** Every card on a kg-default device gains line 2 (`Your default`). The chip is
+   outside `#excard` by §4.4b.1's design, so D6's diff of the Session *card* is unaffected; if the PM
+   reads D6 as the whole session screen, the fallback is to render line 2 only once `prefs.gym.unit`
+   or any `ex` key exists — a device that has never touched WO-012 sees today's chip. I prefer the
+   line always: a chip that says which level it is on is the ask, and "kg, your default" is true on
+   Diana's phone too.
+5. **`implement` on every slot.** The bar rule and line 2 read `ex.implement === "bb"`. If any
+   barbell slot in `PROGRAM` or a saved plan lacks it, that card gets no bar and reads `Your default`
+   — safe, but silently not the rule. W3 or QA: list the `bb` slots once.
+6. **The Trend delta after rounding.** I ruled endpoint-minus-endpoint in the displayed unit so the
+   screen is arithmetically consistent with itself. If `liftPoints`'s `e` is an estimated 1RM rather
+   than a top-set load, converting it is still a reading and the rule holds; but a delta of `0` in lb
+   for a `+0.1 kg` change prints `No change` where the kg screen said `Up`. Accepted; naming it.
+7. **`Last time:` on a lb card.** I left it unconverted as the provenance line and offered it to W1 as
+   the conversion marker. If the coach rules the ghost itself needs a marker, the row has no room
+   for one at 100 % (budget §4.4a), and the answer is a word in the *sheet*, not on the row.
+
+## 21.13 Out of scope, deliberately
+
+Bodyweight, Diet and the Weight screen in lb (B-127) · the verdict's wording (W1) · a unit per
+implement, per plan or per gym · a default bar on non-`bb` slots · any change to the ladder or the
+stepper's tap (B-117) · converting stored history (`w` never changes) · the Summary's `Volume kg`
+counter · plate math (B-10) · syncing `prefs` (B-113) · a marker on the row that a ghost is converted
+(§21.12 item 7) · `B-114` (`+ 0 lb`) and `B-111` (`Swapped`).
