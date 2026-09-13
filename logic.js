@@ -3544,6 +3544,52 @@
      migrateStore reading the store as v1 and marking every restored session
      dateBasis:"utc". Sessions that really were UTC-dated carry the marker in
      their own document and keep it. Never throws. */
+  /* THE ROW RULES, one function per table, shared by restorePayload (which
+     refuses WHOLE on the first sentence) and pullPayload below (WO-011 W3,
+     which refuses BY ROW and carries on). One body, so the sentence a Restore
+     prints and the sentence a merge names for the same document cannot
+     drift. Each returns the problems for row `i`, or [] when the row is
+     clean; nothing here touches the document. */
+  function sessionRowProblems(doc, i) {
+    var p = [], v = validateSessionDoc(doc);
+    if (!v.ok) v.problems.forEach(function (m) { p.push("session " + docLabel(doc) + " (row " + i + "): " + m); });
+    else if (isDemo(doc)) p.push("session " + docLabel(doc) + " (row " + i + "): session " + DEMO_MSG + "; not restored");
+    return p;
+  }
+  function bwRowProblems(doc, i) {
+    var p = [], v = validateBwDoc(doc);
+    if (!v.ok) v.problems.forEach(function (m) { p.push("bodyweight row " + i + ": " + m); });
+    else if (isDemo(doc)) p.push("bodyweight row " + i + ": bodyweight row " + DEMO_MSG + "; not restored");
+    return p;
+  }
+  function planRowProblems(doc, i) {
+    if (!isObj(doc) || typeof doc.planId !== "string" || doc.planId.trim() === "")
+      return ["plan row " + i + ": plan.planId is required and must be a non-empty string"];
+    if (doc.planId.trim() === PHAT_PLAN_ID)
+      return ["plan row " + i + ": planId " + PHAT_PLAN_ID + " is the shipped plan and is never stored"];
+    if (doc.days !== undefined && !Array.isArray(doc.days))
+      return ["plan row " + i + ": plan.days must be an array"];
+    if (isDemo(doc)) return ["plan row " + i + ": plan " + DEMO_MSG + "; not restored"];
+    return [];
+  }
+  /* The user_state row's problems. `us` is the row or null. */
+  function stateRowProblems(us) {
+    var p = [];
+    if (us && us.log_meta !== undefined && us.log_meta !== null && !isObj(us.log_meta)) p.push("user_state.log_meta is not an object");
+    if (us && us.plan_meta !== undefined && us.plan_meta !== null && !isObj(us.plan_meta)) p.push("user_state.plan_meta is not an object");
+    if (us && isObj(us.log_meta) && us.log_meta.sessions !== undefined) p.push("user_state.log_meta carries a sessions key");
+    if (us && isDemo(us.log_meta)) p.push("user_state.log_meta is " + DEMO_MSG + "; not restored");
+    if (us && isDemo(us.plan_meta)) p.push("user_state.plan_meta is " + DEMO_MSG + "; not restored");
+    return p;
+  }
+  /* A plan that normalisePlanStore could not make openable: the sentence
+     restorePayload refuses on and pullPayload names. null when it opens. */
+  function planOpenProblem(p, i) {
+    var v = validatePlan(p);
+    if (v.ok) return null;
+    var extra = v.problems.length > 1 ? " (and " + (v.problems.length - 1) + " more)" : "";
+    return "plan " + planLabel(p) + " (row " + i + "): cannot open - " + planProblemText(v.problems[0]) + extra;
+  }
   function restorePayload(rows) {
     var out = { ok: false, log: null, bw: null, plans: null,
                 counts: { sessions: 0, bodyweight: 0, plans: 0 }, problems: [], notes: [] };
@@ -3551,40 +3597,24 @@
       if (!isObj(rows)) { out.problems.push("restore payload is not an object"); return out; }
       var sess = [], bws = [], pls = [];
       var us = isObj(rows.user_state) ? rows.user_state : null;
+      var push = function (m) { out.problems.push(m); };
 
       if (rows.sessions !== undefined && !Array.isArray(rows.sessions)) out.problems.push("sessions is not an array");
       else (rows.sessions || []).forEach(function (r, i) {
-        var doc = isObj(r) ? r.doc : undefined;
-        var v = validateSessionDoc(doc);
-        if (!v.ok) v.problems.forEach(function (m) { out.problems.push("session " + docLabel(doc) + " (row " + i + "): " + m); });
-        else if (isDemo(doc)) out.problems.push("session " + docLabel(doc) + " (row " + i + "): session " + DEMO_MSG + "; not restored");
-        else sess.push(canonSession(doc));
+        var doc = isObj(r) ? r.doc : undefined, p = sessionRowProblems(doc, i);
+        if (p.length) p.forEach(push); else sess.push(canonSession(doc));
       });
       if (rows.bodyweight !== undefined && !Array.isArray(rows.bodyweight)) out.problems.push("bodyweight is not an array");
       else (rows.bodyweight || []).forEach(function (r, i) {
-        var doc = isObj(r) ? r.doc : undefined;
-        var v = validateBwDoc(doc);
-        if (!v.ok) v.problems.forEach(function (m) { out.problems.push("bodyweight row " + i + ": " + m); });
-        else if (isDemo(doc)) out.problems.push("bodyweight row " + i + ": bodyweight row " + DEMO_MSG + "; not restored");
-        else bws.push(canonBw(doc));
+        var doc = isObj(r) ? r.doc : undefined, p = bwRowProblems(doc, i);
+        if (p.length) p.forEach(push); else bws.push(canonBw(doc));
       });
       if (rows.plans !== undefined && !Array.isArray(rows.plans)) out.problems.push("plans is not an array");
       else (rows.plans || []).forEach(function (r, i) {
-        var doc = isObj(r) ? r.doc : undefined;
-        if (!isObj(doc) || typeof doc.planId !== "string" || doc.planId.trim() === "")
-          out.problems.push("plan row " + i + ": plan.planId is required and must be a non-empty string");
-        else if (doc.planId.trim() === PHAT_PLAN_ID)
-          out.problems.push("plan row " + i + ": planId " + PHAT_PLAN_ID + " is the shipped plan and is never stored");
-        else if (doc.days !== undefined && !Array.isArray(doc.days))
-          out.problems.push("plan row " + i + ": plan.days must be an array");
-        else if (isDemo(doc)) out.problems.push("plan row " + i + ": plan " + DEMO_MSG + "; not restored");
-        else pls.push(doc);
+        var doc = isObj(r) ? r.doc : undefined, p = planRowProblems(doc, i);
+        if (p.length) p.forEach(push); else pls.push(doc);
       });
-      if (us && us.log_meta !== undefined && us.log_meta !== null && !isObj(us.log_meta)) out.problems.push("user_state.log_meta is not an object");
-      if (us && us.plan_meta !== undefined && us.plan_meta !== null && !isObj(us.plan_meta)) out.problems.push("user_state.plan_meta is not an object");
-      if (us && isObj(us.log_meta) && us.log_meta.sessions !== undefined) out.problems.push("user_state.log_meta carries a sessions key");
-      if (us && isDemo(us.log_meta)) out.problems.push("user_state.log_meta is " + DEMO_MSG + "; not restored");
-      if (us && isDemo(us.plan_meta)) out.problems.push("user_state.plan_meta is " + DEMO_MSG + "; not restored");
+      stateRowProblems(us).forEach(push);
       if (out.problems.length) return out;
 
       var log = {};
@@ -3627,10 +3657,8 @@
           out.notes.push("plan store normalised" + (npr.added.length ? " (" + npr.added.join(", ") + ")" : "") + "; no existing value changed");
         }
         plans.plans.forEach(function (p, i) {
-          var v = validatePlan(p);
-          if (v.ok) return;
-          var extra = v.problems.length > 1 ? " (and " + (v.problems.length - 1) + " more)" : "";
-          out.problems.push("plan " + planLabel(p) + " (row " + i + "): cannot open - " + planProblemText(v.problems[0]) + extra);
+          var m = planOpenProblem(p, i);
+          if (m !== null) out.problems.push(m);
         });
         if (out.problems.length) return out;
       }
@@ -3790,6 +3818,7 @@
        kind   "auto"     R-a  the automatic push after a sign-in or a save
               "manual"   R-b  BACK UP NOW
               "restore"  R-c  Restore from backup
+              "merge"    WO-011  the pull-and-merge on open
        owner  backupOwner()'s object (email may be null)
        me     the signed-in account's email
 
@@ -3810,6 +3839,13 @@
     if (kind === "restore") {
       return "Not restored. This device's log belongs to " + who + ". The backup under " + m +
              " was not read and nothing on this device changed. Sign in as " + way + " to restore.";
+    }
+    /* WO-011 W3: the merge on open, refused for the same reason as R-c.
+       Same structure as "restore"; the wording is W2's (ux-designer) to
+       settle, and it changes here and nowhere else. */
+    if (kind === "merge") {
+      return "Not merged. This device's log belongs to " + who + ". The backup under " + m +
+             " was not read and nothing on this device changed. Sign in as " + way + " to bring it back.";
     }
     return "This device's log belongs to " + who + ". Nothing was backed up to " + m +
            ". Sign in as " + way + " to back it up.";
@@ -3884,6 +3920,391 @@
     var writes = [{ key: K.log, value: log, label: "log" }, { key: K.bw, value: bw, label: "weights" }];
     if (plans) writes.push({ key: K.plans, value: plans, label: "plans" });
     return { ok: true, keeps: keeps, writes: writes, log: log, bw: bw, plans: plans };
+  }
+
+  /* ======================================================= the merge (WO-011 W3)
+
+     Chady's ruling, 2026-09-13, verbatim: "it needs to pull from the db" /
+     "otherwise how can I track". E-3's "never pull" is superseded. The app
+     now pulls the account on every open and MERGES it into the phone.
+
+     THE RULE, and every line below serves it:
+       union          anything the server has that the phone lacks is ADDED
+       local wins     the same key on both keeps the phone's document, byte
+                      for byte - the phone is what he was typing on
+       nothing removed  a merge never drops, rewrites or reorders a local
+                      document; the stores can only grow
+       refused, named a server document the validators refuse is left out,
+                      listed in `refused` with its sentence, and never stops
+                      the rest (unlike a Restore, which refuses whole - a
+                      merge that stalled on one bad row would leave the
+                      phone empty every morning)
+     Keys: sessions by `id` (as a string - the server's client_id is text,
+     so 5 and "5" are one session), bodyweight by `date`, plans by `planId`.
+     Log and plan meta: local wins on every key the phone has; a key only
+     the server has is added; and a local `profile: null` does NOT beat a
+     remote stamp - the stamp is the account's and travels with it (WO-008
+     W4), so it comes down when the phone has none. `activePlanId` is the
+     phone's whenever the phone has a plan store.
+
+     PURE. No storage, no network, no DOM, no Date.now(); the keep timestamp
+     is mergeSteps' argument. The draft is neither an input nor an output.
+     Inputs are never mutated: local documents come back by reference (that
+     IS the byte-for-byte guarantee), remote ones as pullPayload built them. */
+
+  /* pullPayload(rows)
+       → { log, bw, plans, state:bool, counts:{sessions, bodyweight, plans},
+           refused:[{kind, key, msg}], notes:[string] }
+
+     restorePayload's per-row twin: the same rows (`PHAT_SYNC.pull()`), the
+     same validators, the same sentences (shared row functions above), but a
+     bad row is REFUSED BY ROW and the good ones still come through. The
+     rebuilt stores are then run through migrateStore, exactly as
+     restoreSteps does, so what mergeStores sees is a store this build wrote.
+       kind   "session" | "bodyweight" | "plan" | "state" | "rows"
+       key    the document's label (docLabel / date / planId), or the row
+              name for a state or shape refusal
+     `state` is whether a usable user_state row came down: when it did not,
+     log/plan meta are this build's defaults and the merge must not mistake
+     them for the account's. Never throws. */
+  function pullPayload(rows) {
+    var out = { log: null, bw: null, plans: null, state: false,
+                counts: { sessions: 0, bodyweight: 0, plans: 0 }, refused: [], notes: [] };
+    try {
+      if (!isObj(rows)) { out.refused.push({ kind: "rows", key: null, msg: "pulled rows are not an object" }); rows = {}; }
+      var sess = [], bws = [], pls = [], seenS = {}, seenB = {}, seenP = {};
+      var refuse = function (kind, key, msgs) {
+        msgs.forEach(function (m) { out.refused.push({ kind: kind, key: key, msg: m }); });
+      };
+      /* M6. pull() selects live rows only (`deleted_at is null`), so a
+         soft-deleted row never arrives. If one did - a hand-built payload,
+         a future query - it is not a document to add and not a fault to
+         name: noted, skipped, and the phone's copy (if any) stays. */
+      var gone = function (r, what, i) {
+        if (!isObj(r) || r.deleted_at === undefined || r.deleted_at === null) return false;
+        out.notes.push(what + " row " + i + " is deleted on the server (deleted_at " + str(r.deleted_at) + "); not merged");
+        return true;
+      };
+      if (rows.sessions !== undefined && !Array.isArray(rows.sessions)) refuse("rows", "sessions", ["sessions is not an array"]);
+      else (rows.sessions || []).forEach(function (r, i) {
+        if (gone(r, "session", i)) return;
+        var doc = isObj(r) ? r.doc : undefined, p = sessionRowProblems(doc, i);
+        if (p.length) { refuse("session", docLabel(doc), p); return; }
+        var k = str(doc.id);
+        if (seenS[k]) { refuse("session", docLabel(doc), ["session " + docLabel(doc) + " (row " + i + "): shares id " + k + " with an earlier row; only the first is merged"]); return; }
+        seenS[k] = true;
+        sess.push(canonSession(doc));
+      });
+      if (rows.bodyweight !== undefined && !Array.isArray(rows.bodyweight)) refuse("rows", "bodyweight", ["bodyweight is not an array"]);
+      else (rows.bodyweight || []).forEach(function (r, i) {
+        if (gone(r, "bodyweight", i)) return;
+        var doc = isObj(r) ? r.doc : undefined, p = bwRowProblems(doc, i);
+        if (p.length) { refuse("bodyweight", isObj(doc) ? str(doc.date) : "(not a row)", p); return; }
+        if (seenB[doc.date]) { refuse("bodyweight", doc.date, ["bodyweight row " + i + ": shares " + doc.date + " with an earlier row; only the first is merged"]); return; }
+        seenB[doc.date] = true;
+        bws.push(canonBw(doc));
+      });
+      if (rows.plans !== undefined && !Array.isArray(rows.plans)) refuse("rows", "plans", ["plans is not an array"]);
+      else (rows.plans || []).forEach(function (r, i) {
+        if (gone(r, "plan", i)) return;
+        var doc = isObj(r) ? r.doc : undefined, p = planRowProblems(doc, i);
+        if (p.length) { refuse("plan", isObj(doc) ? str(doc.planId) : "(not a plan)", p); return; }
+        var pid = doc.planId.trim();
+        if (seenP[pid]) { refuse("plan", pid, ["plan row " + i + ": shares planId " + pid + " with an earlier row; only the first is merged"]); return; }
+        seenP[pid] = true;
+        pls.push(doc);
+      });
+      /* The state row. A row the validators refuse is refused as a row -
+         the sessions beside it still merge - and the meta falls back to
+         this build's defaults, marked state:false. */
+      var us = isObj(rows.user_state) ? rows.user_state : null;
+      var sp = stateRowProblems(us);
+      if (sp.length) { refuse("state", "user_state", sp); us = null; }
+      out.state = us !== null;
+
+      var log = {};
+      if (us && isObj(us.log_meta)) Object.keys(us.log_meta).forEach(function (k) { log[k] = us.log_meta[k]; });
+      if (typeof log.schemaVersion !== "number") {
+        log.schemaVersion = SCHEMA_VERSION;
+        out.notes.push(us ? "log_meta had no schemaVersion; stamped " + SCHEMA_VERSION
+                          : "backup has no user_state row; log stamped schema " + SCHEMA_VERSION + " with default state");
+      }
+      if (log.includeCut === undefined) log.includeCut = false;
+      if (!Object.prototype.hasOwnProperty.call(log, "profile")) {
+        log.profile = null;
+        out.notes.push("log_meta had no profile; set to null (no diet protocol)");
+      }
+      log.sessions = sortSessions(sess);
+
+      var bw = { schemaVersion: SCHEMA_VERSION, entries: bws.slice().sort(function (a, b) {
+        return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }) };
+
+      var plans = null;
+      var pm = (us && isObj(us.plan_meta)) ? us.plan_meta : {};
+      if (pls.length || Object.keys(pm).length) {
+        plans = {};
+        Object.keys(pm).forEach(function (k) { plans[k] = pm[k]; });
+        plans.plans = pls;
+        if (typeof plans.schemaVersion !== "number") plans.schemaVersion = SCHEMA_VERSION;
+        var npr = normalisePlanStore(plans);
+        if (npr.changed) {
+          plans = npr.store;
+          out.notes.push("plan store normalised" + (npr.added.length ? " (" + npr.added.join(", ") + ")" : "") + "; no existing value changed");
+        }
+        /* R4, by row: a plan that still cannot open is refused and named;
+           the plans beside it come through. normalisePlanStore maps each
+           plan on its own, so dropping one changes nothing about another. */
+        var open = [];
+        plans.plans.forEach(function (p, i) {
+          var m = planOpenProblem(p, i);
+          if (m !== null) refuse("plan", str(p.planId), [m]); else open.push(p);
+        });
+        plans.plans = open;
+      }
+
+      /* The same passes a Restore runs (restoreSteps): additive, idempotent,
+         and on a schema-5 account the log lands as schema 6 with no session
+         touched (M10). */
+      var mg = migrateStore(log, bw, plans === null ? undefined : plans);
+      out.log = isObj(mg.log) ? mg.log : log;
+      out.bw = isObj(mg.bw) ? mg.bw : bw;
+      out.plans = plans === null ? null : (isObj(mg.plans) ? mg.plans : plans);
+      out.counts = { sessions: sess.length, bodyweight: bws.length, plans: plans ? plans.plans.length : 0 };
+      return out;
+    } catch (err) {
+      out.refused.push({ kind: "rows", key: null, msg: "pullPayload failed: " + (err && err.message) });
+      out.log = null; out.bw = null; out.plans = null; out.state = false;
+      return out;
+    }
+  }
+
+  /* mergeStores(local, remote)
+       → { ok:true, reason:null,
+           merged:  { log, bw, plans },
+           added:   { sessions, bodyweight, plans },
+           kept:    { sessions, bodyweight, plans,
+                      differ:{ sessions:[id], bodyweight:[date], plans:[planId] } },
+           changed: { log, bw, plans },
+           refused: [{kind, key, msg}], notes:[string] }
+       | { ok:false, reason:"demo"|"local"|"shrink", merged: local as given,
+           added: zeros, kept: zeros, changed: all false, refused:[one], notes }
+
+       local   { log, bw, plans } - the stores as adopted (post-migration),
+               each an object or absent (undefined/null). A local store that
+               is present but not an object refuses the whole merge
+               ("local"): unknown is not empty, and nothing is merged into a
+               store this function cannot read.
+       remote  the pulled rows, { sessions, bodyweight, plans, user_state },
+               exactly what PHAT_SYNC.pull() returns; pullPayload validates,
+               canonicalises and migrates them here.
+
+     `merged.<store>` is the SAME REFERENCE as `local.<store>` when nothing in
+     it changed (changed.<store> false) - the caller writes only what
+     changed, and an unchanged store is provably untouched. When a store did
+     change it is a new object: the local keys in their order with the same
+     values, `sessions` / `entries` / `plans` as local's elements (by
+     reference) plus the added documents, sessions re-sorted through
+     sortSessions (stable: locals keep their relative order). An absent
+     local store takes the remote store whole - what restoreApply would have
+     written (M11) - and counts as changed only when it carries something:
+     a document, or a user_state row (the account's meta).
+
+     `kept` counts the remote documents whose key the phone already held;
+     `kept.differ` lists the ones whose bytes differ from the phone's copy
+     (stableJson, key-order-blind). The phone's copy wins regardless; the
+     push that follows supersedes the server's into `conflicts`, so nothing
+     is destroyed (B-121 is the discussion of whether newer should win).
+
+     THE INVARIANT IS ASSERTED, NOT ASSUMED: before returning, every merged
+     count is checked against the local count, and a smaller store is a
+     refusal ("shrink") with `merged` = local, never a return value. Never
+     throws; a throw is a "local" refusal with the message. */
+  function mergeStores(local, remote) {
+    var L = isObj(local) ? local : {};
+    var zero = function () { return { sessions: 0, bodyweight: 0, plans: 0 }; };
+    var out = { ok: true, reason: null,
+                merged: { log: L.log, bw: L.bw, plans: L.plans },
+                added: zero(), kept: zero(), changed: { log: false, bw: false, plans: false },
+                refused: [], notes: [] };
+    out.kept.differ = { sessions: [], bodyweight: [], plans: [] };
+    var refuseWhole = function (reason, kind, key, msg) {
+      out.ok = false; out.reason = reason;
+      out.merged = { log: L.log, bw: L.bw, plans: L.plans };
+      out.added = zero(); out.kept = zero(); out.kept.differ = { sessions: [], bodyweight: [], plans: [] };
+      out.changed = { log: false, bw: false, plans: false };
+      out.refused = [{ kind: kind, key: key, msg: msg }];
+      return out;
+    };
+    try {
+      var names = { log: "log", bw: "bodyweight", plans: "plan" };
+      for (var k in names) if (Object.prototype.hasOwnProperty.call(names, k)) {
+        if (L[k] !== undefined && L[k] !== null && !isObj(L[k]))
+          return refuseWhole("local", "store", k, "this device's " + names[k] + " store is not an object; nothing merged");
+      }
+      /* M12 / C-14: a demo store merges nothing, in either direction. */
+      if (isDemo(L.log) || isDemo(L.bw) || isDemo(L.plans))
+        return refuseWhole("demo", "store", "demo", "this device holds demo data (store " + DEMO_MSG + "); nothing merged");
+      var lLog = isObj(L.log) ? L.log : null, lBw = isObj(L.bw) ? L.bw : null, lPl = isObj(L.plans) ? L.plans : null;
+      if (lLog && lLog.sessions !== undefined && !Array.isArray(lLog.sessions))
+        return refuseWhole("local", "store", "log", "this device's log.sessions is not an array; nothing merged");
+      if (lBw && lBw.entries !== undefined && !Array.isArray(lBw.entries))
+        return refuseWhole("local", "store", "bw", "this device's bw.entries is not an array; nothing merged");
+      if (lPl && lPl.plans !== undefined && !Array.isArray(lPl.plans))
+        return refuseWhole("local", "store", "plans", "this device's plans.plans is not an array; nothing merged");
+
+      var rp = pullPayload(remote);
+      out.refused = rp.refused; out.notes = rp.notes;
+      if (!isObj(rp.log) || !isObj(rp.bw)) return out;   /* pullPayload failed whole; named; nothing changes */
+      var has = function (o, key) { return Object.prototype.hasOwnProperty.call(o, key); };
+      var same = function (a, b) { return stableJson(a) === stableJson(b); };
+      /* Meta union: every local key in local order (the document array
+         included, so it keeps its place - the caller overwrites it), local
+         values; remote-only keys appended; the profile exception. Returns
+         null when nothing moved. */
+      var unionMeta = function (lo, ro, skip, keepLocal) {
+        var meta = {}, moved = false, key;
+        Object.keys(lo).forEach(function (kk) { meta[kk] = lo[kk]; });
+        for (key in ro) if (has(ro, key) && key !== skip) {
+          if (!has(lo, key)) {
+            if (keepLocal && keepLocal[key]) continue;
+            meta[key] = ro[key]; moved = true;
+          } else if (key === "profile" && lo.profile === null && isObj(ro.profile)) {
+            meta.profile = ro.profile; moved = true;
+          }
+        }
+        return moved ? meta : null;
+      };
+
+      /* ---- sessions, by id ---- */
+      var lSess = lLog && Array.isArray(lLog.sessions) ? lLog.sessions : [];
+      var rSess = Array.isArray(rp.log.sessions) ? rp.log.sessions : [];
+      var byId = {}, addS = [];
+      lSess.forEach(function (s) { if (isObj(s) && s.id !== undefined && s.id !== null && str(s.id) !== "") byId[str(s.id)] = s; });
+      rSess.forEach(function (s) {
+        var key = str(s.id);
+        if (has(byId, key)) {
+          out.kept.sessions++;
+          if (!same(byId[key], s)) out.kept.differ.sessions.push(key);
+        } else { byId[key] = s; addS.push(s); out.added.sessions++; }
+      });
+      if (!lLog) {
+        if (addS.length || rp.state) { out.merged.log = rp.log; out.changed.log = true; }
+      } else {
+        var meta = unionMeta(lLog, rp.log, "sessions", null);
+        if (addS.length || meta) {
+          var nlog = meta || {};
+          if (!meta) Object.keys(lLog).forEach(function (kk) { nlog[kk] = lLog[kk]; });
+          nlog.sessions = addS.length ? sortSessions(lSess.concat(addS)) : lLog.sessions;
+          out.merged.log = nlog; out.changed.log = true;
+        }
+      }
+
+      /* ---- bodyweight, by date ---- */
+      var lEnt = lBw && Array.isArray(lBw.entries) ? lBw.entries : [];
+      var rEnt = Array.isArray(rp.bw.entries) ? rp.bw.entries : [];
+      var byDate = {}, addB = [];
+      lEnt.forEach(function (e) { if (isObj(e) && typeof e.date === "string") byDate[e.date] = e; });
+      rEnt.forEach(function (e) {
+        if (has(byDate, e.date)) {
+          out.kept.bodyweight++;
+          if (!same(byDate[e.date], e)) out.kept.differ.bodyweight.push(e.date);
+        } else { byDate[e.date] = e; addB.push(e); out.added.bodyweight++; }
+      });
+      if (!lBw) {
+        if (addB.length) { out.merged.bw = rp.bw; out.changed.bw = true; }
+      } else {
+        var bmeta = unionMeta(lBw, rp.bw, "entries", null);
+        if (addB.length || bmeta) {
+          var nbw = bmeta || {};
+          if (!bmeta) Object.keys(lBw).forEach(function (kk) { nbw[kk] = lBw[kk]; });
+          nbw.entries = addB.length ? lEnt.concat(addB) : lBw.entries;
+          out.merged.bw = nbw; out.changed.bw = true;
+        }
+      }
+
+      /* ---- plans, by planId; activePlanId is the phone's ---- */
+      var lPlans = lPl && Array.isArray(lPl.plans) ? lPl.plans : [];
+      var rPlans = rp.plans && Array.isArray(rp.plans.plans) ? rp.plans.plans : [];
+      var byPid = {}, addP = [];
+      lPlans.forEach(function (p) { if (isObj(p) && typeof p.planId === "string" && p.planId.trim() !== "") byPid[p.planId.trim()] = p; });
+      rPlans.forEach(function (p) {
+        var pid = p.planId.trim();
+        if (has(byPid, pid)) {
+          out.kept.plans++;
+          if (!same(byPid[pid], p)) out.kept.differ.plans.push(pid);
+        } else { byPid[pid] = p; addP.push(p); out.added.plans++; }
+      });
+      if (!lPl) {
+        if (rp.plans && (addP.length || rp.state)) { out.merged.plans = rp.plans; out.changed.plans = true; }
+      } else if (rp.plans) {
+        var pmeta = unionMeta(lPl, rp.plans, "plans", { activePlanId: true });
+        if (addP.length || pmeta) {
+          var npl = pmeta || {};
+          if (!pmeta) Object.keys(lPl).forEach(function (kk) { npl[kk] = lPl[kk]; });
+          npl.plans = addP.length ? lPlans.concat(addP) : lPl.plans;
+          out.merged.plans = npl; out.changed.plans = true;
+        }
+      }
+
+      /* ---- the invariant: a merge never shrinks a store ---- */
+      var n = function (o, key) { return isObj(o) && Array.isArray(o[key]) ? o[key].length : 0; };
+      var lc = [n(L.log, "sessions"), n(L.bw, "entries"), n(L.plans, "plans")];
+      var mc = [n(out.merged.log, "sessions"), n(out.merged.bw, "entries"), n(out.merged.plans, "plans")];
+      if (mc[0] < lc[0] || mc[1] < lc[1] || mc[2] < lc[2]) {
+        return refuseWhole("shrink", "store", "merge",
+          "merge would shrink a store (sessions " + lc[0] + " -> " + mc[0] + ", bodyweight " + lc[1] + " -> " + mc[1] +
+          ", plans " + lc[2] + " -> " + mc[2] + "); nothing merged");
+      }
+      return out;
+    } catch (err) {
+      return refuseWhole("local", "store", null, "mergeStores failed, nothing merged: " + (err && err.message));
+    }
+  }
+
+  /* mergeSteps(mr, local, keys, ts)
+       → { ok:true, keeps:[{key, value, label}], writes:[{key, value, label}] }
+       | { ok:false, message }
+
+     restoreSteps' twin for a merge: the write sequence as data, so
+     index.html executes a list and tests.html pins the order from file://.
+     `keeps` come first and every one must land before any write; `writes`
+     are the stores that CHANGED, log first, and nothing else - an unchanged
+     store is not rewritten. The keep is ONCE PER DEVICE (`local.kept`
+     true means a merge keep already exists; none is produced) and only when
+     the device holds something (`local.empty` false), a verbatim copy of
+     log and bw, and of plans when it holds a plan document (planStoreHolds,
+     B-73). A store that is blocked (its boot read failed and could not be
+     copied aside) refuses the whole merge before a step is produced.
+
+       mr:    mergeStores' result
+       local: { empty:bool, kept:bool, log, bw, plans, blocked:{key:true} }
+       keys:  { log, bw, plans }
+       ts:    the epoch the recover keys carry (the caller's clock) */
+  function mergeSteps(mr, local, keys, ts) {
+    var L = isObj(local) ? local : {}, K = isObj(keys) ? keys : {};
+    var blocked = isObj(L.blocked) ? L.blocked : {};
+    if (!isObj(mr) || mr.ok !== true) return { ok: false, message: "Nothing merged." };
+    if (typeof K.log !== "string" || typeof K.bw !== "string" || typeof K.plans !== "string")
+      return { ok: false, message: "Nothing merged. The store keys were not given." };
+    var ch = isObj(mr.changed) ? mr.changed : {}, M = isObj(mr.merged) ? mr.merged : {};
+    var writes = [];
+    if (ch.log === true) writes.push({ key: K.log, value: M.log, label: "log" });
+    if (ch.bw === true) writes.push({ key: K.bw, value: M.bw, label: "weights" });
+    if (ch.plans === true) writes.push({ key: K.plans, value: M.plans, label: "plans" });
+    for (var i = 0; i < writes.length; i++) {
+      if (blocked[writes[i].key] === true)
+        return { ok: false, message: "Nothing merged. The saved " + writes[i].label +
+                 " on this device could not be read and must not be overwritten. Reload first." };
+    }
+    var rk = function (k) { return k.replace("phat:v1:", "phat:v1:recover:") + ":" + ts; };
+    var keep = function (k, v, lb) { return { key: rk(k), value: { key: k, savedAt: ts, reason: "merge", value: v }, label: lb }; };
+    var keeps = [];
+    if (writes.length && !L.empty && L.kept !== true) {
+      keeps.push(keep(K.log, L.log, "log"));
+      keeps.push(keep(K.bw, L.bw, "weights"));
+      if (planStoreHolds(L.plans)) keeps.push(keep(K.plans, L.plans, "plans"));
+    }
+    return { ok: true, keeps: keeps, writes: writes };
   }
 
   /* agoText(fromMs, nowMs) → "just now" | "N min ago" | "N h ago" |
@@ -9167,6 +9588,13 @@
     restoreLocalEmpty: restoreLocalEmpty,
     restoreRefusal: restoreRefusal,
     restoreSteps: restoreSteps,
+    /* WO-011 W3. The pull-and-merge on open, pure. pullPayload is
+       restorePayload's per-row twin (refuses by row, never whole);
+       mergeStores is union / local wins / nothing removed, and asserts its
+       own never-shrinks invariant; mergeSteps is the keep-then-write list. */
+    pullPayload: pullPayload,
+    mergeStores: mergeStores,
+    mergeSteps: mergeSteps,
     agoText: agoText,
     /* WO-005 W2b — the pure sample-data generator. Writes nothing, reads no
        clock it was not handed, and every session it builds carries demo:true

@@ -55,7 +55,14 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 802 / 802 / 0, no skips.</b> <b>S42</b> (WO-010 W7, the QA pass, 2026-09-12) added 17: D1 as <b>his</b> bytes (the
+<b>Today: 831 / 831 / 0, no skips.</b> <b>S43</b> (WO-011 W3, the merge, 2026-09-13) added 29: <code>PHAT.mergeStores</code>
+&mdash; union by id / date / planId, local wins byte for byte and by reference, nothing removed, the never-shrinks invariant asserted inside
+the function &mdash; pinned on M1&ndash;M12, on <b>his</b> session three ways (empty phone: byte-identical to the server doc through
+<code>canonSession</code>; already held: kept, local bytes; a different version of the same id: the phone&rsquo;s 24th set wins and the
+server&rsquo;s copy is named under <code>kept.differ</code>), a 200-pair seeded fuzz (never shrinks, every local document carried by reference,
+idempotent, added + kept = the remote&rsquo;s valid count), <code>pullPayload</code> refusing BY ROW with the Restore&rsquo;s own sentences,
+<code>mergeSteps</code> (keeps first, once per device, only the changed stores written) and <code>ownerRefusal("merge")</code>. No schema
+bump. Before it: <b>802 / 802 / 0.</b> <b>S42</b> (WO-010 W7, the QA pass, 2026-09-12) added 17: D1 as <b>his</b> bytes (the
 export hashed, <code>20 &times; 12</code> where the placeholder had <code>60 &times; 5</code>, the v5 &rarr; 6 pin on the whole store);
 his six verdicts pinned as <code>main @ 5d9525c</code>, <code>c0714d8</code> and <code>5a64064</code> all print them (a three-version Node
 run; identical); a hand-edited <code>ld</code> with <code>w</code> off by 0.1 refused at every gate by name &mdash; save, push, restore whole
@@ -15464,6 +15471,625 @@ T("W7 / D5 D7 - the document the LIVE project handed back on 2026-09-12 (JSONB o
 
 T("W7 - up to the end of S42 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
   a.deep(PHAT_KEY_WRITES, [], "a fixture in S42 or earlier wrote into his history");
+});
+
+
+group("S43 WO-011 W3 / mergeStores / pullPayload / mergeSteps / M1-M12 / the merge never shrinks / his session comes back");
+
+/* ---- fixtures ----
+   A LOCAL store is what boot adopted: schema 6, profile asked (null), the
+   v3 keys present, sessions in the save path's shape (E3SESS: numbers,
+   planId, rx). A REMOTE is the rows PHAT_SYNC.pull() returns, built
+   through ROWS(backupPayload(...)) so every doc has been through JSONB()
+   and the fixture cannot hand back the bytes that went out. */
+function L43(sessions, bwEntries, plans){
+  return { log: E3LOG(sessions || []), bw: E3BW(bwEntries || []),
+           plans: plans === undefined ? { schemaVersion: P.SCHEMA_VERSION, plans: [], activePlanId: P.PHAT_PLAN_ID } : plans };
+}
+/* rows for the given documents, with a user_state row carrying `meta`
+   (default: this build's log meta, profile null) or none when meta === null */
+function R43(sessions, bwEntries, plans, meta){
+  var log = E3LOG(sessions || [], meta === undefined ? {} : (meta || {}));
+  var store = Array.isArray(plans) ? { schemaVersion: P.SCHEMA_VERSION, plans: plans, activePlanId: P.PHAT_PLAN_ID } : (plans === undefined ? null : plans);
+  var bp = P.backupPayload(log, E3BW(bwEntries || []), store);
+  if (bp.problems.length) throw new Error("R43 fixture refused: " + E3PROBLEMS(bp));
+  return ROWS(bp, { noUserState: meta === null });
+}
+function ids43(log){ return (log && log.sessions ? log.sessions : []).map(function(s){ return String(s.id); }).join(","); }
+function noStorage43(fn){
+  var ls; try { ls = window.localStorage; } catch (e) { ls = null; }
+  var calls = 0, nowCalls = 0, realSet = ls && ls.setItem, realGet = ls && ls.getItem, realDel = ls && ls.removeItem, realNow = Date.now;
+  if (ls) {
+    ls.setItem = function(){ calls++; return realSet.apply(ls, arguments); };
+    ls.getItem = function(){ calls++; return realGet.apply(ls, arguments); };
+    ls.removeItem = function(){ calls++; return realDel.apply(ls, arguments); };
+  }
+  Date.now = function(){ nowCalls++; return realNow(); };
+  var stashed = window.storage, storageHits = 0;
+  window.storage = { get: function(){ storageHits++; }, set: function(){ storageHits++; } };
+  var r;
+  try { r = fn(); }
+  finally {
+    if (ls) { ls.setItem = realSet; ls.getItem = realGet; ls.removeItem = realDel; }
+    Date.now = realNow;
+    if (stashed === undefined) { try { delete window.storage; } catch (e) { window.storage = undefined; } }
+    else window.storage = stashed;
+  }
+  return { r: r, storage: calls + storageHits, now: nowCalls };
+}
+/* a small seeded generator for the fuzz - deterministic, so a failure
+   names a reproducible pair */
+function rng43(seed){ var x = seed >>> 0 || 1; return function(){ x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
+
+/* ------------------------------------------------------ 0. surface */
+
+T("W3 - PHAT exposes pullPayload, mergeStores and mergeSteps; the merge reads no storage, no window.storage and no clock (Date.now is never called inside it)", function(a){
+  needFns(a, "pullPayload", "mergeStores", "mergeSteps");
+  var loc = L43([E3SESS(1, "2026-09-01")]), rem = R43([E3SESS(2, "2026-09-02")]);
+  var got = noStorage43(function(){ return P.mergeStores(loc, rem); });
+  a.eq(got.r.ok, true); a.eq(got.r.added.sessions, 1);
+  a.eq(got.storage, 0, "the merge touched storage");
+  a.eq(got.now, 0, "the merge read the clock - the keep timestamp is mergeSteps' argument, never Date.now()");
+  var st = noStorage43(function(){ return P.mergeSteps(got.r, { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} }, W2KEYS, 1700000000000); });
+  a.eq(st.r.ok, true); a.eq(st.storage, 0); a.eq(st.now, 0);
+});
+
+T("W3 - the return shape: {ok, reason, merged:{log,bw,plans}, added, kept(+differ), changed, refused, notes}; counts are numbers; refused is [{kind,key,msg}]", function(a){
+  var r = P.mergeStores(L43([E3SESS(1, "2026-09-01")]), R43([E3SESS(1, "2026-09-01"), E3SESS(2, "2026-09-02")]));
+  a.deep(Object.keys(r).sort(), ["added", "changed", "kept", "merged", "notes", "ok", "reason", "refused"]);
+  a.eq(r.ok, true); a.eq(r.reason, null);
+  a.deep(Object.keys(r.merged).sort(), ["bw", "log", "plans"]);
+  a.deep(r.added, { sessions: 1, bodyweight: 0, plans: 0 });
+  a.eq(r.kept.sessions, 1); a.eq(r.kept.bodyweight, 0); a.eq(r.kept.plans, 0);
+  a.deep(r.kept.differ, { sessions: [], bodyweight: [], plans: [] });
+  a.deep(r.changed, { log: true, bw: false, plans: false });
+  a.deep(r.refused, []); a.ok(Array.isArray(r.notes));
+});
+
+/* ------------------------------------------------------ 1. M1 - never reduces a count */
+
+T("W3 / M1 - a pull never reduces a local count: sessions, bodyweight and plans, against an empty remote, a disjoint remote, an overlapping remote and a remote of refused rows", function(a){
+  var loc = L43([E3SESS(1, "2026-09-01"), E3SESS(2, "2026-09-02"), E3SESS(3, "2026-09-03")],
+                [{ date: "2026-09-01", kg: 85 }, { date: "2026-09-02", kg: 85.2 }],
+                { schemaVersion: P.SCHEMA_VERSION, plans: [MINIPLAN()], activePlanId: "p_mini" });
+  var remotes = [
+    R43([], [], null, null),
+    R43([E3SESS(9, "2026-09-09")], [{ date: "2026-09-09", kg: 86 }], [MYPHAT()]),
+    R43([E3SESS(2, "2026-09-02", "d1", 120, 3)], [{ date: "2026-09-02", kg: 99 }], [MINIPLAN()]),
+    { sessions: [{ doc: { id: 5, date: "2026-13-01", dayId: "d1" } }], bodyweight: [{ doc: { date: "x", kg: 1 } }], plans: [{ doc: { planId: "" } }], user_state: null }
+  ];
+  remotes.forEach(function(rem, i){
+    var r = P.mergeStores(loc, rem);
+    a.eq(r.ok, true, "remote " + i);
+    a.ok(r.merged.log.sessions.length >= loc.log.sessions.length, "remote " + i + ": sessions shrank");
+    a.ok(r.merged.bw.entries.length >= loc.bw.entries.length, "remote " + i + ": bodyweight shrank");
+    a.ok(r.merged.plans.plans.length >= loc.plans.plans.length, "remote " + i + ": plans shrank");
+    loc.log.sessions.forEach(function(s){ a.ok(r.merged.log.sessions.indexOf(s) >= 0, "remote " + i + ": a local session is not in the merged set by reference"); });
+    loc.bw.entries.forEach(function(e){ a.ok(r.merged.bw.entries.indexOf(e) >= 0, "remote " + i + ": a local weight is not in the merged set by reference"); });
+    loc.plans.plans.forEach(function(p){ a.ok(r.merged.plans.plans.indexOf(p) >= 0, "remote " + i + ": a local plan is not in the merged set by reference"); });
+  });
+});
+
+T("W3 / M1 - the invariant is asserted INSIDE the function: a merge that would shrink a store is a refusal (reason `shrink`) with merged = local, never a smaller return value", function(a){
+  /* The only way to make the honest implementation shrink is to hand it a
+     local store it has to treat as data yet cannot index. It does neither -
+     every local element is carried by reference - so the invariant is
+     exercised by construction: a local with unindexable rows (no id, no
+     date, no planId) still comes out whole. */
+  var loc = { log: E3LOG([{ dayId: "d1", entries: {} }, E3SESS(1, "2026-09-01"), null]),
+              bw: E3BW([{ kg: 80 }, { date: "2026-09-01", kg: 85 }]),
+              plans: { schemaVersion: P.SCHEMA_VERSION, plans: [{ name: "no id" }, MINIPLAN()], activePlanId: "p_mini" } };
+  var r = P.mergeStores(loc, R43([E3SESS(1, "2026-09-01"), E3SESS(2, "2026-09-02")], [{ date: "2026-09-02", kg: 85.5 }], [MYPHAT()]));
+  a.eq(r.ok, true, JSON.stringify(r.refused));
+  a.eq(r.merged.log.sessions.length, 4, "3 local (one unindexable, one null) + 1 added");
+  a.eq(r.merged.bw.entries.length, 3); a.eq(r.merged.plans.plans.length, 3);
+  a.ok(r.merged.log.sessions.indexOf(loc.log.sessions[0]) >= 0, "the id-less session is still there");
+  a.ok(r.merged.log.sessions.indexOf(null) >= 0, "even a null element is carried - the merge is not a filter");
+  a.eq(r.merged.plans.activePlanId, "p_mini");
+});
+
+/* ------------------------------------------------------ 2. M2 - local wins byte for byte */
+
+T("W3 / M2 - the same id on both keeps the LOCAL document byte for byte and by reference, when the server copy has more entries, a later client_updated_at, a different ld, or a different date; kept.differ names it", function(a){
+  var mine = E3SESS(1789, "2026-09-12", "d1", 100, 5);
+  var loc = L43([mine]);
+  var server = clone(mine);
+  server.entries.d1b = { sets: [{ w: 60, r: 10 }], note: "server only" };
+  server.entries.d1a.sets[0] = { w: 100, r: 5, ld: { bar: 20, bu: "kg", add: 80, au: "kg" } };
+  server.date = "2026-09-11";
+  var rem = R43([server]);
+  rem.sessions[0].client_updated_at = "2026-09-13T01:55:19Z";
+  var before = JSON.stringify(mine), r = P.mergeStores(loc, rem);
+  a.eq(r.ok, true); a.eq(r.added.sessions, 0); a.eq(r.kept.sessions, 1);
+  a.deep(r.kept.differ.sessions, ["1789"], "the server's copy differed and lost; named so Settings can say so");
+  a.deep(r.changed, { log: false, bw: false, plans: false }, "nothing to write");
+  a.eq(r.merged.log, loc.log, "the log store is the same reference when nothing changed");
+  a.eq(r.merged.log.sessions[0], mine, "same reference");
+  a.eq(JSON.stringify(r.merged.log.sessions[0]), before, "same bytes");
+  a.eq(hasKeyDeep40(r.merged.log, "d1b"), false, "the server's extra entry did not come in over his copy");
+  a.eq(JSON.stringify(loc.log), JSON.stringify(L43([E3SESS(1789, "2026-09-12", "d1", 100, 5)]).log), "the input was not mutated");
+});
+
+T("W3 / M2 - ids compare as strings: a local id 5 (number) and a server id \"5\" (string) are ONE session, and the local one wins", function(a){
+  var loc = L43([E3SESS(5, "2026-09-05")]);
+  var s = E3SESS("5", "2026-09-05", "d1", 77, 7);
+  var r = P.mergeStores(loc, R43([s]));
+  a.eq(r.added.sessions, 0); a.eq(r.kept.sessions, 1); a.eq(r.merged.log.sessions.length, 1);
+  a.eq(r.merged.log.sessions[0].entries.d1a.sets[0].w, 100, "his copy");
+});
+
+/* ------------------------------------------------------ 3. M3 - the offline session */
+
+T("W3 / M3 - a session logged offline and not yet pushed is never overwritten by the pull that precedes the push: local {X, 5 entries} + remote without X -> X unchanged, added 0, changed.log false, and X is in the set the push carries", function(a){
+  var X = E3SESS(4242, "2026-09-13");
+  X.entries = { d1a: { sets: [{ w: 100, r: 5 }], note: "" }, d1b: { sets: [{ w: 60, r: 10 }], note: "" }, d1c: { sets: [{ w: 0, r: 8 }], note: "" },
+                d1d: { sets: [{ w: 30, r: 5 }], note: "" }, d1e: { sets: [{ w: 0, r: 12 }], note: "offline" } };
+  var loc = L43([E3SESS(1, "2026-09-01"), X]);
+  var bytes = JSON.stringify(X);
+  var r = P.mergeStores(loc, R43([E3SESS(1, "2026-09-01")]));
+  a.eq(r.ok, true); a.eq(r.added.sessions, 0); a.eq(r.kept.sessions, 1);
+  a.eq(r.changed.log, false); a.eq(r.merged.log, loc.log);
+  a.eq(JSON.stringify(r.merged.log.sessions[1]), bytes);
+  var bp = P.backupPayload(r.merged.log, r.merged.bw, null);
+  a.eq(bp.sessions.length, 2); a.eq(bp.sessions[1], X, "the push after the merge carries X by reference");
+});
+
+/* ------------------------------------------------------ 4. M4 - idempotent */
+
+T("W3 / M4 - mergeStores(mergeStores(l, r).merged, r) is byte-identical to mergeStores(l, r).merged, with added all zero and changed all false on the second call - and the stores come back as the SAME references", function(a){
+  var loc = L43([E3SESS(2, "2026-09-02"), E3SESS(3, "2026-09-03")], [{ date: "2026-09-02", kg: 85 }],
+                { schemaVersion: P.SCHEMA_VERSION, plans: [MINIPLAN()], activePlanId: "p_mini" });
+  var rem = R43([E3SESS(1, "2026-09-01"), E3SESS(2, "2026-09-02", "d1", 120, 3)], [{ date: "2026-09-01", kg: 84.8 }, { date: "2026-09-02", kg: 90 }], [MYPHAT()], { profile: PB });
+  var r1 = P.mergeStores(loc, rem);
+  a.eq(r1.ok, true); a.deep(r1.added, { sessions: 1, bodyweight: 1, plans: 1 });
+  var r2 = P.mergeStores(r1.merged, rem);
+  a.eq(r2.ok, true);
+  a.eq(JSON.stringify(r2.merged), JSON.stringify(r1.merged), "byte-identical");
+  a.deep(r2.added, { sessions: 0, bodyweight: 0, plans: 0 });
+  a.deep(r2.changed, { log: false, bw: false, plans: false });
+  a.eq(r2.merged.log, r1.merged.log); a.eq(r2.merged.bw, r1.merged.bw); a.eq(r2.merged.plans, r1.merged.plans);
+  a.deep(r2.kept, { sessions: 2, bodyweight: 2, plans: 1, differ: { sessions: ["2"], bodyweight: ["2026-09-02"], plans: [] } });
+});
+
+/* ------------------------------------------------------ 5. M5 - union */
+
+T("W3 / M5 - remote {A, B} + local {B, C} -> merged {A, B, C} in date order, B the local copy, added.sessions 1, kept.sessions 1; local sessions keep their relative order", function(a){
+  var B = E3SESS("B", "2026-09-02"), C = E3SESS("C", "2026-09-03");
+  var loc = L43([C, B]);   /* deliberately out of date order: sortSessions is stable, so a re-sort is the only reordering */
+  var r = P.mergeStores(loc, R43([E3SESS("A", "2026-09-01"), E3SESS("B", "2026-09-02", "d1", 1, 1)]));
+  a.eq(ids43(r.merged.log), "A,B,C");
+  a.eq(r.merged.log.sessions[1], B, "B is the local copy, by reference");
+  a.eq(r.added.sessions, 1); a.eq(r.kept.sessions, 1);
+  a.eq(r.merged.log.sessions[0].entries.d1a.sets[0].w, 100, "A came through canonSession: builder key order, numbers");
+  a.eq(JSON.stringify(Object.keys(r.merged.log.sessions[0])), '["id","date","dayId","planId","entries"]');
+  a.eq(ids43(loc.log), "C,B", "the input array was not reordered");
+});
+
+/* ------------------------------------------------------ 6. M6 - deleted rows */
+
+T("W3 / M6 - a server row with deleted_at set is not merged (pull() never sends one; a hand-built payload that does is noted and skipped) and the local copy stays", function(a){
+  var mine = E3SESS(1, "2026-09-01");
+  var loc = L43([mine]);
+  var rem = R43([E3SESS(1, "2026-09-01", "d1", 1, 1), E3SESS(2, "2026-09-02")]);
+  rem.sessions[0].deleted_at = "2026-09-13T00:00:00Z"; rem.sessions[1].deleted_at = "2026-09-13T00:00:00Z";
+  var r = P.mergeStores(loc, rem);
+  a.eq(r.ok, true); a.eq(r.added.sessions, 0); a.eq(r.kept.sessions, 0);
+  a.eq(r.merged.log, loc.log); a.eq(r.merged.log.sessions[0], mine);
+  a.deep(r.refused, [], "a deleted row is not a fault");
+  a.eq(r.notes.filter(function(n){ return /deleted on the server/.test(n); }).length, 2, "both named in notes");
+  /* live rows beside them still merge */
+  rem = R43([E3SESS(3, "2026-09-03"), E3SESS(4, "2026-09-04")]);
+  rem.sessions[0].deleted_at = "2026-09-13T00:00:00Z";
+  r = P.mergeStores(loc, rem);
+  a.eq(ids43(r.merged.log), "1,4");
+});
+
+/* ------------------------------------------------------ 7. M7 - bodyweight by date */
+
+T("W3 / M7 - bodyweight merges by date: local {2026-09-12: 85.0} + remote {2026-09-12: 85.4} -> local wins; remote {2026-09-11} -> added; the local entries keep their order and the added ones follow", function(a){
+  var e12 = { date: "2026-09-12", kg: 85 }, e10 = { date: "2026-09-10", kg: 84.6 };
+  var loc = L43([], [e12, e10]);
+  var r = P.mergeStores(loc, R43([], [{ date: "2026-09-12", kg: 85.4 }, { date: "2026-09-11", kg: 85.1 }, { date: "2026-09-13", kg: 85.3 }]));
+  a.eq(r.ok, true); a.eq(r.added.bodyweight, 2); a.eq(r.kept.bodyweight, 1);
+  a.deep(r.kept.differ.bodyweight, ["2026-09-12"]);
+  a.deep(r.changed, { log: false, bw: true, plans: false });
+  a.eq(r.merged.bw.entries.length, 4);
+  a.eq(r.merged.bw.entries[0], e12); a.eq(r.merged.bw.entries[1], e10);
+  a.eq(r.merged.bw.entries[0].kg, 85, "85.0 stays");
+  a.eq(r.merged.bw.entries[2].date + "," + r.merged.bw.entries[3].date, "2026-09-11,2026-09-13", "added rows in date order after the local ones");
+  a.eq(r.merged.bw.schemaVersion, P.SCHEMA_VERSION);
+  a.eq(r.merged.log, loc.log, "the log was not touched by a bodyweight merge");
+  a.eq(loc.bw.entries.length, 2, "input not mutated");
+});
+
+/* ------------------------------------------------------ 8. M8 - plans by planId */
+
+T("W3 / M8 - plans merge by planId with the same rules, and activePlanId is NEVER changed by a merge into a device that has a plan store", function(a){
+  var mini = MINIPLAN();
+  var loc = L43([], [], { schemaVersion: P.SCHEMA_VERSION, plans: [mini], activePlanId: "p_mini" });
+  var serverMini = MINIPLAN(); serverMini.name = "Mini (edited on the server)";
+  var my = MYPHAT();
+  var rem = R43([], [], [serverMini, my], {});
+  rem.user_state.plan_meta = { schemaVersion: P.SCHEMA_VERSION, activePlanId: my.planId };
+  var r = P.mergeStores(loc, rem);
+  a.eq(r.ok, true, JSON.stringify(r.refused));
+  a.eq(r.added.plans, 1); a.eq(r.kept.plans, 1); a.deep(r.kept.differ.plans, ["p_mini"]);
+  a.eq(r.merged.plans.plans[0], mini, "the local plan, by reference"); a.eq(r.merged.plans.plans[0].name, "Mini");
+  a.eq(r.merged.plans.plans[1].planId, my.planId);
+  a.eq(r.merged.plans.activePlanId, "p_mini", "the server's active id did not move the phone's");
+  a.eq(P.validatePlan(r.merged.plans.plans[1]).ok, true, "the added plan opens");
+  /* the PHAT default store (no plans, phat active) + a remote with plans: the plan is added, active stays phat */
+  var r2 = P.mergeStores(L43([]), rem);
+  a.eq(r2.added.plans, 2); a.eq(r2.merged.plans.activePlanId, P.PHAT_PLAN_ID);
+  /* no plan store on the device at all, remote has one: the remote store comes down whole - what a Restore writes */
+  var r3 = P.mergeStores({ log: E3LOG([]), bw: E3BW([]) }, rem);
+  a.eq(r3.added.plans, 2); a.eq(r3.changed.plans, true); a.eq(r3.merged.plans.activePlanId, my.planId, "nothing local to keep, so the account's");
+  /* remote has no plan store: the local one is untouched, same reference */
+  var r4 = P.mergeStores(loc, R43([E3SESS(1, "2026-09-01")]));
+  a.eq(r4.merged.plans, loc.plans); a.eq(r4.changed.plans, false);
+});
+
+/* ------------------------------------------------------ 9. M9 - refused, named, the rest proceeds */
+
+T("W3 / M9 - a remote document the validators refuse is in `refused` with the SAME sentence a Restore would print, and the rest of the merge proceeds (restorePayload refuses whole; pullPayload refuses by row)", function(a){
+  var loc = L43([E3SESS(1, "2026-09-01")]);
+  var bad = E3SESS(7, "2026-09-07"); bad.entries.d1a.sets[0].w = "7.5.0";
+  var rem = R43([E3SESS(2, "2026-09-02"), E3SESS(3, "2026-09-03")], [{ date: "2026-09-02", kg: 85 }], [MINIPLAN()]);
+  rem.sessions.splice(1, 0, { client_id: "7", local_date: "2026-09-07", doc: JSONB(bad) });
+  rem.bodyweight.push({ local_date: "2026-09-03", doc: { date: "2026-09-03", kg: 999 } });
+  var broken = W2BROKEN(); broken.planId = "p_broken";
+  rem.plans.push({ plan_id: broken.planId, doc: JSONB(broken) });
+  var whole = P.restorePayload(rem);
+  a.eq(whole.ok, false, "a Restore refuses the whole payload");
+  var r = P.mergeStores(loc, rem);
+  a.eq(r.ok, true);
+  a.eq(ids43(r.merged.log), "1,2,3"); a.eq(r.added.sessions, 2); a.eq(r.added.bodyweight, 1); a.eq(r.added.plans, 1);
+  a.eq(r.refused.length, 3, JSON.stringify(r.refused));
+  a.eq(r.refused[0].kind, "session"); a.eq(r.refused[0].key, "7 Sep (d1)");
+  a.eq(r.refused[0].msg, 'session 7 Sep (d1) (row 1): entry d1a has an unreadable weight: "7.5.0"');
+  a.eq(r.refused[1].kind, "bodyweight"); a.eq(r.refused[1].msg, "bodyweight row 1: bodyweight.kg out of range (20..400): 999");
+  a.eq(r.refused[2].kind, "plan"); a.match(r.refused[2].msg, /^plan "Mini" \(row 1\): cannot open - exercise x_1 has no type or implement/);
+  a.ok(whole.problems.indexOf(r.refused[0].msg) >= 0, "the merge's session sentence is the Restore's");
+  a.ok(whole.problems.indexOf(r.refused[1].msg) >= 0, "the merge's bodyweight sentence is the Restore's");
+  var planOnly = P.restorePayload({ sessions: [], bodyweight: [], plans: rem.plans, user_state: null });
+  a.eq(planOnly.problems[0], r.refused[2].msg, "the merge's plan sentence is the Restore's");
+  a.eq(JSON.stringify(r.merged.log).indexOf("7.5.0"), -1, "the bad set never reached the store");
+});
+
+T("W3 / M9 - a user_state row the validators refuse (demo, a sessions key, not an object) is refused AS A ROW: the sessions beside it still merge and the meta falls back to this build's defaults", function(a){
+  var rem = R43([E3SESS(2, "2026-09-02")]);
+  rem.user_state = { log_meta: { schemaVersion: 6, demo: true }, plan_meta: null };
+  var pp = P.pullPayload(rem);
+  a.eq(pp.state, false); a.eq(pp.refused.length, 1); a.eq(pp.refused[0].kind, "state");
+  a.eq(pp.refused[0].msg, "user_state.log_meta is marked demo:true; demo data is never backed up as history; not restored");
+  a.eq(pp.log.sessions.length, 1); a.eq(pp.log.profile, null); a.eq(pp.log.schemaVersion, P.SCHEMA_VERSION);
+  var r = P.mergeStores(L43([E3SESS(1, "2026-09-01")]), rem);
+  a.eq(ids43(r.merged.log), "1,2"); a.eq(r.refused.length, 1);
+  rem.user_state = { log_meta: { schemaVersion: 6, sessions: [] }, plan_meta: null };
+  a.eq(P.pullPayload(rem).refused[0].msg, "user_state.log_meta carries a sessions key");
+  rem.user_state = { log_meta: "x", plan_meta: null };
+  a.eq(P.pullPayload(rem).refused[0].msg, "user_state.log_meta is not an object");
+});
+
+T("W3 / M9 - two server rows sharing an id, a date or a planId: the first merges, the second is refused and named; malformed row containers are refused as `rows` and the other tables still merge", function(a){
+  var rem = R43([E3SESS(2, "2026-09-02")], [{ date: "2026-09-02", kg: 85 }], [MINIPLAN()]);
+  rem.sessions.push(clone(rem.sessions[0])); rem.bodyweight.push(clone(rem.bodyweight[0])); rem.plans.push(clone(rem.plans[0]));
+  var r = P.mergeStores(L43([]), rem);
+  a.deep(r.added, { sessions: 1, bodyweight: 1, plans: 1 });
+  a.eq(r.refused.length, 3);
+  a.eq(r.refused[0].msg, "session 2 Sep (d1) (row 1): shares id 2 with an earlier row; only the first is merged");
+  a.eq(r.refused[1].msg, "bodyweight row 1: shares 2026-09-02 with an earlier row; only the first is merged");
+  a.eq(r.refused[2].msg, "plan row 1: shares planId p_mini with an earlier row; only the first is merged");
+  var r2 = P.mergeStores(L43([]), { sessions: "nope", bodyweight: [{ doc: { date: "2026-09-02", kg: 85 } }], plans: [], user_state: null });
+  a.eq(r2.ok, true); a.eq(r2.added.bodyweight, 1); a.eq(r2.refused[0].kind, "rows"); a.eq(r2.refused[0].msg, "sessions is not an array");
+  var r3 = P.mergeStores(L43([E3SESS(1, "2026-09-01")]), "not rows");
+  a.eq(r3.ok, true); a.eq(r3.refused[0].msg, "pulled rows are not an object"); a.eq(r3.merged.log.sessions.length, 1); a.eq(r3.changed.log, false);
+  var r4 = P.mergeStores(L43([E3SESS(1, "2026-09-01")]), null);
+  a.eq(r4.ok, true); a.eq(r4.changed.log, false);
+});
+
+/* ------------------------------------------------------ 10. M10 - the remote is migrated, the local never re-migrated */
+
+T("W3 / M10 - a remote schema-5 account comes through migrateStore before the merge and lands as schema 6 with no session touched; the local store is never re-migrated (its version, its keys, its sessions are its own)", function(a){
+  var his = CHADY_SESSION();
+  var st = CHADY_STORE();                                  /* schema 5, profile stamped */
+  var bp = P.backupPayload(st, E3BW([]), null);
+  var rem = ROWS(bp);
+  a.eq(rem.user_state.log_meta.schemaVersion, 5);
+  var pp = P.pullPayload(rem);
+  a.eq(pp.log.schemaVersion, P.SCHEMA_VERSION, "migrated on the way in");
+  a.eq(JSON.stringify(pp.log.sessions[0]), JSON.stringify(his), "his session, byte for byte, no dateBasis mark, nothing invented");
+  /* empty phone: the account comes down as schema 6 */
+  var r = P.mergeStores({}, rem);
+  a.eq(r.merged.log.schemaVersion, P.SCHEMA_VERSION); a.eq(r.added.sessions, 1);
+  a.deep(r.merged.log.profile, { diet: "phat-brief" });
+  /* a phone with its own store: local keys win, remote-only keys are added, sessions untouched */
+  var loc = L43([E3SESS(1, "2026-09-01")]);
+  var r2 = P.mergeStores(loc, rem);
+  a.eq(r2.merged.log.schemaVersion, 6);
+  a.eq(r2.merged.log.sessions[0], loc.log.sessions[0]);
+  a.eq(hasKeyDeep40(r2.merged.log.sessions[0], "dateBasis"), false, "no local session was marked");
+  a.eq(r2.merged.log.reintro, loc.log.reintro, "a local key keeps its local value");
+  a.eq(P.migrateStore(r2.merged.log, r2.merged.bw).changed, false, "the merged store is settled: a boot after the merge writes nothing for the schema");
+});
+
+/* ------------------------------------------------------ 11. M11 - the empty phone */
+
+T("W3 / M11 - empty local (absent stores) + remote with his session -> added.sessions 1 and merged.log is BYTE-IDENTICAL to what restoreSteps would have written from the same rows (D1: his export as the fixture)", function(a){
+  var st = CHADY_STORE();
+  var rows = ROWS(P.backupPayload(st, E3BW([{ date: "2026-09-12", kg: 85 }]), null));
+  rows.sessions[0].doc = clone(CHADY_EXPORT);              /* the server's bytes, JSONB order */
+  var rs = P.restoreSteps(P.restorePayload(rows), { empty: true, stores: { log: "absent", bw: "absent", plans: "absent" }, blocked: {} }, W2KEYS, 1);
+  a.eq(rs.ok, true);
+  var shapes = [{}, { log: undefined, bw: undefined, plans: undefined }, { log: null, bw: null, plans: null }];
+  shapes.forEach(function(loc, i){
+    var r = P.mergeStores(loc, rows);
+    a.eq(r.ok, true, "shape " + i);
+    a.deep(r.added, { sessions: 1, bodyweight: 1, plans: 0 }, "shape " + i);
+    a.deep(r.changed, { log: true, bw: true, plans: false }, "shape " + i);
+    a.eq(JSON.stringify(r.merged.log), JSON.stringify(rs.log), "shape " + i + ": the log a Restore would write");
+    a.eq(JSON.stringify(r.merged.bw), JSON.stringify(rs.bw), "shape " + i + ": the bw a Restore would write");
+    a.eq(r.merged.plans, loc.plans, "shape " + i + ": no plan store on either side stays absent");
+    a.eq(JSON.stringify(r.merged.log.sessions[0]), JSON.stringify(CHADY_SESSION()), "shape " + i + ": his session in the builder's key order");
+  });
+  /* an absent log + a remote with a user_state row but no session: the account's meta comes down (the stamp, the hold dates) */
+  var r2 = P.mergeStores({}, ROWS(P.backupPayload(E3LOG([], { profile: PB }), E3BW([]), null)));
+  a.eq(r2.changed.log, true); a.deep(r2.merged.log.profile, PB); a.eq(r2.added.sessions, 0);
+  /* an absent log + no user_state row + no session: nothing to write */
+  var r3 = P.mergeStores({}, R43([], [], null, null));
+  a.deep(r3.changed, { log: false, bw: false, plans: false }); a.eq(r3.merged.log, undefined);
+});
+
+/* ------------------------------------------------------ 12. M12 - the demo guard */
+
+T("W3 / M12 - a local store marked demo:true refuses the whole merge (reason `demo`, refused[0].key `demo`) with merged unchanged; a REMOTE demo row is refused by row (C-14) and nothing else stops", function(a){
+  var d = P.demoStore(42);
+  ["log", "bw"].forEach(function(k){
+    var loc = { log: k === "log" ? d.log : E3LOG([]), bw: k === "bw" ? d.bw : E3BW([]), plans: undefined };
+    var r = P.mergeStores(loc, R43([E3SESS(2, "2026-09-02")]));
+    a.eq(r.ok, false, k); a.eq(r.reason, "demo", k);
+    a.eq(r.refused.length, 1); a.eq(r.refused[0].key, "demo"); a.eq(r.refused[0].kind, "store");
+    a.match(r.refused[0].msg, /demo data/);
+    a.eq(r.merged.log, loc.log, k + ": merged is the local reference"); a.eq(r.merged.bw, loc.bw);
+    a.deep(r.added, { sessions: 0, bodyweight: 0, plans: 0 }); a.deep(r.changed, { log: false, bw: false, plans: false });
+  });
+  var loc2 = L43([], [], { schemaVersion: 6, plans: [], activePlanId: "phat", demo: true });
+  a.eq(P.mergeStores(loc2, R43([])).reason, "demo", "a demo plan store too");
+  /* remote demo rows */
+  var demoSess = E3SESS(9, "2026-09-09"); demoSess.demo = true;
+  var rem = R43([E3SESS(2, "2026-09-02")]);
+  rem.sessions.push({ client_id: "9", local_date: "2026-09-09", doc: JSONB(demoSess) });
+  rem.bodyweight.push({ local_date: "2026-09-09", doc: { date: "2026-09-09", kg: 85, demo: true } });
+  var r2 = P.mergeStores(L43([]), rem);
+  a.eq(r2.ok, true); a.eq(r2.added.sessions, 1); a.eq(r2.added.bodyweight, 0);
+  a.eq(r2.refused.length, 2);
+  a.eq(r2.refused[0].msg, "session 9 Sep (d1) (row 1): session marked demo:true; demo data is never backed up as history; not restored");
+  a.eq(r2.refused[1].msg, "bodyweight row 0: bodyweight row marked demo:true; demo data is never backed up as history; not restored");
+  a.eq(hasKeyDeep40(r2.merged.log, "demo"), false, "no demo mark reached the store");
+});
+
+T("W3 - a local store that is present but not an object (a string, an array, a store with a non-array sessions) refuses the whole merge as `local`: unknown is not empty, and nothing is merged into what cannot be read", function(a){
+  var rem = R43([E3SESS(2, "2026-09-02")]);
+  [{ log: "{" }, { log: [] }, { bw: 5 }, { plans: "x" }, { log: { schemaVersion: 6, sessions: "nope" } }, { bw: { entries: {} } }].forEach(function(loc, i){
+    var r = P.mergeStores(loc, rem);
+    a.eq(r.ok, false, "case " + i); a.eq(r.reason, "local", "case " + i);
+    a.eq(r.refused[0].kind, "store"); a.match(r.refused[0].msg, /nothing merged$/);
+    a.deep(r.added, { sessions: 0, bodyweight: 0, plans: 0 });
+    a.eq(r.merged.log, loc.log); a.eq(r.merged.bw, loc.bw); a.eq(r.merged.plans, loc.plans);
+  });
+});
+
+/* ------------------------------------------------------ 13. the log meta */
+
+T("W3 - log meta: local wins on every key the phone has; a key only the server has is added; a local profile:null does NOT beat the account's stamp (WO-008: the stamp travels with the account); a local stamp is never overwritten", function(a){
+  var loc = L43([E3SESS(1, "2026-09-01")]);
+  loc.log.calChangedAt = "2026-09-10"; loc.log.reintro = { d1c: "2026-09-08" };
+  var rem = R43([], [], null, { profile: PB, calChangedAt: "2026-09-01", reintro: {}, deload: { from: "2026-09-01" }, utcDatedBefore: "2026-09-09", futureKey: 1 });
+  var r = P.mergeStores(loc, rem);
+  a.eq(r.ok, true); a.eq(r.added.sessions, 0);
+  a.eq(r.changed.log, true, "the stamp and the remote-only keys moved");
+  a.deep(r.merged.log.profile, PB, "the stamp came down");
+  a.eq(r.merged.log.calChangedAt, "2026-09-10", "local wins"); a.deep(r.merged.log.reintro, { d1c: "2026-09-08" });
+  a.eq(r.merged.log.deload, null, "local null on a non-profile key wins - the phone said no deload");
+  a.eq(r.merged.log.utcDatedBefore, "2026-09-09", "a remote-only key is added");
+  a.eq(r.merged.log.futureKey, 1, "a key this build does not know is carried, not dropped");
+  a.eq(r.merged.log.sessions, loc.log.sessions, "the sessions array is the same reference when nothing was added");
+  var mk = Object.keys(r.merged.log), lk = Object.keys(loc.log);
+  a.eq(mk.slice(0, lk.length).join(","), lk.join(","), "local key order first, sessions where it was");
+  a.eq(mk.slice(lk.length).sort().join(","), "futureKey,utcDatedBefore", "remote-only keys after (in the order the server returned them)");
+  a.eq(loc.log.profile, null, "the input was not mutated");
+  /* a local stamp is never overwritten, and a remote null never lands on a local stamp */
+  var loc2 = L43([]); loc2.log.profile = { diet: "phat-brief" };
+  var r2 = P.mergeStores(loc2, R43([], [], null, { profile: null }));
+  a.eq(r2.changed.log, false); a.eq(r2.merged.log, loc2.log);
+  var loc3 = L43([]); loc3.log.profile = { diet: "other" };
+  a.deep(P.mergeStores(loc3, rem).merged.log.profile, { diet: "other" });
+  /* a pre-W4 local store with no profile key at all takes the account's answer, null included */
+  var loc4 = L43([]); delete loc4.log.profile;
+  a.eq(Object.prototype.hasOwnProperty.call(P.mergeStores(loc4, R43([], [], null, { profile: null })).merged.log, "profile"), true);
+  /* idempotent after the meta moved */
+  var r3 = P.mergeStores(r.merged, rem);
+  a.eq(r3.changed.log, false); a.eq(r3.merged.log, r.merged.log);
+});
+
+/* ------------------------------------------------------ 14. his session */
+
+T("W3 / HIS SESSION - CHADY_SESSION() as the remote against an EMPTY local: added 1, merged.log.sessions[0] byte-identical to the server doc through canonSession, validates, and goes back up by reference", function(a){
+  var rows = { sessions: [{ client_id: "1789264514484", local_date: "2026-09-12", doc: clone(CHADY_EXPORT) }], bodyweight: [], plans: [], user_state: null };
+  var r = P.mergeStores({}, rows);
+  a.eq(r.ok, true); a.deep(r.added, { sessions: 1, bodyweight: 0, plans: 0 }); a.eq(r.kept.sessions, 0);
+  a.eq(r.merged.log.sessions.length, 1);
+  a.eq(JSON.stringify(r.merged.log.sessions[0]), JSON.stringify(CHADY_SESSION()), "his session, the builder's bytes");
+  a.eq(hash40(JSON.stringify(r.merged.log.sessions[0])), 588696318, "the S42 hash of his session");
+  a.eq(P.validateSessionDoc(r.merged.log.sessions[0]).ok, true);
+  a.eq(r.merged.log.schemaVersion, P.SCHEMA_VERSION); a.eq(r.merged.log.profile, null, "no user_state row: asked, could not tell");
+  var bp = P.backupPayload(r.merged.log, E3BW([]), null);
+  a.eq(bp.sessions[0], r.merged.log.sessions[0], "the push that follows carries it by reference");
+  a.eq(P.backupSig(bp), P.backupSig(P.backupPayload({ schemaVersion: 6, includeCut: false, profile: null, sessions: [clone(CHADY_EXPORT)] }, E3BW([]), null)),
+       "and signs the same as the server's bytes - the re-push is a no-op");
+});
+
+T("W3 / HIS SESSION - against a local that already holds it: kept 1, added 0, changed.log false, the local bytes win and are the same reference", function(a){
+  var his = CHADY_SESSION();
+  var loc = { log: CHADY_STORE(), bw: E3BW([]), plans: undefined };
+  loc.log.sessions = [his]; loc.log.schemaVersion = 6;
+  var rows = { sessions: [{ client_id: "1789264514484", local_date: "2026-09-12", doc: clone(CHADY_EXPORT) }], bodyweight: [], plans: [],
+               user_state: { log_meta: JSONB({ schemaVersion: 6, includeCut: false, reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null, profile: PB }), plan_meta: null } };
+  var r = P.mergeStores(loc, rows);
+  a.eq(r.ok, true); a.eq(r.kept.sessions, 1); a.eq(r.added.sessions, 0);
+  a.deep(r.kept.differ.sessions, [], "same bytes on both sides");
+  a.eq(r.changed.log, false); a.eq(r.merged.log, loc.log); a.eq(r.merged.log.sessions[0], his);
+});
+
+T("W3 / HIS SESSION - against a local holding a DIFFERENT version of the same id (one more set typed on the phone): local wins byte for byte, added 0, kept 1, and the server's copy is listed under kept.differ", function(a){
+  var mine = CHADY_SESSION();
+  mine.entries.d1a.sets.push({ w: 70, r: 8 });          /* the 24th set, on the phone only */
+  var loc = { log: CHADY_STORE(), bw: E3BW([]), plans: undefined };
+  loc.log.sessions = [mine]; loc.log.schemaVersion = 6;
+  var before = JSON.stringify(mine);
+  var rows = { sessions: [{ client_id: "1789264514484", local_date: "2026-09-12", doc: clone(CHADY_EXPORT) }], bodyweight: [], plans: [], user_state: null };
+  var r = P.mergeStores(loc, rows);
+  a.eq(r.ok, true); a.eq(r.added.sessions, 0); a.eq(r.kept.sessions, 1);
+  a.deep(r.kept.differ.sessions, ["1789264514484"], "the server's version lost, and is named");
+  a.eq(r.merged.log.sessions[0], mine); a.eq(JSON.stringify(r.merged.log.sessions[0]), before);
+  a.eq(r.merged.log.sessions[0].entries.d1a.sets.length, 6, "24 sets: the phone's");
+  a.eq(r.changed.log, false, "no user_state row, no new key: nothing to write");
+  a.eq(P.backupPayload(r.merged.log, E3BW([]), null).sessions[0], mine, "the push carries the phone's version; the server's goes to conflicts");
+});
+
+/* ------------------------------------------------------ 15. the fuzz */
+
+T("W3 / FUZZ - 200 random local/remote pairs: the merge never shrinks a store, carries every local document by reference, is idempotent, and added + kept equals the remote's valid count", function(a){
+  var rnd = rng43(20260913), pair, i, j, worst = null;
+  var pick = function(n){ return Math.floor(rnd() * n); };
+  var day = function(){ var dd = pick(28) + 1; return "2026-0" + (1 + pick(9)) + "-" + (dd < 10 ? "0" : "") + dd; };
+  var mkSess = function(id){ var s = E3SESS(id, day(), "d1", pick(200), 1 + pick(12)); if (rnd() < 0.15) s.entries.d1b = { sets: [{ w: pick(100), r: 1 + pick(15) }], note: "x" }; return s; };
+  var mkBw = function(d){ return { date: d, kg: 80 + pick(100) / 10 }; };
+  for (i = 0; i < 200; i++) {
+    var ids = [], k;
+    for (j = 0, k = pick(8); j < k; j++) ids.push(pick(20));
+    var lSess = [], rSess = [], lBw = [], rBw = [], seenL = {}, seenR = {}, seenLB = {}, seenRB = {};
+    ids.forEach(function(id){ if (rnd() < 0.6 && !seenL[id]) { seenL[id] = 1; lSess.push(mkSess(id)); } });
+    ids.forEach(function(id){ if (rnd() < 0.6 && !seenR[id]) { seenR[id] = 1; rSess.push(mkSess(id)); } });
+    for (j = 0, k = pick(6); j < k; j++) { var d = day(); if (!seenLB[d]) { seenLB[d] = 1; lBw.push(mkBw(d)); } }
+    for (j = 0, k = pick(6); j < k; j++) { var d2 = day(); if (!seenRB[d2]) { seenRB[d2] = 1; rBw.push(mkBw(d2)); } }
+    var lPlans = rnd() < 0.4 ? [MINIPLAN()] : [], rPlans = rnd() < 0.4 ? [MINIPLAN()] : (rnd() < 0.3 ? [MYPHAT()] : []);
+    var loc = rnd() < 0.15 ? {} : L43(lSess, lBw, rnd() < 0.2 ? undefined : { schemaVersion: P.SCHEMA_VERSION, plans: lPlans, activePlanId: lPlans.length ? "p_mini" : "phat" });
+    var rem = R43(rSess, rBw, rPlans.length ? rPlans : null, rnd() < 0.3 ? null : (rnd() < 0.5 ? { profile: PB } : {}));
+    if (rnd() < 0.2) rem.sessions.push({ client_id: "bad", local_date: "2026-02-30", doc: { id: 99, date: "2026-02-30", dayId: "d1" } });   /* a refused row */
+    var r = P.mergeStores(loc, rem);
+    pair = "pair " + i + " (local " + lSess.length + "/" + lBw.length + "/" + lPlans.length + ", remote " + rSess.length + "/" + rBw.length + "/" + rPlans.length + ")";
+    if (r.ok !== true) { worst = pair + ": not ok - " + JSON.stringify(r.refused); break; }
+    var n = function(o, key){ return o && Array.isArray(o[key]) ? o[key].length : 0; };
+    if (n(r.merged.log, "sessions") < n(loc.log, "sessions") || n(r.merged.bw, "entries") < n(loc.bw, "entries") || n(r.merged.plans, "plans") < n(loc.plans, "plans")) { worst = pair + ": shrank"; break; }
+    var missing = false;
+    (loc.log ? loc.log.sessions : []).forEach(function(s){ if (r.merged.log.sessions.indexOf(s) < 0) missing = true; });
+    (loc.bw ? loc.bw.entries : []).forEach(function(e){ if (r.merged.bw.entries.indexOf(e) < 0) missing = true; });
+    (loc.plans ? loc.plans.plans : []).forEach(function(p){ if (r.merged.plans.plans.indexOf(p) < 0) missing = true; });
+    if (missing) { worst = pair + ": a local document is not in the merged set by reference"; break; }
+    if (r.added.sessions + r.kept.sessions !== rSess.length) { worst = pair + ": added + kept != remote sessions (" + r.added.sessions + "+" + r.kept.sessions + " vs " + rSess.length + ")"; break; }
+    if (r.added.bodyweight + r.kept.bodyweight !== rBw.length) { worst = pair + ": added + kept != remote weights"; break; }
+    var r2 = P.mergeStores(r.merged, rem);
+    if (JSON.stringify(r2.merged) !== JSON.stringify(r.merged)) { worst = pair + ": not idempotent"; break; }
+    if (r2.added.sessions + r2.added.bodyweight + r2.added.plans !== 0 || r2.changed.log || r2.changed.bw || r2.changed.plans) { worst = pair + ": the second merge changed something"; break; }
+    if (r.added.sessions > 0 && r.merged.log.sessions.length > 1) {   /* nothing added: the local array is untouched, its order included */
+      var ds = r.merged.log.sessions.map(function(s){ return s.date; });
+      for (j = 1; j < ds.length; j++) if (ds[j] < ds[j - 1]) { worst = pair + ": merged sessions not in date order"; break; }
+      if (worst) break;
+    }
+  }
+  a.eq(worst, null, worst || "");
+});
+
+/* ------------------------------------------------------ 16. mergeSteps */
+
+T("W3 / mergeSteps - the write sequence as data: keeps first (log, weights, plans-when-held) under recover keys with reason `merge`, then only the stores that CHANGED, log first; the keep is produced once (kept:true -> none) and never for an empty device", function(a){
+  var loc = L43([E3SESS(1, "2026-09-01")], [{ date: "2026-09-01", kg: 85 }], { schemaVersion: 6, plans: [MINIPLAN()], activePlanId: "p_mini" });
+  var mr = P.mergeStores(loc, R43([E3SESS(2, "2026-09-02")]));
+  a.deep(mr.changed, { log: true, bw: false, plans: false });
+  var L = { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} };
+  var st = P.mergeSteps(mr, L, W2KEYS, 1757700000000);
+  a.eq(st.ok, true);
+  a.deep(st.keeps.map(function(k){ return k.key; }), ["phat:v1:recover:log:1757700000000", "phat:v1:recover:bw:1757700000000", "phat:v1:recover:plans:1757700000000"]);
+  a.eq(st.keeps[0].value.reason, "merge"); a.eq(st.keeps[0].value.savedAt, 1757700000000); a.eq(st.keeps[0].value.key, "phat:v1:log");
+  a.eq(st.keeps[0].value.value, loc.log, "verbatim: the local store by reference"); a.eq(st.keeps[1].value.value, loc.bw); a.eq(st.keeps[2].value.value, loc.plans);
+  a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log"], "only the store that changed");
+  a.eq(st.writes[0].value, mr.merged.log);
+  /* once per device */
+  L.kept = true;
+  a.deep(P.mergeSteps(mr, L, W2KEYS, 2).keeps, []);
+  a.eq(P.mergeSteps(mr, L, W2KEYS, 2).writes.length, 1);
+  /* an empty device keeps nothing */
+  var mr2 = P.mergeStores({}, R43([E3SESS(2, "2026-09-02")]));
+  var st2 = P.mergeSteps(mr2, { empty: true, kept: false, blocked: {} }, W2KEYS, 3);
+  a.deep(st2.keeps, []); a.deep(st2.writes.map(function(w){ return w.key; }), ["phat:v1:log"]);
+  /* the PHAT default plan store is not kept; a held one is */
+  L.kept = false; L.plans = { schemaVersion: 6, plans: [], activePlanId: "phat" };
+  a.deep(P.mergeSteps(mr, L, W2KEYS, 4).keeps.map(function(k){ return k.label; }), ["log", "weights"]);
+  /* nothing changed: no keeps, no writes */
+  var mr3 = P.mergeStores(loc, R43([E3SESS(1, "2026-09-01")]));
+  var st3 = P.mergeSteps(mr3, { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} }, W2KEYS, 5);
+  a.deep(st3.keeps, []); a.deep(st3.writes, []);
+  /* all three changed: log, weights, plans in that order */
+  var mr4 = P.mergeStores(loc, R43([E3SESS(2, "2026-09-02")], [{ date: "2026-09-02", kg: 85 }], [MYPHAT()]));
+  a.deep(P.mergeSteps(mr4, { empty: false, kept: true, blocked: {} }, W2KEYS, 6).writes.map(function(w){ return w.label; }), ["log", "weights", "plans"]);
+});
+
+T("W3 / mergeSteps - refusals: a blocked store that would be written refuses before any step; a failed merge, a missing key set, and a merge with reason set all refuse with a sentence", function(a){
+  var loc = L43([E3SESS(1, "2026-09-01")]);
+  var mr = P.mergeStores(loc, R43([E3SESS(2, "2026-09-02")], [{ date: "2026-09-02", kg: 85 }]));
+  var L = { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} };
+  L.blocked[W2KEYS.bw] = true;
+  var st = P.mergeSteps(mr, L, W2KEYS, 1);
+  a.eq(st.ok, false); a.eq(st.message, "Nothing merged. The saved weights on this device could not be read and must not be overwritten. Reload first.");
+  L.blocked = {}; L.blocked[W2KEYS.plans] = true;
+  a.eq(P.mergeSteps(mr, L, W2KEYS, 1).ok, true, "a blocked store that is NOT written does not refuse");
+  a.eq(P.mergeSteps(P.mergeStores({ log: { demo: true } }, R43([])), L, W2KEYS, 1).message, "Nothing merged.");
+  a.eq(P.mergeSteps(null, L, W2KEYS, 1).message, "Nothing merged.");
+  a.eq(P.mergeSteps(mr, L, { log: "phat:v1:log" }, 1).message, "Nothing merged. The store keys were not given.");
+});
+
+/* ------------------------------------------------------ 17. the owner sentence */
+
+T("W3 - ownerRefusal(\"merge\") names the owner, what did not happen, and the way out; unknown owner reads `another account`; the three existing kinds are unchanged", function(a){
+  a.eq(P.ownerRefusal("merge", { id: "u1", email: "chady@example.com" }, "diana@example.com"),
+       "Not merged. This device's log belongs to chady@example.com. The backup under diana@example.com was not read and nothing on this device changed. Sign in as chady@example.com to bring it back.");
+  a.eq(P.ownerRefusal("merge", { id: "u1", email: null }, "diana@example.com"),
+       "Not merged. This device's log belongs to another account. The backup under diana@example.com was not read and nothing on this device changed. Sign in as that account to bring it back.");
+  a.eq(P.ownerRefusal("restore", { id: "u1", email: "a@b.c" }, "d@e.f"),
+       "Not restored. This device's log belongs to a@b.c. The backup under d@e.f was not read and nothing on this device changed. Sign in as a@b.c to restore.");
+  a.eq(P.ownerRefusal("manual", { id: "u1", email: "a@b.c" }, "d@e.f"), "Not backed up. This device's log belongs to a@b.c, not to d@e.f. Sign in as a@b.c to back it up.");
+  a.eq(P.ownerRefusal("auto", { id: "u1", email: "a@b.c" }, "d@e.f"), "This device's log belongs to a@b.c. Nothing was backed up to d@e.f. Sign in as a@b.c to back it up.");
+});
+
+/* ------------------------------------------------------ 18. restorePayload is unchanged by the refactor */
+
+T("W3 - restorePayload still refuses WHOLE with the same sentences (the row rules were shared, not moved): one bad session, one demo weight, one unopenable plan, a demo state row", function(a){
+  var rem = R43([E3SESS(2, "2026-09-02")], [{ date: "2026-09-02", kg: 85 }], [MINIPLAN()]);
+  var bad = E3SESS(7, "2026-09-07"); bad.entries.d1a.sets[0].r = 0;
+  rem.sessions.push({ client_id: "7", local_date: "2026-09-07", doc: JSONB(bad) });
+  rem.bodyweight.push({ local_date: "2026-09-03", doc: { date: "2026-09-03", kg: 85, demo: true } });
+  var broken = W2BROKEN(); broken.planId = "p_broken"; rem.plans.push({ plan_id: broken.planId, doc: JSONB(broken) });
+  rem.user_state.log_meta.demo = true;
+  var rp = P.restorePayload(rem);
+  a.eq(rp.ok, false); a.eq(rp.log, null);
+  a.deep(rp.problems, [
+    "session 7 Sep (d1) (row 1): entry d1a reps out of range (1..100): 0",
+    "bodyweight row 1: bodyweight row marked demo:true; demo data is never backed up as history; not restored",
+    "user_state.log_meta is marked demo:true; demo data is never backed up as history; not restored"
+  ], "the plan sentence is not reached: the payload refuses on the row problems first, as before");
+  rem.user_state.log_meta.demo = undefined; delete rem.user_state.log_meta.demo; rem.sessions.pop(); rem.bodyweight.pop();
+  var rp2 = P.restorePayload(rem);
+  a.eq(rp2.ok, false);
+  a.eq(rp2.problems.length, 1); a.match(rp2.problems[0], /^plan "Mini" \(row 1\): cannot open - exercise x_1 has no type or implement/);
+  var r = P.mergeStores(L43([]), rem);
+  a.eq(r.refused.length, 1); a.eq(r.refused[0].msg, rp2.problems[0], "one sentence, two callers");
+});
+
+/* ------------------------------------------------------ 19. the tripwire, restated for this section */
+
+T("W3 - up to the end of S43 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S43 or earlier wrote into his history");
 });
 
 
