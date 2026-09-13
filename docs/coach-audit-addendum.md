@@ -5757,3 +5757,342 @@ a property of the code rather than of this document.
 **And the standing item, which has moved.** One session is logged. This order came from lifting with
 the app, which is the first request in this project's history that did — it is the tooling asking to
 match the gym, not the gym waiting on the tooling. Build it; then log the second session.
+
+---
+
+# 21. WO-012 W1 — the kg-direct verdict on a lb card — 2026-09-13
+
+**Added 2026-09-13.** Answers `docs/work-orders/WO-012-default-unit.md` §W1 (B-126) and confirms the
+one constant in §0.1. Read with §18 (L1, L2, L3, L4), which is not reopened: the ladder is still the
+set's build, never the slot's and never a setting's. What is ruled here is one thing — **what a
+sentence that names a kg-grid load looks like on a card he reads in lb** — plus the display rounding
+and the ghost marker the PM asked about.
+
+**The uncomfortable answer first.** Nothing in this section stops the calculator on those three sets.
+A kg-direct set carries no bar, so the app cannot say `20 kg bar + 130 lb` about it without inventing
+the bar, and a lb *total* on a kg bar is never a plate count — `175.5 lb` still has 44 lb of bar
+inside it that he subtracts in his head. The bracket ruled below turns a kg→lb conversion into one
+subtraction he already knows how to do, and it does that **once per kg-direct slot**: the moment he
+logs a set through a lb card the set carries `ld`, L1's lb form prints the plates, and this section
+stops applying to that slot. That is the whole value of it, and it is enough. The rest of his first
+session's verdicts are shaped by two things this section cannot touch — B-116 (the d1a ramp) and two
+loads that read as mis-entered (21.7) — and I say so rather than let W5 tick a literal against a
+verdict that is wrong for a different reason.
+
+Rule id introduced here: **U1** (the lb reading on a kg-grid instruction). The PM's option (a) is
+accepted with two refinements: the bracket sits **on the load token, not at the end of the sentence**,
+and its figure is `displayLoad` at 0.5 lb, so the PM's `(175 lb)` is `(175.5 lb)`.
+
+`[Certain]` on every conversion below: 1 lb = 0.45359237 kg, `LB_KG`. 20 kg = 44.09 lb.
+
+## 21.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | The kg-direct verdict on a lb card | **Option (a), refined.** The kg grid is untouched; the load token the rule tells him to build gains the lb reading in brackets, immediately after the kg: `Go to 79.5 kg (175.5 lb) next session.` The bracket is `displayLoad(x, "lb")` of the **same number printed** — never a second rounding, never a 5 lb snap. Report loads (`7 reps at 77 kg`, the `Sets not matched` list, `your 77 kg triple`) stay kg; they are on his rows in lb already. Rule **U1**, 21.1. |
+| 1 | Option (b), the lb ladder | **Rejected.** A 5 lb grid on a *total* is meaningless on a kg bar (44.09 + 5n is never a multiple of 5), so `175 lb` is exactly as unbuildable as `79.5 kg` while pretending not to be; and it would make the ladder a function of a display setting, which B-58 and L1 both forbid. 21.5. |
+| 1 | The card's default bar as the build | **Rejected.** `prefs.gym.ex`/`defaultMode`'s bar is a default he has not confirmed, not a fact about the set. L1's principle — a rule names a build only from the set's own components — holds. Silence over a guessed plate count. 21.5. |
+| 2 | `displayLoad` at 0.5 lb | **Confirmed**, one constant, ties down (`roundGrid(w / LB_KG, 0.5)`). 0.5 lb = 0.227 kg, coarser than the 0.1 kg store, finer than any plate step, and the only rounding a lb-bar total (`137.5 lb`) survives intact. The verdict bracket **calls the same function** — two roundings on one screen is a defect, not a choice. 21.3. |
+| 3 | A conversion marker on the ghost | **None.** The row's `= 77 kg` total is the marker, and a glyph he learns to ignore is worse than no glyph. 21.4. |
+| — | L1's lb-built form | **Unchanged, byte for byte, on every card unit.** `Go to 83.5 kg next session — 20 kg bar + 140 lb.` never gains a bracket: the build phrase already is the lb reading. 21.6. |
+| — | The kg card | **Byte-identical to today.** `unit` absent or `"kg"` → every string is `main`'s (WO-012 D6). |
+
+---
+
+## 21.1 Rule U1 — the lb reading on a kg-grid instruction
+
+```
+Rule: U1 — the lb reading on a kg-grid instruction
+Applies to:   Every sentence in which a rule tells him what to LOAD and the
+              figure was computed on the KG-DIRECT path (L1's build() = KG-DIRECT):
+                P1.1 / H1.1 `Drop to`     P1.2 `Repeat`      P1.3 / H1.2 `Go to` and `Add`
+                P1.4 `Go to` and `Add`    P1.5 `Stay at`     H1.4d `Add a rep or`
+                SP1's target (kg-direct source, and L3's bar-above-band fallback)
+                speedFlagText's `Drop to` when the target came from that path.
+              Session screen, Summary, the speed-work card. Every role.
+              NOT: any sentence whose working-load set is LB or KG-ON-BAR (L1's
+              form is unchanged); the I2 second line; report tokens (below).
+Inputs:       The verdict's kg figure x as already computed and rounded by the
+              rule (r1, the 2.5 kg grid, w + 2.5 — nothing here changes x).
+              `unit`: the card's display unit as cardModeFor(...).au resolves it
+              at render time — "kg" | "lb". Absent or unreadable → "kg".
+              No history, no minimum: this is a reading of a number the rule
+              has already decided to print.
+Logic:        instr(x, unit) — the load token at an INSTRUCTION site:
+                unit !== "lb"                 -> `{kg(x)} kg`                      (today, byte for byte)
+                unit === "lb", x > 0          -> `{kg(x)} kg ({displayLoad(x, "lb")})`
+                x === 0                       -> loadWord (Z2): `bodyweight` / `zero load`, no bracket
+                displayLoad not a number      -> `{kg(x)} kg`, no bracket, never `(NaN lb)`
+              The bracket is ON THE TOKEN — `79.5 kg (175.5 lb)` — wherever the
+              token sits in the sentence. Not at the end. `Stay at 77 kg until
+              all 3 sets reach 5 reps (170 lb).` reads as reps and is wrong.
+              REPORT TOKENS ARE NOT INSTRUCTION SITES and stay kg on every card:
+                `{n} reps at {w} kg` (heads of P1.1/P1.3/H1.1), the `Sets not
+                matched: a / b / c kg` list, `65–70% of your {R} kg triple`,
+                `{w} kg is not speed work`. They describe sets that are on his
+                rows, which the card renders in lb through displayLoad already.
+              THE INVARIANT (W5's meta-test): with unit "lb" and a kg-direct
+              working set, delete the one substring ` ({N} lb)` and the string
+              is byte-identical to the unit-"kg" string. Exactly one bracket
+              when an instruction load > 0 is named; zero otherwise. N ===
+              displayLoad(K, "lb") for the K in the `K kg` immediately before it.
+              A lb-built or kg-on-bar set: the unit-"lb" string EQUALS the
+              unit-"kg" string. No bracket ever follows an em dash.
+Output copy:  d1a Bent-over row {s:3, lo:3, hi:5, k:"power"}, bb, kg-direct, unit "lb":
+              P1.4  `Top of range on all 3 sets. Go to 79.5 kg (175.5 lb) next session.`
+              P1.3  `7 reps at 77 kg on every set. Too light. Go to 82 kg (181 lb).`
+              P1.1  `2 reps at 77 kg. Below the range. Drop to 72.5 kg (160 lb) next session.`
+              P1.2  `Sets not matched: 77 / 77 / 75 kg. Repeat 77 kg (170 lb) until all 3 sets reach 5 reps.`
+              P1.5  `Stay at 77 kg (170 lb) until all 3 sets reach 5 reps.`
+              Zero  `Top of range on all 2 sets at bodyweight. Add 2.5 kg (5.5 lb) next session.`
+              H1.4d `Volume down 10%. Add a rep or 2.5 kg (5.5 lb) next time.`
+              SP1   `52.5 kg (115.5 lb). 65–70% of your 77 kg triple. Rest 60–90 s. Fast, never grinding.`
+              The I2 line is unchanged: `If 2.5 kg per DB is not available, add
+              reps up to 7 first, then jump.` It is a conditional about the step
+              named one line above, and `If 2.5 kg (5.5 lb) is not available`
+              reads as if 5.5 lb were a plate.
+Not enough data: not applicable — the rule reads a number already printed.
+              `unit` unreadable → kg form. displayLoad NaN → kg form. The
+              bracket is never the only thing that changes a rule's id, tone
+              or kg figure.
+```
+
+**Why the token and not the sentence end.** `[Certain]` the PM's `Go to 79.5 kg next session (175 lb).`
+works for `Go to` and `Drop to`, where the load is the last number, and fails for `Stay at` and
+`Repeat`, where `until all 3 sets reach 5 reps` follows — a trailing `(170 lb)` after `5 reps` is
+read as a rep or a total. One placement for every shape, or the implementer picks per sentence and
+QA cannot state the invariant. On the token it is the same number twice, side by side, which is what
+a reading aid is.
+
+**Why report tokens stay kg.** `[Opinion]`, reasoned: the report clause describes what he just did,
+and the rows directly above the verdict already show it in lb through `displayLoad` (WO-012 §0.1).
+Bracketing every kg token puts three brackets in `Sets not matched: 77 / 77 / 75 kg` and pushes P1.3
+past a 400 px line, for numbers he is not going to load. The bracket marks the one number he acts on.
+The L1 lb-built form makes the same choice — `7 reps at 81.2 kg on every set` is kg there too, with
+the plates only on the instruction — and a lb card must not have two grammars.
+
+**Why `Repeat` and `Stay at` get the bracket when L1 gives them no build phrase.** `[Certain]` they
+are different things. A build phrase is *new information* — the plates, read from `ld`, which the kg
+total hides; on P1.2/P1.5 the load is on his rows and the phrase would be a duplicate. A bracket is
+the *same number in the unit he reads*, and on a lb card the rows show that unit, so the bracket on
+`Stay at 77 kg (170 lb)` matches the ghost's `170 lb` exactly — a check QA can run. L1 example 11's
+assertion (no em dash on P1.2/P1.5) still holds.
+
+**Why the zero and H1.4d steps take the bracket rather than a lb step.** `Add 2.5 kg (5.5 lb)` is
+honest and he will add 5 lb; `Add 5 lb` would be the app choosing a ladder from the display setting,
+which is the thing B-58 ruled out. The session after, the set carries `ld` and L4 prints `Add 5 lb`
+on its own. `[Opinion]`: one rule with no exception list is worth the one odd-looking line.
+
+---
+
+## 21.2 Worked examples — his three loads
+
+The acceptance criterion names 77, 86 and 51 kg. **The reps in the dispatch do not match those
+loads** (`d1a 70×10 top set; d1b 86×5; d1d 81×3` — B-116 records d1a as a 20 → 70 kg ramp), and the
+fixture on disk holds placeholders, so the examples below put each load on the slot it was named for
+with reps chosen to hit each P1 case. They are literals to pin on fixtures, not observations of his
+session; 21.7 says what his session actually prints. Every set is `{w, r}` with no `ld`; `unit` is
+`"lb"` unless stated. Each `kg` form is what the same fixture prints with `unit` absent, byte for byte.
+
+**77 kg — `d1a` Bent-over row {s:3, lo:3, hi:5, k:"power"}, `bb`.**
+
+1. **P1.4, the discriminating case.** `77 × 5/5/5` → load 77 → 77 + 2.5 = 79.5 → 175.2675 lb →
+   `Top of range on all 3 sets. Go to 79.5 kg (175.5 lb) next session.`
+   **Must not print** `(175 lb)` (that is 1 lb or 5 lb rounding; 175.2675 is nearer 175.5),
+   `Go to 175 lb`, or any ` — ` build phrase. kg card: `Top of range on all 3 sets. Go to 79.5 kg next session.`
+2. **P1.3, G1.** `77 × 7/7/7` → excess 2; raw round2p5(3.85) = 5, cap round2p5(15.4) = 15 → step 5 →
+   82 kg → 180.779 → `7 reps at 77 kg on every set. Too light. Go to 82 kg (181 lb).` No I2 line (`bb`).
+   **Must not print** `7 reps at 77 kg (170 lb)` — a report token.
+3. **P1.1, the drop.** `77 × 2`, `77 × 4`, `77 × 5` → round2p5(73.15) = 72.5 < 77 ✓ → 159.835 →
+   `2 reps at 77 kg. Below the range. Drop to 72.5 kg (160 lb) next session.`
+4. **P1.2.** `77 × 5`, `77 × 5`, `75 × 5` → R 77 > load 75 →
+   `Sets not matched: 77 / 77 / 75 kg. Repeat 77 kg (170 lb) until all 3 sets reach 5 reps.`
+   One bracket. **Must not print** `77 / 77 / 75 kg (170 / 170 / 165.5 lb)`.
+5. **P1.5.** `77 × 5/5/4` → `Stay at 77 kg (170 lb) until all 3 sets reach 5 reps.` The `170 lb`
+   equals `displayLoad(77, "lb")`, which is the ghost's figure on the same card — assert equal.
+6. **SP1 from it.** A speed slot whose source is this `77 × 3` within 28 days → round2p5(51.975) = 52.5
+   → 115.7427 lb → `52.5 kg (115.5 lb). 65–70% of your 77 kg triple. Rest 60–90 s. Fast, never grinding.`
+   Near-tie: 0.2427 to 115.5, 0.2573 to 116 — compute it. **Must not print** `your 77 kg (170 lb) triple`.
+   Typing 81 on that card: `81 kg is not speed work. Drop to 52.5 kg (115.5 lb).`
+
+**86 kg — `d1b` Weighted pull-up {s:2, lo:6, hi:10, k:"power"}, `bodyweight`** (w is the ADDED load
+— see 21.7 before believing this number).
+
+7. **P1.4.** `86 × 10/10` → 88.5 → 195.109 → `Top of range on all 2 sets. Go to 88.5 kg (195 lb) next session.`
+   then the I2 line unchanged: `If 2.5 kg is not available, add reps up to 12 first, then jump.`
+8. **P1.1.** `86 × 5`, `86 × 8` → C[0].r 5 < 6 → round2p5(81.7) = 82.5 → 181.881 →
+   `5 reps at 86 kg. Below the range. Drop to 82.5 kg (182 lb) next session.`
+9. **P1.5.** `86 × 10/9` → `Stay at 86 kg (189.5 lb) until all 2 sets reach 10 reps.` (189.5975 → 189.5.)
+10. **P1.3.** `86 × 12/12` → raw round2p5(4.3) = 5, cap round2p5(17.2) = 17.5 → step 5 → 91 →
+    200.6207 → `12 reps at 86 kg on every set. Too light. Go to 91 kg (200.5 lb).` + the I2 line.
+
+**51 kg — `d1d` Flat DB press {s:3, lo:3, hi:5, k:"power"}, `db`** (per DB by I1; see 21.7).
+
+11. **P1.4.** `51 × 5/5/5` → 53.5 → 117.947 → `Top of range on all 3 sets. Go to 53.5 kg (118 lb) next
+    session.` then `If 2.5 kg per DB is not available, add reps up to 7 first, then jump.` The target
+    line keeps ` · per DB`; the bracket does not repeat it.
+12. **P1.3.** `51 × 7/7/7` → raw round2p5(2.55) = 2.5, cap 10 → step 2.5 → 53.5 →
+    `7 reps at 51 kg on every set. Too light. Go to 53.5 kg (118 lb).` + the I2 line.
+13. **P1.1.** `51 × 2`, `51 × 4`, `51 × 5` → round2p5(48.45) = 47.5 → 104.7196 →
+    `2 reps at 51 kg. Below the range. Drop to 47.5 kg (104.5 lb) next session.`
+14. **P1.5.** `51 × 5/5/4` → `Stay at 51 kg (112.5 lb) until all 3 sets reach 5 reps.`
+
+**Edges and failing cases.**
+
+15. **Zero, kg-direct, lb card.** `d1c` `{w: 0, r: 10} × 2` → `Top of range on all 2 sets at
+    bodyweight. Add 2.5 kg (5.5 lb) next session.` + the I2 line. **Must not print** `Add 5 lb`.
+16. **Drop to zero.** `d1c` `{w: 2.5, r: 4}`, `{w: 2.5, r: 6}` → round2p5(2.375) = 2.5, not < 2.5 →
+    2.5 − 2.5 = 0 → `4 reps at 2.5 kg. Below the range. Drop to bodyweight next session.` No bracket:
+    there is no kg token. **Must not print** `(0 lb)`.
+17. **Hold, no load named.** `d1c` `{w: 2, r: 4}`, `{w: 2, r: 6}` → drop 2 − 2.5 < 0 → `4 reps at 2 kg.
+    Below the range. Hold here until all 2 sets reach 6 reps.` Zero brackets; `2 kg` is a report token.
+18. **H1 on a kg cable stack.** `d3c` `{w: 35, r: 13} × 3` → `All sets above 12. Go to 37.5 kg (82.5 lb)
+    next session.` + `If 2.5 kg is not available, add reps first, then jump.` And with
+    `ld: {add: 35, au: "kg"}` on a lb card — L1 reads it as KG-DIRECT, so the same string; assert equal.
+19. **H1.1.** `d5b` `{w: 25, r: 6}`, `25 × 9`, `25 × 9` → round2p5(23.75) = 22.5 → 49.604 →
+    `6 reps at 25 kg. Below the 8–12 range. Drop to 22.5 kg (49.5 lb).`
+20. **H1.4d.** `d5b` last `25 × 10/10/10`, now `25 × 9/9/9` → `Volume down 10%. Add a rep or 2.5 kg
+    (5.5 lb) next time.`
+21. **Failing — the lb-built set on a lb card.** §18.1 example 1 (`135 lb × 5/5/5` on the 20 kg bar),
+    `unit: "lb"` → `Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb.`
+    Byte-identical to `unit: "kg"`. **Must not print** `83.5 kg (184 lb)`. Assert: no `(` in any
+    string whose working set has an `ld` that recomposes.
+22. **Failing — the kg card.** Every fixture above with `unit` absent, `"kg"`, `""`, `7`, `"pounds"` →
+    today's string. `"pounds"` is not `"lb"`; it is not a reason to print a bracket.
+23. **Failing — the card's default bar.** `d1a` kg-direct `77 × 5/5/5` on a lb card whose
+    `defaultMode` carries the profile's 20 kg bar → example 1's string exactly. **Must not print**
+    ` — 20 kg bar + 130 lb`, ` — 20 kg bar + 131.4 lb`, or `Go to 79 kg`. The mode's bar is not the
+    set's bar.
+
+---
+
+## 21.3 `displayLoad` at 0.5 lb — confirmed
+
+**Constant: 0.5 lb, nearest, ties down.** `displayLoad(w, "lb") = String(roundGrid(w / LB_KG, 0.5)) + " lb"`
+— `ceil(x / 0.5 − 0.5) × 0.5`, the same shape as `round2p5` and the 5 lb grid, so there is one
+rounding convention in the file. `170 lb`, `112.5 lb`, never `170.0 lb`. `unit === "kg"` returns
+`kg(w) + " kg"`, byte for byte.
+
+`[Certain]` 0.5 lb is 0.227 kg, coarser than the 0.1 kg the store holds, so no displayed figure
+claims a precision `w` lacks. `[Certain]` it is finer than every plate step (2.5 lb per side = 5 lb;
+1.25 kg per side = 2.5 kg), so no two grid loads collide on display. `[Certain]` a total built on a
+**lb** bar — `45 lb + 92.5 lb = 137.5 lb`, w 62.4 — comes back as `137.5 lb`; at 1 lb it would print
+`137 lb` or `138 lb` for plates he can see. `[Opinion]` the bracket in U1 must use this function and
+not a rounder one: `Stay at 86 kg (190 lb)` above a row reading `189.5 lb` is the same load shown as
+two numbers, and he will read it as an error in the app rather than in the rounding. One constant,
+one call site, every surface.
+
+**On a kg bar the lb total is never round** — `20 kg + 130 lb` is `174.1 lb`, displayed `174 lb`. That
+is not a rounding problem, it is what a kg bar does to a lb total, and it is why the build phrase,
+not the total, is the honest lb form for an `ld`-carrying set (L1). Flagged to W2 in 21.7 #4.
+
+## 21.4 The ghost marker — none
+
+**The `= 77 kg` row total is the marker.** `Last 170 lb × 5` from `w: 77` needs no glyph, asterisk or
+`≈`. `[Opinion]`, reasoned: the figure is within 1 lb of what he loaded (he converted a plate load
+to whole kg by hand; the app converts it back — 21.7 #1), a marker is one more symbol on a row he
+reads with chalk on his thumb, and its meaning ("this was typed in kg") stops mattering the session
+after, when the row is a lb set. If the ghost is ever wrong by a plate, the cause is the kg he typed,
+not the conversion, and no marker fixes that.
+
+## 21.5 Why not (b), and why not the card's bar
+
+**(b) — ladder in lb from a converted base** (`77 → 169.76 → 170 → 175 lb`). Rejected on three counts.
+`[Certain]` a 5 lb grid on a total assumes a lb bar or no bar; on his 20 kg bar every total is
+44.09 + 5n, so `175 lb` is not buildable and the sentence would claim otherwise — worse than
+`79.5 kg`, which claims nothing about plates. `[Certain]` it makes the ladder a function of
+`prefs.gym.unit`, which is a display setting; B-58 (the increment is the rule's, not a setting's) and
+L1 (the grid is the set's build) both say no, and D6's byte-identity would then hide a real fork in
+the engine behind a preference. `[Certain]` G1's percentage step would have to be recomputed on the
+lb grid for a set that has no lb grid, and the two paths would disagree by up to a full step at
+light loads. If Chady overrules this, the grid is 5 lb on the **converted total**, G1 runs on
+`w / LB_KG` with `grid = 5`, and the I2 line becomes the generic 5 lb line — one branch in `buildOf`
+returning a synthetic LB build with no bar. I would not do it.
+
+**(c) — read the card's mode bar** (`defaultMode`'s 20 kg on a `bb` slot) and print `Go to 79 kg next
+session — 20 kg bar + 130 lb.` This is the tempting one, because it is `[Likely]` what he will
+physically do. Rejected: `[Certain]` the mode's bar is a default nobody confirmed (WO-012 §3 flags it
+as the risk it is), and the build phrase is the one string the app promises is a fact. The session
+after, the set carries the bar he actually used and L1 prints it. One subtraction, once, against a
+phrase that is sometimes a fabrication: silence over a guessed plate count, §18's own rule.
+
+## 21.6 L1's lb-built form — unchanged
+
+Stated for the acceptance criterion: **a working-load set whose `ld` recomposes and is LB or
+KG-ON-BAR prints L1's form on every card unit, byte for byte.** `Go to 83.5 kg next session — 20 kg
+bar + 140 lb.`, `Drop to 76.7 kg next session — 20 kg bar + 125 lb.`, `All sets above 12. Go to 27.2
+kg next session — 60 lb per DB.`, L3's `54 kg — 20 kg bar + 75 lb. 65–70% of your 81.2 kg triple.`,
+L4's `bodyweight + 50 lb`. No bracket, no second figure. The build phrase is the lb reading. Also
+unchanged on any unit: P1.2/P1.5 on a lb-built set (`Stay at 81.2 kg until all 3 sets reach 5
+reps.` — 18.1 example 5 — takes no bracket because the set is not kg-direct; the ghost beside it is
+the lb set itself).
+
+## 21.7 Found while in here
+
+1. **What 77 and 86 most likely were.** `[Likely]` 77 kg is `20 kg bar + 125 lb` = 76.7 kg, rounded
+   up by hand; 86 kg is `20 kg bar + 145 lb` = 85.8 kg. Both land within 0.3 kg of a real plate load
+   on his bar. 51 kg does not: `20 kg + 65 lb` = 49.5, `20 kg + 70 lb` = 51.8 — so either it was not
+   on the bar or it was not converted the same way. Not a ruling; it is why the ghost's `170 lb` is
+   within a pound of the truth and why a marker (21.4) would add nothing.
+2. **`d1b` at 86 kg is not a weighted pull-up.** Z1/Z2 define `w` on a `bodyweight` slot as the
+   ADDED load. 86 kg hanging from a belt at 85 kg bodyweight is a 171 kg pull-up. `[Likely]` he
+   logged his bodyweight, or bodyweight plus a plate. Read literally, P1 prints `Drop to 82.5 kg
+   (182 lb) next session.` — an instruction to hang 182 lb from a belt. **W1 does not fix this and
+   W5 must not tick it.** The literal in example 8 is correct arithmetic on a wrong fact; the fact is
+   Chady's to correct (21.9 #1).
+3. **`d1d` at 81 kg is not a per-dumbbell load.** I1 makes the `db` slot's load per DB; 81 kg per hand
+   is a 178 lb dumbbell. `[Likely]` a pair total (2 × 90 lb = 81.6 kg). Same status as #2: the
+   verdict will be arithmetically right on a number that means something else. 21.9 #1.
+4. **The ghost on a kg-bar lb card asks for a subtraction the bracket cannot remove.** A kg-direct
+   ghost is a *total* — `Last 170 lb × 5` — and a lb card with the default 20 kg bar takes plates, so
+   `170` typed into the plates field is 214 lb. This is the `+`-seed question (W2 #6) seen from the
+   verdict: whatever the ghost seeds, it must be the number that goes in the field the card is showing,
+   and on a card with a bar that is not the total. W2's to rule; flagged because 21.1's bracket is the
+   same total and the same subtraction. For an `ld`-carrying set the ghost should carry the build
+   (`130 lb` on the bar), not the converted total — 21.3's last paragraph.
+5. **`speedFlagText` is a verdict site the order did not list.** `81 kg is not speed work. Drop to
+   52.5 kg.` names a load to build. U1 covers it (example 6); W3's site list should include it.
+6. **His real `d1a` verdict is B-116's, in any unit.** Five ramping sets on a 3-set slot: P1's C is the
+   first three completed sets and the working load is their `min`, so the verdict on his only session
+   is computed from the warm-up and prints `Sets not matched` or a `Repeat` at a warm-up load — with a
+   bracket after this order, still wrong before it. W5's "string observed against his real session"
+   is a *display* check (the bracket is present and recomputes) and not evidence the advice is right.
+   B-116 stays the first question for the next planning pass, and it is mine.
+
+## 21.8 What changes, by work item
+
+| Site | Owner | Moves? | What |
+|---|---|---|---|
+| `displayLoad(w, unit)` | W3 | **new** | 21.3: `roundGrid(w / LB_KG, 0.5)`, `String(n) + " lb"`; kg path `kg(w) + " kg"`. Zero through `loadWord` (WO §W3). |
+| `instr(x, unit)` (name is W3's) | W3 | **new** | U1's token. Called at: P1.1/H1.1's `Drop to`, P1.2's `Repeat`, P1.3/P1.4's `Go to`/`Add`, P1.5's `Stay at` (**not** `hold`'s `word` when it is a report — the same `word` string appears in P1.3's head, which stays kg; build the hold sentence from `instr`, the head from `loadWord`), H1.2's `Go to`/`Add`, H1.4d's step, SP1's kg-direct target (both branches at 6679 and 6715), `speedFlagText`'s target when kg-direct. |
+| `verdictPower`, `verdictHyp`, `tooHeavy`, `speedLoad`, `speedFlagText` | W3 | **move** | Take `unit` on the ctx; `unit` absent → today's strings. The `b` branches (`ld` present) do not read `unit` at all. |
+| `incrementLine` | — | **stays** | The I2 line is unchanged on every unit. |
+| Report tokens (`loadWord` heads, the P1.2 list, `your R kg triple`, `w kg is not speed work`) | — | **stay** | kg on every card. |
+| Suite | W5 | — | Examples 1–23 as tests, every `Must not print` its own assertion; the invariant in U1 as a meta-test over every fixture in the existing kg-direct differential (strip ` (N lb)` → equals the kg string; N recomputes from the preceding K; ≤ 1 bracket; 0 brackets when no instruction load > 0; 0 brackets on any `ld`-carrying set); `displayLoad(77, "lb") === "170 lb"`, `(51) === "112.5 lb"`, `(79.5) === "175.5 lb"`, `(52.5) === "115.5 lb"`, `(62.4) === "137.5 lb"`, `(60.8, "kg") === "60.8 kg"`. |
+
+Not in this order, restated: B-116 (the warm-up ruling — 21.7 #6), B-114 (`+ 0 lb`), B-111
+(`Swapped`), B-127 (bodyweight in lb), the `+`-seed on a card with a bar (W2 #6 — 21.7 #4).
+
+## 21.9 Needs from Chady
+
+1. **What were `d1b` 86 and `d1d` 81?** Added load on the pull-up, or bodyweight? Per dumbbell, or
+   the pair? Until answered, every verdict on those two slots is arithmetic on a number that means
+   something other than what the rule reads. B-05 (edit a saved session) is the fix once he says.
+2. **The bar he rows and benches with is the 20 kg bar** (B-117 #2). 21.7 #1's reading of his
+   numbers assumes it; nothing in U1 does.
+3. **Nothing else.** U1 needs no answer from him; it is the form until his next lb-logged set, then
+   it is gone from that slot.
+
+## 21.10 Verdict
+
+**Sign off the PM's option (a) with two changes**: the bracket sits on the load token
+(`Go to 79.5 kg (175.5 lb) next session.`, `Stay at 77 kg (170 lb) until all 3 sets reach 5 reps.`),
+and its figure is `displayLoad` at 0.5 lb, ties down — so `175.5`, not `175`. Report tokens stay kg,
+the I2 line is untouched, a lb-built set's L1 form is byte-identical on every card, and a kg card is
+byte-identical to `main`. Options (b) and (c) are rejected on the record in 21.5; the brief does not
+settle anything here that needed settling — it fixes stored kg, and this is display.
+
+**And the standing item.** The three loads this section was asked to rule on are one session, and
+two of the three are numbers I cannot read as the lift they are logged under. The app now shows
+him lb; the next thing it needs is a second session logged through a lb card, at which point every
+slot he touches leaves this section behind.
