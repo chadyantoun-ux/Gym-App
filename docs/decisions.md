@@ -2867,3 +2867,75 @@ destroyed). One phone today; revisit as newer-`client_updated_at`-wins when a se
 
 **Not ruled:** which of H1–H7 it was. That line is written here by the main session when W0 or W1 answers it, and
 not before. The design complaint (*"dude what is this design ridiculous"*) is B-120, parked until he says which part.
+
+## 2026-09-13 — WO-011 W5: the merge passes every data criterion and the paint rule as observed; not a pass for release until one backend commit clears three named reds; P14's prefs write is accepted; two stale-memory findings filed, neither blocking
+
+**Context.** W3 (`ccad6a4`) and W4 (`a80ea09`) on `wo-011-merge`, verified by `qa-engineer` against the live project as
+`diana@saba.com` (0 / 0 / 0 / 0 at the start; every row her account holds afterwards is listed in the W5 report for
+deletion). `tests.html` gains S44 (11 tests) and re-pins two lines in S43. `diag.html` is `main @ d27e7cd` only, so its
+zero-write check ran on a copy served from the rig's origin, not from this branch. The cause of B-119 is still not
+confirmed; that, not this pass, gates the deploy.
+
+**Ruled: the suite reads 842 / 839 / 3 on this branch, and the three reds are the gate, not a carried failure.**
+
+1. `PHAT.ownerRefusal("merge")` is pinned to UX spec §20.3's R-d **verbatim**, in S43 (the two literals) and in S44 (the
+   shape). The sentence to swap in, with the §18.5 substitution for an unknown owner:
+   *This device's log belongs to {owner}. The backup under {me} was not read and nothing here changed. Sign in as
+   {owner} to restore what is missing.* / *…belongs to another account. … Sign in as that account to restore what is
+   missing.* No `Not merged.` prefix (that is R-a/R-b/R-c's shape; §20.3 rules it out for M-c), no `merge` or `pull` in
+   the string (§20.1). `index.html` prints exactly this today from its own `mergeRefusal()`; F8 observed it in
+   `#bk-status`. One sentence, one owner: backend swaps the string in `logic.js`; frontend's copy becomes a caller or
+   goes.
+2. `mergeCounts` is pinned for all seven non-zero combinations, the zero case, the §20.5 first-open sentence and a
+   missing argument, against `PHAT.mergeCounts` — which does not exist. It is `index.html:6823`, pure, and this page
+   cannot reach it (B-20). §20.2 says "one function, tested for all seven non-empty combinations" and offers "W3
+   exports one". The seven sentences were observed on screen from real rows (toast and `#bk-check`), so the move is a
+   move with its strings already pinned.
+
+   Both are one backend commit on `logic.js` (with the `index.html` call-site change); nothing else in the suite moves.
+   Per WO-003 Decision 1 the reds are not renamed, softened or skipped: the tripwires forbid it and the whole point of
+   pinning before the fix is that the fix is provably a fix.
+
+**Ruled: W4's P14 deviation is accepted and recorded.** §20.4 P14 says a merge that adds nothing writes nothing. W4
+honours that for the three data stores — observed: `phat:v1:log`, `phat:v1:bw`, `phat:v1:plans` byte-identical, no
+`render()`, no toast — and writes `prefs.merge.at` on every completed check so Settings' *Checked the backup {ago}* is a
+fact and not a guess. Accepted because the sentence would otherwise lie on every quiet morning, `phat:v1:prefs` is not
+history (CLAUDE.md §3.3 is about numbers), and the write is one `save()` of a store the app already rewrites on every
+setting change. The spec's "nothing written" is read as "nothing written to the data stores" from here on.
+
+**Observed and passing (the record is on the page under "Already proven", item 37).** F1–F10 as the work order words
+them, including F6 with a real save in a second tab during a held pull; every P-table row (P1–P9, P11–P14; P10 as the
+§20.5 first run); the manual control allowed on a draft and refused on a plan working copy; the six attacks. The
+lost-phone play in Chady's exact shape — the sessions array emptied by hand, a draft open with a set typed — comes back
+on the next open with one toast, the header right, `recover:log` exactly once, the draft byte-identical and still
+offered, and the push a signature no-op. **B-76 is reproduced exactly**: a tab that booted empty and saved one session
+wrote one session over ten (`finish()` writes `S.sessions.concat` from memory), and the next open restored the union.
+The net holds when the overwritten session had been pushed; S44 pins the hole when it had not (a session logged offline
+and overwritten before its push is on no row, and the merge cannot reach it). **The merge is not a fix for B-76.**
+
+**Two findings, same class (memory over disk), filed for the PM, neither a data-store loss:**
+
+- **The two-tab race leaves one tab stale.** Both tabs booted with the wiped log; the tab whose post-pull disk read
+  already held the other tab's write merged nothing, adopted nothing, still read *Nothing logged yet*, and its open push
+  stamped *Backed up 0 sessions and 2 weights* from memory. Disk kept every session; the server keeps every row; the
+  keep exists once. But that tab is now the B-76 stale page, made by the merge itself. Recommended fix, one clause in
+  `mergeOnOpen`: when the second disk read shows a log that is not what this document holds in memory, adopt the disk
+  (memory must never lag disk, B-74's rule in the other direction). Not blocking on one phone; do it with B-76.
+- **The merge's prefs write is from memory.** In F6 the second tab's push stamped `prefs.backup` (n+1, new signature)
+  during the first tab's held pull; the first tab's merge then wrote `prefsPayload()` from its own `S.prefs` and put the
+  older stamp back. Prefs only, the log untouched, self-healing on the next open (the older signature makes the push
+  re-send; the upsert is idempotent). The same pattern could re-spend the one keep if `keptAt` were stamped by the
+  other tab. P3, with the above.
+
+**Two document notes, not defects.** (i) `{k} item(s)` in M-a′ / M-b′ counts validator *sentences*, so one row with
+two faults reads *2 items*; §20.2 says "item" for a server document. Cosmetic; UX's call whether the count is per
+document. (ii) `diag.html` as deployed has no COPY ALL button (W1 criterion 7 — it says *Screenshot it and send it*),
+reads display mode from `navigator.standalone` only, and names an unreadable store `UNPARSEABLE` rather than
+`unparseable (1 byte)`. Its one W5 criterion — zero writes — holds byte for byte.
+
+**Environment note.** The project rate-limited the rig's pull rate twice (a `429` with no CORS headers, which the
+browser reports as a blocked fetch and the app as *Could not check the backup: … Nothing here changed.*, M-f). Nothing
+changed on disk and the next merge succeeded. Not a defect; it is the offline-first path holding under a network fault,
+and it says the merge on `online` must never be assumed to have landed.
+
+**Diana's password is exactly what it was** — a fresh password sign-in through REST succeeded after the run.

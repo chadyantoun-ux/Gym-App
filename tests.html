@@ -55,7 +55,26 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 831 / 831 / 0, no skips.</b> <b>S43</b> (WO-011 W3, the merge, 2026-09-13) added 29: <code>PHAT.mergeStores</code>
+<b>Today: 842 / 839 / 3, no skips &mdash; three reds, all named, all one backend commit away.</b> <b>S44</b> (WO-011 W5, the QA pass on the
+merge, 2026-09-13) added 11 and re-pinned two lines in S43. The reds: (1) S43&rsquo;s <code>ownerRefusal("merge")</code> and (2) S44&rsquo;s
+<b>R-d</b> shape test both pin UX spec &sect;20.3&rsquo;s sentence verbatim &mdash; <i>This device's log belongs to {owner}. The backup under
+{me} was not read and nothing here changed. Sign in as {owner} to restore what is missing.</i> &mdash; where <code>logic.js</code> still
+carries W3&rsquo;s placeholder (<i>Not merged. &hellip; to bring it back.</i>); <code>index.html</code> prints R-d from its own
+<code>mergeRefusal()</code>, which is what F8 observed on screen. One sentence, one owner: backend swaps the string, frontend&rsquo;s copy goes.
+(3) <b><code>mergeCounts</code></b> is pinned for all seven non-zero combinations and the zero case against <code>PHAT.mergeCounts</code>,
+which does not exist: the function is <code>index.html:6823</code> and this page cannot reach it (B-20). The seven sentences were observed on
+screen in the W5 browser run (the toast and <code>#bk-check</code> from real rows), so the extraction is a move with its expected strings
+already pinned. Also in S44: a <b>second 200-pair fuzz from its own generator</b> (mulberry32; mixed id types, duplicate local ids, deleted and
+refused rows, <code>ld</code> sets, Feb 29, both plan stores; never shrinks, every local element by reference <em>and by count</em>, every
+overlap the local reference, idempotent, neither input mutated, <code>mergeSteps</code> never writes an unchanged store and a keep is only ever
+the local reference); <b>his session three ways through the wire shape</b> (<code>select(client_id,local_date,doc)</code>, JSONB order):
+the lost phone (23 sets, 6 entries, the S42 hash, one write and no keep, the re-push a signature no-op), the phone that has it (same object,
+no keep, no write &mdash; P14&rsquo;s data half), and <b>both directions</b> of a same-id difference including <b>B-121</b> pinned as the
+accepted cost (the server&rsquo;s 24th set never lands, named under <code>kept.differ</code>); the <b>B-76 net</b> as data (a stale
+document&rsquo;s <code>sessions: []</code> write + the server &rarr; his session back; and <b>the hole</b>: a session that was never pushed is
+on no row and the merge cannot reach it &mdash; pinned so nobody calls the merge a fix for B-76); keep-once as a three-open sequence; and
+rows that are not what <code>pull()</code> promises (a JSON-string doc, nulls, a number, no id, <code>client_id</code> &ne; <code>doc.id</code>
+&mdash; the doc&rsquo;s id is the key &mdash; and 1000 rows in well under the budget). Before it: <b>831 / 831 / 0.</b> <b>S43</b> (WO-011 W3, the merge, 2026-09-13) added 29: <code>PHAT.mergeStores</code>
 &mdash; union by id / date / planId, local wins byte for byte and by reference, nothing removed, the never-shrinks invariant asserted inside
 the function &mdash; pinned on M1&ndash;M12, on <b>his</b> session three ways (empty phone: byte-identical to the server doc through
 <code>canonSession</code>; already held: kept, local bytes; a different version of the same id: the phone&rsquo;s 24th set wins and the
@@ -16051,11 +16070,20 @@ T("W3 / mergeSteps - refusals: a blocked store that would be written refuses bef
 
 /* ------------------------------------------------------ 17. the owner sentence */
 
+/* WO-011 W5 (qa): RE-PINNED to UX spec §20.3's R-d, verbatim. Backend's
+   W3 wording ("Not merged. ... to bring it back.") was a placeholder, and
+   frontend built R-d as its own mergeRefusal() in index.html because these
+   two lines pinned the placeholder. One sentence, one owner: logic.js. This
+   test reads RED until backend swaps ownerRefusal("merge") to the two
+   strings below; index.html's mergeRefusal() is then a one-line caller or
+   deleted. The sentence is the one F8 observed on screen (#bk-status). */
 T("W3 - ownerRefusal(\"merge\") names the owner, what did not happen, and the way out; unknown owner reads `another account`; the three existing kinds are unchanged", function(a){
   a.eq(P.ownerRefusal("merge", { id: "u1", email: "chady@example.com" }, "diana@example.com"),
-       "Not merged. This device's log belongs to chady@example.com. The backup under diana@example.com was not read and nothing on this device changed. Sign in as chady@example.com to bring it back.");
+       "This device's log belongs to chady@example.com. The backup under diana@example.com was not read and nothing here changed. Sign in as chady@example.com to restore what is missing.",
+       "spec 20.3 R-d, verbatim - the sentence index.html's mergeRefusal() prints today");
   a.eq(P.ownerRefusal("merge", { id: "u1", email: null }, "diana@example.com"),
-       "Not merged. This device's log belongs to another account. The backup under diana@example.com was not read and nothing on this device changed. Sign in as that account to bring it back.");
+       "This device's log belongs to another account. The backup under diana@example.com was not read and nothing here changed. Sign in as that account to restore what is missing.",
+       "spec 20.3 R-d with the 18.5 substitution for an unknown owner");
   a.eq(P.ownerRefusal("restore", { id: "u1", email: "a@b.c" }, "d@e.f"),
        "Not restored. This device's log belongs to a@b.c. The backup under d@e.f was not read and nothing on this device changed. Sign in as a@b.c to restore.");
   a.eq(P.ownerRefusal("manual", { id: "u1", email: "a@b.c" }, "d@e.f"), "Not backed up. This device's log belongs to a@b.c, not to d@e.f. Sign in as a@b.c to back it up.");
@@ -16090,6 +16118,356 @@ T("W3 - restorePayload still refuses WHOLE with the same sentences (the row rule
 
 T("W3 - up to the end of S43 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
   a.deep(PHAT_KEY_WRITES, [], "a fixture in S43 or earlier wrote into his history");
+});
+
+
+group("S44 WO-011 W5 / the QA pass on the merge / R-d / mergeCounts / a second fuzz / his session through the wire / the B-76 net / the B-121 cost");
+
+/* ---- fixtures, this section's own ----
+   The rows exactly as sync.js pull() returns them: select(client_id,
+   local_date,doc) on sessions, (local_date,doc) on bodyweight, (plan_id,doc)
+   on plans, maybeSingle(log_meta,plan_meta) on user_state - nothing else
+   arrives, and `deleted_at is null` is in the query. Docs are the server's
+   JSONB (shortest key first, then alphabetical), never the builder's. */
+function WIRE44(sessions, weights, plans, state){
+  return {
+    sessions: (sessions || []).map(function(d){ return { client_id: String(d.id), local_date: d.date, doc: JSONB(d) }; }),
+    bodyweight: (weights || []).map(function(d){ return { local_date: d.date, doc: JSONB(d) }; }),
+    plans: (plans || []).map(function(d){ return { plan_id: d.planId, doc: JSONB(d) }; }),
+    user_state: state === undefined ? null : state
+  };
+}
+/* The store a stale document writes when it taps setCalStamp / v1Answer /
+   answerDeload: logPayload() from ITS memory - this build's meta, schema 6,
+   and the sessions array it booted with. When it booted empty, that array
+   is []. This is B-76's write, as bytes. */
+function STALE44(sessions, profile){
+  return { schemaVersion: P.SCHEMA_VERSION, includeCut: false, reintro: {}, lastReintroDate: {}, calChangedAt: "2026-09-13", deload: null,
+           profile: profile === undefined ? null : profile, sessions: sessions || [] };
+}
+/* mulberry32 - a different generator from S43's xorshift, a different seed,
+   so the two fuzzes do not walk the same pairs. */
+function rng44(seed){ var a = seed >>> 0; return function(){ a = (a + 0x6D2B79F5) >>> 0; var t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function count44(arr, x){ var n = 0, i; for (i = 0; i < arr.length; i++) if (arr[i] === x) n++; return n; }
+function isObj44(o){ return !!o && typeof o === "object" && !Array.isArray(o); }
+function CHADY_STATE44(){ return { log_meta: JSONB({ schemaVersion: 6, includeCut: false, reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null, profile: PB }), plan_meta: null }; }
+
+/* ------------------------------------------------------ 1. R-d - the one sentence, in logic.js */
+
+T("W5 / R-d - the owner refusal of a merge is UX spec 20.3's sentence and nothing else: no `Not merged.` prefix, `nothing here changed`, `to restore what is missing`; the shape is 18.5's (owner, what did not happen, one way out)", function(a){
+  /* The S43 pin above carries the two literals. This one pins the SHAPE so
+     a rewording that keeps the literals cannot drift: the sentence must not
+     open with a verdict word (that is R-a/R-b/R-c's shape and 20.3 rules it
+     out for M-c), must name both accounts, and must end on the way out. */
+  var s = P.ownerRefusal("merge", { id: "u1", email: "chady@b-script.com" }, "diana@saba.com");
+  a.match(s, /^This device's log belongs to chady@b-script\.com\. /, "opens on the fact, not on `Not merged.`");
+  a.match(s, / The backup under diana@saba\.com was not read and nothing here changed\. /, "what did not happen, in 20.3's words");
+  a.match(s, / Sign in as chady@b-script\.com to restore what is missing\.$/, "the way out, in 20.1's verb (restore), never `bring it back`");
+  a.eq(s.indexOf("merge"), -1, "20.1: `merge` appears in no string");
+  a.eq(s.indexOf("pull"), -1, "20.1: `pull` appears in no string");
+  var u = P.ownerRefusal("merge", { id: "u1", email: "" }, "");
+  a.eq(u, "This device's log belongs to another account. The backup under this account was not read and nothing here changed. Sign in as that account to restore what is missing.");
+});
+
+/* ------------------------------------------------------ 2. mergeCounts - the seven non-zero combinations */
+
+T("W5 / mergeCounts - all seven non-zero combinations and the zero case, spec 20.2 rule 2: sessions, weights, plans, `, ` then ` and `, plurals, never a `0 weights`; EXTRACT to logic.js - it lives in index.html today and this page cannot reach it", function(a){
+  /* index.html:6823 `function mergeCounts(a)` is pure (plural() and three
+     ifs) and is the one function behind the toast, #bk-check M-a / M-a'
+     and the record line. The spec says "one function, tested for all
+     seven non-empty combinations" and offers "W3 exports one". This page
+     reads logic.js only, so the seven are pinned here against
+     PHAT.mergeCounts and the test is RED until the function moves. The
+     seven sentences below were observed on screen (#bk-check, via
+     prefs.merge {n,m,p}) in the W5 browser run - see the checklist item. */
+  needFns(a, "mergeCounts");
+  var f = P.mergeCounts;
+  a.eq(f({ sessions: 1, bodyweight: 0, plans: 0 }), "1 session");
+  a.eq(f({ sessions: 0, bodyweight: 2, plans: 0 }), "2 weights");
+  a.eq(f({ sessions: 0, bodyweight: 0, plans: 1 }), "1 plan");
+  a.eq(f({ sessions: 3, bodyweight: 2, plans: 0 }), "3 sessions and 2 weights");
+  a.eq(f({ sessions: 1, bodyweight: 0, plans: 1 }), "1 session and 1 plan");
+  a.eq(f({ sessions: 0, bodyweight: 2, plans: 1 }), "2 weights and 1 plan");
+  a.eq(f({ sessions: 3, bodyweight: 2, plans: 1 }), "3 sessions, 2 weights and 1 plan");
+  a.eq(f({ sessions: 0, bodyweight: 0, plans: 0 }), "", "all zero: nothing to say (rule 1 - a merge that added nothing is not an event)");
+  a.eq(f({ sessions: 12, bodyweight: 30, plans: 0 }), "12 sessions and 30 weights", "20.5's first-open sentence");
+  a.eq(f(undefined), "", "no argument: nothing, never a throw");
+  a.eq(f({ sessions: 1, bodyweight: 1, plans: 1 }), "1 session, 1 weight and 1 plan", "singular in every slot");
+});
+
+/* ------------------------------------------------------ 3. the second fuzz */
+
+T("W5 / FUZZ 2 - 200 pairs from a second generator (mulberry32, seed 40521826): mixed id types, duplicate LOCAL ids, deleted and refused remote rows, ld-carrying sets, Feb 29, both plan stores - the merge never shrinks, carries every local element by reference and by count, adds every valid remote-only id once, keeps every overlap as the local reference, is idempotent, mutates neither input, and mergeSteps never writes an unchanged store", function(a){
+  var rnd = rng44(40521826), pick = function(n){ return Math.floor(rnd() * n); };
+  var DAYS = ["2024-02-29", "2026-01-01", "2026-03-08", "2026-03-29", "2026-09-12", "2026-09-13", "2026-10-25", "2026-12-31", "2027-01-01"];
+  var day = function(){ return DAYS[pick(DAYS.length)]; };
+  var idOf = function(n){ return rnd() < 0.5 ? n : String(n); };              /* 7 and "7" are one session */
+  var mkSess = function(n){
+    var s = E3SESS(idOf(n), day(), ["d1", "d2", "d3"][pick(3)], 20 + 2.5 * pick(60), 1 + pick(15));
+    if (rnd() < 0.3) s.entries.d1a.sets.push({ w: 60.8, r: 5, ld: { bar: 20, bu: "kg", add: 90, au: "lb" } });
+    if (rnd() < 0.3) s.entries.d1b = { sets: [{ w: 0, r: 8 + pick(6) }], note: "chin-ups, bodyweight - forearm ok", rx: { s: 2, lo: 6, hi: 10, k: "power" } };
+    return s;
+  };
+  var mkBw = function(d){ return { date: d, kg: Math.round((78 + rnd() * 12) * 10) / 10 }; };
+  var worst = null, i, j;
+  for (i = 0; i < 200 && !worst; i++) {
+    /* local: 0..7 sessions from a pool of 12 ids; ~10 % of the time one id is
+       present TWICE (a corrupted store - the merge is not a filter) */
+    var lSess = [], lIds = {}, nL = pick(8);
+    for (j = 0; j < nL; j++) { var n1 = pick(12); if (!lIds[n1]) { lIds[n1] = 1; lSess.push(mkSess(n1)); } }
+    if (lSess.length && rnd() < 0.1) lSess.push(clone(lSess[pick(lSess.length)]));
+    var lBw = [], lDates = {}, nLB = pick(5);
+    for (j = 0; j < nLB; j++) { var d1 = day(); if (!lDates[d1]) { lDates[d1] = 1; lBw.push(mkBw(d1)); } }
+    var lHasPlans = rnd() < 0.5, lPlans = lHasPlans ? (rnd() < 0.5 ? [MINIPLAN()] : [MINIPLAN(), MYPHAT()]) : [];
+    var localAbsent = rnd() < 0.1;
+    if (localAbsent) { lSess = []; lBw = []; lPlans = []; lHasPlans = false; }
+    var loc = localAbsent ? { log: undefined, bw: undefined, plans: undefined }
+                          : { log: E3LOG(lSess, rnd() < 0.3 ? { profile: PB } : {}), bw: E3BW(lBw),
+                              plans: lHasPlans ? { schemaVersion: P.SCHEMA_VERSION, plans: lPlans, activePlanId: lPlans[0].planId } : undefined };
+    /* remote: 0..8 valid rows over the same pool (overlap by construction),
+       plus 0..2 refused rows and 0..1 deleted rows, in random positions */
+    var rSess = [], rIds = {}, nR = pick(9), validR = 0;
+    for (j = 0; j < nR; j++) { var n2 = pick(12); if (!rIds[n2]) { rIds[n2] = 1; rSess.push(mkSess(n2)); validR++; } }
+    var rBw = [], rDates = {}, nRB = pick(6), validRB = 0;
+    for (j = 0; j < nRB; j++) { var d2 = day(); if (!rDates[d2]) { rDates[d2] = 1; rBw.push(mkBw(d2)); validRB++; } }
+    var rPlans = rnd() < 0.5 ? [] : (rnd() < 0.5 ? [MINIPLAN()] : [MYPHAT()]);
+    var state = rnd() < 0.5 ? null : { log_meta: JSONB(E3LOG([], { profile: rnd() < 0.5 ? PB : null })), plan_meta: null };
+    if (state) delete state.log_meta.sessions;
+    var rem = WIRE44(rSess, rBw, rPlans, state);
+    var nBad = pick(3), nGone = pick(2), refusedS = 0, goneS = 0;
+    for (j = 0; j < nBad; j++) {
+      var bad = mkSess(50 + j), which = pick(4);
+      if (which === 0) bad.entries.d1a.sets[0].w = "7.5.0";
+      else if (which === 1) bad.entries.d1a.sets[0].r = 0;
+      else if (which === 2) bad.date = "2026-02-30";
+      else bad.demo = true;
+      rem.sessions.splice(pick(rem.sessions.length + 1), 0, { client_id: String(bad.id), local_date: bad.date, doc: JSONB(bad) });
+      refusedS++;
+    }
+    for (j = 0; j < nGone; j++) {
+      var g = mkSess(60 + j);
+      rem.sessions.splice(pick(rem.sessions.length + 1), 0, { client_id: String(g.id), local_date: g.date, doc: JSONB(g), deleted_at: "2026-09-13T00:00:00Z" });
+      goneS++;
+    }
+    if (rnd() < 0.2) { rem.bodyweight.push({ local_date: "2026-02-30", doc: { date: "2026-02-30", kg: 85 } }); }
+    var badBw = rem.bodyweight.length - validRB;
+    var tag = "pair " + i + " (local " + lSess.length + "/" + lBw.length + "/" + lPlans.length + (localAbsent ? " absent" : "") +
+              ", remote " + validR + "+" + refusedS + "+" + goneS + "/" + validRB + "+" + badBw + "/" + rPlans.length + ")";
+    var locBytes = JSON.stringify(loc), remBytes = JSON.stringify(rem);
+    var r = P.mergeStores(loc, rem);
+    if (r.ok !== true) { worst = tag + ": not ok " + JSON.stringify(r.refused); break; }
+    if (JSON.stringify(loc) !== locBytes) { worst = tag + ": the local input was mutated"; break; }
+    if (JSON.stringify(rem) !== remBytes) { worst = tag + ": the remote input was mutated"; break; }
+    var mS = r.merged.log && Array.isArray(r.merged.log.sessions) ? r.merged.log.sessions : [];
+    var mB = r.merged.bw && Array.isArray(r.merged.bw.entries) ? r.merged.bw.entries : [];
+    var mP = r.merged.plans && Array.isArray(r.merged.plans.plans) ? r.merged.plans.plans : [];
+    if (mS.length < lSess.length || mB.length < lBw.length || mP.length < lPlans.length) { worst = tag + ": shrank"; break; }
+    /* every local element, by reference AND by count (the duplicate is carried twice) */
+    var miss = null;
+    if (!localAbsent) {
+      lSess.forEach(function(s){ if (count44(mS, s) < count44(lSess, s)) miss = "session " + s.id; });
+      lBw.forEach(function(e){ if (mB.indexOf(e) < 0) miss = "weight " + e.date; });
+      lPlans.forEach(function(p){ if (mP.indexOf(p) < 0) miss = "plan " + p.planId; });
+    }
+    if (miss) { worst = tag + ": local " + miss + " is not in the merged set by reference"; break; }
+    /* every valid remote-only id is added exactly once; every overlap is the local reference */
+    var lKeys = {}; lSess.forEach(function(s){ lKeys[String(s.id)] = s; });
+    var expAdd = 0, expKeep = 0, bad2 = null;
+    rSess.forEach(function(s){
+      var k = String(s.id), found = mS.filter(function(x){ return String(x.id) === k; });
+      if (lKeys[k]) { expKeep++; if (found.indexOf(lKeys[k]) < 0) bad2 = "overlap " + k + " is not the local reference"; }
+      else { expAdd++; if (found.length !== 1) bad2 = "remote-only " + k + " appears " + found.length + " times"; }
+    });
+    if (bad2) { worst = tag + ": " + bad2; break; }
+    if (r.added.sessions !== expAdd || r.kept.sessions !== expKeep) { worst = tag + ": added/kept " + r.added.sessions + "/" + r.kept.sessions + " vs expected " + expAdd + "/" + expKeep; break; }
+    var refS = r.refused.filter(function(x){ return x.kind === "session"; }).length;
+    if (refS !== refusedS) { worst = tag + ": refused sessions " + refS + " vs " + refusedS + " " + JSON.stringify(r.refused); break; }
+    if (r.added.sessions + r.kept.sessions + refS + goneS !== rem.sessions.length) { worst = tag + ": rows do not account (" + r.added.sessions + "+" + r.kept.sessions + "+" + refS + "+" + goneS + " vs " + rem.sessions.length + ")"; break; }
+    if (r.added.bodyweight + r.kept.bodyweight !== validRB) { worst = tag + ": weights do not account"; break; }
+    if (r.refused.filter(function(x){ return x.kind === "bodyweight"; }).length !== badBw) { worst = tag + ": bad weight not refused"; break; }
+    if (mS.some(function(s){ return !isObj44(s); })) { worst = tag + ": a non-object reached the merged sessions"; break; }
+    /* no refused bytes reached the store */
+    var mBytes = JSON.stringify(r.merged);
+    if (mBytes.indexOf("7.5.0") >= 0 || mBytes.indexOf("2026-02-30") >= 0 || mBytes.indexOf('"demo":true') >= 0) { worst = tag + ": a refused row's bytes reached the merged set"; break; }
+    if (r.added.sessions && mS.some(function(s, ix){ return ix > 0 && s.date < mS[ix - 1].date; })) { worst = tag + ": merged sessions not in date order after an add"; break; }
+    /* the phone's active plan never moves when the phone has a plan store */
+    if (lHasPlans && !localAbsent && r.merged.plans.activePlanId !== lPlans[0].planId) { worst = tag + ": activePlanId moved"; break; }
+    /* idempotent, and the second pass writes nothing */
+    var r2 = P.mergeStores(r.merged, rem);
+    if (r2.ok !== true || JSON.stringify(r2.merged) !== mBytes) { worst = tag + ": not idempotent"; break; }
+    if (r2.added.sessions + r2.added.bodyweight + r2.added.plans !== 0 || r2.changed.log || r2.changed.bw || r2.changed.plans) { worst = tag + ": the second merge changed something"; break; }
+    if (r2.merged.log !== r.merged.log || r2.merged.bw !== r.merged.bw) { worst = tag + ": the second merge returned a new store object for an unchanged store"; break; }
+    /* the write list never carries an unchanged store, and a keep is only ever the local reference */
+    var st = P.mergeSteps(r, { empty: localAbsent, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} }, W2KEYS, 1757700000000 + i);
+    if (st.ok !== true) { worst = tag + ": mergeSteps refused " + st.message; break; }
+    if (st.writes.some(function(w){ return (w.key === W2KEYS.log && !r.changed.log) || (w.key === W2KEYS.bw && !r.changed.bw) || (w.key === W2KEYS.plans && !r.changed.plans); })) { worst = tag + ": an unchanged store is in the write list"; break; }
+    if (st.keeps.some(function(k){ return k.value.value !== loc[k.value.key === W2KEYS.log ? "log" : k.value.key === W2KEYS.bw ? "bw" : "plans"]; })) { worst = tag + ": a keep is not the local store by reference (" + k.key + ")"; break; }
+    if (st.keeps.some(function(k){ return k.key.indexOf("phat:v1:recover:") !== 0 || k.value.reason !== "merge"; })) { worst = tag + ": a keep is not under a recover key with reason merge"; break; }
+    if (localAbsent && st.keeps.length) { worst = tag + ": an empty device produced a keep"; break; }
+    if (!st.writes.length && (r.changed.log || r.changed.bw || r.changed.plans)) { worst = tag + ": a changed store has no write"; break; }
+  }
+  a.eq(worst, null, worst || "");
+  a.eq(i, 200, "all 200 pairs ran");
+});
+
+/* ------------------------------------------------------ 4. his session, three ways, through the wire */
+
+T("W5 / HIS SESSION, way 1 - the lost phone: local {} (nothing on disk) + the wire row for 1789264514484 -> pullPayload and mergeStores agree byte for byte; 6 entries, 23 sets, every number his; the write list is exactly phat:v1:log with the merged store by reference, no keep; the push after it signs the same as the server's bytes", function(a){
+  var rows = WIRE44([CHADY_EXPORT], [], [], CHADY_STATE44());
+  a.eq(rows.sessions[0].client_id, "1789264514484");
+  var pp = P.pullPayload(rows);
+  a.deep(pp.refused, []); a.eq(pp.state, true); a.eq(pp.counts.sessions, 1);
+  var r = P.mergeStores({}, rows);
+  a.eq(r.ok, true); a.deep(r.added, { sessions: 1, bodyweight: 0, plans: 0 }); a.deep(r.changed, { log: true, bw: false, plans: false });
+  a.eq(JSON.stringify(r.merged.log), JSON.stringify(pp.log), "what the merge writes is what the pull built - nothing in between");
+  var s = r.merged.log.sessions[0];
+  a.eq(JSON.stringify(s), JSON.stringify(CHADY_SESSION()), "the builder's bytes and key order, from the server's JSONB order");
+  a.eq(hash40(JSON.stringify(s)), 588696318, "S42's hash of his session");
+  a.eq(String(s.id), "1789264514484"); a.eq(s.date, "2026-09-12"); a.eq(s.dayId, "d1"); a.eq(s.planId, "phat");
+  a.deep(Object.keys(s.entries), ["d1a", "d1b", "d1d", "d1e", "d1f", "d1g"], "six entries, his order");
+  var sets = 0; Object.keys(s.entries).forEach(function(k){ sets += s.entries[k].sets.length; });
+  a.eq(sets, 23, "twenty-three sets");
+  a.eq(s.entries.d1b.note, "I have done iso-lateral front lat pull downs- forearm still not recovered");
+  a.eq(s.entries.d1g.sets[0].w, 27.5); a.eq(s.entries.d1e.sets[0].w, 0, "bodyweight chins stay 0, not dropped");
+  a.eq(P.validateSessionDoc(s).ok, true);
+  a.deep(r.merged.log.profile, PB, "the account's stamp came down with it");
+  a.eq(r.merged.log.schemaVersion, P.SCHEMA_VERSION);
+  var st = P.mergeSteps(r, { empty: true, kept: false, blocked: {} }, W2KEYS, 1757760000000);
+  a.eq(st.ok, true); a.deep(st.keeps, [], "an empty device keeps nothing");
+  a.eq(st.writes.length, 1); a.eq(st.writes[0].key, "phat:v1:log"); a.eq(st.writes[0].value, r.merged.log, "by reference");
+  var bp = P.backupPayload(r.merged.log, E3BW([]), null);
+  a.deep(bp.problems, []); a.eq(bp.sessions[0], s);
+  var serverSide = Object.assign(clone(CHADY_STATE44().log_meta), { sessions: [clone(CHADY_EXPORT)] });
+  a.eq(P.backupSig(bp), P.backupSig(P.backupPayload(serverSide, E3BW([]), null)), "the re-push is a signature no-op: the merged log signs as the server's meta + the server's doc");
+});
+
+T("W5 / HIS SESSION, way 2 - the phone that has it: the schema-5 store the live app held on 12 Sep, migrated by boot, + the same wire row -> kept 1, added 0, differ [], changed all false, merged.log THE SAME OBJECT, and mergeSteps produces no keep and no write (P14's data half: nothing is written when nothing was missing)", function(a){
+  var st5 = CHADY_STORE();
+  var m = P.migrateStore(st5, E3BW([]));
+  var loc = { log: m.log, bw: m.bw, plans: undefined };
+  a.eq(loc.log.schemaVersion, P.SCHEMA_VERSION, "boot migrated 5 -> 6");
+  var rows = WIRE44([CHADY_EXPORT], [], [], CHADY_STATE44());
+  var before = JSON.stringify(loc.log);
+  var r = P.mergeStores(loc, rows);
+  a.eq(r.ok, true); a.eq(r.kept.sessions, 1); a.eq(r.added.sessions, 0);
+  a.deep(r.kept.differ, { sessions: [], bodyweight: [], plans: [] }, "same bytes on both sides");
+  a.deep(r.changed, { log: false, bw: false, plans: false });
+  a.eq(r.merged.log, loc.log, "same reference"); a.eq(r.merged.bw, loc.bw);
+  a.eq(JSON.stringify(r.merged.log), before);
+  var st = P.mergeSteps(r, { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} }, W2KEYS, 1757760000000);
+  a.eq(st.ok, true); a.deep(st.keeps, [], "no keep when nothing will be written"); a.deep(st.writes, []);
+});
+
+T("W5 / HIS SESSION, way 3 - both directions of a same-id difference: (a) the phone has a 24th set the server lacks -> the phone's wins and the server's copy is named; (b) B-121, the server has a 24th set the phone lacks -> the phone's STILL wins, the extra set never lands, and it is named under kept.differ so Settings can say so - the accepted cost, pinned as observed", function(a){
+  /* (a) */
+  var mine = CHADY_SESSION(); mine.entries.d1a.sets.push({ w: 70, r: 8 });
+  var loc = { log: Object.assign(P.migrateStore(CHADY_STORE(), E3BW([])).log, { sessions: [mine] }), bw: E3BW([]), plans: undefined };
+  var r = P.mergeStores(loc, WIRE44([CHADY_EXPORT]));
+  a.eq(r.ok, true); a.eq(r.added.sessions, 0); a.eq(r.kept.sessions, 1); a.deep(r.kept.differ.sessions, ["1789264514484"]);
+  a.eq(r.merged.log.sessions[0], mine); a.eq(r.merged.log.sessions[0].entries.d1a.sets.length, 6);
+  a.eq(r.changed.log, false);
+  /* (b) B-121 */
+  var server = clone(CHADY_EXPORT); server.entries.d1a.sets.push({ r: 8, w: 70 });
+  var his = CHADY_SESSION();
+  var loc2 = { log: Object.assign(P.migrateStore(CHADY_STORE(), E3BW([])).log, { sessions: [his] }), bw: E3BW([]), plans: undefined };
+  var bytes = JSON.stringify(his);
+  var r2 = P.mergeStores(loc2, WIRE44([server]));
+  a.eq(r2.ok, true); a.eq(r2.added.sessions, 0); a.eq(r2.kept.sessions, 1);
+  a.deep(r2.kept.differ.sessions, ["1789264514484"], "the server's newer copy is named, not taken");
+  a.eq(r2.merged.log.sessions[0], his, "the phone's copy, by reference");
+  a.eq(JSON.stringify(r2.merged.log.sessions[0]), bytes);
+  a.eq(r2.merged.log.sessions[0].entries.d1a.sets.length, 5, "the server's 24th set did not land - B-121, open, P3");
+  a.eq(r2.changed.log, false, "and nothing is written for it");
+  /* the push that follows carries the phone's copy: the server's goes to conflicts, not to /dev/null */
+  a.eq(P.backupPayload(r2.merged.log, E3BW([]), null).sessions[0], his);
+});
+
+/* ------------------------------------------------------ 5. the B-76 net - the stale tab's write, and what the next open does about it */
+
+T("W5 / B-76 NET - the store a stale document writes over a real log (this build's meta, schema 6, sessions: []) + the server holding his session -> the next open's merge adds it back byte for byte, the stale meta keeps its local values, and the device counts as EMPTY for the keep (nothing to keep - the bytes that were lost are on the server, not on disk)", function(a){
+  var stale = STALE44([], PB);
+  var loc = { log: stale, bw: E3BW([]), plans: undefined };
+  var r = P.mergeStores(loc, WIRE44([CHADY_EXPORT], [], [], CHADY_STATE44()));
+  a.eq(r.ok, true); a.deep(r.added, { sessions: 1, bodyweight: 0, plans: 0 });
+  a.eq(JSON.stringify(r.merged.log.sessions[0]), JSON.stringify(CHADY_SESSION()), "his session, back");
+  a.eq(r.merged.log.calChangedAt, "2026-09-13", "the stale document's own stamp is kept - local wins on meta");
+  a.deep(r.merged.log.profile, PB);
+  var empty = P.restoreLocalEmpty({ stores: { log: "ok", bw: "ok", plans: "absent" }, sessions: 0, bw: 0, plans: 0, activePlanId: "" });
+  a.eq(empty, true, "a log with no sessions and no weights is an empty device");
+  var st = P.mergeSteps(r, { empty: true, kept: false, log: loc.log, bw: loc.bw, plans: undefined, blocked: {} }, W2KEYS, 1757760000000);
+  a.deep(st.keeps, []); a.deep(st.writes.map(function(w){ return w.key; }), ["phat:v1:log"]);
+  a.eq(st.writes[0].value.sessions.length, 1);
+});
+
+T("W5 / B-76 NET, the hole - a session the stale tab overwrote that had NEVER been pushed (logged offline, radio still off) is on no server row: the merge has nothing to add, merged.log stays at zero sessions, and only a recover:* key would hold it - none exists on this path. Pinned as observed so the merge is never described as a fix for B-76", function(a){
+  var stale = STALE44([], null);
+  var r = P.mergeStores({ log: stale, bw: E3BW([]), plans: undefined }, WIRE44([], [], [], null));
+  a.eq(r.ok, true); a.deep(r.added, { sessions: 0, bodyweight: 0, plans: 0 });
+  a.eq(r.merged.log, stale, "nothing to write");
+  a.eq(r.merged.log.sessions.length, 0, "the offline session is gone from disk and the server never had it: the net does not reach here");
+  var st = P.mergeSteps(r, { empty: true, kept: false, log: stale, bw: E3BW([]), plans: undefined, blocked: {} }, W2KEYS, 1);
+  a.deep(st.keeps, []); a.deep(st.writes, []);
+});
+
+/* ------------------------------------------------------ 6. keep-once as a sequence */
+
+T("W5 / keep-once - three opens on one device as a sequence: open 1 changes the log -> keeps log+bw and writes log; the caller stamps keptAt; open 2 changes the bw -> NO keep (kept:true), writes bw only; open 3 changes nothing -> no keep, no write. And a device that has never kept but has nothing to write does not spend its one keep", function(a){
+  var loc = L43([E3SESS(1, "2026-09-01")], [{ date: "2026-09-01", kg: 85 }]);
+  var r1 = P.mergeStores(loc, R43([E3SESS(2, "2026-09-02")]));
+  var s1 = P.mergeSteps(r1, { empty: false, kept: false, log: loc.log, bw: loc.bw, plans: loc.plans, blocked: {} }, W2KEYS, 1000);
+  a.deep(s1.keeps.map(function(k){ return k.key; }), ["phat:v1:recover:log:1000", "phat:v1:recover:bw:1000"], "the PHAT default plan store is not a held plan");
+  a.deep(s1.writes.map(function(w){ return w.key; }), ["phat:v1:log"]);
+  a.eq(s1.keeps[0].value.value, loc.log, "verbatim: the local store by reference, not a copy that could differ");
+  var keptAt = s1.keeps[0].value.savedAt; a.eq(keptAt, 1000);
+  var loc2 = { log: s1.writes[0].value, bw: loc.bw, plans: loc.plans };
+  var r2 = P.mergeStores(loc2, R43([E3SESS(2, "2026-09-02")], [{ date: "2026-09-02", kg: 85.4 }]));
+  a.deep(r2.changed, { log: false, bw: true, plans: false });
+  var s2 = P.mergeSteps(r2, { empty: false, kept: keptAt !== null, log: loc2.log, bw: loc2.bw, plans: loc2.plans, blocked: {} }, W2KEYS, 2000);
+  a.deep(s2.keeps, [], "once per device"); a.deep(s2.writes.map(function(w){ return w.key; }), ["phat:v1:bw"]);
+  var loc3 = { log: loc2.log, bw: s2.writes[0].value, plans: loc.plans };
+  var r3 = P.mergeStores(loc3, R43([E3SESS(2, "2026-09-02")], [{ date: "2026-09-02", kg: 85.4 }]));
+  var s3 = P.mergeSteps(r3, { empty: false, kept: true, log: loc3.log, bw: loc3.bw, plans: loc3.plans, blocked: {} }, W2KEYS, 3000);
+  a.deep(s3.keeps, []); a.deep(s3.writes, []);
+  /* never kept, nothing to write: the keep is not spent */
+  var s4 = P.mergeSteps(r3, { empty: false, kept: false, log: loc3.log, bw: loc3.bw, plans: loc3.plans, blocked: {} }, W2KEYS, 4000);
+  a.deep(s4.keeps, [], "a keep is produced only before a write that changes a store");
+});
+
+/* ------------------------------------------------------ 7. rows that are not what pull() promises */
+
+T("W5 / WIRE - rows that are not what pull() promises never throw and never touch the local stores: a doc that is a JSON string, a null doc, a null row, a number in the array, a doc with no id, a doc whose id disagrees with client_id (the doc's id is the key), a bodyweight doc that is a string, a null plan row, user_state as an array; and a 1000-row remote merges whole, in date order, in well under the budget", function(a){
+  var mine = E3SESS(1, "2026-09-01");
+  var loc = L43([mine]);
+  var good = E3SESS(2, "2026-09-02");
+  var noId = E3SESS(11, "2026-09-11"); delete noId.id;
+  var rem = { sessions: [
+      { client_id: "9", local_date: "2026-09-09", doc: JSON.stringify(E3SESS(9, "2026-09-09")) },
+      { client_id: "10", local_date: "2026-09-10", doc: null },
+      null,
+      7,
+      { client_id: "11", local_date: "2026-09-11", doc: noId },
+      { client_id: "999", local_date: "2026-09-02", doc: JSONB(good) }
+    ], bodyweight: [{ local_date: "2026-09-02", doc: "85" }, { doc: { date: "2026-09-03", kg: 85 } }], plans: [null], user_state: [] };
+  var r = a.noThrow(function(){ return P.mergeStores(loc, rem); }, "malformed rows");
+  a.eq(r.ok, true, JSON.stringify(r.refused));
+  a.eq(r.added.sessions, 1, "the one good row"); a.eq(String(r.merged.log.sessions[1].id), "2", "keyed on the doc's id, not client_id 999");
+  a.eq(r.merged.log.sessions[0], mine);
+  a.eq(r.added.bodyweight, 1, "the row with no local_date column still merges by its doc's date");
+  a.ok(r.refused.length >= 6, "each malformed row named: " + r.refused.length + " " + JSON.stringify(r.refused));
+  r.refused.forEach(function(x){ a.ok(typeof x.msg === "string" && x.msg.length > 10, "a refusal carries a sentence: " + JSON.stringify(x)); a.oneOf(x.kind, ["session", "bodyweight", "plan", "state", "rows"]); });
+  a.eq(r.refused.filter(function(x){ return x.kind === "plan"; }).length, 1, "the null plan row");
+  /* 1000 rows, all valid, distinct ids: every one added, in date order */
+  var big = [], i; for (i = 0; i < 1000; i++) big.push(E3SESS(100000 + i, "2026-0" + (1 + (i % 9)) + "-" + (10 + (i % 18))));
+  var t0 = Date.now(), rb = P.mergeStores(loc, WIRE44(big));
+  a.eq(rb.ok, true); a.eq(rb.added.sessions, 1000); a.eq(rb.merged.log.sessions.length, 1001);
+  a.ok(rb.merged.log.sessions.every(function(s, ix, arr){ return ix === 0 || arr[ix - 1].date <= s.date; }), "date order");
+  a.ok(Date.now() - t0 < 400, "1000 rows merged in " + (Date.now() - t0) + " ms");
+});
+
+/* ------------------------------------------------------ 8. the meta-tripwire, restated for this section */
+
+T("W5 - up to the end of S44 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S44 or earlier wrote into his history");
 });
 
 
@@ -17071,7 +17449,7 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "fixed by hand; pinned as-is in S39 and named in the contract questions for the PM.</p>";
 
   document.getElementById("manual").innerHTML =
-    "<p><b>Ten items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Eleven items. Two minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
@@ -17206,7 +17584,17 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "reload and across a second tab, the kg-direct row is <code>main</code>&rsquo;s row byte for byte, the switch never re-values a number. " +
     "What no rig can answer: whether the chip and the sheet&rsquo;s bar rows land under one thumb with chalk on, whether <code>= 60.8 kg</code> in " +
     "<code>--bone</code> at 0.875 rem is legible at arm&rsquo;s length under gym light, and whether the OS keyboard covers the total when the lb " +
-    "field has focus. If the total is too small or too dim, say so: it is one token in <code>.gtot</code> and a UX call, not an engine change.</span></li></ol>" +
+    "field has focus. If the total is too small or too dim, say so: it is one token in <code>.gtot</code> and a UX call, not a runtime change QA can make.</span></li>" +
+    "<li><b>Open it both ways and read the header (WO-011 F1, the one thing only your phone can answer).</b> Sign in as yourself. Open the app from " +
+    "the <b>home-screen icon</b>: within a few seconds of Home painting you should see one toast &mdash; <i>Restored 1 session from your backup.</i> " +
+    "(more if the backup holds more) &mdash; and the header count goes up. Open History: the 12 Sep Upper power session with its six exercises. Now open " +
+    "<code>gym-app-psi-eight.vercel.app</code> in a <b>Safari tab</b>: same check. Then Settings &rarr; Backup in each: the line under the block reads " +
+    "<i>Checked the backup just now and restored &hellip;</i> the first time and <i>Checked the backup &hellip; Nothing was missing here.</i> the next. " +
+    "If either launcher never shows the toast and never grows the count, open <code>/diag.html</code> in that same launcher and screenshot it.<br>" +
+    "<span class=\"skipmsg\">Why a phone: iOS gives the home-screen app and the Safari tab <b>separate</b> storage, which is the leading reading of how " +
+    "your 12 Sep session went missing (B-119, H1). Everything the merge does is measured (the WO-011 W5 item below: F1&ndash;F10, the P1&ndash;P14 paint " +
+    "rule, six attacks, against the live project as a throwaway account); what no rig can reach is your two launch contexts on your phone, and whether " +
+    "the pull lands on gym signal before you start the first set. This is a one-time check; after it the merge is silent when nothing is missing.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -18181,6 +18569,65 @@ contract("<b>E-3 &mdash; a half-applied Restore is silent on the next boot, and 
     "sees nothing; two append-only <code>conflicts</code> rows (<code>superseded_by_update</code>, from the boundary re-push) and the soft-deleted " +
     "row remain and need the dashboard to remove. A fresh password sign-in succeeded at the end: her password is exactly what it was. " +
     "<b>file:// suite 802 / 802 / 0, three tripwires.</b></span></li>" +
+    "<li><b>WO-011 W5 &mdash; pull-and-merge on every open, 2026-09-13, on <code>wo-011-merge @ a80ea09</code>, against the live project as " +
+    "<code>diana@saba.com</code> (her account started at 0 / 0 / 0 / 0 and every row it holds afterwards is listed for deletion in the W5 report; " +
+    "a password sign-in through REST succeeded at the end: her password is exactly what it was).</b> <span class=\"msg\">Rig: Node + Playwright, " +
+    "a static server on <code>localhost</code> serving the branch&rsquo;s real files, the real <code>sync.js</code> and CDN module, 400 &times; 850; " +
+    "expectations re-derived from UX spec &sect;20 and the work order, not from frontend&rsquo;s rig. <b>F1</b> empty device: first paint <i>Nothing " +
+    "logged yet</i> from disk, then one toast <i>Restored 1 session from your backup.</i> (and, later in the run with the account fuller, <i>Restored 10 " +
+    "sessions, 2 weights and 4 plans from your backup.</i>), header repainted, the session byte-identical to the builder&rsquo;s bytes, " +
+    "<code>prefs.backup</code> stamped by the merge (&sect;20.5) so the owner row read H1 on the first paint and the open push made <b>zero</b> REST " +
+    "writes, <code>prefs.merge {at,n,m,p}</code> with no <code>keptAt</code>, no recover key, Settings M-a, <code>#bk-status</code> the stamp line; " +
+    "second open: byte-identical, silent. <b>F2</b> three local sessions + the server&rsquo;s: union on disk in date order, the three byte-identical, " +
+    "one toast, <code>recover:log</code> + <code>recover:bw</code> once with one timestamp holding the pre-merge bytes with <code>reason:\"merge\"</code>, " +
+    "the stamp left to the push (n = the union), second open silent with exactly one keep and M-b. <b>F3</b> offline: zero requests, bytes identical, " +
+    "M-d, no <code>#bk-check</code>. <b>F4</b> signed out: zero reads; demo store: M-e verbatim, <code>.tiny</code>, zero reads. <b>F5</b> a draft with " +
+    "three typed sets: merge ran, draft byte-identical, Home offered <i>Upper power &middot; 3 sets logged</i>, Resume gave back 60/60/62.5 &times; " +
+    "5/5/4. <b>F6</b> a REAL save in a second tab while the first tab&rsquo;s pull was held 6 s: the busy line, the three buttons disabled, the saved " +
+    "session on disk byte-identical after the check, the first tab wrote nothing (its second disk read matched), and the second tab&rsquo;s push " +
+    "carried it (<code>POST /rest/v1/sessions</code>, <i>Backed up n+1 sessions</i>). <b>F7 / the P-table:</b> P1 render(true) + toast on Home; P2 " +
+    "= F1; P3 session screen with the third weight focused: no render, focus and 62.5 kept, draft byte-identical, disk adopted; P4 nothing focused on " +
+    "the session screen: no render; P5 Summary: held; P6 Home with the Discard sheet open: no render, sheet and its heading focus unchanged; P7 " +
+    "Weight tab with 85.3 typed and focus on whitespace: no render, 85.3 kept; P8 Settings with the password field focused: no render, value and " +
+    "focus carried, <code>#bk-check</code> repainted in place to M-a, no password request; P9 plan editor with a working copy: no render, the typed " +
+    "name kept; P11/P12 and every held case: the next Home render delivered the one sentence; P13 two merges before a flush: one toast with the sum " +
+    "(<i>Restored 16 sessions</i> for 8 + 8); P14 a merge that adds nothing on Home: no render at all, the three data stores byte-identical, " +
+    "<code>prefs.merge.at</code> moved (the accepted deviation, recorded in decisions.md). <b>F8</b> foreign account on a stamped device: R-d verbatim " +
+    "in <code>#bk-status</code> (<code>role=alert</code>, the owner&rsquo;s stamp line under it), no <code>#bk-check</code>, announced once, zero " +
+    "reads, zero writes, no recover key, the open push skipped (status still R-d, not R-a), Home H3; <i>Check the backup now</i> on the same device " +
+    "refused the same way with still nothing read. <b>F9</b> unreadable log whose copy-aside fails: the B-40 notice, no <code>#bk-check</code>, no " +
+    "<code>prefs.merge</code>, zero reads, bytes untouched. <b>F10</b> <code>file://</code>: zero console output, zero requests. <b>First run " +
+    "(&sect;20.5)</b>: timeline <code>B &gt; C-t &gt; Home</code> by a MutationObserver inside the page, never C1, toast on Home, " +
+    "<code>onboarded</code> + stamp + merge in one prefs write, H1 on the first paint, zero REST writes after. <b>The manual control</b>: allowed " +
+    "with a draft on disk (draft byte-identical), focus kept on the button through the busy repaint, refused on a plan working copy in " +
+    "<code>#bk-status</code>. <b>The six attacks.</b> (1) The lost phone on a fresh device: sessions array emptied by hand &rarr; reopen &rarr; every " +
+    "session back, the restored log byte-identical to the log before the wipe, header right, one toast, <code>recover:log</code> exactly once " +
+    "holding <code>sessions: []</code> (the device held weights and plans, so it was not empty), the push a no-op with zero POSTs, the second open " +
+    "silent with still one keep. (2) The same wipe with a draft open: the draft offered (<i>1 set logged</i>) and byte-identical, the sessions " +
+    "restored underneath, Resume 100 &times; 5. (3) <b>B-76, the stale page, reproduced exactly:</b> tab A booted with an empty log and its pull " +
+    "hanging; tab B restored 9 and saved a tenth and pushed; tab A saved one session &rarr; <b>1 session on disk where there were 10</b> " +
+    "(<code>finish()</code> writes <code>S.sessions.concat</code> from memory); the next open restored the union &mdash; <i>Restored 10 sessions</i>, " +
+    "11 on disk, B&rsquo;s session byte for byte, no duplicate ids. The net holds when the lost session was pushed; S44 pins the hole when it was " +
+    "not. (4) Two tabs merging at once: no duplicate ids, no shrink, one keep &mdash; <b>and a finding</b>: the tab whose post-pull disk read already " +
+    "held the other tab&rsquo;s write merged nothing, adopted nothing, still read <i>Nothing logged yet</i>, and its open push stamped " +
+    "<i>Backed up 0 sessions and 2 weights</i> from stale memory (disk kept 10; the server keeps every row; it is the B-76 stale page made by the " +
+    "merge itself &mdash; reported). (5) = F8. (6) Two malformed rows beside good ones: M-b&prime; <i>Checked the backup just now. 2 items could not " +
+    "be restored:</i> with the two validator sentences, silent on Home; then with sessions missing, M-a&prime; <i>Restored 10 sessions. 2 items could " +
+    "not be restored:</i>, the good rows merged, <code>7.5.0</code> and <code>999</code> never reached disk, and the rule-5 toast <i>&hellip; 2 items " +
+    "could not be restored. See Settings.</i> <b>The seven <code>mergeCounts</code> sentences on screen</b> from real rows (10 sessions, 2 weights, " +
+    "4 plans on the server; each part wiped locally in turn): <i>10 sessions</i> &middot; <i>2 weights</i> &middot; <i>4 plans</i> &middot; <i>10 " +
+    "sessions and 2 weights</i> &middot; <i>10 sessions and 4 plans</i> &middot; <i>2 weights and 4 plans</i> &middot; <i>10 sessions, 2 weights and " +
+    "4 plans</i>, in the toast and in <code>#bk-check</code>. <b><code>diag.html</code> (main @ d27e7cd, served from a copy on the same origin): " +
+    "zero writes</b> &mdash; every localStorage key and value byte-identical after load; prints the display mode, <code>schema=6 sessions=10</code> with " +
+    "every id and date, the recover key with its bytes, reason and <code>savedAt</code>, the stamp, the auth user, the network " +
+    "<code>SCHEMA_VERSION</code>; <code>{</code> in the log reads <code>UNPARSEABLE</code> at 1 byte with no throw. It has no COPY ALL button " +
+    "(W1 criterion 7; it says <i>Screenshot it and send it</i>) &mdash; noted, not W5&rsquo;s to pass. <b>One more finding from F6:</b> the merge&rsquo;s " +
+    "single <code>save(PREFS, prefsPayload())</code> is from memory, so when another tab had stamped a fresher <code>prefs.backup</code> during the " +
+    "pull, the merge&rsquo;s write put the older stamp (n and signature) back &mdash; prefs only, the log untouched, self-healing on the next open " +
+    "(the older signature makes the push re-send; the upsert is idempotent). Reported with A4 as the memory-over-disk class (B-74 / B-76). " +
+    "The project rate-limited the rig&rsquo;s pull rate twice (a <code>429</code> without CORS headers, seen by the app as a failed read): M-f, " +
+    "nothing changed, and the next merge succeeded &mdash; the offline-first path holding under a network fault. " +
+    "<b>file:// suite 842 / 839 / 3 (the three named reds above), three tripwires.</b></span></li>" +
     "</ol>";
 })();
 </script>
