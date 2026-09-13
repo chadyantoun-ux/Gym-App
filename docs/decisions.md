@@ -3222,3 +3222,65 @@ Stated so nobody hunts for it, not created here.
 
 **The standing diagnosis.** WO-010 gave him lb on the bar; WO-012 gave him lb on every card without a tap. One
 session logged, in kg, by hand. The app now needs nothing from tooling to log a lb session; it needs the session.
+
+## 2026-09-13 — WO-012b QA: the record-of-taps passes as observed — his state migrates once, a bar-only record survives every Settings write, D6 holds against `main @ db3e0f2`; one of the order's eight observations does not hold as written (a stale chip line after a failed write, P3); one lifetime the pass does not cover (P3)
+
+**Context.** Frontend's `1071542` on `wo-012b-override` (`index.html` + `diag.html`; `logic.js` untouched), verified
+by `qa-engineer` against the order's eight numbered observations. `tests.html` gains **no test** — the whole change
+is view code and a boot pass inside `index.html`'s IIFE, unreachable from `file://`; the count stays **905 / 905 / 0**
+(1.2 s), three tripwires. The browser half ran on a Node + Playwright rig: the branch on :8831, a `git archive` of
+`main @ db3e0f2` on :8832, 400 × 850, CDN and Supabase blocked, a `Storage.prototype.setItem` spy installed before any
+script on every navigation, his session `1789264514484` as the log. The record is "Already proven" item 39.
+
+**Ruled: pass for release. Two P3 findings to file, neither loses a number, neither is his phone's state.**
+
+**The eight observations, each with its evidence.**
+
+1. **His seeded state** — `{unit: lb, bars: [Barbell 20 kg], ex: {d1a: {au: kg, bar: 20, bu: kg}}}`: boot prints
+   `[phat] override pass: 1 rewritten` once, exactly one `phat:v1:prefs` write, no log or bw write; disk
+   `ex.d1a = {bar: 20, bu: kg, v: 2}` with `unit`, the bars and every other prefs key untouched; d1a reads
+   *Weight in lb + Barbell 20 kg* / *Your default · bar set for this exercise*; the sheet offers *Use my default · lb
+   + Barbell 20 kg*. **Second boot: no pass line, zero writes, prefs and log byte-identical.** Pass.
+2. Sheet → kg: `{au: kg, bar: 20, bu: kg, v: 2}`, *Set for this exercise*; *Use my default*: the key gone, the empty
+   `ex` removed, the chip back on *Your default · first bar in your gym*. Pass.
+3. Fresh card: *No bar* → `{bar: null, v: 2}` (no `au`); *Another bar* 15 → `{bar: 15, bu: kg, v: 2}`; Settings → kg;
+   the next session's card is *Weight in kg + bar 15 kg* / *Your default · bar set for this exercise* — the bar
+   followed the unit. The sheet there reads *Use my default · kg · no bar*, which is right: a kg default carries no
+   bar (D6). Pass.
+4. **The regression**: `{d1a: {bar: 20, bu: kg, v: 2}, d1d: {bar: null, v: 2}}` on lb; *I lift in* kg, then lb, then
+   a bar saved — after each of the three writes both records are byte-identical, no `au` sneaked in. Pass.
+5. A deliberate `{au: kg, …, v: 2}` on lb survives two boots with zero writes. Pass. The pass's other rows, driven:
+   an unmarked kg record on a **kg** account is left whole and unmarked (no write); the next boot after the unit
+   becomes lb rewrites it — the order this bug happened in. A bare `{au: kg}` on lb — item 38's D3 literal — is
+   **removed** by the pass: the PM's rule, and the one case where the pass undoes a choice he may have made. Stated,
+   not a defect; one chip tap back.
+6. **D6** against `main @ db3e0f2` over four profiles (kg + no `ex`, bars only, no prefs key, lb + no `ex`): the Day
+   1 `#view`, chip, sets after 77 × 5/5/5, verdict, draft (but for `savedAt`), load sheet, Summary and Trend `#view`,
+   and `phat:v1:prefs` — byte-identical, all four; neither build wrote on boot. Pass.
+7. **`diag.html`**: no `pageerror`, runs past *reading…*, prints the raw gym record (it reads, never migrates),
+   `caches: phat-shell-v6` (58), `served index.html : … ovRecord=true`, `served logic.js : SCHEMA=6 …`,
+   `served sw.js : VERSION=v6`, the `now` line; storage byte-identical after. Pass.
+8. **The failing prefs write**: *No bar* → the chip updates, the toast *Could not save the unit for next time. It
+   holds for this session.* once, prefs untouched, no record; a set typed under a kg tap lands on the draft
+   kg-direct. **Fail on the line-2 wording**: the order says *Set for this exercise*; observed *Your default · bar
+   set for this exercise* at 0.6 s and 2.1 s. `gymCommit` puts the record in memory before its `await`, `paintMode`
+   runs synchronously on that, and the failed save restores memory without a repaint; the next paint reads *Set for
+   this exercise*. Cosmetic — the toast is true, disk is untouched. **P3**, frontend: repaint the chip in
+   `overrideCommit`'s failure branch.
+
+**Undo**, not in the order but a write path: a bar-only record, 125 typed, *Switch to kg and clear* writes
+`{au: kg, bar: 20, bu: kg, v: 2}`; *Undo* puts back `{bar: 20, bu: kg, v: 2}` verbatim, the chip and the 125.
+
+**Found, second (P3).** One lifetime the pass does not cover: a **kg** account with an unmarked
+`{au: kg, bar: 20, bu: kg}`, *I lift in* → lb in Settings, then *No bar* on that card **before the next launch**:
+`writeOverride` merges the unmigrated `au: kg` and stamps `v: 2` → `{au: kg, bar: null, v: 2}`; the next boot prints
+no pass and the card is *Weight in kg · no bar* / *Set for this exercise* for good — his bug, re-created by one tap in
+one window. Not his phone's state (his record sits on a lb account and migrates at the first launch). Fix: run
+`migrateOverrides` inside `setGymUnit` when the unit becomes lb, or have `writeOverride` refuse to carry an unmarked
+`au` forward. Frontend or backend, PM's call.
+
+**Asked for (B-20).** `migrateOverrides`, `recEngine`, `gymEngine`, `recCopy`, `recFrom` and `writeOverride`'s merge
+are six pure functions with no DOM and no `S`, all inside `index.html`. The pass's table is proven by driving the app,
+not pinned. Frontend's own comment names the end state — `overrideMode` with `au` optional and `bar: null`,
+`MODE_KEYS` + `v`, `readGymProfile` keeping the record, the pass beside the schema migrations in `logic.js` — and the
+pins for that day are written in `tests.html`'s B-20 note.
