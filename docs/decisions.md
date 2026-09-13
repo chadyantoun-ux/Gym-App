@@ -3284,3 +3284,55 @@ are six pure functions with no DOM and no `S`, all inside `index.html`. The pass
 not pinned. Frontend's own comment names the end state — `overrideMode` with `au` optional and `bar: null`,
 `MODE_KEYS` + `v`, `readGymProfile` keeping the record, the pass beside the schema migrations in `logic.js` — and the
 pins for that day are written in `tests.html`'s B-20 note.
+
+## 2026-09-13 — WO-013: every store write reads the key first and overlays; a stale tab never removes anything; the B-76 "refuse, naming the reload" shape is retired for an overlay that never refuses a Save
+
+**What happened.** Chady set *I lift in: lb*. `diag.html` on the live build (`65465c3`, markers current) printed
+`prefs.gym = {bars:[…]}` — no `unit`, no `ex`. The write path is proven on production with his prefs, so the setting was
+written and then overwritten: `prefs.backup.at` 16:55 UTC, `prefs.merge.at` 23:28 UTC, `recover:log`/`recover:bw` at
+23:28:05 `reason=merge`. `mergeOnOpen` ends with `save(PREFS, prefsPayload())` from memory; a second tab that booted
+before the tap carried no `unit` and its merge wrote its prefs whole. That is B-124 producing B-128, on his phone — the
+two P3s QA reproduced and filed at the WO-011 and WO-012 closes. B-76 and B-123 are the same class on the log.
+
+**Decision 1 — read-modify-write on the four stores, no exceptions.** `save(k, obj, opts)` for `PREFS`, `LOG`, `BWK`,
+`PLANS` re-reads the key inside `save()`, after the caller's own awaits, and writes `PHAT.overlayStore(kind, disk, obj)`:
+sessions union by `id`, bodyweight by `date`, plans by `planId`, prefs key by key with `gym.unit` / `gym.ex` per id kept
+from disk when the writer lacks them, `backup` by the greater `at`, `merge.keptAt` by the greater value. A key on disk and
+absent in memory is kept. The caller supplies a patch (the default for a single-key intent: `{restAuto}`, `{sessions}`,
+`{gym}`) or the whole payload (boot migration, the merge's writes — a no-op overlay on a just-read disk). `disk` unreadable
+at write time refuses with the existing sentence — today it overwrites, and a store that read at boot and not now is a fault
+whose only safe write is none. After a write that folded in anything the tab lacked, the tab adopts the written value
+(`adoptLog` / `adoptBw` / `adoptPlans` / `adoptPrefs`, the boot reader factored): memory never lags disk after its own write.
+
+**Decision 2 — a removal is named or it does not happen.** `opts.drop = ["calChanged", "gym.ex.d1a"]` is the only way a key
+leaves a store; `opts.replace = true` the only way an array shrinks, and it appears three times, all in `restoreApply`,
+behind a typed REPLACE and a keep. A shrink guard in `save()` refuses anything else with a named sentence — asserted, not
+assumed, as `mergeStores` does. `PHAT.metaPatch(before, after)` diffs an engine's next-state so the `logMeta` sites need not
+know which keys `clearCalChanged` / `endDeload` / `declineReintro` delete.
+
+**Decision 3 — overlay, not refuse.** B-76's row carried "read the key first and refuse, naming the reload, when the bytes
+differ from what this document last loaded". Retired. `[Certain]` a refusal on `finish()` is a Save that does nothing until
+he reloads, on a phone, between sets — the draft survives the reload, but the thing it asks for is what B-01 exists to make
+unnecessary. An overlay never refuses and never loses: the stale tab's one session lands beside the ten, it adopts the
+eleven, the screen tells the truth. The refusal shape is right only where a merge cannot be defined; for these four stores
+it can, and `mergeStores` already defines it for the server pull. The S44 hole (a session logged offline and overwritten
+before its push, on no row anywhere) closes with this.
+
+**Decision 4 — the two collisions decided "writer wins", stated (B-132, B-133).** `gym.bars` replaces, never unions: a bar
+he deletes stays deleted; a stale tab's bar save can drop a bar the other tab added — a setting, one re-add, and the unit
+and every override survive that write. A document under one id takes the writer's bytes: sessions are immutable today, a
+bodyweight upsert's newer tap is the intent, SAVE PLAN is the editor's. When B-05 (edit history) lands its writes must be a
+per-session patch with a newest-wins rule, never the whole array — B-133 pins it as B-05's precondition.
+
+**Exempt, unchanged.** `phat:v1:draft` (per tab by nature), `phat:v1:planedit` (the working copy), every `phat:v1:recover:*`
+keep (write-once raw bytes; when a keep is taken, its key and its once-per-device stamp do not move). `mergeStores` untouched.
+Nothing on the server changes; the push payload is built from memory after adoption, so it can only grow.
+
+**Byte-identity is the acceptance bar for a single tab.** Key order is disk's order then new keys, which on a store this build
+has written once is the builder's order; QA diffs every store after every ordinary write against `main @ 65465c3` on the four
+WO-012b D6 profiles and his session. One extra local read per write; no bytes may change.
+
+**Interim on his phone**, already told: close every other tab of the app until this merges. After release: one re-tap of
+`lb` — the setting was overwritten, not migrated; nothing brings it back but a tap — and any override he had made.
+B-76 / B-123 / B-124 / B-128 are promoted to WO-013 and close against it; B-128 is P1 tonight by the "blocks real use"
+definition, not P3. Work order: `docs/work-orders/WO-013-read-before-write.md`.
