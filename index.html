@@ -87,6 +87,7 @@
     --tap:44px;        /* the floor. WIDTH as well as height - B-43 exists
                           because only the height was ever checked.           */
     --key:48px;        /* stepper key height: 44 is the floor, 48 is the size */
+    --ldchip:56px;     /* the load chip: two lines from first paint (spec 21.2, row 61) */
     /* -- THE COLUMN. ONE NUMBER, AND EVERY FIXED THING READS IT -----------
        The app is a centred column and does not stretch. Logging is a phone
        activity; desktop is where he REVIEWS. #dock used to be fixed with
@@ -181,7 +182,11 @@
   .setrow{display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2); margin-bottom:9px}
   .idx{color:var(--faint); font-weight:800; font-size:.8125rem; width:14px; flex:none; align-self:center}
   .grp{flex:1 1 8.5rem; min-width:8.5rem; display:flex; flex-direction:column; gap:3px}
-  .unit{font-size:.625rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+  /* WO-012 W4 / B-118 (spec 21.6): 10 px -> 11 px, EVERY .unit in the app.
+     The size was the failure, not the ratio (--faint on .card is 4.9:1). The
+     caption line grows by at most 2 px in BOTH modes equally, so 4.4a rule 1
+     (identical box model kg <-> ld) holds. */
+  .unit{font-size:.6875rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
   /* B-37: the ghost has its OWN full-width row under the steppers, so the
      zero-width squeeze that made it invisible at 400px is structurally
      impossible. It shares the row with Rule X1's EXTRA badge, right-aligned,
@@ -202,10 +207,18 @@
   /* WO-010 (spec 4.4b.1). The load chip: full width, 44 px, above the card,
      present from first paint. Text is the fact; the chevron is the one amber
      mark, as on the day rows - it is a control and it opens something. */
-  .ldchip{width:100%; min-height:var(--tap); display:flex; align-items:center; justify-content:space-between;
+  .ldchip{width:100%; min-height:var(--ldchip); display:flex; align-items:center; justify-content:space-between;
     gap:var(--s2); padding:0 var(--s4); background:transparent; color:var(--bone); text-align:left;
     font-size:1rem; font-weight:800; margin-bottom:var(--s1)}
   .ldchip .ct{min-width:0; overflow-wrap:anywhere}
+  /* WO-012 W4 (spec 21.2). The chip is 56 px and TWO LINES: line 1 what he
+     types (as before), line 2 which LEVEL chose it - `Your default`, `Set for
+     this exercise`, `From last time`. The height is fixed at 56 in CSS for
+     EVERY chip, including a device that has never chosen a unit (whose chip
+     DOM is main's, byte for byte - D6), so the rows never move when line 2
+     first appears. Line 2 is text inside the button: one target, one name. */
+  .ldchip .l1,.ldchip .l2{display:block}
+  .ldchip .l2{font-size:.75rem; font-weight:400; color:var(--faint); margin-top:2px}
   .ldchip .chv{color:var(--amber); font-size:1.375rem; line-height:1; flex:none}
   /* The load sheet (4.4b.2) and Settings -> Gym (10.6) share the list row:
      a radio with a two-form mark (outline / fill), never a fill of the row. */
@@ -815,6 +828,11 @@
   .seg button[aria-pressed="true"]{border-color:var(--amber); color:var(--amber)}
   .seg button[aria-pressed="true"] .mk{background:var(--amber); border-color:var(--amber)}
   .setsec{padding:20px var(--s4) 0}
+  /* WO-012 W4 (spec 21.1): the `Bars` sub-kicker under the unit's helper, so
+     the two helpers do not read as one wall. #gym-unit-err is an empty node
+     until a write fails, so nothing moves on a successful tap. */
+  .setsec .gymsub{margin-top:20px; margin-bottom:var(--s2)}
+  .setsec #gym-unit-err .refuse{margin-top:11px}
   .setsec .ghostbtn{margin-top:11px}
   .setsec .tiny{margin-top:11px}
   /* Export's two outcomes, and they do not look alike (B-16, spec 10.4).
@@ -1341,6 +1359,11 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
             and Settings say so and still work (spec 4.4b.5, 10.6). gymUi: the
             Settings form, IN MEMORY: {open:"add"|index, form:{n,w,u}, init}. */
          gymBad:false, gymUi:null,
+         /* WO-012 W4. gymKeep: the `unit` / `ex` keys salvaged from a profile
+            whose BARS were refused whole (S.gymBad), merged back under the
+            next Gym write so a bad bar list never costs the decided unit or
+            an override. gymUnitErr: the `I lift in` refusal, in memory. */
+         gymKeep:null, gymUnitErr:null,
          prefsMeta:{},exp:null,
          /* E-3. The backup client's state, IN MEMORY. `mod` is whether sync.js
             loaded: "off" (never attempted - file://, or offline at boot),
@@ -2137,18 +2160,36 @@ function vSettings(){
 }
 
 /* ============================================================ WO-010 W6:
-   SETTINGS -> GYM (spec 10.6). Bars only: name, weight, unit. No unit
-   default, no per-implement anything, no default bar. Every write goes
-   through PHAT.validateGymProfile and lands in phat:v1:prefs and nowhere
-   else; the log is self-describing (every set stores its own bar), so
-   editing this list never changes a logged number. The form's typed values
-   live in S.gymUi so a render can never discard them. */
+   SETTINGS -> GYM (spec 10.6, amended by 21.1). `I lift in` first - the
+   unit every card starts in (level 1) - then the bars: name, weight, unit.
+   In lb the FIRST bar goes on every `bb` card he has not set himself (the
+   bar rule, WO-012 §0.1); no per-implement anything beyond that. Every
+   write goes through PHAT.readGymProfile and lands in phat:v1:prefs and
+   nowhere else; the log is self-describing (every set stores its own bar),
+   so editing this list never changes a logged number. The form's typed
+   values live in S.gymUi so a render can never discard them. */
 function vGym(){
   const bars=(S.prefs.gym&&Array.isArray(S.prefs.gym.bars))?S.prefs.gym.bars:[];
   const ui=S.gymUi;
-  let h=`<div class="setsec"><span class="lbl secrule">Gym</span>
+  let h=`<div class="setsec"><span class="lbl secrule">Gym</span>`;
+  /* WO-012 W4 (spec 21.1): `I lift in`, FIRST in the section - the bars are
+     subordinate to it (a bar is a thing you add to a lb number). Absent ->
+     kg pressed. Unreadable (prefs, or the profile refused whole) -> neither
+     pressed and a refusal above; a tap still attempts the write. The
+     refusal under it is the write's. */
+  const u=gymUnit(), unreadable=S.prefsBad||S.gymBad;
+  h+=`<span class="lbl" id="gym-unit-l">I lift in</span>`;
+  if(unreadable) h+=`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>Could not read your unit. Pick one to set it again.</p></div>`;
+  h+=`<div class="seg" role="group" aria-labelledby="gym-unit-l">
+      <button data-gymunit="kg" aria-pressed="${u==="kg"?"true":"false"}"><span class="mk" aria-hidden="true"></span>kg</button>
+      <button data-gymunit="lb" aria-pressed="${u==="lb"?"true":"false"}"><span class="mk" aria-hidden="true"></span>lb</button></div>
+    <div id="gym-unit-err">${S.gymUnitErr?`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>${esc(S.gymUnitErr)}</p></div>`:""}</div>
+    <p class="tiny">Every exercise starts in this. Pick another unit on an exercise's card and it keeps that one.
+      Bodyweight stays in kg.</p>
+    <span class="lbl gymsub">Bars</span>
     <p class="tiny" style="margin-top:0">Bars in your gym. Pick one per exercise from the card.
-      Each set records its own bar, so editing this list never changes your log.</p>`;
+      Each set records its own bar, so editing this list never changes your log.${
+      u==="lb"?" In lb, the first bar here goes on every barbell exercise you have not set yourself.":""}</p>`;
   if(S.gymBad) h+=`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>Could not read your bars.</p></div>`;
   const form=(ix)=>{
     const f=ui.form, step=LD_STEP[f.u], edit=typeof ix==="number";
@@ -2198,15 +2239,99 @@ function gymOpen(which){
   render(true);
   const n=document.getElementById("gym-n"); if(n) n.focus();
 }
-async function gymWrite(bars,okMsg,undoFn){
-  const before=S.prefs.gym;
-  S.prefs.gym={bars:bars};
+/* THE PROFILE A GYM WRITE STARTS FROM (WO-012 W4). The adopted profile, or -
+   when the bars were refused whole - an empty list under the unit and
+   overrides salvaged at boot (S.gymKeep). Always a fresh object. */
+function gymBase(){
+  if(S.prefs.gym) return Object.assign({},S.prefs.gym);
+  return Object.assign({bars:[]},S.gymKeep||{});
+}
+/* One commit path for phat:v1:prefs' gym key. Memory first, then the write;
+   a failed write puts memory back. Returns the save's verdict. */
+async function gymCommit(next){
+  const before=S.prefs.gym, keep=S.gymKeep;
+  S.prefs.gym=next; S.gymKeep=null;
   const ok=await save(PREFS,prefsPayload());
-  if(!ok){ S.prefs.gym=before; return false; }
-  S.gymBad=false;
+  if(!ok){ S.prefs.gym=before; S.gymKeep=keep; }
+  return ok;
+}
+async function gymWrite(bars,okMsg,undoFn){
+  /* WO-012 W4 - THE LINE THAT BROKE "DECIDE ONCE" (UX §21, finding 2): this
+     used to write {bars:bars}, so every bar save deleted `unit` and every
+     override. It now replaces `bars` on the existing object and nothing else. */
+  const next=Object.assign(gymBase(),{bars:bars});
+  const wasBad=S.gymBad; S.gymBad=false;
+  const ok=await gymCommit(next);
+  if(!ok){ S.gymBad=wasBad; return false; }
   if(undoFn) toastUndo(okMsg,undoFn); else toast(okMsg);
   return true;
 }
+/* ============================================================ WO-012 W4:
+   THE UNIT, DECIDED ONCE (spec 21.1). Level 1: prefs.gym.unit - where every
+   card starts. The tap is the write; the pressed mark is the receipt; the
+   live region says it. A tap on the pressed option does nothing. Changing
+   it never touches an override (level 2, prefs.gym.ex) - that is what
+   "it keeps that one" in the helper means. Bodyweight is not touched. */
+const gymUnit=()=>(!S.prefsBad&&!S.gymBad&&S.prefs.gym&&(S.prefs.gym.unit==="kg"||S.prefs.gym.unit==="lb"))?S.prefs.gym.unit:null;
+async function setGymUnit(u){
+  u=u==="lb"?"lb":"kg";
+  const cur=gymUnit();
+  if(cur===u) return;
+  const next=Object.assign(gymBase(),{unit:u});
+  let rg=null; try{ rg=PHAT.readGymProfile(next); }catch(err){ rg=null; }
+  if(!rg||!rg.ok){ S.gymUnitErr="Could not save the unit. Nothing changed."; paintGymUnit(); return; }
+  const wasBad=S.gymBad; S.gymBad=false;
+  const ok=await gymCommit(rg.gym);
+  if(!ok){ S.gymBad=wasBad; S.gymUnitErr="Could not save the unit. Nothing changed."; paintGymUnit(); return; }
+  S.gymUnitErr=null;
+  /* The bars section's shape may have changed (a refused list is now an
+     empty one; the lb-only sentence appears) - Settings holds no caret
+     unless the bar form is open, and that form's values live in S.gymUi. */
+  render(true);
+  const again=document.querySelector('[data-gymunit="'+u+'"]'); if(again) again.focus();
+  announce("I lift in "+u+".");
+}
+/* The segment and its refusal, in place: no render on a failure, so a bar
+   form with a caret in it is not repainted for a write that changed nothing. */
+function paintGymUnit(){
+  const cur=gymUnit();
+  document.querySelectorAll("[data-gymunit]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.gymunit===cur?"true":"false"));
+  const el=document.getElementById("gym-unit-err");
+  if(el) el.innerHTML=S.gymUnitErr?`<div class="refuse" role="alert"><p><span aria-hidden="true">! </span>${esc(S.gymUnitErr)}</p></div>`:"";
+}
+/* Level 2: the per-exercise override, WRITTEN ON THE TAP that applies a
+   choice in the card's sheet - a set logged or not (WO-012 §0.1). The draft
+   write has already happened, first and independently; this is a second
+   save() with its own failure path: the session keeps the choice (the draft
+   is the source of truth mid-workout), the chip reflects it, and the app
+   says ONCE per session that it will not be there next time (D7). save()'s
+   generic S.err is put back as it was: the sentence for this failure is the
+   toast's, and the generic one would tell him his SETS failed, which is
+   false. */
+let ovSaid=false;
+async function writeOverride(id,mode){
+  const base=gymBase(), ex=Object.assign({},base.ex||{});
+  ex[id]=modeCopy(mode);
+  return overrideCommit(Object.assign(base,{ex:ex}));
+}
+async function clearOverride(id){
+  const base=gymBase(), ex=Object.assign({},base.ex||{});
+  if(!Object.prototype.hasOwnProperty.call(ex,id)&&!S.gymBad) return true;
+  delete ex[id];
+  if(Object.keys(ex).length) base.ex=ex; else delete base.ex;
+  return overrideCommit(base);
+}
+async function overrideCommit(next){
+  const err=S.err;
+  const ok=await gymCommit(next);
+  if(!ok){
+    S.err=err;
+    if(!ovSaid){ ovSaid=true; toast("Could not save the unit for next time. It holds for this session.",false,4200); }
+  }
+  return ok;
+}
+/* The override on disk for this card, or null. */
+const overrideOf=id=>{ try{ return S.gymBad?null:PHAT.overrideMode(S.prefs,id); }catch(err){ return null; } };
 async function gymSave(){
   const ui=S.gymUi; if(!ui||!ui.form) return;
   const f=ui.form, n=String(f.n).trim();
@@ -2327,16 +2452,17 @@ function ghostText(e,prev,k,changed,mode){
   /* Rule Z2: a rack chin reads `Last bodyweight x 10`. No rule and no view in
      this app produces the string `0 kg`. */
   if(mode&&!isKgDirect(mode)&&pw.value>0){
-    /* WO-010 spec 4.4a rule 4, on an `ld` card only - a kg-direct card is
-       the line below, byte for byte (D8). The number he will LOAD prints only
-       when last time was the SAME BUILD - same unit, same bar or both no bar;
-       anything else prints the stored kg total WITH its unit, so the row
-       never shows a number that looks loadable and is not. The build itself
-       (which bar) is not repeated per row: the chip above the rows names it,
-       and the sheet's "Last time:" line carries the prior build. */
-    const pm=PHAT.loadModeFor({sets:[pv]});
-    if(pv.ld&&modeEq(pm,mode)) return "Last "+String(pv.ld.add)+" "+pv.ld.au+" × "+pr.value;
-    return "Last "+PHAT.loadWord(pw.value,e.implement)+" × "+pr.value;
+    /* WO-012 W4 (spec 21.4, replacing 4.4a rule 4's kg fallback): on a
+       non-kg-direct card the ghost is PHAT.priorGhost's - the number that
+       belongs in THIS card's weight field to reproduce the prior. Same build
+       -> `Last 90 lb × 5` (ld.add verbatim); a different build -> the prior's
+       ADDED weight for this card's bar, in the card's unit (`Last 125.5 lb ×
+       5` for 77 kg on a 20 kg bar; `Last 170 lb × 5` with no bar); a prior
+       at or under the bar -> `Last 44 lb total × 12`, marked, never seeded.
+       The row's `= {w} kg` total is the conversion's marker (coach 21.4).
+       A kg-direct card is the line below, byte for byte (D6). */
+    let g=""; try{ g=PHAT.priorGhost(pv,mode,e.implement); }catch(err){ g=""; }
+    return g||"No prior set.";
   }
   const w=pw.value>0?String(r1(pw.value)):PHAT.loadWord(0,e.implement);
   return "Last "+w+" × "+pr.value;
@@ -2368,20 +2494,67 @@ function modeCopy(m){
   if(m.bar!==undefined&&m.bar!==null){ o.bar=(typeof m.bar==="number")?m.bar:Number(m.bar); o.bu=m.bu==="lb"?"lb":"kg"; }
   return o;
 }
-/* The card's mode, in precedence: the mode he CHOSE on the chip this session
-   (entry.mode) > the build already on the draft's own sets > sets typed in
-   kg direct before any mode existed > how the load was built LAST TIME
-   (PHAT.loadModeFor) > kg direct. The draft's own ld wins while a draft is
-   open (WO-010 §1). Never throws: a throw here is a kg-direct card (§0.7). */
-function cardMode(id,prev){
+/* The card's mode AND THE TIER THAT CHOSE IT (WO-012 W4): a thin caller of
+   PHAT.cardModeFor, the one pure precedence - the chip's choice this session
+   (entry.mode) > the draft's own ld > a kg-direct set typed > the OVERRIDE
+   (prefs.gym.ex[id], level 2) > the DEFAULT (prefs.gym.unit + the bar rule,
+   level 1) > history (WO-010's loadModeFor, only while no default has ever
+   been chosen) > kg direct. The draft entry is passed explicitly. A refused
+   profile (S.gymBad) lends nothing: those cards are on kg and the chip says
+   so. Never throws: a throw here is a kg-direct card (§0.7). */
+function cardModeFull(id,prev){
   try{
     const en=S.draft&&S.draft.entries[id];
-    if(en&&en.mode&&typeof en.mode==="object") return modeCopy(en.mode);
-    const sets=(en&&Array.isArray(en.sets))?en.sets:[];
-    for(let i=0;i<sets.length;i++){ const l=sets[i]&&sets[i].ld; if(l&&typeof l==="object") return modeCopy(l); }
-    if(sets.some(x=>String((x&&x.w)==null?"":x.w).trim()!=="")) return {au:"kg"};
-    return modeCopy(PHAT.loadModeFor(prev===undefined?PHAT.lastFor(S.sessions,id):prev));
-  }catch(err){ return {au:"kg"}; }
+    const r=PHAT.cardModeFor({exId:id, ex:exAnywhere(id), entry:en||undefined,
+      prefs:S.gymBad?null:S.prefs, plan:sp(),
+      prev:prev===undefined?PHAT.lastFor(S.sessions,id):prev});
+    return {mode:modeCopy(r.mode), tier:r.tier};
+  }catch(err){ return {mode:{au:"kg"},tier:"kg"}; }
+}
+function cardMode(id,prev){ return cardModeFull(id,prev).mode; }
+/* Level 1 for this card, as the sheet names it (`Use my default · lb +
+   Barbell 20 kg`) even while an override is in force. */
+function defaultModeFor(id){
+  try{ return modeCopy(PHAT.defaultMode(S.gymBad?null:S.prefs,exAnywhere(id),sp())); }
+  catch(err){ return {au:"kg"}; }
+}
+/* Is a default KNOWN on this device - a unit chosen in Settings and readable?
+   Until it is, there is nothing for `Use my default` to go back to. */
+const defaultKnown=()=>gymUnit()!==null;
+/* THE CHIP'S SECOND LINE (spec 21.2): which LEVEL the card is on. Computed
+   from the tier and two facts the view already has. Three rulings kept:
+   `draft` / `typed` never get their own words - they report the level
+   UNDERNEATH the numbers, so the line does not change as he types a 7;
+   `chip` reads `Set for this exercise` even when the prefs write failed (D7:
+   for this workout it is); history is its own state. And one ruling applied
+   from the main session on UX 21.12 #1: history fires only while no default
+   has been chosen, so the `From last time` reading under a typed number is
+   given only while prefs.gym.unit is absent - with a default set, the sets'
+   build came from the default or the override, and the line says which.
+   "" means NO second line: a device that has never chosen a unit and holds
+   no override sees today's chip, byte for byte (D6, UX 21.12 #4). */
+function chipLevel(id,cm,prev){
+  const t=cm.tier, ov=!!overrideOf(id);
+  const unreadable=S.prefsBad||S.gymBad;
+  const hasLd=p=>!!(p&&Array.isArray(p.sets)&&p.sets.some(s=>s&&s.ld&&typeof s.ld==="object"));
+  const dflt=()=>{
+    const g=S.prefs.gym, e=exAnywhere(id);
+    if(g&&g.unit==="lb"&&e&&e.implement==="bb")
+      return (Array.isArray(g.bars)&&g.bars.length)?"Your default · first bar in your gym":"Your default · no bars in your gym yet";
+    return "Your default";
+  };
+  if(t==="chip"||t==="override") return "Set for this exercise";
+  if(t==="draft"||t==="typed"){
+    if(ov) return "Set for this exercise";
+    if(unreadable) return "Could not read Settings · kg for now";
+    if(defaultKnown()) return dflt();
+    if(prev===undefined) prev=PHAT.lastFor(S.sessions,id);
+    return hasLd(prev)?"From last time":"";
+  }
+  if(unreadable) return "Could not read Settings · kg for now";
+  if(t==="history") return "From last time";
+  if(t==="default") return dflt();
+  return "";
 }
 /* The bar's name for a mode: the profile's when a bar matches on weight and
    unit, else the unnamed form. null for no bar. */
@@ -2392,10 +2565,22 @@ function barLabel(m,cap){
   if(hit) return String(hit.n)+" "+m.bar+" "+m.bu;
   return (cap?"Bar ":"bar ")+m.bar+" "+m.bu;
 }
-/* Spec 4.4b.1, the chip's text: `Weight in kg · no bar` / `Weight in lb + Barbell 20 kg`. */
-function chipText(m){
+/* The build in the chip's grammar without `Weight in `: `lb + Barbell 20 kg`
+   / `kg · no bar` / `lb + bar 20 kg` (spec 21.3's {mode}). */
+function modeWord(m){
   const b=barLabel(m);
-  return "Weight in "+m.au+(b?" + "+b:" · no bar");
+  return m.au+(b?" + "+b:" · no bar");
+}
+/* Spec 4.4b.1, the chip's text: `Weight in kg · no bar` / `Weight in lb + Barbell 20 kg`. */
+function chipText(m){ return "Weight in "+modeWord(m); }
+/* The chip's two lines and its name (spec 21.2, 21.9 #14): line 1 + `. ` +
+   line 2 with ` · ` read as a comma + `. Change.`. With no second line the
+   markup and the name are main's, byte for byte (D6). */
+function chipParts(id,cm,prev){
+  const l1=chipText(cm.mode), l2=chipLevel(id,cm,prev);
+  if(!l2) return {html:esc(l1), name:l1+". Change."};
+  return {html:`<span class="l1">${esc(l1)}</span><span class="l2">${esc(l2)}</span>`,
+          name:l1+". "+l2.replace(" · ",", ")+". Change.", l2:l2};
 }
 /* What he typed into the weight field: `add` on an ld set, `w` on a kg-direct one. */
 const typedW=st=>(st&&st.ld&&typeof st.ld==="object")?String(st.ld.add==null?"":st.ld.add):String((st&&st.w)==null?"":st.w);
@@ -2439,10 +2624,14 @@ function ldAnnounce(st,e){
    TYPED (typedW) - never from the stored kg total - so a bar change keeps
    the plates and moves only the total, and a unit change arrives here only
    after the confirmation that clears the fields (spec 4.4b.3). */
-function applyMode(id,mode,clearW){
+function applyMode(id,mode,clearW,asDefault){
   const en=S.draft&&S.draft.entries[id]; if(!en) return;
-  en.mode=modeCopy(mode);
-  (en.sets||[]).forEach(st=>{ writeW(st,clearW?"":typedW(st),en.mode); });
+  const m=modeCopy(mode);
+  /* WO-012 W4: `Use my default` applies the default's mode to the sets and
+     leaves NO chip choice on the draft, so the card's tier falls through to
+     the default and the chip's second line says so (spec 21.3). */
+  if(asDefault) delete en.mode; else en.mode=m;
+  (en.sets||[]).forEach(st=>{ writeW(st,clearW?"":typedW(st),m); });
   flushDraft();
 }
 /* Repaint the card's mode-dependent nodes IN PLACE. Never render(): the
@@ -2457,9 +2646,9 @@ function paintMode(id){
   const prev=PHAT.lastFor(S.sessions,id);
   let changed=false;
   try{ const ep=PHAT.prescriptionEpoch({ex:e,prev:prev,plan:sp(),exId:id}); changed=!!(ep&&ep.changed); }catch(err){}
-  const mode=cardMode(id,prev), kgd=isKgDirect(mode);
+  const cm=cardModeFull(id,prev), mode=cm.mode, kgd=isKgDirect(mode);
   const chip=document.getElementById("ldchip");
-  if(chip){ const t=chipText(mode); chip.querySelector(".ct").textContent=t; chip.setAttribute("aria-label",t+". Change."); }
+  if(chip){ const cp=chipParts(id,cm,prev); chip.querySelector(".ct").innerHTML=cp.html; chip.setAttribute("aria-label",cp.name); }
   const step=LD_STEP[mode.au], bl=barLabel(mode);
   card.querySelectorAll(".setrow").forEach(row=>{
     const k=+row.dataset.i, st=en.sets[k]; if(!st) return;
@@ -2530,9 +2719,13 @@ function vSession(){
   const changed=!!(ep&&ep.changed);
   let xs={flags:[],count:0,line:"",idle:false};
   try{ const r=PHAT.extraSets(st.sets,rx); if(r) xs=r; }catch(err){}
+  /* WO-012 W4: the card's mode is read ONCE per paint and its unit rides
+     into every rule that names a load (Rule U1: `52.5 kg (115.5 lb)` on a lb
+     card; a kg card is today's bytes). */
+  const cm=cardModeFull(e.id,prev), mode=cm.mode, kgd=isKgDirect(mode);
   let sl=null;
   if(e.k==="speed"){
-    try{ sl=PHAT.speedLoad(S.sessions,e.id,C.today,speedSrcName(e.id),sp()); }
+    try{ sl=PHAT.speedLoad(S.sessions,e.id,C.today,speedSrcName(e.id),sp(),mode.au); }
     catch(err){ sl=null; }
   }
   const ag=PHAT.draftAge(S.draft.date,C.today);
@@ -2605,9 +2798,12 @@ function vSession(){
      the card, OUTSIDE #excard so the row DOM is untouched (D8). A control
      above inputs, allowed because it is present from first paint at a fixed
      44 px and its text changes only on a tap inside a modal he opened. */
-  const mode=cardMode(e.id,prev), kgd=isKgDirect(mode);
-  { const ct=chipText(mode);
-    h+=`<button class="ldchip" id="ldchip" aria-haspopup="dialog" aria-label="${esc(ct)}. Change."><span class="ct">${esc(ct)}</span><span class="chv" aria-hidden="true">&rsaquo;</span></button>`; }
+  /* WO-012 W4 (spec 21.2): two lines at a fixed 56 px, the second naming
+     the level (`Your default · first bar in your gym` / `Set for this
+     exercise` / `From last time`). No second line on a device that has never
+     chosen a unit: main's chip, byte for byte (D6). */
+  { const cp=chipParts(e.id,cm,prev);
+    h+=`<button class="ldchip" id="ldchip" aria-haspopup="dialog" aria-label="${esc(cp.name)}"><span class="ct">${cp.html}</span><span class="chv" aria-hidden="true">&rsaquo;</span></button>`; }
 
   /* ---- THE INPUTS. Built BEFORE and OUTSIDE every try block above, so no
      advice rule can prevent a set row painting (§0.7). */
@@ -2769,9 +2965,17 @@ function sumRow(e,st,C){
   if(!inSessDay(e.id)) h+=`<p class="sumnote">Not in the plan any more. It still saves with this session.</p>`;
   if(done.length){
     /* Rule Z2 holds on this screen too: a rack chin reads `bodyweight × 10`.
-       No view in this app prints the string `0 kg` (B-32). */
-    h+=`<p class="sumsets">${esc(done.map(s=>
-      (s.w>0?String(r1(s.w)):PHAT.loadWord(0,e.implement))+" × "+s.r).join(" · "))}</p>`;
+       No view in this app prints the string `0 kg` (B-32).
+       WO-012 W4 (spec 21.4 #22): a set typed on a non-kg-direct card prints
+       what he TYPED, in its unit - `125.5 lb × 5` - the number he can check
+       against the bar, in the words the remove confirmation uses. A
+       kg-direct set is main's `77 × 5`, byte for byte (D6). The `Volume kg`
+       counter above stays kg; its label says so. */
+    const raw=(st.sets||[]).filter(s=>PHAT.completedSets([s]).length);
+    h+=`<p class="sumsets">${esc(raw.map(s=>{
+      const n=PHAT.completedSets([s])[0];
+      if(s.ld&&typeof s.ld==="object"&&!isKgDirect(s.ld)&&typedW(s).trim()!=="") return typedW(s).trim()+" "+s.ld.au+" × "+n.r;
+      return (n.w>0?String(r1(n.w)):PHAT.loadWord(0,e.implement))+" × "+n.r; }).join(" · "))}</p>`;
   }
   /* B-33: a typed note is data. It is counted separately, and it is SHOWN —
      hiding the only thing an exercise holds is how a note gets deleted by
@@ -2784,15 +2988,17 @@ function sumRow(e,st,C){
   if(done.length&&!e.gone){
     let v=null, vh=null;
     const dl=C.deload.active===true;
+    /* WO-012 W4: the card's unit rides into the verdict (Rule U1). */
+    const au=cardMode(e.id).au;
     try{
       v=PHAT.verdict({ex:e, sets:st.sets, prev:PHAT.lastFor(S.sessions,e.id),
-        note:st.note, deload:dl});
+        note:st.note, deload:dl, unit:au});
       vh=verdictHtml(v,dl,"");
     }catch(err){ vh=null; }
     if(vh) h+=vh.html;
     else if(e.k==="speed"){
       let ins="";
-      try{ const sl=PHAT.speedLoad(S.sessions,e.id,C.today,speedSrcName(e.id),sp());
+      try{ const sl=PHAT.speedLoad(S.sessions,e.id,C.today,speedSrcName(e.id),sp(),au);
            ins=sl?sl.instruction:""; }catch(err){ ins=""; }
       if(ins) h+=`<div class="advice"><p class="kick">Speed work</p><p>${esc(ins)}</p></div>`;
     }else{
@@ -3010,22 +3216,36 @@ function liftPoints(l){
 function liftRow(l){
   const pts=liftPoints(l);
   const last=pts.length?pts[pts.length-1]:null;
+  /* WO-012 W4 (spec 21.4): the row reads in the CARD'S unit - cardModeFor
+     with no draft (override > default > history). On a lb card the
+     endpoints are displayLoad's (`182 lb`) and the delta is ENDPOINT MINUS
+     ENDPOINT AFTER ROUNDING, so the two numbers he can see subtract to the
+     number he is shown; sign and word from that displayed difference. A kg
+     card is main's row, byte for byte (D6). */
+  let au="kg";
+  try{
+    let ex=null; try{ ex=PHAT.exById(S.plan,l.id); }catch(err){ ex=null; }
+    au=PHAT.cardModeFor({exId:l.id, ex:ex||undefined, prefs:S.gymBad?null:S.prefs, plan:S.plan,
+      prev:PHAT.lastFor(S.sessions,l.id)}).mode.au;
+  }catch(err){ au="kg"; }
+  const lb=au==="lb";
+  const tok=e=>lb?PHAT.displayLoad(e,"lb"):r1(e).toFixed(1)+" kg";
   let head=`<span class="tlname">${esc(l.lbl)}</span>`;
   if(pts.length>=2){
-    const d=r1(last.e-pts[0].e);
+    const d=lb?r1(PHAT.displayNum(last.e,"lb")-PHAT.displayNum(pts[0].e,"lb")):r1(last.e-pts[0].e);
     const word=d>0?"Up":(d<0?"Down":"No change");
-    const lab=word+(d?" "+Math.abs(d).toFixed(1)+" kg":"")+" since "+fmt(pts[0].date);
+    const lab=word+(d?" "+Math.abs(d).toFixed(1)+" "+au:"")+" since "+fmt(pts[0].date);
     head+=`<span class="tldelta ${d>0?"up":(d<0?"dn":"")}" aria-label="${esc(lab)}">${
-      d>0?"+":d<0?"−":""}${Math.abs(d).toFixed(1)} kg</span>`;
+      d>0?"+":d<0?"−":""}${Math.abs(d).toFixed(1)} ${au}</span>`;
   }
   let body;
   if(pts.length>=2){
     body=spark(pts)+`<div class="tlfoot"><span>${esc(fmt(pts[0].date))}</span><span>${
-      r1(last.e).toFixed(1)} kg &middot; ${esc(fmt(last.date))}</span></div>`;
+      esc(tok(last.e))} &middot; ${esc(fmt(last.date))}</span></div>`;
   }else if(pts.length===1){
     /* NEVER a flat line at zero and never an empty box (spec §6, states).
        One date is a reading, not a trend, so it is printed as a reading. */
-    body=`<p class="tlnone">${r1(last.e).toFixed(1)} kg on ${esc(fmt(last.date))}.
+    body=`<p class="tlnone">${esc(tok(last.e))} on ${esc(fmt(last.date))}.
       One date cannot make a line. Log it again.</p>`;
   }else{
     body=`<p class="tlnone">No data yet. This line reads sets at 8 reps or fewer.</p>`;
@@ -4509,10 +4729,15 @@ function paintAdvice(speak){
      draft on disk still holds 110, Save writes 110 - and the input gets NO
      aria-invalid and no aria-describedby pointing at it, because it is a valid
      value and telling a screen reader otherwise is a lie with consequences. */
+  /* WO-012 W4: the card's unit rides into every rule below (Rule U1 - the
+     lb reading in brackets on a kg-direct instruction; a kg card is today's
+     bytes). speedFlagText takes speedLoad's RESULT so the bracket follows
+     the source's path. */
+  const au=cardMode(id).au;
   let flag="";
   try{
     if(e.k==="speed"){
-      const sl=PHAT.speedLoad(S.sessions,id,today,speedSrcName(id),sp());
+      const sl=PHAT.speedLoad(S.sessions,id,today,speedSrcName(id),sp(),au);
       if(sl&&sl.source&&sl.target>0){
         let worst=null;
         st.sets.forEach(s=>{
@@ -4520,7 +4745,7 @@ function paintAdvice(speak){
           const v=PHAT.parseWeight(s.w);
           if(v.ok&&(worst===null||v.value>worst)) worst=v.value;
         });
-        if(worst!==null) flag=PHAT.speedFlagText(worst,sl.target);
+        if(worst!==null) flag=PHAT.speedFlagText(worst,sl,au);
       }
     }
   }catch(err){ flag=""; }
@@ -4545,7 +4770,7 @@ function paintAdvice(speak){
   let v=null;
   try{
     v=PHAT.verdict({ex:e, sets:st.sets, prev:PHAT.lastFor(S.sessions,id),
-      note:st.note, deload:dl.active===true});
+      note:st.note, deload:dl.active===true, unit:au});
   }catch(err){ v=null; }
   let html="", say="";
   const vh=verdictHtml(v,dl.active===true,"vslot");
@@ -4555,7 +4780,7 @@ function paintAdvice(speak){
        speedLoad(): `text` for the load, `instruction` for how to move it. Both
        ungated, both permanent. verdict() returns null here by design. */
     let ins="";
-    try{ const sl=PHAT.speedLoad(S.sessions,id,today,speedSrcName(id),sp());
+    try{ const sl=PHAT.speedLoad(S.sessions,id,today,speedSrcName(id),sp(),au);
          ins=sl?sl.instruction:""; }catch(err){ ins=""; }
     html=`<div class="advice vslot"><p class="kick">Speed work</p><p>${esc(ins)}</p></div>`;
   }else{
@@ -4765,6 +4990,9 @@ document.getElementById("view").addEventListener("click",async e=>{
      form in memory and the node under the thumb - no render while the name
      field may hold a caret. Save, Remove, Cancel and a row tap are commits. */
   if(e.target.closest("#gym-add")){ gymOpen("add"); return; }
+  /* WO-012 W4: `I lift in`. The tap is the write (spec 21.1). */
+  const gun=e.target.closest("[data-gymunit]");
+  if(gun){ await setGymUnit(gun.dataset.gymunit); return; }
   const gr=e.target.closest("[data-gymrow]");
   if(gr){ gymOpen(+gr.dataset.gymrow); return; }
   if(e.target.closest("#gym-save")){ await gymSave(); return; }
@@ -5501,7 +5729,16 @@ function sheetBars(){
 function openLoadSheet(keep){
   const C=sessionCtx(), e=C.list[S.exIx]; if(!e||!S.draft) return;
   const id=e.id, prev=PHAT.lastFor(S.sessions,id);
-  const mode=cardMode(id,prev);
+  const cm=cardModeFull(id,prev), mode=cm.mode;
+  /* WO-012 W4 (spec 21.3): `Use my default · {mode}` renders only when the
+     card is NOT on the default level - the chip's second line does not read
+     `Your default…` - and a default is known (a unit chosen in Settings and
+     readable). On a default card the segment and the checked bar already
+     show what the default is, and a row that does nothing is a row a tired
+     thumb will tap. */
+  const lvl=chipLevel(id,cm,prev);
+  const onDefault=lvl.indexOf("Your default")===0;
+  const showDflt=defaultKnown()&&!onDefault;
   const bars=sheetBars();
   const cur=(mode.bar!==undefined)?{w:mode.bar,u:mode.bu}:null;
   const hit=cur?bars.findIndex(b=>b&&Number(b.w)===Number(cur.w)&&b.u===cur.u):-1;
@@ -5529,18 +5766,25 @@ function openLoadSheet(keep){
       <button class="ghostbtn ldfull" data-ld="use">Use this bar</button>
       <p class="tiny">Kept for this exercise. Add it in Settings &rarr; Gym to have it on every card.</p></div>`;
   }
+  /* `Last time:` is NOT converted (spec 21.4): it is the provenance line -
+     the one that says what unit the prior was ENTERED in - and on a lb card
+     `Last time: kg · no bar.` is what tells him the ghost's `125.5 lb` is a
+     conversion. On the history tier with no chosen default, the real
+     control is named instead (spec 21.3). */
   let last="";
-  if(prev){
+  if(cm.tier==="history"&&!defaultKnown()) last="From last time. Set your default in Settings → Gym.";
+  else if(prev){
     const pb=barLabel(prevMode);
     last=prevMode.au==="kg"&&prevMode.bar===undefined&&!prev.sets.some(x=>x&&x.ld)
       ? "Last time: kg · no bar."
       : "Last time: "+prevMode.au+(pb?" + "+pb:" · no bar")+".";
   }
+  const dflt=showDflt?`<button class="ghostbtn ldfull" data-ld="dflt">Use my default · ${esc(modeWord(defaultModeFor(id)))}</button>`:"";
   const m=document.getElementById("modal");
   m.innerHTML=`<div class="scrim" data-sheet="cancel"></div>
     <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title">
       <h2 id="dr-confirm-title" tabindex="-1">Weight on ${esc(e.n)}</h2>
-      ${S.gymBad||S.prefsBad?`<div class="refuse ldwarn"><p>Could not read your bars. You can still set one here.</p></div>`:""}
+      ${S.gymBad||S.prefsBad?`<div class="refuse ldwarn"><p>Could not read your settings. You can still set the unit and bar here.</p></div>`:""}
       <span class="lbl ldlbl" id="ld-unit-l">Weight entered in</span>
       <div class="seg" role="group" aria-labelledby="ld-unit-l">
         <button data-ld="unit" data-u="kg" aria-pressed="${mode.au==="kg"?"true":"false"}"><span class="mk" aria-hidden="true"></span>kg</button>
@@ -5548,6 +5792,7 @@ function openLoadSheet(keep){
       <span class="lbl ldlbl" id="ld-bar-l">Added to</span>
       <div class="mvlist ldlist" role="radiogroup" aria-labelledby="ld-bar-l">${rows}</div>
       ${form}
+      ${dflt}
       ${last?`<p class="det">${esc(last)}</p>`:""}
       <div id="dr-sheet-err"></div>
       <div class="btns"><button class="ghostbtn mvno" data-sheet="safe">Done</button></div>
@@ -5566,9 +5811,11 @@ function loadSheetTap(b){
   if(a==="unit"){
     const u=b.dataset.u; if(u===mode.au) return;
     const typed=typedSets(id);
-    if(typed.length){ askUnitSwitch(id,mode,u,typed); return; }
     const nm=modeCopy(mode); nm.au=u;
-    applyMode(id,nm,false); paintMode(id);
+    if(typed.length){ askUnitSwitch(id,mode,nm,typed); return; }
+    /* WO-012 W4: the draft write first (applyMode), then the override -
+       written ON THIS TAP, a set logged or not. Independent writes. */
+    applyMode(id,nm,false); writeOverride(id,nm); paintMode(id); paintAdvice(false);
     openLoadSheet(true);
     const again=document.querySelector('#modal [data-ld="unit"][data-u="'+u+'"]'); if(again) again.focus();
     return;
@@ -5579,6 +5826,10 @@ function loadSheetTap(b){
     if(key!=="none"){ const bar=sheetBars()[+key]; if(!bar) return; nb={w:Number(bar.w),u:bar.u}; }
     pickBar(id,mode,nb); return;
   }
+  /* WO-012 W4 (spec 21.3): `Use my default · {mode}`. Clears the override
+     and applies level 1 with its bar. The D9 confirmations apply exactly as
+     to any other switch; nothing differs -> silent. */
+  if(a==="dflt"){ useDefault(id,mode); return; }
   if(a==="another"){ st.another=!st.another; openLoadSheet(true);
     const inp=document.getElementById("ld-bw"); if(inp&&st.another) inp.focus(); return; }
   if(a==="bu"){ st.bu=b.dataset.u==="lb"?"lb":"kg"; const inp=document.getElementById("ld-bw"); if(inp) st.bw=inp.value; openLoadSheet(true);
@@ -5604,12 +5855,26 @@ function loadSheetTap(b){
 }
 /* The bar for the card. Same bar → close. Typed weights → the confirmation
    that names both totals per set (4.4b.3); nothing typed → apply and close. */
-function pickBar(id,mode,nb){
+/* WO-012 W4: every apply in the sheet is one of two writes AFTER the draft's -
+   the override (a chosen unit or bar, level 2) or its removal (`Use my
+   default`). `asDefault` picks which; both are their own save() and neither
+   blocks the draft write that already happened. */
+function applyChoice(id,nm,clearW,asDefault){
+  applyMode(id,nm,clearW,asDefault);
+  if(asDefault){ clearOverride(id); announce("On your default: "+modeWord(nm)+"."); }
+  else writeOverride(id,nm);
+}
+function pickBar(id,mode,nb,asDefault){
   const same=nb?(mode.bar!==undefined&&Number(mode.bar)===nb.w&&mode.bu===nb.u):(mode.bar===undefined);
-  if(same){ closeSheet(); return; }
+  if(same){
+    /* `Use my default` with nothing differing: the key goes silently and the
+       chip's second line changes (spec 21.3). A bar row: close. */
+    if(asDefault){ applyChoice(id,modeCopy(mode),false,true); closeSheet(); paintMode(id); return; }
+    closeSheet(); return;
+  }
   const nm={au:mode.au}; if(nb){ nm.bar=nb.w; nm.bu=nb.u; }
   const typed=typedSets(id).filter(x=>{ const l={add:typedW(x.st),au:mode.au}; if(nb){ l.bar=nb.w; l.bu=nb.u; } return PHAT.composeLoad(l).ok; });
-  if(!typed.length){ applyMode(id,nm,false); closeSheet(); paintMode(id); paintAdvice(false); return; }
+  if(!typed.length){ applyChoice(id,nm,false,asDefault); closeSheet(); paintMode(id); paintAdvice(false); return; }
   const b1=barLabel(mode), b2=barLabel(nm);
   const on=b=>b?"on "+b:"with no bar";
   const lines=typed.map(x=>{
@@ -5622,12 +5887,16 @@ function pickBar(id,mode,nb){
   askSheet({headline:"The bar changes the totals.", body:lines.join(" "),
     danger:"Use "+(b2||"no bar"), safe:"Keep "+(b1||"no bar"), back:"ldchip", load:id,
     onSafe:()=>openLoadSheet(false),
-    onDanger:()=>{ applyMode(id,nm,false); closeSheet(); paintMode(id); paintAdvice(false); }});
+    onDanger:()=>{ applyChoice(id,nm,false,asDefault); closeSheet(); paintMode(id); paintAdvice(false); }});
 }
 /* Unit switch with typed weights (4.4b.3): the digits are in the old unit,
    converting them makes an unloadable number and keeping them re-values w.
-   So: confirm, clear the weight fields, keep reps, offer undo. */
-function askUnitSwitch(id,mode,u,typed){
+   So: confirm, clear the weight fields, keep reps, offer undo. `nm` is the
+   mode to switch to (WO-012: `Use my default` arrives here with the
+   default's bar on it); `asDefault` clears the override instead of writing
+   one. The undo remembers the override as it was, so it goes back too. */
+function askUnitSwitch(id,mode,nm,typed,asDefault){
+  const u=nm.au;
   const head=typed.length===1?"Set "+(typed[0].i+1)+" holds "+mode.au+" weights.":typed.length+" sets hold "+mode.au+" weights.";
   askSheet({headline:head, body:"Switching to "+u+" clears them. Reps stay.",
     danger:"Switch to "+u+" and clear", safe:"Keep "+mode.au, back:"ldchip", load:id,
@@ -5635,19 +5904,20 @@ function askUnitSwitch(id,mode,u,typed){
     onDanger:()=>{
       const en=S.draft.entries[id];
       S.undo={kind:"unit",exId:id,fromAu:mode.au,mode:en.mode?modeCopy(en.mode):null,
+              ov:overrideOf(id),
               sets:en.sets.map(st=>{ const o={w:String(st.w==null?"":st.w)}; if(st.ld&&typeof st.ld==="object") o.ld=ldCopy(st.ld); return o; })};
-      const nm=modeCopy(mode); nm.au=u;
-      applyMode(id,nm,true);
+      applyChoice(id,modeCopy(nm),true,asDefault);
       /* Nothing is displaced on the card: the fields are emptied in place. */
       const card=document.getElementById("excard");
       if(card&&card.dataset.ex===id) card.querySelectorAll("input.w").forEach(inp=>{ inp.value=""; });
       S.problems=S.problems.filter(pr=>!(pr.exId===id&&pr.field!=="r"));
       paintMode(id); paintProblems(); paintAdvice(false); paintUndo(id);
-      closeSheet(); openLoadSheet(false);
+      closeSheet(); if(!asDefault) openLoadSheet(false);
       toastUndo("Switched to "+u+". Weights cleared.",undoUnit);
     }});
 }
-/* Undo the switch: the mode and every weight string go back byte for byte. */
+/* Undo the switch: the mode and every weight string go back byte for byte -
+   and the override key as it stood before the tap (WO-012, spec 21.3). */
 function undoUnit(){
   const u=S.undo; if(!u||u.kind!=="unit") return;
   const en=S.draft&&S.draft.entries[u.exId]; if(!en) return;
@@ -5655,9 +5925,25 @@ function undoUnit(){
   u.sets.forEach((o,i)=>{ const st=en.sets[i]; if(!st) return; st.w=o.w; if(o.ld) st.ld=ldCopy(o.ld); else delete st.ld; });
   S.undo=null; hideToast();
   flushDraft();
+  if(u.ov) writeOverride(u.exId,u.ov); else clearOverride(u.exId);
   if(sheetState&&sheetState.load===u.exId) closeSheet();
   paintMode(u.exId); paintAdvice(false); paintUndo(u.exId);
   toast("Weights restored.");
+}
+/* `Use my default · {mode}` (spec 21.3). The default's mode with its bar
+   rule; a unit that differs with typed weights -> the D9 unit confirmation,
+   verbatim; the same unit and a different bar -> the bar confirmation with
+   the default's bar as {bar2}; nothing differs -> the key goes, silently.
+   Every path ends with the override deleted, the sheet closed, focus on
+   the chip, and `On your default: …` in the live region. */
+function useDefault(id,mode){
+  const dm=defaultModeFor(id);
+  if(dm.au!==mode.au){
+    const typed=typedSets(id);
+    if(typed.length){ askUnitSwitch(id,mode,dm,typed,true); return; }
+    applyChoice(id,dm,false,true); closeSheet(); paintMode(id); paintAdvice(false); return;
+  }
+  pickBar(id,mode,dm.bar!==undefined?{w:dm.bar,u:dm.bu}:null,true);
 }
 
 /* Spec 2.3 rule 4: BACK TO SAVE returns to the screen Save lives on — since
@@ -5726,10 +6012,24 @@ function seedValue(inp,f,dir,mode){
      unit on a different bar is a different load and seeds the step; so does
      a kg-direct prior. Nothing is converted. */
   if(mode&&!isKgDirect(mode)){
-    if(!pv.ld) return null;
-    if(!modeEq(PHAT.loadModeFor({sets:[pv]}),mode)) return null;
-    const a=String(pv.ld.add==null?"":pv.ld.add).trim();
-    return a===""?null:a;
+    /* WO-012 W4 (spec 21.5): SEED WHAT THE GHOST SHOWS - PHAT.priorInUnit,
+       the same figure priorGhost prints: same build -> ld.add verbatim; a
+       different build -> the prior's ADDED weight for this card's bar, in
+       the card's unit (77 kg on a 20 kg bar card -> 125.5; no bar -> 170).
+       A prior at or under the bar, or zero, does not seed (`+` steps). The
+       seeded set is a NEW set - w recomposes from it (76.9 / 77.1, the
+       half-pound's resolution); the stored prior never changes (D2). */
+    /* Coach 21.13, Rule SD1: on the CONVERTED path (a prior that is not
+       this card's build) the seed is NOT the half-pound ghost figure but
+       the heaviest load on the card's grid whose total is not above the
+       prior by more than the same-load tolerance - 77 kg on the 20 kg bar
+       seeds 125 lb (76.7 kg), not 125.5, or the ladder names plates that
+       do not exist (130.5, 135.5 ...). The ghost still reads priorGhost's
+       `Last 125.5 lb × 5`: the ghost is what was lifted, the seed is what
+       can be built. Same-build seeds stay ld.add verbatim. PHAT.seedInUnit
+       is that split in one call (backend, fd24342). */
+    let n=null; try{ n=PHAT.seedInUnit(pv,mode); }catch(err){ n=null; }
+    return (n===null||n===undefined)?null:String(n);
   }
   return String(r1(pw.value));
 }
@@ -7483,10 +7783,33 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
        build cannot read is NOT adopted and NOT rewritten here (no boot
        write): S.gymBad says so on the sheet and in Settings, and the next
        Save from Settings writes a valid one over it. */
+    /* WO-012 W4 (D4). Through PHAT.readGymProfile: the bars decide `ok` as
+       before, and `unit` / `ex` ride along PER KEY - a bad unit, a bad ex
+       map or ONE bad override is dropped BY NAME from what is adopted (one
+       console.warn naming it), never a reason to refuse the bars. Nothing
+       is rewritten here; the next Gym write from Settings or a card writes
+       the clean profile over it. */
     if(rp.value.gym!==undefined&&rp.value.gym!==null){
-      let ok=false; try{ ok=PHAT.validateGymProfile(rp.value.gym).ok; }catch(err){ ok=false; }
-      if(ok) S.prefs.gym={bars:(rp.value.gym.bars||[]).map(b=>({n:String(b.n),w:Number(b.w),u:b.u}))};
-      else{ S.gymBad=true; console.warn("[phat] prefs.gym did not validate"); }
+      let rg=null; try{ rg=PHAT.readGymProfile(rp.value.gym); }catch(err){ rg=null; }
+      if(rg&&rg.drop.length) console.warn("[phat] prefs.gym: dropped "+rg.drop.join(", "));
+      if(rg&&rg.ok) S.prefs.gym=rg.gym;
+      else{
+        S.gymBad=true; console.warn("[phat] prefs.gym did not validate");
+        /* The bars are refused; the unit and every override that reads are
+           NOT thrown away with them (§3.3). Kept aside, merged back under
+           the next write. Cards meanwhile are on kg (spec 21.2). */
+        const raw=rp.value.gym, keep={};
+        try{
+          const drop=rg?rg.drop:[];
+          if(typeof raw==="object"&&(raw.unit==="kg"||raw.unit==="lb")&&drop.indexOf("unit")<0) keep.unit=raw.unit;
+          if(typeof raw==="object"&&raw.ex&&typeof raw.ex==="object"&&drop.indexOf("ex")<0){
+            const ex={};
+            Object.keys(raw.ex).forEach(k=>{ const m=PHAT.overrideMode({gym:raw},k); if(m) ex[k]=m; });
+            if(Object.keys(ex).length) keep.ex=ex;
+          }
+        }catch(err){}
+        S.gymKeep=Object.keys(keep).length?keep:null;
+      }
     }
     /* E-3. The last successful backup, or null. Shape-checked: a stamp that
        is not an object with a numeric `at` is treated as "never backed up",
