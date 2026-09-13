@@ -129,6 +129,21 @@
      own components compose to before it is a refusal (never a correction). */
   var LB_KG = 0.45359237;
   var LOAD_UNITS = ["kg", "lb"];
+  /* ---- the ladder (Rule L1, addendum §18.1) ----
+     Two grids, chosen by the WORKING-LOAD SET's ld and never by the slot:
+       KG-DIRECT  (no ld, or au "kg" with no bar)  2.5 kg on w   — unchanged
+       KG-ON-BAR  (au "kg" with a bar)             2.5 kg on add
+       LB         (au "lb", bar or no bar)         LB_STEP / LB_BAR_STEP on add
+     KG_STEP is the 2.5 every rule has always used. LB_STEP is the one step
+     every no-bar lb build can make: one dumbbell up the rack, one 5 lb plate
+     on a belt or a plate-loaded machine. LB_BAR_STEP is a 2.5 lb plate per
+     side — the coach's §18.8 #1 open item, [Likely] present in his gym. If
+     Chady says the smallest plate is 5 lb, this ONE constant becomes 10 and
+     every bar-built ladder, phrase and H1.4d figure moves with it; the
+     no-bar step stays 5. Nothing reads ex.inc (B-58). */
+  var KG_STEP = 2.5;
+  var LB_STEP = 5;
+  var LB_BAR_STEP = 5;
   var ADD_MAX = { kg: 500, lb: 1100 };
   var BAR_MAX = { kg: 50, lb: 110 };
   var LD_TOL = 0.05;
@@ -362,19 +377,91 @@
     return out;
   }
 
-  /* buildWord(ld) -> "20 kg bar + 90 lb" | "45 lb" | "" when the build does
-     not compose. The build in HIS units, for the ghost line and — if the
-     coach's §18 says so (W4) — the verdict. Numbers print as typed-and-parsed,
-     never rounded: he typed 90, the word says 90. No "bodyweight" here: what a
-     0-add or a no-bar build MEANS on a bodyweight slot is Rule Z2's, and Z2
-     is W4's. */
-  function buildWord(ld) {
+  /* buildWord(ld, implement) -> "20 kg bar + 90 lb" | "45 lb" | "55 lb per DB"
+     | "bodyweight + 45 lb" | "" when the build does not compose.
+     The build in HIS units, for the ghost line and the verdict's build
+     phrase (Rule L2, addendum §18.2). Numbers print as typed-and-parsed,
+     never rounded: he typed 90, the word says 90. `implement` is OPTIONAL
+     and decides only the two words it has always decided — `per DB` and
+     `bodyweight +` — and only when no bar is present: a bar in ld overrides
+     a db slot (nobody puts a bar on a dumbbell; the set is dispositive, the
+     slot is a label). Without `implement` the phrase is the plain one, which
+     is what the ghost line printed before W4. */
+  function buildWord(ld, implement) {
     var c = composeLoad(ld);
     if (!c.ok) return "";
-    var n = ldNumbers(ld);
+    return buildPhrase(ldNumbers(ld), implement);
+  }
+
+  /* The phrase's one grammar, L2's table. `n` is numbers in §1's shape.
+       bar present            `{bar} {bu} bar + {add} {au}`
+       no bar, implement db   `{add} {au} per DB`
+       no bar, bodyweight     `bodyweight + {add} {au}`
+       no bar, any other      `{add} {au}` */
+  function buildPhrase(n, implement) {
     var s = String(n.add) + " " + n.au;
-    if (n.bar !== undefined) s = String(n.bar) + " " + n.bu + " bar + " + s;
+    if (n.bar !== undefined) return String(n.bar) + " " + n.bu + " bar + " + s;
+    if (implement === "db") return s + " per DB";
+    if (implement === "bodyweight") return "bodyweight + " + s;
     return s;
+  }
+
+  /* buildOf(ld, w) -> the BUILD a rule may ladder on, or null for KG-DIRECT.
+     Rule L1's classifier. null when: ld is absent; ld does not compose; ld
+     composes to something other than `w` (an older store, a hand edit — the
+     set is read as kg-direct with no build phrase: silence over a wrong plate
+     count, validateEntry refuses such a set at save time and this is the
+     defence for one that got past it); or ld is kg with no bar, which IS
+     kg-direct and prints as one (18.1 example 9). `w` is optional — pass it
+     when you have the set's stored total.
+       { ld, add, au, hasBar, bar, bu, barKg, grid, w }
+     grid is the step in the unit of `add`. barKg is 0 with no bar. */
+  function buildOf(ld, w) {
+    if (ld === undefined || ld === null) return null;
+    var c = composeLoad(ld);
+    if (!c.ok) return null;
+    if (typeof w === "number" && isFinite(w) && Math.abs(c.w - w) > LD_TOL + 1e-9) return null;
+    var n = ldNumbers(ld), hasBar = n.bar !== undefined;
+    if (!hasBar && n.au === "kg") return null;
+    return {
+      ld: ld, add: n.add, au: n.au, hasBar: hasBar,
+      bar: hasBar ? n.bar : 0, bu: hasBar ? n.bu : null,
+      barKg: hasBar ? toKg(n.bar, n.bu) : 0,
+      grid: n.au === "lb" ? (hasBar ? LB_BAR_STEP : LB_STEP) : KG_STEP,
+      w: c.w
+    };
+  }
+  /* A kg quantity in the build's add-unit (the bar included when the
+     quantity includes it — G1 is a percentage of the load, not the plates). */
+  function inUnit(b, kgv) { return b.au === "lb" ? kgv / LB_KG : kgv; }
+  /* The kg total the same build stores with `add2` on it: r1 once, at the
+     total — composeLoad's own arithmetic, so the figure a verdict prints is
+     the number the row will show confirmed next session. */
+  function buildTotal(b, add2) { return r1(b.barKg + toKg(add2, b.au)); }
+  /* add + a step, with float noise stripped at 1e-3 (82.3 + 2.5 is
+     84.80000000000001 in IEEE). Not a rounding any plate can see. */
+  function addStep(add, step) { return Math.round((add + step) * 1000) / 1000; }
+  /* The phrase for a NEW add on this build. */
+  function buildAt(b, add2, implement) {
+    var n = { add: add2, au: b.au };
+    if (b.hasBar) { n.bar = b.bar; n.bu = b.bu; }
+    return buildPhrase(n, implement);
+  }
+  /* The working-load set's build: the FIRST set among the first `n`
+     completed sets, in logged order, whose w equals `load` (P1's min of C,
+     0.01-tolerant like P1 itself). Its ld, or its absence, is the build —
+     ties to the earliest set. Walks the RAW rows because completedSets
+     strips everything but w and r. */
+  function workingBuild(sets, n, load) {
+    if (!Array.isArray(sets)) return null;
+    var done = 0, i, s;
+    for (i = 0; i < sets.length && done < n; i++) {
+      s = numSet(sets[i]);
+      if (!s) continue;
+      done++;
+      if (Math.abs(s.w - load) <= 0.01) return buildOf(sets[i].ld, s.w);
+    }
+    return null;
   }
 
   /* loadModeFor(prevEntry) -> { au, bar?, bu? }
@@ -3883,6 +3970,15 @@
     if (!isFinite(n)) return NaN;
     return Math.ceil(n / 2.5 - 0.5) * 2.5;
   }
+  /* The same shape on any grid, ties down (Rule L1, addendum §18.7 —
+     round2p5's sibling for the 5 lb grid): roundGrid(x, 5) = ceil(x/5 − 0.5) × 5.
+     roundGrid(x, 2.5) is round2p5(x) to the bit; the kg-direct path keeps
+     calling round2p5 by name so the baseline reads as the baseline. */
+  function roundGrid(x, g) {
+    var n = (typeof x === "number") ? x : Number(str(x));
+    if (!isFinite(n) || typeof g !== "number" || !(g > 0)) return NaN;
+    return Math.ceil(n / g - 0.5) * g + 0;   /* + 0: never -0 */
+  }
 
   /* Rule P1's working load: the weight he held for EVERY set — min, not max.
      `topSet` recommends off a weight hit once and missed twice (B-08).
@@ -4043,7 +4139,7 @@
      3–5 slot and two reps BELOW the range on a 6–10 one. Hypertrophy carries
      no number: H1 case 2 triggers on `every r > hi` with no ceiling, and
      inventing one would be prescribing a rep range. */
-  function incrementLine(ex) {
+  function incrementLine(ex, ld) {
     if (!isObj(ex)) return "";
     /* THE ROLE GATE, addendum §9.12 ruling 1 — the §9.11 rider extends here.
        An unrecognised `k` ("tempo", "", 7, missing) gets NO line. This used to
@@ -4063,8 +4159,26 @@
     if (PLAN_KINDS.indexOf(ex.k) < 0) return "";
     if (ex.k === "speed") return "";
     var im = ex.implement;
-    if (im !== "db" && im !== "machine" && im !== "cable" && im !== "bodyweight") return "";
-    var unit = (im === "db") ? "2.5 kg per DB" : "2.5 kg";
+    /* Rule L2 (addendum §18.2), the I2 line by BUILD. `ld` is the
+       working-load set's; absent or kg-with-no-bar is kg-direct and the
+       table below is exactly what it always was.
+         any build with a bar     NONE — the 2.5 lb pair is the 1.25 kg pair,
+                                  and I2's premise ("the smallest step is on
+                                  the bar") is decided by ld, not implement
+         LB, no bar, db           `If 5 lb per DB is not available, …`
+         LB, no bar, any other    `If 5 lb is not available, …` — INCLUDING
+                                  a bb slot: he built something without a
+                                  bar, and a spurious line is noise where a
+                                  missing one is a jump he cannot make. */
+    var b = buildOf(ld);
+    var unit;
+    if (b) {
+      if (b.hasBar) return "";
+      unit = String(b.grid) + " " + b.au + (im === "db" ? " per DB" : "");
+    } else {
+      if (im !== "db" && im !== "machine" && im !== "cable" && im !== "bodyweight") return "";
+      unit = (im === "db") ? "2.5 kg per DB" : "2.5 kg";
+    }
     if (ex.k === "power") return "If " + unit + " is not available, add reps up to " + (ex.hi + 2) + " first, then jump.";
     return "If " + unit + " is not available, add reps first, then jump.";
   }
@@ -4078,14 +4192,29 @@
        load 0 -> every multiplicative term is 0 -> 2.5
      The cap is rounded to the 2.5 grid as well, so no rule can print an
      off-grid kg (Decision 4). That only binds where the alternative was an
-     unroundable number, and it binds downward. */
-  function g1Step(load, mr, hi) {
+     unroundable number, and it binds downward.
+
+     Rule L1 (addendum §18.1, §18.7): `grid` is the build's step and `load`
+     is the working load EXPRESSED IN THE BUILD'S UNIT, bar included — G1 is
+     a percentage of the load, not of the plates. Omitted, grid is 2.5 and
+     the three lines below are the kg-direct path, byte for byte (roundGrid
+     on 2.5 is round2p5; the kg path calls round2p5 by name on purpose).
+       135 lb on a 20 kg bar, hi 5, min r 7: L 179.02 lb -> 8.95 -> 10, cap
+       35 -> 10 lb (18.1 example 2; kg-direct would say 5 kg = 145.9 lb)
+       45 lb belt, hi 10, min r 12: 2.25 -> 0, floor -> 5 lb (18.4 example 2) */
+  function g1Step(load, mr, hi, grid) {
     if (typeof load !== "number" || !isFinite(load) || load < 0) return NaN;
     var excess = mr - hi;
     if (!(excess > 0)) excess = 0;
-    var raw = round2p5(load * 0.025 * excess);
-    var cap = round2p5(load * 0.20);
-    return Math.max(2.5, Math.min(raw, cap));
+    var g = (typeof grid === "number" && isFinite(grid) && grid > 0) ? grid : KG_STEP;
+    if (g === KG_STEP) {
+      var raw = round2p5(load * 0.025 * excess);
+      var cap = round2p5(load * 0.20);
+      return Math.max(2.5, Math.min(raw, cap));
+    }
+    var rawG = roundGrid(load * 0.025 * excess, g);
+    var capG = roundGrid(load * 0.20, g);
+    return Math.max(g, Math.min(rawG, capG));
   }
 
   /* ------------------------------------------------------- verdict copy */
@@ -4105,9 +4234,10 @@
   }
   function cap1(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function mk(t, x, x2, rule) { return { t: t, x: x, x2: x2 || "", rule: rule }; }
-  function incOf(ex) {
-    return (isObj(ex) && typeof ex.inc === "number" && isFinite(ex.inc) && ex.inc > 0) ? ex.inc : 2.5;
-  }
+  /* Rule L1: the step is the BUILD's, never the slot's and never a setting's
+     (B-58). This replaced incOf(ex), which read an `ex.inc` no plan ever
+     carried; ex.inc stays unread. null (kg-direct) is 2.5 kg on w. */
+  function stepOf(b) { return b ? b.grid : KG_STEP; }
   function allZero(C) {
     if (!C.length) return false;
     for (var i = 0; i < C.length; i++) if (C[i].w !== 0) return false;
@@ -4494,15 +4624,41 @@
      easier: no band, no rack height, no substitute exercise. It holds.
      Returns the sentence WITHOUT its final punctuation on the drop branch, so
      P1 can end it "next session." and H1 can end it "." — the two rules print
-     different tails off the same arithmetic. */
-  function tooHeavy(ex, C, rangeWord) {
+     different tails off the same arithmetic. The build phrase (L2) rides in
+     `p` (" — 20 kg bar + 125 lb" or ""), and the caller puts it AFTER its
+     tail word and before the full stop: `Drop to 76.7 kg next session — 20
+     kg bar + 125 lb.`
+
+     Rule L1's drop (addendum §18.1), on the build's grid, with the guard on
+     EVERY build: nearest, then — if that is not STRICTLY below the current
+     load — exactly one grid step below it. Below zero, the hold form; exactly
+     zero, Z2's word and no phrase. `[Certain]` the 5 % drop is under half a
+     grid step whenever the load is under about 22.7 kg (the empty bar, a belt
+     with a 45 lb plate, a 55 lb dumbbell) and plain nearest rounds it back
+     to the load he just failed at, printed as `Drop to`. Floor would
+     over-drop at ordinary loads. This guard also closes the kg-direct
+     degenerate §18.6 #1 found: a 20 kg dumbbell missed at 2 reps printed
+     `Drop to 20 kg next session.` — at every kg-direct load ≤ 22.5 kg. It
+     is the ONLY kg-direct output §18 changes. */
+  function tooHeavy(ex, C, rangeWord, b) {
     var im = ex.implement, w0 = C[0].w;
-    var drop = round2p5(w0 * 0.95);
     var head = repWord(C[0].r) + " at " + loadWord(w0, im) + ". Below the " + rangeWord + ".";
-    if (!(drop > 0)) {
-      return mk("", head + " Hold here until all " + ex.s + " sets reach " + ex.lo + " reps.", "", "1z");
+    var hold = mk("", head + " Hold here until all " + ex.s + " sets reach " + ex.lo + " reps.", "", "1z");
+    var drop, p = "";
+    if (!b) {
+      drop = round2p5(w0 * 0.95);
+      if (!(drop < w0)) drop = w0 - KG_STEP;
+    } else {
+      var add2 = roundGrid(inUnit(b, w0 * 0.95) - inUnit(b, b.barKg), b.grid);
+      if (!(add2 < b.add)) add2 = addStep(b.add, -b.grid);
+      if (add2 < 0) { hold.p = ""; return hold; }
+      drop = buildTotal(b, add2);
+      if (drop > 0) p = " — " + buildAt(b, add2, im);
     }
-    return mk("down", head + " Drop to " + kg(drop) + " kg", "", "1");
+    if (drop < 0) { hold.p = ""; return hold; }
+    var out = mk("down", head + " Drop to " + (drop > 0 ? kg(drop) + " kg" : loadWord(0, im)), "", "1");
+    out.p = p;
+    return out;
   }
 
   /* -------------------------------------------------------------- P1 */
@@ -4525,7 +4681,7 @@
      sentence makes a claim about every set and has to stay true.
 
      Float-tolerant on 0.01: 2.5 kg steps arriving as parsed strings. */
-  function verdictPower(ex, C, pain) {
+  function verdictPower(ex, C, pain, b) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var load = minW(C), top = maxW(C), R = repeatLoad(C);
@@ -4533,12 +4689,17 @@
     var mixed = (top - load) > 0.01;
     var word = loadWord(load, im);
     var hold = mk("", "Stay at " + word + " until all " + s + " sets reach " + hi + " reps.", "", "P1.5");
+    /* `b` is the working-load set's build (Rule L1) or null for kg-direct.
+       It reaches cases 1, 3 and 4 — the cases that name a NEW load — and
+       never 2 or 5, which name a load he built this session and is on his
+       own rows (no phrase, ever: 18.1 example 11). */
+    var ld = b ? b.ld : undefined;
 
     /* 1 — too heavy. Beats case 2 deliberately: a mismatch is a symptom of the
        load being wrong, and the useful instruction is about the load. */
     if (C[0].r < lo) {
-      var th = tooHeavy(ex, C, "range");
-      return mk(th.t, th.rule === "1" ? th.x + " next session." : th.x, "", "P1." + th.rule);
+      var th = tooHeavy(ex, C, "range", b);
+      return mk(th.t, th.rule === "1" ? th.x + " next session" + th.p + "." : th.x, "", "P1." + th.rule);
     }
 
     /* 2 — the sets were not matched. Fires on `backoff` only: a set fell
@@ -4574,10 +4735,22 @@
        still computed off the working load — only the claim widens. */
     if (mr >= hi + 2) {
       if (pain) return hold;
-      var step = g1Step(load, mr, hi);
       var head3 = repWord(mr) + " at " + word + (mixed ? " or above" : "") + " on every set. Too light. ";
-      return mk("up", head3 + (load === 0 ? "Add " + kg(step) + " kg." : "Go to " + kg(load + step) + " kg."),
-        incrementLine(ex), "P1.3");
+      if (!b) {
+        var step = g1Step(load, mr, hi);
+        return mk("up", head3 + (load === 0 ? "Add " + kg(step) + " kg." : "Go to " + kg(load + step) + " kg."),
+          incrementLine(ex), "P1.3");
+      }
+      /* Rule L1, TOO LIGHT on a build: G1 in the build's unit, bar included;
+         the step lands on `add`; the kg total is what those plates compose to.
+         At zero load in lb (a belt with nothing on it): `Add 5 lb.` — Z2
+         delta 2's verb, the step in the build's unit, no total to explain. */
+      var step3 = g1Step(inUnit(b, load), mr, hi, b.grid);
+      var add3 = addStep(b.add, step3);
+      return mk("up", head3 + (load === 0
+          ? "Add " + String(step3) + " " + b.au + "."
+          : "Go to " + kg(buildTotal(b, add3)) + " kg — " + buildAt(b, add3, im) + "."),
+        incrementLine(ex, ld), "P1.3");
     }
 
     /* 4 — top of the range on every set. Also suppressed by a pain note.
@@ -4586,11 +4759,21 @@
        set, so only it takes ` or above` (§13.1). */
     if (mr >= hi) {
       if (pain) return hold;
-      var inc = incOf(ex);
+      var inc = stepOf(b);
+      if (!b) {
+        return mk("up", load === 0
+          ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + kg(inc) + " kg next session."
+          : "Top of range on all " + s + " sets. Go to " + kg(load + inc) + " kg next session.",
+          incrementLine(ex), "P1.4");
+      }
+      /* Rule L1, INCREASE on a build: add' = add + one grid step; the printed
+         kg is buildTotal, deliberately OFF the 2.5 grid (83.5, not 83.7),
+         and the build follows the em dash (L2). */
+      var add4 = addStep(b.add, inc);
       return mk("up", load === 0
-        ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + kg(inc) + " kg next session."
-        : "Top of range on all " + s + " sets. Go to " + kg(load + inc) + " kg next session.",
-        incrementLine(ex), "P1.4");
+        ? "Top of range on all " + s + " sets at " + word + (mixed ? " or above" : "") + ". Add " + String(inc) + " " + b.au + " next session."
+        : "Top of range on all " + s + " sets. Go to " + kg(buildTotal(b, add4)) + " kg next session — " + buildAt(b, add4, im) + ".",
+        incrementLine(ex, ld), "P1.4");
     }
 
     /* 5 — hold. One rep short is not a rounding error. */
@@ -4601,16 +4784,20 @@
 
   /* Rule H1 — hypertrophy verdict (audit §9), with Z1/Z2/Z3/G1/I2/S1.
      Cprev is the previous entry's first ex.s completed sets, or null. */
-  function verdictHyp(ex, C, Cprev, pain, epochChanged) {
+  function verdictHyp(ex, C, Cprev, pain, epochChanged, b) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var range = lo + "–" + hi + " range";
     var load = minW(C), mr = minRep(C);
+    /* `b`: the working-load set's build (Rule L1), null for kg-direct.
+       Read by cases 1, 2 and 4d only — the ones that name a new load or a
+       step. 3a–3c and 4a–4c name nothing new. */
+    var ld = b ? b.ld : undefined;
 
     /* 1 — too heavy. */
     if (C[0].r < lo) {
-      var th = tooHeavy(ex, C, range);
-      return mk(th.t, th.rule === "1" ? th.x + "." : th.x, "", "H1." + th.rule);
+      var th = tooHeavy(ex, C, range, b);
+      return mk(th.t, th.rule === "1" ? th.x + th.p + "." : th.x, "", "H1." + th.rule);
     }
 
     /* 2 — every set ABOVE the top of the range (12 is inside 8–12, so it does
@@ -4620,11 +4807,21 @@
        which falls through to the comparison rather than inventing hold copy
        for a branch the audit gives none for. */
     if (mr > hi && !pain) {
-      var step = g1Step(load, mr, hi);
+      if (!b) {
+        var step = g1Step(load, mr, hi);
+        return mk("up", load === 0
+          ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + kg(step) + " kg next session."
+          : "All sets above " + hi + ". Go to " + kg(load + step) + " kg next session.",
+          incrementLine(ex), "H1.2");
+      }
+      /* Rule L1 on a build — G1 in the build's unit, the phrase after the
+         em dash: `All sets above 12. Go to 27.2 kg next session — 60 lb per DB.` */
+      var step2 = g1Step(inUnit(b, load), mr, hi, b.grid);
+      var add2 = addStep(b.add, step2);
       return mk("up", load === 0
-        ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + kg(step) + " kg next session."
-        : "All sets above " + hi + ". Go to " + kg(load + step) + " kg next session.",
-        incrementLine(ex), "H1.2");
+        ? "All sets above " + hi + " at " + loadWord(load, im) + ". Add " + String(step2) + " " + b.au + " next session."
+        : "All sets above " + hi + ". Go to " + kg(buildTotal(b, add2)) + " kg next session — " + buildAt(b, add2, im) + ".",
+        incrementLine(ex, ld), "H1.2");
     }
 
     /* 3 — no comparable previous entry, split by WHY (addendum §7.7 N3).
@@ -4694,7 +4891,9 @@
     var va = volOf(C), vb = volOf(Cprev);                 /* 4d — tonnage */
     var p = vb > 0 ? Math.round((va - vb) / vb * 100) : 0;
     if (va > vb) return mk("up", "Volume up " + p + "% — " + grp(va) + " kg against " + grp(vb) + " kg.", "", "H1.4d");
-    if (va < vb) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or 2.5 kg next time.", "", "H1.4d");
+    /* H1.4d's step is the working-load set's (L1): `5 lb` on an lb build,
+       `2.5 kg` otherwise — a kg-on-bar build steps 2.5 kg too. */
+    if (va < vb) return mk("down", "Volume down " + Math.abs(p) + "%. Add a rep or " + String(stepOf(b)) + " " + (b ? b.au : "kg") + " next time.", "", "H1.4d");
     return mk("", "Volume matched. One more rep next session.", "", "H1.4d");
   }
 
@@ -4886,7 +5085,13 @@
 
     var pain = (typeof ctx.painFlag === "boolean") ? ctx.painFlag : painFlag(ctx.note);
 
-    if (ex.k === "power") return notAbsent(verdictPower(ex, C, pain));
+    /* Rule L1 — the WORKING-LOAD SET's build, computed once here from the
+       raw rows (completedSets strips ld) and threaded into both engines like
+       `pain` is: a fact about today's sets that the rule reads, never a
+       storage read. null is kg-direct, and kg-direct is the baseline. */
+    var b = workingBuild(ctx.sets, s, minW(C));
+
+    if (ex.k === "power") return notAbsent(verdictPower(ex, C, pain, b));
 
     /* Rule PE1. Computed HERE from the entry rather than trusted from the
        caller, so a view that forgets to pass anything still cannot compare
@@ -4903,7 +5108,7 @@
     var praw = ctx.prev;
     if (isObj(praw) && Array.isArray(praw.sets)) praw = praw.sets;
     var Cprev = Array.isArray(praw) ? completedSets(praw).slice(0, s) : null;
-    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch));
+    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch, b));
   }
 
   /* ==================================================== Rule W1 - W7
@@ -5923,6 +6128,10 @@
         if (!(n.w > 0)) continue;
         if (best === null || n.w > best.w || (n.w === best.w && d > best.date)) {
           best = { w: n.w, r: n.r, date: d };
+          /* Rule L3: the source SET's build rides along, so speedLoad can fit
+             the target to the plates R was lifted on. Only when the set
+             carries one; a kg-direct source has no key here. */
+          if (e.sets[j].ld !== undefined) best.ld = e.sets[j].ld;
         }
       }
     }
@@ -6019,11 +6228,65 @@
 
     out.source = { w: src.w, r: src.r, date: src.date };
     out.srcWindow = win;
-    out.target = round2p5(src.w * SP1_MID);
-    out.lo = round2p5(src.w * SP1_BAND_LO);
-    out.hi = round2p5(src.w * SP1_BAND_HI);
-    out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
-               " kg triple. Rest 60–90 s. Fast, never grinding.";
+
+    /* Rule L3 (addendum §18.1) — the target fitted to the SOURCE SET's build.
+       The speed card's own mode is not read; the source set is the only
+       build the engine can see. A kg-direct source (no ld, or a build that
+       does not recompose to R, or kg with no bar) is the path below,
+       unchanged to the byte. */
+    var b = buildOf(src.ld, src.w);
+    if (!b) {
+      out.target = round2p5(src.w * SP1_MID);
+      out.lo = round2p5(src.w * SP1_BAND_LO);
+      out.hi = round2p5(src.w * SP1_BAND_HI);
+      out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
+                 " kg triple. Rest 60–90 s. Fast, never grinding.";
+      return out;
+    }
+    /* lo/hi are r1 BAND EDGES, not grid-fitted: the band is a fact about R,
+       the grid is a fact about the plates, and the `65–70%` claim is only
+       printed when it is true of the number beside it. */
+    var lo = r1(src.w * SP1_BAND_LO), hi = r1(src.w * SP1_BAND_HI);
+    var mid = src.w * SP1_MID;
+    var cand = roundGrid(inUnit(b, mid) - inUnit(b, b.barKg), b.grid);
+    var pick = null, inBand = false, k, a2, w2, bestD = Infinity;
+    /* the grid point inside [lo, hi] nearest R × 0.675 — cand itself when it
+       fits, else a neighbour on the same grid */
+    for (k = -2; k <= 2; k++) {
+      a2 = addStep(cand, k * b.grid);
+      if (a2 < 0) continue;
+      w2 = buildTotal(b, a2);
+      if (w2 >= lo && w2 <= hi && Math.abs(w2 - mid) < bestD) { pick = a2; bestD = Math.abs(w2 - mid); inBand = true; }
+    }
+    if (pick === null) {
+      /* no grid point inside the band: the nearest one BELOW lo. Too light
+         is still speed work; too heavy is not. */
+      a2 = cand;
+      while (a2 >= 0 && buildTotal(b, a2) >= lo) a2 = addStep(a2, -b.grid);
+      if (a2 >= 0) pick = a2;
+    }
+    if (pick === null) {
+      /* The bar alone is above the band (a triple under ~31 kg on a 20 kg
+         bar): nothing on this build reaches under 65–70%, so the build is
+         IGNORED and the source is read as kg-direct with no phrase — L1's
+         "silence over a wrong plate count" — rather than naming a load
+         above the band as speed work. Not in §18's examples; flagged in the
+         W4 report. */
+      out.target = round2p5(src.w * SP1_MID);
+      out.lo = round2p5(src.w * SP1_BAND_LO);
+      out.hi = round2p5(src.w * SP1_BAND_HI);
+      out.text = kg(out.target) + " kg. 65–70% of your " + kg(src.w) +
+                 " kg triple. Rest 60–90 s. Fast, never grinding.";
+      return out;
+    }
+    var sx2 = exById(p, out.srcId);
+    var srcIm = isObj(sx2) ? sx2.implement : undefined;
+    out.target = buildTotal(b, pick);
+    out.lo = lo;
+    out.hi = hi;
+    out.text = kg(out.target) + " kg — " + buildAt(b, pick, srcIm) + ". " +
+               (inBand ? "65–70% of your " : "The nearest you can build under 65–70% of your ") +
+               kg(src.w) + " kg triple. Rest 60–90 s. Fast, never grinding.";
     return out;
   }
 
@@ -8590,6 +8853,18 @@
     toKg: toKg,
     composeLoad: composeLoad,
     buildWord: buildWord,
+    /* WO-010 W4 — the ladder (Rules L1–L4, addendum §18). Two grids chosen
+       by the working-load set's build, never the slot: KG_STEP on w for
+       kg-direct, LB_STEP / LB_BAR_STEP on `add` for an lb build. buildOf is
+       the classifier (null = kg-direct), roundGrid the ties-down sibling of
+       round2p5, workingBuild the set P1/H1 ladder on. LB_BAR_STEP is the one
+       constant that moves if his gym has no 2.5 lb plates (§18.8 #1). */
+    KG_STEP: KG_STEP,
+    LB_STEP: LB_STEP,
+    LB_BAR_STEP: LB_BAR_STEP,
+    roundGrid: roundGrid,
+    buildOf: buildOf,
+    workingBuild: workingBuild,
     loadModeFor: loadModeFor,
     validateGymProfile: validateGymProfile,
     localDate: localDate,

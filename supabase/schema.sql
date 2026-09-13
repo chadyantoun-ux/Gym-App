@@ -89,6 +89,13 @@
 -- session; it is never rounded, never NaN'd, never skipped. That is B-02's
 -- failure class and it does not get to cross the network either.
 --
+-- From schema 6 (WO-010, logic.js V_LD) a set may carry `ld`, the bar and
+-- added weight its kg total was built from. phat_validate_ld below mirrors
+-- logic.js ldDocProblems / validateSessionDoc's ld rules sentence for
+-- sentence (the message table is in its header); a set without `ld` is
+-- kg-direct and unchanged. The same functions ship as migrate-006-ld.sql for
+-- a database that already has this file applied.
+--
 -- Errors are raised with SQLSTATE 23514 (check_violation) so a future sync
 -- layer can tell "this row is permanently unacceptable, stop retrying and tell
 -- him" from a network error, which it must retry.
@@ -108,12 +115,142 @@ comment on function public.phat_reject(text) is
    that sees 23514 must surface the message, not retry and not drop the row.';
 
 
+-- A numeric printed the way JavaScript's String(n) prints it: no trailing
+-- zeros after the point, no dangling point. 100.0 -> 100, 60.80 -> 60.8.
+create or replace function public.phat_num_text(n numeric)
+returns text
+language sql
+immutable
+as $$
+  select case when position('.' in n::text) > 0
+              then rtrim(rtrim(n::text, '0'), '.')
+              else n::text end;
+$$;
+
+comment on function public.phat_num_text(numeric) is
+  'numeric -> text as JS String() would print it (no trailing zeros). Used so a
+   refusal sentence quotes the same figure logic.js quotes.';
+
+
+-- The value of a JSON scalar as logic.js str() would render it for a sentence:
+-- absent / null -> "", string -> itself, number -> its text, boolean -> true/
+-- false, object -> [object Object], array -> elements joined by commas.
+create or replace function public.phat_json_str(v jsonb)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when v is null or jsonb_typeof(v) = 'null' then ''
+    when jsonb_typeof(v) = 'object' then '[object Object]'
+    when jsonb_typeof(v) = 'array' then
+      coalesce((select string_agg(x.e #>> '{}', ',') from jsonb_array_elements(v) as x(e)), '')
+    else v #>> '{}'
+  end;
+$$;
+
+
+-- One set's `ld`, validated against the table above. `who` is the sentence
+-- prefix ("entry d1a set 2 "), `w_text` the typed total as stored, `n_w` the
+-- typed total as a number (null when the weight itself was unreadable — then
+-- the disagreement test is skipped, exactly as validateSessionDoc skips it).
+create or replace function public.phat_validate_ld(ld jsonb, who text, w_text text, n_w numeric)
+returns void
+language plpgsql
+as $$
+declare
+  k       text;
+  au      jsonb;
+  bu      jsonb;
+  t_add   text;
+  t_bar   text;
+  n_add   numeric;
+  n_bar   numeric;
+  has_bar boolean;
+  has_bu  boolean;
+  kg_bar  numeric := 0;
+  kg_tot  numeric;
+  lb_kg   constant numeric := 0.45359237;   -- PHAT.LIMITS.lbKg, exactly
+  tol     constant numeric := 0.05;         -- PHAT.LIMITS.ldTol
+begin
+  if ld is null or jsonb_typeof(ld) <> 'object' then
+    perform public.phat_reject(who || 'ld must be an object');
+  end if;
+
+  -- 1. no key outside {bar, bu, add, au}. JSONB iterates keys in its own
+  --    storage order (length, then bytes); with one stray key that is the key.
+  for k in select jsonb_object_keys(ld) loop
+    if k not in ('bar', 'bu', 'add', 'au') then
+      perform public.phat_reject(who || 'ld has an unknown key: ' || k);
+    end if;
+  end loop;
+
+  -- 2. au
+  au := ld -> 'au';
+  if au is null or jsonb_typeof(au) <> 'string' or (au #>> '{}') not in ('kg', 'lb') then
+    perform public.phat_reject(who || 'ld.au must be kg or lb, got: '
+      || case when au is null then '(absent)' else public.phat_json_str(au) end);
+  end if;
+
+  -- 3. add: NUM_W's text rule on its trimmed text (never coerced), then its
+  --    own range in its own unit.
+  t_add := btrim(public.phat_json_str(ld -> 'add'), E' \t\n\r');
+  if t_add !~ '^(\d+(\.\d*)?|\.\d+)$' then
+    perform public.phat_reject(who || 'has an unreadable ld.add: "' || public.phat_json_str(ld -> 'add') || '"');
+  end if;
+  n_add := t_add::numeric;
+  if n_add < 0 or n_add > (case when (au #>> '{}') = 'kg' then 500 else 1100 end) then
+    perform public.phat_reject(who || 'ld.add out of range (0..500 kg, 0..1100 lb): ' || public.phat_json_str(ld -> 'add'));
+  end if;
+
+  -- 4. bar / bu: both or neither
+  has_bar := ld ? 'bar';
+  has_bu  := ld ? 'bu';
+  if has_bar and not has_bu then
+    perform public.phat_reject(who || 'ld.bar without ld.bu');
+  end if;
+  if has_bu and not has_bar then
+    perform public.phat_reject(who || 'ld.bu without ld.bar');
+  end if;
+  if has_bu then
+    bu := ld -> 'bu';
+    if jsonb_typeof(bu) <> 'string' or (bu #>> '{}') not in ('kg', 'lb') then
+      perform public.phat_reject(who || 'ld.bu must be kg or lb, got: ' || public.phat_json_str(bu));
+    end if;
+  end if;
+  if has_bar then
+    t_bar := btrim(public.phat_json_str(ld -> 'bar'), E' \t\n\r');
+    if t_bar !~ '^(\d+(\.\d*)?|\.\d+)$' then
+      perform public.phat_reject(who || 'has an unreadable ld.bar: "' || public.phat_json_str(ld -> 'bar') || '"');
+    end if;
+    n_bar := t_bar::numeric;
+    if n_bar <= 0 or n_bar > (case when (bu #>> '{}') = 'kg' then 50 else 110 end) then
+      perform public.phat_reject(who || 'ld.bar out of range (above 0, up to 50 kg or 110 lb): ' || public.phat_json_str(ld -> 'bar'));
+    end if;
+    kg_bar := case when (bu #>> '{}') = 'kg' then n_bar else n_bar * lb_kg end;
+  end if;
+
+  -- 5. compose — rounded ONCE, at the total, to 0.1 kg (composeLoad) — and
+  --    compare with the typed w. A disagreement is a refusal, never a rewrite.
+  kg_tot := round(kg_bar + (case when (au #>> '{}') = 'kg' then n_add else n_add * lb_kg end), 1);
+  if n_w is not null and abs(n_w - kg_tot) > tol + 0.000000001 then
+    perform public.phat_reject(who || 'w ' || w_text || ' disagrees with ld (' || public.phat_num_text(kg_tot) || ')');
+  end if;
+end;
+$$;
+
+comment on function public.phat_validate_ld(jsonb, text, text, numeric) is
+  'Mirrors logic.js ldDocProblems + the w/ld disagreement test in
+   validateSessionDoc, same sentences, first fault raised (23514).';
+
+
 create or replace function public.phat_validate_session_doc(doc jsonb)
 returns void
 language plpgsql
 as $$
 declare
   r_entry record;
+  r_set   record;
   v_set   jsonb;
   v_w     jsonb;
   v_r     jsonb;
@@ -121,6 +258,7 @@ declare
   n_w     numeric;
   n_r     numeric;
   d       date;
+  who     text;
 begin
   if doc is null or jsonb_typeof(doc) <> 'object' then
     perform public.phat_reject('session doc must be a JSON object');
@@ -172,18 +310,20 @@ begin
           perform public.phat_reject('entry ' || r_entry.ex_id || '.sets must be an array');
         end if;
 
-        for v_set in select value from jsonb_array_elements(r_entry.entry -> 'sets') loop
+        for r_set in select value, ordinality from jsonb_array_elements(r_entry.entry -> 'sets') with ordinality loop
+          v_set := r_set.value;
           if jsonb_typeof(v_set) <> 'object' then
             perform public.phat_reject('entry ' || r_entry.ex_id || ' has a set that is not an object');
           end if;
 
           v_w := v_set -> 'w';
           v_r := v_set -> 'r';
-          if v_w is null or v_r is null then
+          if v_w is null or v_r is null or jsonb_typeof(v_w) = 'null' or jsonb_typeof(v_r) = 'null' then
             perform public.phat_reject('entry ' || r_entry.ex_id || ' has a set missing w or r');
           end if;
 
           -- weight
+          n_w := null;
           if jsonb_typeof(v_w) = 'number' then
             n_w := (v_w #>> '{}')::numeric;
           elsif jsonb_typeof(v_w) = 'string' then
@@ -197,6 +337,14 @@ begin
           end if;
           if n_w < 0 or n_w > 500 then
             perform public.phat_reject('entry ' || r_entry.ex_id || ' weight out of range (0..500): ' || n_w::text);
+          end if;
+
+          -- the load's components (WO-010 §1, schema 6) — between weight and
+          -- reps, which is where validateSessionDoc reads them, so the FIRST
+          -- fault named is the same on both sides. Absent means kg-direct.
+          if v_set ? 'ld' then
+            who := 'entry ' || r_entry.ex_id || ' set ' || r_set.ordinality::text || ' ';
+            perform public.phat_validate_ld(v_set -> 'ld', who, v_w #>> '{}', n_w);
           end if;
 
           -- reps
@@ -225,7 +373,8 @@ end;
 $$;
 
 comment on function public.phat_validate_session_doc(jsonb) is
-  'Mirrors logic.js validateDraft/buildSession bounds. Refuses; never coerces.';
+  'Mirrors logic.js validateDraft/buildSession bounds and, from schema 6,
+   validateSessionDoc''s ld rules (phat_validate_ld). Refuses; never coerces.';
 
 
 create or replace function public.phat_validate_bw_doc(doc jsonb)

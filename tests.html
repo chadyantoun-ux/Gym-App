@@ -55,7 +55,32 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 740 / 740 / 0, no skips.</b> <b>S40</b> (WO-010 W3, backend, 2026-09-12) added 22: the load&rsquo;s components.
+<b>Today: 785 / 785 / 0, no skips.</b> <b>S41</b> (WO-010 W4 + W5, backend, 2026-09-12) added 45: the ladder in a
+mixed-unit gym, strength-coach addendum &sect;18 transcribed. <b>Every numbered worked example in &sect;18.1 (L1, eleven),
+&sect;18.2 (L2, six) and &sect;18.4 (L4, eight) as an exact string, every &ldquo;must not print&rdquo; as its own assertion</b>
+(<code>83.7 kg</code>, <code>86.2 kg</code>, <code>77.5 kg</code>, <code>27.4 kg</code>, <code>22.9 kg</code>, <code>If 5 lb per DB</code> under a bar,
+<code>Add 2.5 kg</code> on an lb belt&hellip;); L3&rsquo;s three SP1 cases (<code>54 kg &mdash; 20 kg bar + 75 lb</code>, the band-missed
+<code>24.9 kg &mdash; 55 lb per DB. The nearest you can build under&hellip;</code>, the in-band dumbbell) with <code>lo</code>/<code>hi</code> as
+r1 band edges; the two kg-direct byte-identity pins (18.1 ex 9: a kg cable stack carrying <code>ld</code> equals the same set without it;
+18.2 ex 4: kg-direct on <code>db</code>); <b>the &sect;18.6 #1 regression &mdash; kg-direct <code>Drop to 17.5 kg</code> at 20 kg, never
+<code>Drop to 20 kg</code> &mdash; and the whole kg-direct drop table, 2.5&ndash;22.5 one step down, 25&ndash;200 byte-identical to
+<code>round2p5(0.95 w)</code></b> (a differential run of 60,030 kg-direct verdicts against <code>c0714d8</code> found diffs only at
+&le; 22.5 kg, only on the too-heavy case, and zero in <code>speedLoad</code>); L2&rsquo;s precedence table for <code>incrementLine(ex, ld)</code>
+over six implements &times; four builds &times; three roles; <code>buildOf</code> / <code>workingBuild</code> (ties to the earliest set, extras
+unread, a build that does not recompose to <code>w</code> read as kg-direct); the strictly-below guard on every build, the empty bar holding;
+<b>the meta-test recomputing every <code>Go to</code> / <code>Drop to</code> / speed figure from the components in the same sentence</b>
+(Decision 4 restated); <b>the <code>validateSessionDoc</code> boundary the SQL mirror (W5, <code>supabase/migrate-006-ld.sql</code>)
+copies: 60.75 and 60.85 accepted, 60.86 and 60.74 refused, every message-table sentence verbatim</b>; and <b>his real session
+&mdash; the export replaced S40&rsquo;s placeholders, <code>restorePayload</code> on the server&rsquo;s JSONB-ordered bytes equals
+<code>CHADY_SESSION()</code> byte for byte, 23 sets / 6 entries / 3 notes / no <code>ld</code>, the v5 &rarr; 6 pin re-run on it, and no
+verdict on it carrying a phrase or a pound</b>. The one S40 pin written to fail at W4 (&ldquo;same verdict with or without the build&rdquo;) was
+restated as the difference W4 introduced. Twenty-two mutants across the nine lattice sites, twenty-one killed (ties-up rounding, an
+unrounded G1 cap, G1 fed kg on the lb grid, <code>stepOf</code> always 2.5, a bar not silencing I2, <code>per DB</code> ignoring the bar,
+plain nearest on the kg-direct drop, no guard on a build, floor on the drop, H1.4d always 2.5 kg, SP1 target/lo/hi grid-fitted, band
+missed going above, the 65&ndash;70% claim on a below-band target, a non-recomposing <code>ld</code> trusted, kg-no-bar as a build, last
+set instead of first, the phrase on <code>Repeat</code>, per-component rounding, tolerance 0.06); the one survivor (<code>LB_BAR_STEP</code>
+unwired) is equivalent while <code>LB_BAR_STEP === LB_STEP === 5</code> and was killed by hand at 10 (145 lb / 120 lb / <code>10 lb</code> /
+80 lb move, the dumbbell and belt stay at 5). Before S41 the count read 740. <b>S40</b> (WO-010 W3, backend, 2026-09-12) added 22: the load&rsquo;s components.
 <code>composeLoad</code>&rsquo;s truth table from the work order&rsquo;s own numbers (<code>20 kg + 90 lb = 60.8</code>,
 <code>45 lb = 20.4</code>, <code>20 lb bar + 0 = 9.1</code>, <code>45 lb bar + 90 lb = 61.2</code>) with the rounding pinned
 <b>once at the total</b> (45 lb bar + 180 lb is 102.1, not the per-component 102.0); every refusal by field and reason;
@@ -13983,28 +14008,34 @@ group("S40 WO-010 W3 / composeLoad / ld on a set / B-112 save side / schema 6 / 
 
 /* ---- fixtures ---- */
 /* HIS FIRST LOGGED SESSION, by id. client_id 1789264514484, 2026-09-12, d1,
-   entries d1a d1b d1d d1e d1f d1g, every set {w, r} in kg, no components.
-   THE NUMBERS BELOW ARE PLACEHOLDERS - the export was not in hand when this
-   was written (WO-010 §5 item 3). The id, date, day and entry list are the
-   real ones; W7 substitutes the exported sets when the file arrives. The
-   property under test does not depend on the numbers: the v6 pass reads no
-   set, so whatever they are, they come out byte-identical. Built through
-   buildSession with the shipped plan, which is exactly the path finish()
-   took, so the shape (planId, rx, note, key order) is the app's own. */
+   entries d1a d1b d1d d1e d1f d1g, every set {w, r} in kg, no components,
+   three notes. THE REAL NUMBERS (WO-010 W4, 2026-09-12): the placeholders
+   S40 shipped with were replaced by the export the moment it landed, so the
+   v5 -> 6 pin below holds on his actual data and not on a stand-in. Built
+   through buildSession with the shipped plan, which is exactly the path
+   finish() took, so the shape (planId, rx, note, key order) is the app's
+   own; CHADY_EXPORT below is the same session as the server handed it back
+   (JSONB key order), and S41 pins that restorePayload turns one into the
+   other byte for byte. Twenty-three sets (5 + 4 + 4 + 3 + 4 + 3), two of
+   them past the prescription on d1a; every load kg-direct. */
 var CHADY_SESSION_ID = 1789264514484;
 function CHADY_SESSION(){
   var draft = { date: "2026-09-12", entries: {
-    d1a: { sets: [{ w: "60", r: "5" }, { w: "60", r: "5" }, { w: "60", r: "5" }], note: "" },
-    d1b: { sets: [{ w: "0", r: "8" }, { w: "0", r: "6" }], note: "" },
-    d1d: { sets: [{ w: "22.5", r: "5" }, { w: "22.5", r: "5" }, { w: "22.5", r: "4" }], note: "" },
-    d1e: { sets: [{ w: "40", r: "10" }, { w: "40", r: "8" }], note: "" },
-    d1f: { sets: [{ w: "30", r: "12" }, { w: "30", r: "12" }], note: "" },
-    d1g: { sets: [{ w: "12.5", r: "12" }, { w: "12.5", r: "10" }], note: "first one" }
+    d1a: { sets: [{ w: "20", r: "12" }, { w: "40", r: "12" }, { w: "51", r: "15" }, { w: "60", r: "14" }, { w: "70", r: "10" }], note: "" },
+    d1b: { sets: [{ w: "68", r: "12" }, { w: "77", r: "12" }, { w: "77", r: "11" }, { w: "86", r: "5" }], note: "I have done iso-lateral front lat pull downs- forearm still not recovered" },
+    d1d: { sets: [{ w: "63", r: "12" }, { w: "77", r: "5" }, { w: "77", r: "6" }, { w: "81", r: "3" }], note: "" },
+    d1e: { sets: [{ w: "0", r: "12" }, { w: "0", r: "10" }, { w: "0", r: "10" }], note: "" },
+    d1f: { sets: [{ w: "42", r: "13" }, { w: "51", r: "8" }, { w: "60", r: "3" }, { w: "42", r: "20" }], note: "did this standing" },
+    d1g: { sets: [{ w: "27.5", r: "15" }, { w: "32.5", r: "10" }, { w: "35", r: "8" }], note: "did this in cable" }
   } };
   var s = P.buildSession(draft, "d1", "2026-09-12", CHADY_SESSION_ID, "phat", P.PHAT_PLAN);
   if (!s) throw new Error("fixture: buildSession refused his session");
   return s;
 }
+/* The same session AS PULLED from Supabase on 2026-09-12 - JSONB's key order
+   (shortest key first, then alphabetical), which is why r precedes w and
+   id precedes date. Typed from the export verbatim; not built. */
+var CHADY_EXPORT = {"id":1789264514484,"date":"2026-09-12","dayId":"d1","planId":"phat","entries":{"d1a":{"rx":{"k":"power","s":3,"hi":5,"lo":3},"note":"","sets":[{"r":12,"w":20},{"r":12,"w":40},{"r":15,"w":51},{"r":14,"w":60},{"r":10,"w":70}]},"d1b":{"rx":{"k":"power","s":2,"hi":10,"lo":6},"note":"I have done iso-lateral front lat pull downs- forearm still not recovered","sets":[{"r":12,"w":68},{"r":12,"w":77},{"r":11,"w":77},{"r":5,"w":86}]},"d1d":{"rx":{"k":"power","s":3,"hi":5,"lo":3},"note":"","sets":[{"r":12,"w":63},{"r":5,"w":77},{"r":6,"w":77},{"r":3,"w":81}]},"d1e":{"rx":{"k":"power","s":2,"hi":10,"lo":6},"note":"","sets":[{"r":12,"w":0},{"r":10,"w":0},{"r":10,"w":0}]},"d1f":{"rx":{"k":"power","s":3,"hi":10,"lo":6},"note":"did this standing","sets":[{"r":13,"w":42},{"r":8,"w":51},{"r":3,"w":60},{"r":20,"w":42}]},"d1g":{"rx":{"k":"power","s":3,"hi":10,"lo":6},"note":"did this in cable","sets":[{"r":15,"w":27.5},{"r":10,"w":32.5},{"r":8,"w":35}]}}};
 /* The log store as the live app held it on 2026-09-12 evening: schema 5,
    profile stamped, his one session. */
 function CHADY_STORE(){
@@ -14442,20 +14473,614 @@ T("W3 - demoStore is unaffected: the same sessions byte for byte as main @ 5d952
 
 /* ------------------------------------------------------ 7. W4's sites are untouched, and the meta-tripwire */
 
-T("W3 - nothing a verdict prints moved: round2p5, g1Step, incrementLine, loadWord and a kg-direct verdict are what they were (W4 owns them, after §18)", function(a){
-  a.eq(P.round2p5(61.2), 60, "the 2.5 kg lattice is untouched - a lb-built set still rounds to kg here until W4");
+T("W3 -> W4 - the kg-direct baseline did not move: round2p5, g1Step, incrementLine, loadWord and a kg-direct verdict are what they were; a verdict on ld-carrying sets NOW differs, deliberately (§18, S41)", function(a){
+  /* Was "nothing a verdict prints moved ... W4 changes this deliberately,
+     not by accident". W4 landed 2026-09-12; the last assertion was written
+     to go red then, and it did. Restated: the kg-direct half stays pinned
+     here, and the ld half asserts the DIFFERENCE W4 introduced. Every §18
+     string is pinned in S41. */
+  a.eq(P.round2p5(61.2), 60, "the 2.5 kg lattice is untouched for kg-direct");
   a.eq(P.g1Step(120, 10, 8), 5);
-  a.eq(P.loadWord(60.8, "bb"), "60.8 kg", "Z2 still reads w only - the build word is W4's to wire");
+  a.eq(P.loadWord(60.8, "bb"), "60.8 kg", "Z2 reads w only - the build phrase is L2's, appended after the token");
   a.eq(P.incrementLine({ id: "x", n: "x", s: 3, lo: 3, hi: 5, k: "power", implement: "db" }), "If 2.5 kg per DB is not available, add reps up to 7 first, then jump.");
-  /* a verdict on sets that carry ld reads w and only w - the components are inert to it today */
   var ex = P.exById(P.PHAT_PLAN, "d2a");
   var withLd = P.verdict({ ex: ex, sets: [{ w: 60.8, r: 5, ld: LD_BB }, { w: 60.8, r: 5, ld: LD_BB }, { w: 60.8, r: 5, ld: LD_BB }], prev: null });
   var without = P.verdict({ ex: ex, sets: [{ w: 60.8, r: 5 }, { w: 60.8, r: 5 }, { w: 60.8, r: 5 }], prev: null });
-  a.eq(JSON.stringify(withLd), JSON.stringify(without), "same verdict, same words, with or without the build - W4 changes this deliberately, not by accident");
+  a.eq(without.x, "Top of range on all 3 sets. Go to 63.3 kg next session.", "kg-direct: the string S40 pinned, unchanged");
+  a.eq(withLd.x, "Top of range on all 3 sets. Go to 63.1 kg next session — 20 kg bar + 95 lb.", "the build: 5 lb on add, the kg total those plates compose to (L1), the build after the em dash (L2)");
+  a.ne(withLd.x, without.x, "W4 changed this deliberately - the S40 equality pin was written to fail here");
 });
 
 T("W3 - up to the end of S40 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
   a.deep(PHAT_KEY_WRITES, [], "a fixture in S40 or earlier wrote into his history");
+});
+
+
+/* ============================================================ S41 - WO-010 W4
+   The ladder in a mixed-unit gym: Rules L1-L4, strength-coach addendum
+   §18, transcribed. Every numbered worked example in §18.1, §18.2 and §18.4
+   is one exact-string assertion; every "Must not print" is its own
+   assertion; the two kg-direct byte-identity pins (18.1 ex 9, 18.2 ex 4);
+   the §18.6 #1 `Drop to 20 kg` regression; L2's precedence table; L3's SP1
+   cases; L4's P1 cases; the validateSessionDoc boundary the SQL mirror
+   (W5) copies; and his real session through v5 -> 6 byte-identical, from
+   the export rather than a placeholder.
+
+   Written by backend-engineer with the code, 2026-09-12. The figures below
+   are the coach's, typed from §18 - not re-derived - and the meta-test at
+   the end recomputes every `Go to` / `Drop to` / speed figure from the
+   components in the same sentence, which is what makes Decision 4
+   ("no rule prints a load that cannot be built from the components it
+   names") a property of the code rather than of the document.
+   ========================================================================== */
+group("S41 WO-010 W4 / the ladder (L1-L4) / build phrase / SP1 on a build / the SQL boundary / his real session");
+
+/* ---- fixtures: sets built the way the card builds them. w is what
+   composeLoad stores for the plates named; ld sits beside it as numbers. */
+function S41_SET(ld, r){ var c = P.composeLoad(ld); if (!c.ok) throw new Error("fixture: " + JSON.stringify(ld)); return { w: c.w, r: r, ld: ld }; }
+function BB20(add, r){ return S41_SET({ bar: 20, bu: "kg", add: add, au: "lb" }, r); }      /* 20 kg bar + N lb */
+function BB45(add, r){ return S41_SET({ bar: 45, bu: "lb", add: add, au: "lb" }, r); }      /* 45 lb bar + N lb */
+function KGB(add, r){ return S41_SET({ bar: 20, bu: "kg", add: add, au: "kg" }, r); }       /* 20 kg bar + N kg */
+function LBN(add, r){ return S41_SET({ add: add, au: "lb" }, r); }                          /* N lb, no bar */
+function KGD(w, r){ return { w: w, r: r }; }                                                 /* kg-direct */
+function EX41(id){ return P.exById(P.PHAT_PLAN, id); }
+function V41(id, sets, prev){ return P.verdict({ ex: EX41(id), sets: sets, prev: prev === undefined ? null : prev }); }
+/* speedLoad on one source set, dated inside the 28-day window */
+function SP41(srcId, set, exId){
+  var sess = [{ id: 1, date: "2026-09-10", dayId: "d1", dateBasis: "local", planId: "phat", entries: {} }];
+  sess[0].entries[srcId] = { sets: [set], note: "" };
+  return P.speedLoad(sess, exId, "2026-09-12", EX41(srcId).n);
+}
+/* every string a verdict prints, joined, for the "must not" assertions */
+function ALL41(v){ return v ? (v.x + "\n" + v.x2) : ""; }
+var S41_SENTENCES = [];   /* every (sentence) the meta-test recomputes */
+function pinS41(a, v, x, x2, rule, msg){
+  a.ok(v !== null && typeof v === "object", (msg || "") + ": a verdict");
+  a.eq(v.rule, rule, (msg || "") + ": the case");
+  a.eq(v.x, x, msg);
+  a.eq(v.x2, x2 === undefined ? "" : x2, (msg || "") + ": the second line");
+  S41_SENTENCES.push(v.x);
+}
+
+/* ------------------------------------------------------ 0. surface and the grid */
+
+T("W4 - the surface: KG_STEP 2.5, LB_STEP 5, LB_BAR_STEP 5 (the one constant §18.8 #1 can move), roundGrid, buildOf, workingBuild; g1Step and incrementLine grew an optional argument and lost nothing", function(a){
+  ["roundGrid", "buildOf", "workingBuild", "g1Step", "incrementLine", "buildWord", "verdict", "speedLoad"].forEach(function(n){ a.isFn(P[n], n); });
+  a.eq(P.KG_STEP, 2.5, "the 2.5 kg every rule has always used");
+  a.eq(P.LB_STEP, 5, "one dumbbell up the rack, one 5 lb plate on a belt or a stack");
+  a.eq(P.LB_BAR_STEP, 5, "a 2.5 lb plate per side - [Likely] present; becomes 10 in one edit if Chady says no");
+  a.eq(P.g1Step.length, 4, "g1Step(load, mr, hi, grid)");
+  a.eq(P.incrementLine.length, 2, "incrementLine(ex, ld) - §18.7");
+  a.eq(P.buildWord.length, 2, "buildWord(ld, implement) - §18.2");
+});
+
+T("W4 / L1 - roundGrid is round2p5's sibling: on 2.5 it IS round2p5 to the bit over 0..250 by 0.01; on 5 it is ceil(x/5 - 0.5) x 5 with ties DOWN, and never -0", function(a){
+  var i, x, bad = 0;
+  for (i = 0; i <= 25000; i++) { x = i / 100; if (P.roundGrid(x, 2.5) !== P.round2p5(x)) bad++; }
+  a.eq(bad, 0, "roundGrid(x, 2.5) === round2p5(x) on every hundredth");
+  /* the coach's own numbers, §18.1 examples 2, 3, 12-14, §18.4 examples 2-4 */
+  a.eq(P.roundGrid(8.95, 5), 10, "8.95 -> 10 (G1 raw, ex 2)");
+  a.eq(P.roundGrid(35.80, 5), 35, "35.80 -> 35 (G1 cap, ex 2)");
+  a.eq(P.roundGrid(125.98, 5), 125, "125.98 -> 125 (the drop, ex 3)");
+  a.eq(P.roundGrid(76.74, 5), 75, "76.74 -> 75 (SP1, ex 12)");
+  a.eq(P.roundGrid(57.44, 5), 55, "57.44 -> 55 (SP1, ex 13)");
+  a.eq(P.roundGrid(54.02, 5), 55, "54.02 -> 55 (SP1, ex 14)");
+  a.eq(P.roundGrid(2.25, 5), 0, "2.25 -> 0 (G1 raw at 45 lb, §18.4 ex 2)");
+  a.ok(Object.is(P.roundGrid(2.25, 5), 0) && !Object.is(P.roundGrid(2.25, 5), -0), "0, not -0: a -0 would print as 0 but compare as < 0 nowhere and confuse a guard");
+  a.eq(P.roundGrid(8.99, 5), 10, "8.99 -> 10 (G1 cap at 45 lb)");
+  a.eq(P.roundGrid(42.73, 5), 45, "42.73 -> 45 (the drop from 45 lb rounds back - the guard's case)");
+  a.eq(P.roundGrid(4.82, 5), 5, "4.82 -> 5 (the drop from 5 lb rounds back)");
+  a.eq(P.roundGrid(2.5, 5), 0, "a tie goes DOWN");
+  a.eq(P.roundGrid(7.5, 5), 5, "a tie goes DOWN");
+  a.eq(P.roundGrid(12.5, 5), 10, "a tie goes DOWN");
+  a.eq(P.roundGrid(12.51, 5), 15, "just past the tie goes up");
+  a.eq(P.roundGrid(140, 5), 140, "on the grid stays");
+  a.ok(isNaN(P.roundGrid("x", 5)) && isNaN(P.roundGrid(5, 0)) && isNaN(P.roundGrid(5, -5)) && isNaN(P.roundGrid(5)), "garbage is NaN, never 0: no caller may invent a load out of an unreadable value");
+});
+
+T("W4 / L1 - buildOf classifies: absent / kg-no-bar / a build that does not recompose to w / malformed -> null (KG-DIRECT); kg-on-bar grid 2.5; lb grid LB_STEP without a bar and LB_BAR_STEP with one; strings while drafting are read the same", function(a){
+  a.eq(P.buildOf(undefined), null, "no ld: kg-direct");
+  a.eq(P.buildOf(null), null);
+  a.eq(P.buildOf({ add: 35, au: "kg" }), null, "kg with no bar IS kg-direct (18.1 ex 9)");
+  a.eq(P.buildOf({ add: 35, au: "kg" }, 35), null);
+  a.eq(P.buildOf({ bar: 20, bu: "kg", add: 90, au: "lb" }, 61.5), null, "does not recompose to w (61.5 vs 60.8): IGNORED, read as kg-direct - silence over a wrong plate count");
+  a.eq(P.buildOf({ bar: 20, bu: "kg", add: 90, au: "lb" }, 60.86), null, "0.06 off: refused (the same LD_TOL as validateEntry; 60.85 is inside it)");
+  a.ok(P.buildOf({ bar: 20, bu: "kg", add: 90, au: "lb" }, 60.8) !== null, "recomposes: a build");
+  a.ok(P.buildOf({ bar: 20, bu: "kg", add: 90, au: "lb" }, 60.84) !== null, "within 0.05: a build");
+  a.eq(P.buildOf({ bar: 20, add: 90, au: "lb" }, 60.8), null, "bar without bu does not compose: kg-direct, no phrase");
+  a.eq(P.buildOf({ add: "x", au: "lb" }), null);
+  a.eq(P.buildOf({ add: 90, au: "lb", extra: 1 }), null, "an unknown key does not compose");
+  var b1 = P.buildOf({ bar: 20, bu: "kg", add: 80, au: "kg" }, 100);
+  a.eq(b1.grid, 2.5, "KG-ON-BAR: 2.5 on add"); a.eq(b1.hasBar, true); a.eq(b1.barKg, 20); a.eq(b1.add, 80); a.eq(b1.au, "kg"); a.eq(b1.w, 100);
+  var b2 = P.buildOf({ add: 55, au: "lb" }, 24.9);
+  a.eq(b2.grid, P.LB_STEP, "LB, no bar: LB_STEP on add"); a.eq(b2.hasBar, false); a.eq(b2.barKg, 0); a.eq(b2.bar, 0);
+  var b3 = P.buildOf({ bar: 20, bu: "kg", add: 135, au: "lb" }, 81.2);
+  a.eq(b3.grid, P.LB_BAR_STEP, "LB on a bar: LB_BAR_STEP on add - the constant that moves if the gym has no 2.5 lb plates");
+  var b4 = P.buildOf({ bar: 45, bu: "lb", add: 90, au: "lb" }, 61.2);
+  a.eq(b4.grid, P.LB_BAR_STEP); a.eq(r1s41(b4.barKg), 20.4, "a 45 lb bar is 20.412 kg, unrounded inside");
+  var b5 = P.buildOf({ bar: "20", bu: "kg", add: "135", au: "lb" }, 81.2);
+  a.deep({ add: b5.add, grid: b5.grid, hasBar: b5.hasBar }, { add: 135, grid: 5, hasBar: true }, "strings (the draft) classify exactly like numbers (the store)");
+  a.eq(P.buildOf({ add: 0, au: "lb" }, 0).grid, 5, "an empty belt in lb is an LB build at zero");
+});
+function r1s41(x){ return Math.round(x * 10) / 10; }
+
+T("W4 / L1 - workingBuild: the FIRST set among the first n completed sets whose w equals the working load - ties to the earliest, extras ignored, blank rows skipped, and the kg-direct set wins when it is the one at the load", function(a){
+  var LDA = { bar: 20, bu: "kg", add: 135, au: "lb" }, LDB = { bar: 20, bu: "kg", add: 130, au: "lb" };
+  var s1 = [BB20(135, 5), BB20(135, 5), BB20(135, 5)];
+  a.eq(P.workingBuild(s1, 3, 81.2).add, 135, "all equal: the first");
+  var s2 = [BB20(135, 5), BB20(135, 5), BB20(130, 5)];
+  a.eq(P.workingBuild(s2, 3, 79.0).add, 130, "the min-load set is the third: its build");
+  var s3 = [{ w: 81.2, r: 5 }, BB20(135, 5), BB20(135, 5)];
+  a.eq(P.workingBuild(s3, 3, 81.2), null, "set 1 is kg-direct at the load: ties to the earliest, so kg-direct - no phrase");
+  var s4 = [BB20(135, 5), BB20(135, 5), BB20(135, 5), { w: 60, r: 5, ld: LDB }];
+  a.eq(P.workingBuild(s4, 3, 81.2).add, 135, "a fourth set past n is not read");
+  a.eq(P.workingBuild(s4, 3, 60), null, "and a load only a set past n holds is not found");
+  var s5 = [{ w: "", r: "" }, BB20(135, 5), { w: "60", r: "" }, BB20(135, 5), BB20(135, 5)];
+  a.eq(P.workingBuild(s5, 3, 81.2).add, 135, "blank rows are skipped, not counted");
+  a.eq(P.workingBuild([{ w: 81.5, r: 5, ld: LDA }], 1, 81.5), null, "a set whose ld does not recompose to its w is kg-direct here too");
+  a.eq(P.workingBuild(null, 3, 1), null); a.eq(P.workingBuild([], 3, 1), null);
+  a.eq(P.workingBuild([{ w: 81.205, r: 5, ld: LDA }], 1, 81.2).add, 135, "0.01-tolerant on the load, like P1 itself");
+});
+
+/* ------------------------------------------------------ 1. Rule L1 - §18.1's eleven worked examples, d1a bb, 20 kg bar + N lb */
+
+T("W4 / L1 ex 1 - THE DISCRIMINATING CASE (P1.4): 135 lb x 5/5/5 -> `Go to 83.5 kg next session — 20 kg bar + 140 lb.`; must not print 83.7 kg or `If 5 lb`", function(a){
+  var v = V41("d1a", [BB20(135, 5), BB20(135, 5), BB20(135, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 83.5 kg next session — 20 kg bar + 140 lb.", "", "P1.4", "ex 1");
+  a.eq(ALL41(v).indexOf("83.7"), -1, "MUST NOT print 83.7 kg (81.2 + 2.5; would need 140.4 lb)");
+  a.eq(ALL41(v).indexOf("If 5 lb"), -1, "MUST NOT print an I2 line: a bar is present");
+  a.eq(v.x2, "", "no second line");
+});
+
+T("W4 / L1 ex 2 - G1 IN LB (P1.3): 135 lb x 7/7/7 -> step 10 lb -> `Go to 85.8 kg — 20 kg bar + 145 lb.`; must not print 86.2 kg", function(a){
+  var v = V41("d1a", [BB20(135, 7), BB20(135, 7), BB20(135, 7)]);
+  pinS41(a, v, "7 reps at 81.2 kg on every set. Too light. Go to 85.8 kg — 20 kg bar + 145 lb.", "", "P1.3", "ex 2");
+  a.eq(ALL41(v).indexOf("86.2"), -1, "MUST NOT print 86.2 kg (kg-direct G1: step 5 kg; would need 145.9 lb)");
+  a.eq(P.g1Step(81.2 / P.LB_KG, 7, 5, 5), 10, "G1 on L = 179.02 lb: 8.95 -> 10, cap 35 -> 10 lb");
+  /* the cap BINDING, and binding on the grid: 135 lb x 15/15/15 -> raw 44.76
+     -> 45, cap 35.80 -> 35 -> 35 lb, not 35.8 lb (170.8 lb is no plate) */
+  a.eq(P.g1Step(81.2 / P.LB_KG, 15, 5, 5), 35, "the 20 % cap is rounded to the build grid: 35, never 35.8");
+  var c = V41("d1a", [BB20(135, 15), BB20(135, 15), BB20(135, 15)]);
+  pinS41(a, c, "15 reps at 81.2 kg on every set. Too light. Go to 97.1 kg — 20 kg bar + 170 lb.", "", "P1.3", "the cap on the grid");
+  a.eq(ALL41(c).indexOf("97.5"), -1, "MUST NOT print 97.5 kg (an unrounded cap: 170.8 lb)");
+});
+
+T("W4 / L1 ex 3 - THE DROP (P1.1): 135 x 2, 130 x 4, 130 x 5 -> case 1 beats the mismatch -> `Drop to 76.7 kg next session — 20 kg bar + 125 lb.`; must not print 77.5 kg", function(a){
+  var v = V41("d1a", [BB20(135, 2), BB20(130, 4), BB20(130, 5)]);
+  pinS41(a, v, "2 reps at 81.2 kg. Below the range. Drop to 76.7 kg next session — 20 kg bar + 125 lb.", "", "P1.1", "ex 3");
+  a.eq(ALL41(v).indexOf("77.5"), -1, "MUST NOT print 77.5 kg (round2p5(77.14); would need 126.8 lb)");
+});
+
+T("W4 / L1 ex 4 - MISMATCH (P1.2), unchanged grammar, NO build phrase: 135/135/130 x 5 -> `Sets not matched: 81.2 / 81.2 / 79 kg. Repeat 81.2 kg until all 3 sets reach 5 reps.`", function(a){
+  var v = V41("d1a", [BB20(135, 5), BB20(135, 5), BB20(130, 5)]);
+  pinS41(a, v, "Sets not matched: 81.2 / 81.2 / 79 kg. Repeat 81.2 kg until all 3 sets reach 5 reps.", "", "P1.2", "ex 4");
+  a.eq(v.x.indexOf(" — "), -1, "no em dash: 81.2 is on two of his own rows");
+});
+
+T("W4 / L1 ex 5 - HOLD (P1.5), unchanged: 135 x 5/5/4 -> `Stay at 81.2 kg until all 3 sets reach 5 reps.` and nothing after it", function(a){
+  var v = V41("d1a", [BB20(135, 5), BB20(135, 5), BB20(135, 4)]);
+  pinS41(a, v, "Stay at 81.2 kg until all 3 sets reach 5 reps.", "", "P1.5", "ex 5");
+  a.eq(v.x.indexOf(" — "), -1, "no em dash on a hold");
+});
+
+T("W4 / L1 ex 6 - A LB BAR: 45 lb bar + 90 lb x 5/5/5 -> w 61.2 -> `Go to 63.5 kg next session — 45 lb bar + 95 lb.`", function(a){
+  a.eq(BB45(90, 5).w, 61.2, "135 lb total is 61.235 -> 61.2");
+  var v = V41("d1a", [BB45(90, 5), BB45(90, 5), BB45(90, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 63.5 kg next session — 45 lb bar + 95 lb.", "", "P1.4", "ex 6");
+  /* rounded ONCE at the total (18.5): 45 lb bar + 180 lb is 102.058 -> 102.1,
+     and r1(20.412) + r1(81.647) = 102.0 is the per-component mutant S40 named */
+  var h = V41("d1a", [BB45(175, 5), BB45(175, 5), BB45(175, 5)]);
+  pinS41(a, h, "Top of range on all 3 sets. Go to 102.1 kg next session — 45 lb bar + 180 lb.", "", "P1.4", "ex 6, rounded once at the total");
+  a.eq(ALL41(h).indexOf("102.0"), -1, "MUST NOT print 102.0 kg (rounded per component)");
+});
+
+T("W4 / L1 ex 7 - KG PLATES ON THE BAR: 20 kg bar + 80 kg x 5/5/5 -> `Go to 102.5 kg next session — 20 kg bar + 82.5 kg.` (the kg-direct number, plus the build because a bar is present)", function(a){
+  var v = V41("d1a", [KGB(80, 5), KGB(80, 5), KGB(80, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 102.5 kg next session — 20 kg bar + 82.5 kg.", "", "P1.4", "ex 7");
+  a.eq(v.x2, "", "no I2 line under a bar, in any unit");
+});
+
+T("W4 / L1 ex 8 - KG-DIRECT, THE BASELINE: {w:100, r:5} x 3, no ld -> `Top of range on all 3 sets. Go to 102.5 kg next session.` byte-identical to today's suite", function(a){
+  var v = V41("d1a", [KGD(100, 5), KGD(100, 5), KGD(100, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 102.5 kg next session.", "", "P1.4", "ex 8");
+  a.eq(v.x.indexOf("—"), -1, "no em dash anywhere in a kg-direct verdict");
+});
+
+T("W4 / L1 ex 9 - A KG CABLE STACK CARRYING ld IS KG-DIRECT: d3c {w:35, r:13, ld:{add:35, au:\"kg\"}} x 3 equals the same set without ld, string for string (byte-identity pin 1 of 2)", function(a){
+  var prev = { sets: [KGD(35, 12), KGD(35, 12), KGD(35, 12)] };
+  var withLd = V41("d3c", [S41_SET({ add: 35, au: "kg" }, 13), S41_SET({ add: 35, au: "kg" }, 13), S41_SET({ add: 35, au: "kg" }, 13)], prev);
+  var without = V41("d3c", [KGD(35, 13), KGD(35, 13), KGD(35, 13)], prev);
+  pinS41(a, withLd, "All sets above 12. Go to 37.5 kg next session.", "If 2.5 kg is not available, add reps first, then jump.", "H1.2", "ex 9");
+  a.eq(JSON.stringify(withLd), JSON.stringify(without), "identical to the same set without ld - assert the two strings equal");
+  a.eq(withLd.x.indexOf("—"), -1, "no build phrase (no bar, kg)");
+});
+
+T("W4 / L1 ex 10 - LB DUMBBELL, H1.4d: d5b 55 lb x 10/10/10 then 55 lb x 9/9/9 -> `Volume down 10%. Add a rep or 5 lb next time.`; must not print 2.5 kg", function(a){
+  var v = V41("d5b", [LBN(55, 9), LBN(55, 9), LBN(55, 9)], { sets: [LBN(55, 10), LBN(55, 10), LBN(55, 10)] });
+  pinS41(a, v, "Volume down 10%. Add a rep or 5 lb next time.", "", "H1.4d", "ex 10");
+  a.eq(ALL41(v).indexOf("2.5 kg"), -1, "MUST NOT print 2.5 kg");
+  /* and the kg-direct and kg-on-bar forms of the same line */
+  var vk = V41("d5b", [KGD(25, 9), KGD(25, 9), KGD(25, 9)], { sets: [KGD(25, 10), KGD(25, 10), KGD(25, 10)] });
+  a.eq(vk.x, "Volume down 10%. Add a rep or 2.5 kg next time.", "kg-direct: as today");
+  var vb = V41("d5b", [KGB(10, 9), KGB(10, 9), KGB(10, 9)], { sets: [KGB(10, 10), KGB(10, 10), KGB(10, 10)] });
+  a.eq(vb.x, "Volume down 10%. Add a rep or 2.5 kg next time.", "kg on a bar steps 2.5 kg too");
+  var vbb = V41("d5b", [BB20(10, 9), BB20(10, 9), BB20(10, 9)], { sets: [BB20(10, 10), BB20(10, 10), BB20(10, 10)] });
+  a.eq(vbb.x, "Volume down 10%. Add a rep or 5 lb next time.", "lb on a bar: LB_BAR_STEP");
+});
+
+T("W4 / L1 ex 11 - FAILING CASE: no em dash on ANY P1.2 or P1.5 string, on every build - the phrase is only ever on a NEW load", function(a){
+  var builds = [
+    [BB20(135, 5), BB20(135, 5), BB20(130, 5)], [BB45(90, 5), BB45(90, 5), BB45(85, 5)], [KGB(80, 5), KGB(80, 5), KGB(77.5, 5)],
+    [LBN(55, 5), LBN(55, 5), LBN(50, 5)], [KGD(100, 5), KGD(100, 5), KGD(97.5, 5)]
+  ];
+  builds.forEach(function(sets, i){
+    var v = V41("d1a", sets);
+    a.eq(v.rule, "P1.2", "build " + i + " is a mismatch");
+    a.eq(v.x.indexOf("—"), -1, "build " + i + ": P1.2 carries no phrase");
+    a.eq(v.x.indexOf("per DB"), -1);
+    var h = V41("d1a", [sets[0], sets[0], { w: sets[0].w, r: 4, ld: sets[0].ld }]);
+    a.eq(h.rule, "P1.5", "build " + i + " is a hold");
+    a.eq(h.x.indexOf("—"), -1, "build " + i + ": P1.5 carries no phrase");
+  });
+  a.eq(V41("d1a", [BB20(135, 5), BB20(135, 5), BB20(130, 5)]).x.indexOf("Repeat 81.2 kg —"), -1, "never `Repeat 81.2 kg — 20 kg bar + 135 lb`");
+});
+
+T("W4 / L1 - the H1 output copy in §18.1: H1.2 `All sets above 12. Go to 27.2 kg next session — 60 lb per DB.` and H1.1 `6 reps at 24.9 kg. Below the 8–12 range. Drop to 22.7 kg — 50 lb per DB.` on d5b", function(a){
+  var v2 = V41("d5b", [LBN(55, 13), LBN(55, 13), LBN(55, 13)]);
+  pinS41(a, v2, "All sets above 12. Go to 27.2 kg next session — 60 lb per DB.", "If 5 lb per DB is not available, add reps first, then jump.", "H1.2", "H1.2 in lb");
+  var v1 = V41("d5b", [LBN(55, 6), LBN(55, 8), LBN(55, 8)]);
+  pinS41(a, v1, "6 reps at 24.9 kg. Below the 8–12 range. Drop to 22.7 kg — 50 lb per DB.", "", "H1.1", "H1.1 in lb");
+  a.eq(ALL41(v2).indexOf("27.4"), -1, "MUST NOT print 27.4 kg (24.9 + 2.5)");
+  /* the P1.3 zero form in lb, and the H1.2 zero form in lb */
+  var z3 = V41("d1c", [LBN(0, 12), LBN(0, 12)]);
+  pinS41(a, z3, "12 reps at bodyweight on every set. Too light. Add 5 lb.", "If 5 lb is not available, add reps up to 12 first, then jump.", "P1.3", "P1.3 at zero in lb: `Add 5 lb.`");
+  var ex = { id: "x", n: "x", s: 2, lo: 8, hi: 12, k: "hyp", implement: "bodyweight" };
+  var z2 = P.verdict({ ex: ex, sets: [LBN(0, 13), LBN(0, 13)], prev: null });
+  a.eq(z2.x, "All sets above 12 at bodyweight. Add 5 lb next session.", "H1.2 at zero in lb: the step in the build's unit");
+  a.eq(z2.x2, "If 5 lb is not available, add reps first, then jump.");
+});
+
+/* ------------------------------------------------------ 2. Rule L2 - precedence, and who reads what */
+
+T("W4 / L2 ex 1 - PRECEDENCE, a bar on a db slot: d1d {bar 20 kg, add 90 lb} x 5/5/5 -> `Go to 63.1 kg next session — 20 kg bar + 95 lb.`, no I2 line; must not print `95 lb per DB`, `If 5 lb per DB` or ` · per DB`", function(a){
+  var v = V41("d1d", [BB20(90, 5), BB20(90, 5), BB20(90, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 63.1 kg next session — 20 kg bar + 95 lb.", "", "P1.4", "L2 ex 1");
+  a.eq(ALL41(v).indexOf("95 lb per DB"), -1, "MUST NOT: `— 95 lb per DB`");
+  a.eq(ALL41(v).indexOf("If 5 lb per DB"), -1, "MUST NOT: `If 5 lb per DB`");
+  a.eq(ALL41(v).indexOf("per DB"), -1, "MUST NOT: `per DB` anywhere - nobody puts a bar on a dumbbell");
+  a.eq(P.incrementLine(EX41("d1d"), { bar: 20, bu: "kg", add: 90, au: "lb" }), "", "I2's premise is decided by ld: a bar present = no line");
+});
+
+T("W4 / L2 ex 2 - A bb SLOT BUILT WITHOUT A BAR gets the generic I2 line: d1a {add 90 lb} x 5/5/5 -> `Go to 43.1 kg next session — 95 lb.` then `If 5 lb is not available, add reps up to 7 first, then jump.`", function(a){
+  var v = V41("d1a", [LBN(90, 5), LBN(90, 5), LBN(90, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 43.1 kg next session — 95 lb.", "If 5 lb is not available, add reps up to 7 first, then jump.", "P1.4", "L2 ex 2");
+  a.eq(P.incrementLine(EX41("d1a")), "", "today a bb slot never gets the line (kg-direct)");
+  a.eq(P.incrementLine(EX41("d1a"), { add: 90, au: "lb" }), "If 5 lb is not available, add reps up to 7 first, then jump.", "this one does because ld says there was no bar");
+});
+
+T("W4 / L2 ex 3 - LB DUMBBELL ON A db SLOT, the ordinary case: d1d {add 55 lb} x 5/5/5 -> `Go to 27.2 kg next session — 60 lb per DB.` then `If 5 lb per DB is not available, add reps up to 7 first, then jump.`; must not print 27.4 kg or `If 2.5 kg per DB`", function(a){
+  var v = V41("d1d", [LBN(55, 5), LBN(55, 5), LBN(55, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 27.2 kg next session — 60 lb per DB.", "If 5 lb per DB is not available, add reps up to 7 first, then jump.", "P1.4", "L2 ex 3");
+  a.eq(ALL41(v).indexOf("27.4"), -1, "MUST NOT print 27.4 kg (24.9 + 2.5)");
+  a.eq(ALL41(v).indexOf("If 2.5 kg per DB"), -1, "MUST NOT print `If 2.5 kg per DB`");
+});
+
+T("W4 / L2 ex 4 - KG-DIRECT ON db, unchanged: d1d {w:25, r:5} x 3 -> `Go to 27.5 kg next session.` then `If 2.5 kg per DB is not available, add reps up to 7 first, then jump.` (byte-identity pin 2 of 2)", function(a){
+  var v = V41("d1d", [KGD(25, 5), KGD(25, 5), KGD(25, 5)]);
+  pinS41(a, v, "Top of range on all 3 sets. Go to 27.5 kg next session.", "If 2.5 kg per DB is not available, add reps up to 7 first, then jump.", "P1.4", "L2 ex 4");
+});
+
+T("W4 / L2 ex 5 - FAILING CASE, the build phrase on a hold: d1d {add 55 lb} x 5/5/4 -> `Stay at 24.9 kg until all 3 sets reach 5 reps.` and nothing after it - no ` — `, no `per DB`", function(a){
+  var v = V41("d1d", [LBN(55, 5), LBN(55, 5), LBN(55, 4)]);
+  pinS41(a, v, "Stay at 24.9 kg until all 3 sets reach 5 reps.", "", "P1.5", "L2 ex 5");
+  a.eq(v.x.indexOf(" — "), -1); a.eq(ALL41(v).indexOf("per DB"), -1);
+});
+
+T("W4 / L2 ex 6 - speed work never gets the I2 line, any build: d3a from a lb-built source prints the L3 sentence and no `If 5 lb`; verdict() on the speed slot is still null", function(a){
+  var o = SP41("d1a", BB20(135, 3), "d3a");
+  a.eq(o.text.indexOf("If 5 lb"), -1); a.eq(o.text.indexOf("If 2.5"), -1);
+  a.eq(V41("d3a", [BB20(75, 3), BB20(75, 3), BB20(75, 3), BB20(75, 3), BB20(75, 3), BB20(75, 3)]), null, "SP0 is gone; speed work has no verdict on any build");
+  a.eq(P.incrementLine(EX41("d3a"), { add: 90, au: "lb" }), "", "I2 refuses speed by name, before it reads ld");
+});
+
+T("W4 / L2 - incrementLine(ex, ld), the whole table: kg-direct by implement as today; any bar -> none; lb no bar -> `5 lb` (`per DB` iff db), on bb / machine / cable / bodyweight / untagged; hyp carries no number; unrecognised k -> none", function(a){
+  var LB = { add: 55, au: "lb" }, BAR = { bar: 20, bu: "kg", add: 90, au: "lb" }, KGBAR = { bar: 20, bu: "kg", add: 80, au: "kg" }, KGN = { add: 35, au: "kg" };
+  function ex(im, k){ return { id: "x", n: "x", s: 3, lo: 8, hi: 12, k: k || "power", implement: im }; }
+  ["db", "machine", "cable", "bodyweight", "bb", undefined].forEach(function(im){
+    a.eq(P.incrementLine(ex(im), BAR), "", "bar + lb on " + im + ": none");
+    a.eq(P.incrementLine(ex(im), KGBAR), "", "bar + kg on " + im + ": none");
+    a.eq(P.incrementLine(ex(im), KGN), P.incrementLine(ex(im)), "kg with no bar on " + im + ": exactly the kg-direct line");
+    a.eq(P.incrementLine(ex(im, "speed"), LB), "", "speed on " + im + ": none");
+    a.eq(P.incrementLine(ex(im, "tempo"), LB), "", "unrecognised k on " + im + ": none");
+  });
+  a.eq(P.incrementLine(ex("db"), LB), "If 5 lb per DB is not available, add reps up to 14 first, then jump.");
+  a.eq(P.incrementLine(ex("db", "hyp"), LB), "If 5 lb per DB is not available, add reps first, then jump.");
+  ["machine", "cable", "bodyweight", "bb", undefined].forEach(function(im){
+    a.eq(P.incrementLine(ex(im), LB), "If 5 lb is not available, add reps up to 14 first, then jump.", "lb, no bar, " + im);
+    a.eq(P.incrementLine(ex(im, "hyp"), LB), "If 5 lb is not available, add reps first, then jump.", "lb, no bar, hyp, " + im);
+  });
+  /* kg-direct rows are what they were */
+  a.eq(P.incrementLine(ex("db")), "If 2.5 kg per DB is not available, add reps up to 14 first, then jump.");
+  a.eq(P.incrementLine(ex("bb")), ""); a.eq(P.incrementLine(ex(undefined)), "");
+  a.eq(P.incrementLine(ex("cable", "hyp")), "If 2.5 kg is not available, add reps first, then jump.");
+  a.eq(P.incrementLine(ex("db"), { bar: 20, add: 90, au: "lb" }), P.incrementLine(ex("db")), "an ld that does not compose is ignored: kg-direct line");
+});
+
+T("W4 / L2 - buildWord(ld, implement): `per DB` and `bodyweight +` only with NO bar; a bar overrides db; without implement the ghost-line form is what W3 shipped", function(a){
+  a.eq(P.buildWord({ add: 55, au: "lb" }), "55 lb", "W3's form, unchanged");
+  a.eq(P.buildWord({ bar: 20, bu: "kg", add: 90, au: "lb" }), "20 kg bar + 90 lb", "W3's form, unchanged");
+  a.eq(P.buildWord({ add: 55, au: "lb" }, "db"), "55 lb per DB");
+  a.eq(P.buildWord({ add: 45, au: "lb" }, "bodyweight"), "bodyweight + 45 lb");
+  a.eq(P.buildWord({ add: 95, au: "lb" }, "bb"), "95 lb");
+  a.eq(P.buildWord({ add: 95, au: "lb" }, "machine"), "95 lb");
+  a.eq(P.buildWord({ bar: 20, bu: "kg", add: 90, au: "lb" }, "db"), "20 kg bar + 90 lb", "a bar in ld overrides db");
+  a.eq(P.buildWord({ bar: 20, bu: "kg", add: 90, au: "lb" }, "bodyweight"), "20 kg bar + 90 lb");
+  a.eq(P.buildWord({ add: 82.5, au: "kg" }, "db"), "82.5 kg per DB", "the grammar is unit-agnostic; the VERDICT is what withholds a kg no-bar phrase");
+  a.eq(P.buildWord({ bar: 20, add: 90, au: "lb" }, "db"), "", "does not compose: empty");
+});
+
+/* ------------------------------------------------------ 3. Rule L3 - SP1 on a lb-built source */
+
+T("W4 / L3 ex 12 - SP1, LB BAR: source d1a 81.2 x 3 built 20 kg + 135 lb -> `54 kg — 20 kg bar + 75 lb. 65–70% of your 81.2 kg triple. Rest 60–90 s. Fast, never grinding.`; lo/hi are r1 band edges; must not print 55 kg", function(a){
+  var o = SP41("d1a", BB20(135, 3), "d3a");
+  a.eq(o.text, "54 kg — 20 kg bar + 75 lb. 65–70% of your 81.2 kg triple. Rest 60–90 s. Fast, never grinding.");
+  a.eq(o.target, 54, "the kg total of 20 kg + 75 lb: 54.019 -> 54");
+  a.eq(o.lo, 52.8, "r1(81.2 x 0.65), NOT grid-fitted"); a.eq(o.hi, 56.8, "r1(81.2 x 0.70)");
+  a.deep(o.source, { w: 81.2, r: 3, date: "2026-09-10" }, "the source shape is unchanged - ld does not leak onto it");
+  a.eq(o.text.indexOf("55 kg"), -1, "MUST NOT print 55 kg (round2p5(54.81); would need 77.2 lb)");
+  a.eq(o.reason, null); a.eq(o.srcWindow, 28); a.eq(o.absent, false);
+  S41_SENTENCES.push(o.text);
+});
+
+T("W4 / L3 ex 13 - SP1, LB DUMBBELL, BAND MISSED: d5a from d1d 85 lb x 3 (38.6) -> no grid point inside 25.1–27.0 -> below -> `24.9 kg — 55 lb per DB. The nearest you can build under 65–70% of your 38.6 kg triple. …`; must not print 60 lb or claim 65–70% beside 24.9", function(a){
+  var o = SP41("d1d", LBN(85, 3), "d5a");
+  a.eq(o.text, "24.9 kg — 55 lb per DB. The nearest you can build under 65–70% of your 38.6 kg triple. Rest 60–90 s. Fast, never grinding.");
+  a.eq(o.target, 24.9); a.eq(o.lo, 25.1); a.eq(o.hi, 27);
+  a.eq(o.text.indexOf("27.2 kg — 60 lb per DB"), -1, "MUST NOT print 60 lb (70.5 %, above the band)");
+  a.eq(o.text.indexOf("24.9 kg — 55 lb per DB. 65–70% of your"), -1, "MUST NOT print `65–70% of your` beside 24.9");
+  a.eq(o.text.indexOf(". 65–70% of your"), -1, "the claim is only printed when it is true of the number beside it");
+  S41_SENTENCES.push(o.text);
+});
+
+T("W4 / L3 ex 14 - SP1, LB DUMBBELL, IN BAND: source 80 lb x 3 (36.3) -> 55 lb = 24.9 inside 23.6–25.4 -> `24.9 kg — 55 lb per DB. 65–70% of your 36.3 kg triple. Rest 60–90 s. Fast, never grinding.`", function(a){
+  var o = SP41("d1d", LBN(80, 3), "d5a");
+  a.eq(o.text, "24.9 kg — 55 lb per DB. 65–70% of your 36.3 kg triple. Rest 60–90 s. Fast, never grinding.");
+  a.eq(o.target, 24.9); a.eq(o.lo, 23.6); a.eq(o.hi, 25.4);
+  S41_SENTENCES.push(o.text);
+});
+
+T("W4 / L3 - a kg-direct source is UNCHANGED, and so is a source whose ld is kg with no bar or does not recompose: `55 kg. 65–70% of your 81.2 kg triple. …`, target/lo/hi on the 2.5 grid, speedTooHeavy and speedFlagText untouched", function(a){
+  var o1 = SP41("d1a", KGD(81.2, 3), "d3a");
+  a.eq(o1.text, "55 kg. 65–70% of your 81.2 kg triple. Rest 60–90 s. Fast, never grinding.");
+  a.eq(o1.target, 55); a.eq(o1.lo, 52.5); a.eq(o1.hi, 57.5);
+  var o2 = SP41("d1a", S41_SET({ add: 81.2, au: "kg" }, 3), "d3a");
+  a.eq(JSON.stringify(o2), JSON.stringify(o1), "kg with no bar: byte-identical to kg-direct");
+  var o3 = SP41("d1a", { w: 81.2, r: 3, ld: { bar: 20, bu: "kg", add: 130, au: "lb" } }, "d3a");
+  a.eq(JSON.stringify(o3), JSON.stringify(o1), "an ld that does not recompose to R (130 lb is 79.0) is IGNORED: kg-direct, no phrase");
+  a.eq(P.speedTooHeavy(70, 81.2), true); a.eq(P.speedTooHeavy(60, 81.2), false);
+  a.eq(P.speedFlagText(70, 54), "70 kg is not speed work. Drop to 54 kg.", "the flag prints the target it was given; no lattice in it");
+  /* the heaviest-wins rule still picks by w, and the ld of THAT set rides along */
+  var sess = [{ id: 1, date: "2026-09-10", dayId: "d1", dateBasis: "local", planId: "phat", entries: { d1a: { sets: [BB20(135, 3), KGD(60, 3)], note: "" } } }];
+  var o4 = P.speedLoad(sess, "d3a", "2026-09-12", "Bent-over row");
+  a.eq(o4.text, "54 kg — 20 kg bar + 75 lb. 65–70% of your 81.2 kg triple. Rest 60–90 s. Fast, never grinding.", "the 81.2 set is heaviest and it is the lb build");
+});
+
+T("W4 / L3 - the bar alone above the band (a 20 kg bar + 5 lb triple, R 22.3): no grid point reaches under 65–70%, so the build is ignored and the kg-direct sentence prints - never a load above the band called speed work", function(a){
+  var o = SP41("d1a", BB20(5, 3), "d3a");
+  a.eq(o.text, "15 kg. 65–70% of your 22.3 kg triple. Rest 60–90 s. Fast, never grinding.", "round2p5(22.3 x 0.675 = 15.05) = 15, no phrase");
+  a.eq(o.text.indexOf("—"), -1, "no phrase: nothing on this build can be named");
+  a.ok(o.target <= 0.70 * 22.3 + 1e-9, "the target is not above the band");
+});
+
+/* ------------------------------------------------------ 4. Rule L4 - bodyweight + lb, d1c rack chin {s:2, lo:6, hi:10} */
+
+T("W4 / L4 ex 1 - case 4: 45 lb x 10/10 -> `Top of range on all 2 sets. Go to 22.7 kg next session — bodyweight + 50 lb.` + `If 5 lb is not available, add reps up to 12 first, then jump.`; must not print 22.9 kg", function(a){
+  var v = V41("d1c", [LBN(45, 10), LBN(45, 10)]);
+  pinS41(a, v, "Top of range on all 2 sets. Go to 22.7 kg next session — bodyweight + 50 lb.", "If 5 lb is not available, add reps up to 12 first, then jump.", "P1.4", "L4 ex 1");
+  a.eq(ALL41(v).indexOf("22.9"), -1, "MUST NOT print 22.9 kg (20.4 + 2.5; there is no 50.5 lb plate)");
+});
+
+T("W4 / L4 ex 2 - case 3, G1 at a light load: 45 lb x 12/12 -> raw 0, floor 5 -> `12 reps at 20.4 kg on every set. Too light. Go to 22.7 kg — bodyweight + 50 lb.` + the I2 line", function(a){
+  var v = V41("d1c", [LBN(45, 12), LBN(45, 12)]);
+  pinS41(a, v, "12 reps at 20.4 kg on every set. Too light. Go to 22.7 kg — bodyweight + 50 lb.", "If 5 lb is not available, add reps up to 12 first, then jump.", "P1.3", "L4 ex 2");
+  a.eq(P.g1Step(20.4 / P.LB_KG, 12, 10, 5), 5, "L 44.97 lb: 2.25 -> 0; cap 10; max(5, min(0, 10)) = 5");
+});
+
+T("W4 / L4 ex 3 - case 1, THE GUARD DOING ITS JOB: 45 lb x 4, 45 lb x 6 -> 42.73 lb rounds back to 45 -> one step -> 40 -> `4 reps at 20.4 kg. Below the range. Drop to 18.1 kg next session — bodyweight + 40 lb.`; must not print `Drop to 20 kg` or `Hold here`", function(a){
+  var v = V41("d1c", [LBN(45, 4), LBN(45, 6)]);
+  pinS41(a, v, "4 reps at 20.4 kg. Below the range. Drop to 18.1 kg next session — bodyweight + 40 lb.", "", "P1.1", "L4 ex 3");
+  a.eq(ALL41(v).indexOf("Drop to 20 kg"), -1, "MUST NOT print `Drop to 20 kg` (kg-direct's round2p5(19.38); a 0.4 kg drop no plate makes)");
+  a.eq(ALL41(v).indexOf("Hold here"), -1, "MUST NOT print `Hold here` - there is a plate to remove");
+});
+
+T("W4 / L4 ex 4 - case 1 to bodyweight: 5 lb x 4/6 -> 4.82 rounds back to 5 -> one step -> 0 -> `4 reps at 2.3 kg. Below the range. Drop to bodyweight next session.` No phrase", function(a){
+  var v = V41("d1c", [LBN(5, 4), LBN(5, 6)]);
+  pinS41(a, v, "4 reps at 2.3 kg. Below the range. Drop to bodyweight next session.", "", "P1.1", "L4 ex 4");
+  a.eq(v.x.indexOf("—"), -1, "no phrase on a zero target: the word is Z2's");
+  a.eq(v.x.indexOf("0 kg"), -1, "Z2: `0 kg` is never produced");
+  /* the same drop-to-zero on a non-bodyweight slot reads `zero load` */
+  var m = P.verdict({ ex: { id: "x", n: "x", s: 2, lo: 6, hi: 10, k: "power", implement: "machine" }, sets: [LBN(5, 4), LBN(5, 6)], prev: null });
+  a.eq(m.x, "4 reps at 2.3 kg. Below the range. Drop to zero load next session.", "ld does not change the zero-load word - a lb set at 0 on a machine slot is still a mis-log");
+});
+
+T("W4 / L4 ex 5 - case 1 at bodyweight, unchanged (Z2 delta 1): {w:0, r:4, ld:{add:0, au:\"lb\"}}, 0 x 6 -> `4 reps at bodyweight. Below the range. Hold here until all 2 sets reach 6 reps.`", function(a){
+  var v = V41("d1c", [LBN(0, 4), LBN(0, 6)]);
+  pinS41(a, v, "4 reps at bodyweight. Below the range. Hold here until all 2 sets reach 6 reps.", "", "P1.1z", "L4 ex 5");
+  a.eq(JSON.stringify(v), JSON.stringify(V41("d1c", [KGD(0, 4), KGD(0, 6)])), "identical to the kg-direct zero hold");
+});
+
+T("W4 / L4 ex 6 - zero in lb (Z2 delta 2, lb form): {add:0, au:\"lb\"} x 10/10 -> `Top of range on all 2 sets at bodyweight. Add 5 lb next session.` + the I2 line; must not print `Add 2.5 kg`", function(a){
+  var v = V41("d1c", [LBN(0, 10), LBN(0, 10)]);
+  pinS41(a, v, "Top of range on all 2 sets at bodyweight. Add 5 lb next session.", "If 5 lb is not available, add reps up to 12 first, then jump.", "P1.4", "L4 ex 6");
+  a.eq(ALL41(v).indexOf("Add 2.5 kg"), -1, "MUST NOT print `Add 2.5 kg`");
+  a.eq(v.x.indexOf("—"), -1, "no kg total, no phrase - there is no total to explain");
+});
+
+T("W4 / L4 ex 7 - FAILING CASE, case 2 with a phrase: 45 lb x 10, 40 lb x 10 -> `Sets not matched: 20.4 / 18.1 kg. Repeat 20.4 kg until all 2 sets reach 10 reps.` - no ` — bodyweight`", function(a){
+  var v = V41("d1c", [LBN(45, 10), LBN(40, 10)]);
+  pinS41(a, v, "Sets not matched: 20.4 / 18.1 kg. Repeat 20.4 kg until all 2 sets reach 10 reps.", "", "P1.2", "L4 ex 7");
+  a.eq(v.x.indexOf(" — bodyweight"), -1); a.eq(v.x.indexOf("—"), -1);
+});
+
+T("W4 / L4 ex 8 - KG-DIRECT RACK CHIN, the baseline: {w:20, r:10} x 2 -> `Top of range on all 2 sets. Go to 22.5 kg next session.` + `If 2.5 kg is not available, add reps up to 12 first, then jump.` byte-identical", function(a){
+  var v = V41("d1c", [KGD(20, 10), KGD(20, 10)]);
+  pinS41(a, v, "Top of range on all 2 sets. Go to 22.5 kg next session.", "If 2.5 kg is not available, add reps up to 12 first, then jump.", "P1.4", "L4 ex 8");
+  var z = V41("d1c", [KGD(0, 10), KGD(0, 10)]);
+  a.eq(z.x, "Top of range on all 2 sets at bodyweight. Add 2.5 kg next session.", "the kg-direct zero form is what it was");
+});
+
+/* ------------------------------------------------------ 5. §18.6 #1 - the kg-direct drop that was not one */
+
+T("W4 / §18.6 #1 - THE ONLY KG-DIRECT OUTPUT THAT CHANGES: d1d kg-direct 20 x 2, 20 x 4, 20 x 5 -> `2 reps at 20 kg. Below the range. Drop to 17.5 kg next session.`; must not print `Drop to 20 kg`", function(a){
+  var v = V41("d1d", [KGD(20, 2), KGD(20, 4), KGD(20, 5)]);
+  pinS41(a, v, "2 reps at 20 kg. Below the range. Drop to 17.5 kg next session.", "", "P1.1", "18.6 #1");
+  a.eq(ALL41(v).indexOf("Drop to 20 kg"), -1, "MUST NOT print `Drop to 20 kg` - a hold wearing a drop's clothes");
+});
+
+T("W4 / §18.6 #1 - the whole kg-direct drop table: every grid load 2.5..22.5 drops exactly one step (2.5 -> zero load, through Z2); 25 and above are round2p5(0.95 w) exactly as before; 0 holds; an H1 slot gets the same arithmetic with its own tail", function(a){
+  var w, v, expect;
+  for (w = 2.5; w <= 22.5; w += 2.5) {
+    v = V41("d1d", [KGD(w, 2), KGD(w, 4), KGD(w, 5)]);
+    expect = (w === 2.5) ? "Drop to zero load next session." : "Drop to " + String(w - 2.5) + " kg next session.";
+    a.eq(v.x, "2 reps at " + String(w) + " kg. Below the range. " + expect, "kg-direct " + w + " kg: one grid step down, never the same load");
+    a.ok(v.x.indexOf("Drop to " + String(w) + " kg") < 0, w + " kg: the degenerate is gone");
+  }
+  for (w = 25; w <= 200; w += 2.5) {
+    v = V41("d1d", [KGD(w, 2), KGD(w, 4), KGD(w, 5)]);
+    a.eq(v.x, "2 reps at " + String(w) + " kg. Below the range. Drop to " + String(P.round2p5(w * 0.95)) + " kg next session.", "kg-direct " + w + " kg: round2p5(0.95 w), as it always was");
+    a.ok(P.round2p5(w * 0.95) < w, w + ": the guard never fires above 22.5");
+  }
+  a.eq(V41("d1d", [KGD(0, 2), KGD(0, 4), KGD(0, 5)]).x, "2 reps at zero load. Below the range. Hold here until all 3 sets reach 3 reps.", "0: nothing to remove - the hold, unchanged");
+  a.eq(V41("d1c", [KGD(0, 4), KGD(0, 6)]).x, "4 reps at bodyweight. Below the range. Hold here until all 2 sets reach 6 reps.", "0 on a bodyweight slot: unchanged");
+  var h = V41("d5b", [KGD(20, 6), KGD(20, 8), KGD(20, 8)]);
+  a.eq(h.x, "6 reps at 20 kg. Below the 8–12 range. Drop to 17.5 kg.", "H1.1 at 20 kg kg-direct: the same guard, H1's tail");
+  var t = V41("d1d", [KGD(1.4, 2), KGD(1.4, 4), KGD(1.4, 5)]);
+  a.eq(t.x, "2 reps at 1.4 kg. Below the range. Hold here until all 3 sets reach 3 reps.", "an off-grid 1.4 kg used to print `Drop to 2.5 kg` - a drop that was an INCREASE; one step below is under zero, so it holds");
+});
+
+/* ------------------------------------------------------ 6. the strictly-below guard on every build, and the empty bar */
+
+T("W4 / L1 - the guard on a bar build: 20 kg bar + 5 lb missed -> add 0 -> `Drop to 20 kg next session — 20 kg bar + 0 lb.` (the empty bar is a real load); the empty bar itself missed -> nothing to remove -> the hold", function(a){
+  var v = V41("d1a", [BB20(5, 2), BB20(5, 3), BB20(5, 3)]);
+  a.eq(v.x, "2 reps at 22.3 kg. Below the range. Drop to 20 kg next session — 20 kg bar + 0 lb.");
+  a.eq(v.rule, "P1.1");
+  var e = V41("d1a", [BB20(0, 2), BB20(0, 3), BB20(0, 3)]);
+  a.eq(e.x, "2 reps at 20 kg. Below the range. Hold here until all 3 sets reach 3 reps.", "an empty bar has no plate to remove: Z2 delta 1's hold, not `Drop to 17.5 kg` (which no 20 kg bar can build)");
+  a.eq(e.rule, "P1.1z");
+  var k = V41("d1a", [KGB(2.5, 2), KGB(2.5, 3), KGB(2.5, 3)]);
+  a.eq(k.x, "2 reps at 22.5 kg. Below the range. Drop to 20 kg next session — 20 kg bar + 0 kg.", "kg-on-bar at 22.5: the guard fires on the build's grid too");
+  /* nearest, NOT floor - the coach's own rationale case: 20 kg + 60 lb, a
+     5 % drop is 54.76 lb of plates -> 55 (4.9 %); floor would say 50 (9.5 %) */
+  var f = V41("d1a", [BB20(60, 2), BB20(60, 3), BB20(60, 3)]);
+  pinS41(a, f, "2 reps at 47.2 kg. Below the range. Drop to 44.9 kg next session — 20 kg bar + 55 lb.", "", "P1.1", "nearest on the drop");
+  a.eq(ALL41(f).indexOf("50 lb"), -1, "MUST NOT print 50 lb (floor over-drops at ordinary loads)");
+});
+
+/* ------------------------------------------------------ 7. the meta-test: every figure buildable from the components beside it */
+
+T("W4 / Decision 4 restated - THE META-TEST: every `Go to` / `Drop to` / speed figure pinned above recomputes from the components in the SAME sentence (composeLoad of the phrase's parts equals the kg printed), and every kg-direct figure sits on the 2.5 grid", function(a){
+  var re = /(?:Go to|Drop to|^)\s*([\d.]+) kg(?: next session)? — (?:(\d+(?:\.\d+)?) (kg|lb) bar \+ )?(?:bodyweight \+ )?(\d+(?:\.\d+)?) (kg|lb)(?: per DB)?\./;
+  var re2 = /(?:Go to|Drop to) ([\d.]+) kg(?: next session)?\./;
+  var seen = 0, kgd = 0, i, m, ld, c, s;
+  a.ok(S41_SENTENCES.length >= 28, "the pins above registered their sentences: " + S41_SENTENCES.length);
+  for (i = 0; i < S41_SENTENCES.length; i++) {
+    s = S41_SENTENCES[i];
+    m = re.exec(s);
+    if (m) {
+      ld = { add: Number(m[4]), au: m[5] };
+      if (m[2] !== undefined) { ld.bar = Number(m[2]); ld.bu = m[3]; }
+      c = P.composeLoad(ld);
+      a.ok(c.ok, "the phrase composes: " + s);
+      a.eq(String(c.w), m[1], "the kg printed is what the plates named beside it compose to: " + s);
+      seen++;
+    } else if ((m = re2.exec(s))) {
+      a.eq(P.round2p5(Number(m[1])), Number(m[1]), "a kg-direct figure is on the 2.5 grid: " + s);
+      kgd++;
+    }
+  }
+  a.ok(seen >= 14, "at least fourteen built figures were recomputed: " + seen);
+  a.ok(kgd >= 5, "at least five kg-direct figures were checked: " + kgd);
+});
+
+/* ------------------------------------------------------ 8. the SQL boundary (W5) */
+
+T("W4/W5 - the validateSessionDoc boundary the SQL mirror copies: 20 kg bar + 90 lb composes to 60.8; w 60.75 and 60.85 ACCEPTED (|d| = 0.05, the +1e-9 makes the edge inclusive), 60.86 and 60.74 REFUSED with the message-table sentence; unit / bar-without-bu / add range / unknown key by name", function(a){
+  var LD = { bar: 20, bu: "kg", add: 90, au: "lb" };
+  function doc(w, ld){ return { id: 7, date: "2026-09-13", dayId: "d2", planId: "phat", entries: { d2a: { sets: [{ w: w, r: 5, ld: ld === undefined ? LD : ld }], note: "", rx: { s: 3, lo: 3, hi: 5, k: "power" } } } }; }
+  a.eq(P.composeLoad(LD).w, 60.8);
+  a.eq(P.validateSessionDoc(doc(60.8)).ok, true);
+  a.eq(P.validateSessionDoc(doc(60.75)).ok, true, "60.75: |0.05| accepted");
+  a.eq(P.validateSessionDoc(doc(60.85)).ok, true, "60.85: |0.05| accepted");
+  a.eq(P.validateSessionDoc(doc("60.75")).ok, true, "as a string too");
+  var r = P.validateSessionDoc(doc(60.86));
+  a.eq(r.ok, false); a.deep(r.problems, ["entry d2a set 1 w 60.86 disagrees with ld (60.8)"], "60.86: refused, named, never corrected");
+  r = P.validateSessionDoc(doc(60.74));
+  a.deep(r.problems, ["entry d2a set 1 w 60.74 disagrees with ld (60.8)"]);
+  r = P.validateSessionDoc(doc("60.86"));
+  a.deep(r.problems, ["entry d2a set 1 w 60.86 disagrees with ld (60.8)"], "the string as stored is what the sentence quotes");
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, bu: "kg", add: 90, au: "kilo" })).problems, ["entry d2a set 1 ld.au must be kg or lb, got: kilo"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, bu: "kg", add: 90 })).problems, ["entry d2a set 1 ld.au must be kg or lb, got: (absent)"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, add: 90, au: "lb" })).problems, ["entry d2a set 1 ld.bar without ld.bu"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bu: "kg", add: 90, au: "lb" })).problems, ["entry d2a set 1 ld.bu without ld.bar"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, bu: "stone", add: 90, au: "lb" })).problems, ["entry d2a set 1 ld.bu must be kg or lb, got: stone"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, bu: "kg", add: -5, au: "lb" })).problems, ["entry d2a set 1 has an unreadable ld.add: \"-5\""]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, bu: "kg", add: 1101, au: "lb" })).problems, ["entry d2a set 1 ld.add out of range (0..500 kg, 0..1100 lb): 1101"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, bu: "kg", add: 501, au: "kg" })).problems, ["entry d2a set 1 ld.add out of range (0..500 kg, 0..1100 lb): 501"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 0, bu: "kg", add: 90, au: "lb" })).problems, ["entry d2a set 1 ld.bar out of range (above 0, up to 50 kg or 110 lb): 0"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 111, bu: "lb", add: 90, au: "lb" })).problems, ["entry d2a set 1 ld.bar out of range (above 0, up to 50 kg or 110 lb): 111"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: "x", bu: "kg", add: 90, au: "lb" })).problems, ["entry d2a set 1 has an unreadable ld.bar: \"x\""]);
+  a.deep(P.validateSessionDoc(doc(60.8, { bar: 20, bu: "kg", add: 90, au: "lb", plates: 2 })).problems, ["entry d2a set 1 ld has an unknown key: plates"]);
+  a.deep(P.validateSessionDoc(doc(60.8, "45 lb")).problems, ["entry d2a set 1 ld must be an object"]);
+  a.deep(P.validateSessionDoc(doc(60.8, { add: 90, au: "lb", bar: 20, bu: "kg" })).problems, [], "key order is not a fault");
+  a.deep(P.validateSessionDoc(doc(20.4, { add: 45, au: "lb" })).problems, [], "no bar is a whole build");
+  a.deep(P.validateSessionDoc(doc(0, { add: 0, au: "lb" })).problems, [], "an empty belt is a whole build at zero");
+});
+
+/* ------------------------------------------------------ 9. his real session, from the export */
+
+T("W4 - HIS REAL SESSION: the fixture is the export - restorePayload on the server's bytes (JSONB key order) returns CHADY_SESSION() byte for byte; 23 sets, 6 entries, 3 notes, no ld; and the v5 -> 6 pin holds on his actual data", function(a){
+  var his = CHADY_SESSION();
+  var rp = P.restorePayload({ sessions: [{ client_id: "1789264514484", local_date: "2026-09-12", doc: clone(CHADY_EXPORT) }], bodyweight: [], plans: [], user_state: null });
+  a.eq(rp.ok, true, JSON.stringify(rp.problems));
+  a.eq(JSON.stringify(rp.log.sessions[0]), JSON.stringify(his), "the export and the fixture are the same session");
+  var n = 0, notes = 0;
+  Object.keys(his.entries).forEach(function(ex){ n += his.entries[ex].sets.length; if (his.entries[ex].note) notes++; });
+  a.eq(n, 23, "twenty-three sets: 5 + 4 + 4 + 3 + 4 + 3"); a.eq(notes, 3, "three notes");
+  a.eq(Object.keys(his.entries).join(","), "d1a,d1b,d1d,d1e,d1f,d1g");
+  a.eq(his.entries.d1b.note, "I have done iso-lateral front lat pull downs- forearm still not recovered");
+  a.eq(his.entries.d1f.note, "did this standing"); a.eq(his.entries.d1g.note, "did this in cable");
+  a.eq(hasKeyDeep40(his, "ld"), false, "every load kg-direct - whatever he typed was a conversion done at the rack (§18.6 #4)");
+  a.eq(P.validateSessionDoc(his).ok, true);
+  /* the migration pin, on the real numbers */
+  var store = CHADY_STORE(), before = JSON.stringify(store.sessions);
+  var r = P.migrateStore(clone(store), null);
+  a.eq(r.log.schemaVersion, P.SCHEMA_VERSION);
+  a.eq(JSON.stringify(r.log.sessions), before, "v5 -> 6: byte-identical on his actual data");
+  a.eq(P.migrateStore(r.log, null).changed, false, "settled");
+});
+
+T("W4 - no verdict on his real session carries a build phrase or an I2 line in lb, and P1 reads it as it did before W4 (kg-direct is the baseline); d1e at bodyweight still says `Add 2.5 kg`", function(a){
+  var his = CHADY_SESSION(), ids = Object.keys(his.entries), i, v;
+  var expect = {
+    d1a: "Sets not matched: 20 / 40 / 51 kg. Repeat 40 kg until all 3 sets reach 5 reps.",
+    d1b: "Sets not matched: 68 / 77 kg. Repeat 77 kg until all 2 sets reach 10 reps.",
+    d1d: "Sets not matched: 63 / 77 / 77 kg. Repeat 77 kg until all 3 sets reach 5 reps.",
+    d1e: "Top of range on all 2 sets at bodyweight. Add 2.5 kg next session.",
+    d1f: "Sets not matched: 42 / 51 / 60 kg. Repeat 51 kg until all 3 sets reach 10 reps.",
+    d1g: "Sets not matched: 27.5 / 32.5 / 35 kg. Repeat 32.5 kg until all 3 sets reach 10 reps."
+  };
+  for (i = 0; i < ids.length; i++) {
+    v = P.verdict({ ex: EX41(ids[i]), sets: his.entries[ids[i]].sets, prev: null });
+    a.eq(v.x, expect[ids[i]], ids[i]);
+    a.eq(v.x.indexOf("—"), -1, ids[i] + ": no phrase");
+    a.eq((v.x + v.x2).indexOf(" lb"), -1, ids[i] + ": no pound anywhere");
+  }
+});
+
+/* ------------------------------------------------------ 10. the meta-tripwire, restated for this section */
+
+T("W4 - up to the end of S41 no fixture wrote a phat:* key (the suite tripwire, re-asserted here so a future fixture in THIS group is caught in this group, not at the bottom)", function(a){
+  a.deep(PHAT_KEY_WRITES, [], "a fixture in S41 or earlier wrote into his history");
 });
 
 

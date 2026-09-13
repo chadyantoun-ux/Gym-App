@@ -20,6 +20,10 @@
 --   C. anon select on every table -> 0 rows, NO error
 --   D. anon insert -> ERROR 42501, and the error text contains no row data
 --   E. auth.uid() is null for anon
+--   F. (schema 6, migrate-006-ld.sql) the session validator refuses a bad `ld`
+--      unit with SQLSTATE 23514 and logic.js's exact sentence, refuses w/ld
+--      disagreement at 60.86 and accepts it at 60.75 — one DO block, prints
+--      `F: ok` or raises naming the first probe that disagreed
 -- If any one of them fails, STOP and do not put the anon key into client code.
 -- ============================================================================
 
@@ -95,3 +99,54 @@ rollback;
 -- after the WHERE clause is parsed, not before — the filter cannot widen it.
 -- Done from a real browser on 2026-09-11 (E-3 verification): a signed-in user
 -- filtering on another user_id got 200 and [].
+
+-- --- F. the ld validator (schema 6) — 23514 on a bad unit, the boundary ------
+-- READ-ONLY: only the validator functions run; nothing is inserted. Run after
+-- migrate-006-ld.sql (or a fresh schema.sql). Every sentence below is typed
+-- from logic.js validateSessionDoc's message table and pinned in tests.html
+-- S41 - the two sides must refuse with the SAME words. Expected output: one
+-- notice, `F: ok (9 probes)`. Anything else is a mirror drift: fix the SQL to
+-- match logic.js, never the other way round.
+do $$
+declare
+  base    constant jsonb := '{"id":7,"date":"2026-09-13","dayId":"d2","planId":"phat","entries":{"d2a":{"sets":[],"note":"","rx":{"s":3,"lo":3,"hi":5,"k":"power"}}}}'::jsonb;
+  probes  constant jsonb := '[
+    {"set": {"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"kilo"}},  "expect": "phat: entry d2a set 1 ld.au must be kg or lb, got: kilo"},
+    {"set": {"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":90}},              "expect": "phat: entry d2a set 1 ld.au must be kg or lb, got: (absent)"},
+    {"set": {"w":60.8,"r":5,"ld":{"bar":20,"add":90,"au":"lb"}},              "expect": "phat: entry d2a set 1 ld.bar without ld.bu"},
+    {"set": {"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":-5,"au":"lb"}},    "expect": "phat: entry d2a set 1 has an unreadable ld.add: \"-5\""},
+    {"set": {"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":1101,"au":"lb"}},  "expect": "phat: entry d2a set 1 ld.add out of range (0..500 kg, 0..1100 lb): 1101"},
+    {"set": {"w":60.8,"r":5,"ld":{"bar":0,"bu":"kg","add":90,"au":"lb"}},     "expect": "phat: entry d2a set 1 ld.bar out of range (above 0, up to 50 kg or 110 lb): 0"},
+    {"set": {"w":60.86,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"lb"}},   "expect": "phat: entry d2a set 1 w 60.86 disagrees with ld (60.8)"},
+    {"set": {"w":60.75,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"lb"}},   "expect": null},
+    {"set": {"w":60.8,"r":5,"ld":{"bar":20,"bu":"kg","add":90,"au":"lb","plates":2}}, "expect": "phat: entry d2a set 1 ld has an unknown key: plates"}
+  ]'::jsonb;
+  pr      jsonb;
+  doc     jsonb;
+  got     text;
+  n       int := 0;
+begin
+  for pr in select value from jsonb_array_elements(probes) loop
+    n := n + 1;
+    doc := jsonb_set(base, '{entries,d2a,sets}', jsonb_build_array(pr -> 'set'));
+    got := null;
+    begin
+      perform public.phat_validate_session_doc(doc);
+    exception when check_violation then
+      got := sqlerrm;
+    end;
+    if jsonb_typeof(pr -> 'expect') = 'null' then
+      if got is not null then
+        raise exception 'F probe % should be ACCEPTED (60.75 is inside 0.05 of 60.8) but was refused: %', n, got;
+      end if;
+    elsif got is null then
+      raise exception 'F probe % was ACCEPTED but must be refused with: %', n, pr ->> 'expect';
+    elsif got <> (pr ->> 'expect') then
+      raise exception 'F probe % refused with the wrong sentence. got: [%] expected: [%]', n, got, pr ->> 'expect';
+    end if;
+  end loop;
+  raise notice 'F: ok (% probes)', n;
+end $$;
+-- A refusal here is the SAME 23514 the sync client is told to surface and not
+-- retry; the probe asserts the SQLSTATE by catching check_violation and nothing
+-- else, so a wrong error class fails the block rather than passing it.
