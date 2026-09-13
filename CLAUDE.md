@@ -138,7 +138,9 @@ These are not preferences. Violating one is a defect.
    a reload, a phone lock, a browser kill, and a failed save.
 4. **Local dates, never UTC.** `new Date().toISOString()` for a calendar date is a bug — it shifts the
    day for anyone not on UTC. Use local date components.
-5. **Units are kg**, steps of 2.5 kg for weight and 0.1 kg for bodyweight.
+5. **Stored loads are kg.** Entry is bar + added weight, in kg or lb, as a total, not per side; `w` is
+   always the kg total and `ld` beside it records the components (absent means kg). The step is in the
+   entry unit: 2.5 kg or 5 lb. Bodyweight is kg in steps of 0.1 kg.
 6. **Touch targets ≥ 44 px.** Thumb-reachable. Nothing important in the top corners.
 7. **Secrets:** the Supabase *anon* key is designed to be public and may live in client code, but only
    behind RLS. The *service_role* key must never appear in the repo, in client code, or in a prompt.
