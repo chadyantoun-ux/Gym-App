@@ -3007,3 +3007,42 @@ was named and no UX work is owed; a complaint about the v6 shell is a new row.
 
 **Not a coach item.** No verdict, stall, deload or `PROGRAM` path moved. Logged sessions: one, now on the phone in every
 context that signs in as him — once the page has been closed.
+
+## 2026-09-13 — WO-012: the unit is decided once, overridden per exercise on the tap, and displayed everywhere in the card's unit; storage does not move
+
+**Context.** Chady, after WO-010 shipped: *"You want me to do the conversion myself every time"* and
+*"I would like to be able to change the unit by exercise."* WO-010 chose the unit per card, remembered
+it only through a logged set's `ld`, and started every card in kg — 42 first-time taps, and a choice
+not followed by a logged set was forgotten. His first session, entered in kg from hand conversions,
+still reads `Last 77 kg × 5` on a lb card.
+
+**Decisions.**
+
+1. **Two levels, stated, not a side effect.** `prefs.gym.unit` (`"kg" | "lb"`, absent = kg; Settings →
+   Gym, *I lift in*) is where every card starts. `prefs.gym.ex[exId]` = `{au, bar?, bu?}` is the
+   override — written **the moment the chip's sheet applies it**, whether or not a set is ever logged
+   in that mode; cleared by *Use my default*. History (`loadModeFor`) never writes an override; it
+   stays as a tier between override and default so a WO-010-era choice is not lost. Precedence on a
+   card: chip this session → draft's own `ld` → kg if a kg-direct set is typed → override → history →
+   default. The engine returns which tier chose (`cardModeFor(...).tier`) so the chip can say which.
+2. **Default bar on a lb card: the profile's first bar on `bb` slots only, no bar elsewhere.** A lb
+   Bench card with no bar stores 61.2 kg for an 81.2 kg lift — a wrong number written silently. That
+   outranks "a bar he did not lift", which the chip and the `+ lb` caption make visible. Reads
+   `implement` for the same reason L2 does; it is not the per-implement *unit* split he ruled out.
+   One branch; Chady can overturn it.
+3. **Display follows the card's unit; `w` is never touched.** `displayLoad(w, unit)`: kg path is
+   `r1` byte for byte; lb path is nearest 0.5 lb (the finest plate; 0.23 kg, coarser than the 0.1 kg
+   stored — coach confirms in W1). Surfaces: ghost, stepper + aria, `+` seed, live region, remove-set
+   body, sheet's *Last time:*, Summary per-set line, Trend delta/endpoints, the verdict for a
+   kg-direct set (coach's literal, B-126). The `= 60.8 kg` row total stays: he asked for it.
+4. **A kg-default device is today byte for byte.** `unit` absent and no `ex` → identical DOM,
+   strings and `phat:v1:*` values. Diana's phone and the suite see nothing.
+5. **No schema bump, no migration.** The log's shape is unchanged; `prefs` carries no version. The one
+   regression path is `validateGymProfile`: it must accept the new keys and refuse a bad override
+   **per key**, never the profile whole — a refused profile empties the bars at boot (D4).
+6. **Bodyweight stays kg.** The setting is *I lift in*, not *units*. B-127 asks him; nothing is built
+   on a guess about his scale.
+
+**Rejected.** Converting history (`w` rewritten to lb) — storage is kg by §3.5 and every engine reads
+it. A per-implement unit default — his WO-010 ruling stands. Migrating WO-010's `ld` history into
+overrides — a logged build is a fact, an override is a choice; kept as separate tiers.
