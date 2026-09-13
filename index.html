@@ -829,6 +829,10 @@
     border-radius:var(--r); padding:var(--s3); font-size:1rem; font-weight:800; margin-top:var(--s1);
     min-height:var(--key); font-family:var(--sans)}
   .setsec button[disabled]{opacity:.5; cursor:default}
+  /* WO-011 W4 (spec 20.6 item 3, 9.9.7's pattern). The demoted REPLACE
+     trigger: a ghost with no border and --dim text, full width x 48, at the
+     foot of the section. The ellipsis in its label says it opens a sheet. */
+  .ghostbtn.txt{border-color:transparent; color:var(--dim); text-transform:none; letter-spacing:0; font-size:.9375rem}
   .sheet .bklbl{margin-top:var(--s3)}
   /* WO-009 W9. The password block sits inside #bk-body (it exists only while
      signed in, and repaints with it) but reads as a peer section: the same
@@ -1326,7 +1330,13 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
          planBroken:false,edits:{},planView:"",pe:null,plErr:null,
          problems:[],logMeta:{profile:null},bwMeta:{},blockWrites:{},draftRead:{status:"none"},offer:null,
          exIx:0,rest:null,undo:null,v1msg:"",v1added:null,sum:false,dietView:null,
-         stores:{log:"absent",bw:"absent",plans:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null,gym:null},
+         stores:{log:"absent",bw:"absent",plans:"absent"},prefs:{restAuto:true,onboarded:false,proteinDate:"",backup:null,gym:null,merge:null},
+         /* WO-011 W4. The merge's held announcement (spec 20.4 FLUSH): `pending`
+            is the one sentence waiting for a paint at which mayPaint() is true;
+            `acc` the running counts behind it, so a second merge before the
+            flush REPLACES the sentence with the sum (P13) and never queues two.
+            In memory only. prefs.merge is on disk: {keptAt, at, n, m, p}. */
+         merge:{pending:null,acc:null},
          /* WO-010 W6. gymBad: the stored profile did not validate - the card
             and Settings say so and still work (spec 4.4b.5, 10.6). gymUi: the
             Settings form, IN MEMORY: {open:"add"|index, form:{n,w,u}, init}. */
@@ -1381,7 +1391,11 @@ const prefsPayload=()=>Object.assign({},S.prefsMeta,
      so it lives here and not in the log; absent until the first push lands.
      WO-008 W4: `user` is {id, email} - the OWNER of this device's stores
      (B-88). The E-3 string form is still read; see the boot reader. */
-  S.prefs.backup?{backup:S.prefs.backup}:{});
+  S.prefs.backup?{backup:S.prefs.backup}:{},
+  /* WO-011 W4. The merge record: keptAt (the once-per-device keep), at (the
+     last completed check), n/m/p (what it added). Device state, like the
+     stamp; absent until the first check completes. */
+  S.prefs.merge?{merge:S.prefs.merge}:{});
 
 /* ============================================================ utils */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1425,7 +1439,22 @@ function toast(m,quiet,ms){const t=document.getElementById("toast");
   if(act){ act.hidden=true; act.textContent=""; }
   if(!quiet) announce(m);
   t.classList.add("on");clearTimeout(toast._t);
+  toast._until=Date.now()+(ms||2100);
   toast._t=setTimeout(()=>t.classList.remove("on"),ms||2100);}
+/* WO-011 W4. A toast that FOLLOWS the one on screen instead of replacing it.
+   Used by the merge flush only (spec 20.4): the flush runs inside render(),
+   and the caller of that render may toast its own receipt right after it
+   ("Session saved.", P11) - a synchronous toast here would be overwritten by
+   the receipt, a 0 ms one would overwrite the receipt. So: yield one task,
+   then wait out whatever receipt landed, then say the sentence. On a quiet
+   Home (P1) the wait is zero and the toast lands one task after the paint -
+   with it, never before it. */
+function toastLater(m,ms){
+  setTimeout(()=>{
+    const wait=Math.max(0,(toast._until||0)-Date.now());
+    setTimeout(()=>toast(m,false,ms),wait);
+  },0);
+}
 /* An undo (spec 2.4, defined once): a control in the toast, >= 88 x 48, live
    for the WHOLE SESSION and not a 5-second timer - he is out of breath and
    reading something else. It restores the removed object byte-for-byte. A
@@ -2020,13 +2049,10 @@ function vObChoose(){
   let h=`<div class="hd"><span class="kick">First run</span></div>
   <div class="pad" style="padding-top:26px">
     <h1 class="obh" id="ob-h" tabindex="-1">Signed in as ${esc(me)}.</h1>`;
-  if(O.status==="rows"){
-    const c=O.rp.counts;
-    h+=`<p class="sub">${esc(restoreCounts(c.sessions,c.bodyweight,c.plans))} are backed up under this account.</p></div>
-    <div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
-      <button class="primary" id="ob-restore">Restore ${esc(plural(c.sessions,"session"))}</button>
-      <button class="ghostbtn" id="ob-signout">Sign out</button></div>`;
-  }else if(O.status==="empty"){
+  /* WO-011 W4 (spec 20.5): C1 - "Restore {n} sessions" - is gone. The
+     sign-in is the consent; an account with rows lands on Home by the merge
+     (C-t is the whole happy path), an account with none is asked (C2). */
+  if(O.status==="empty"){
     h+=`<p class="sub">Nothing is backed up under this account yet.</p></div>
     <div class="pad mt24 obacts" style="padding-bottom:var(--s6)">
       <button class="primary" id="ob-start">Start with an empty log</button>
@@ -4341,6 +4367,13 @@ function render(keepScroll){
   renderRest();
   renderOffer();
   if(!keepScroll) window.scrollTo(0,0);
+  /* WO-011 W4 (spec 20.4 FLUSH). A merge sentence held because the screen
+     could not be repainted at the time is delivered by the first render at
+     which it can: mayPaint() re-evaluated NOW, not remembered. Once. */
+  if(S.merge.pending&&mayPaint()){
+    const m=S.merge.pending; S.merge.pending=null; S.merge.acc=null;
+    toastLater(m,4200);
+  }
 }
 /* ONE RENDERING OF ONE VERDICT OBJECT, and both screens that print a verdict
    go through it — the session card (W7) and the summary row (W8). Two
@@ -4708,7 +4741,10 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#bk-signout")){ await signOutTap(); return; }
   if(e.target.closest("#bk-pw")){ await pwTap(); return; }
   if(e.target.closest("#bk-push")){ clearTimeout(bkTimer); await runBackup(true,"manual"); return; }
-  if(e.target.closest("#bk-restore")){ await restoreStart(); return; }
+  /* WO-011 W4 (spec 20.6). CHECK THE BACKUP NOW is the merge on open, by
+     hand; the typed-REPLACE path is the demoted text trigger at the foot. */
+  if(e.target.closest("#bk-checknow")){ await mergeOnOpen("manual"); return; }
+  if(e.target.closest("#bk-replace")){ await restoreStart(); return; }
   if(e.target.closest("#settings-back")){ S.sub=""; S.exp=null; render(); return; }
   /* ---- WO-010 W6: Settings -> Gym. The stepper and the segment update the
      form in memory and the node under the thumb - no render while the name
@@ -4746,7 +4782,6 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#ob-signin")){ obSignin(); return; }
   if(e.target.closest("#ob-back")){ obBack(); return; }
   if(e.target.closest("#ob-retry")){ await obPull(); return; }
-  if(e.target.closest("#ob-restore")){ await obRestore(); return; }
   if(e.target.closest("#ob-signout")){ await obSignout(); return; }
   /* ---- W12. The Diet segment is a VIEW and writes nothing at all; the
      protein tick writes one key. Both delegated from #view like everything
@@ -6241,7 +6276,10 @@ async function storesOnDisk(){
   const p=(plans&&Array.isArray(plans.plans))?plans.plans.length:0;
   const stores={log:rl.status,bw:rb.status,plans:rpl.status};
   const empty=PHAT.restoreLocalEmpty({stores:stores,sessions:n,bw:m,plans:p,activePlanId:plans?plans.activePlanId:""});
-  return {log:log,bw:bw,plans:plans,stores:stores,bad:bad,n:n,m:m,p:p,empty:empty};
+  /* WO-011 W4. The bytes themselves, so the merge can prove the disk it is
+     about to write is the disk it merged from (F6). Additive. */
+  return {log:log,bw:bw,plans:plans,stores:stores,bad:bad,n:n,m:m,p:p,empty:empty,
+          raw:{log:rl.raw,bw:rb.raw,plans:rpl.raw}};
 }
 const diskRefusal=D=>"Nothing restored. The saved "+D.bad.join(" and ")+" on this device could not be read, so no copy of it could be kept. Reload first.";
 
@@ -6378,12 +6416,13 @@ function openBackupSettings(){
    obBack     B -> A. Writes nothing; focus back on Sign in (closeSheet's
               `back` pattern).
    obToC      B -> C, then the one pull.
-   obPull     Y.pull() once; the result picks C1 / C2 / C3. The payload is
-              validated WHOLE by PHAT.restorePayload like restoreStart does;
-              a refused payload is C3 with the first problem named.
-   obRestore  C1's RESTORE: straight to restoreApply - screen C IS the
-              one-tap sheet (it names the counts and the account). restoreApply
-              re-reads disk (B-74) and refuses if anything has appeared.
+   obPull     WO-011 W4 (spec 20.5): the merge, from screen C. mergeOnOpen
+              ("firstrun") pulls once and, on an empty device, writes
+              everything the account holds (mergeStores on absent stores is
+              what restoreApply wrote - M11), sets `onboarded` in the same
+              prefs write as the stamp, and routes to Home with the toast.
+              An account with nothing under it is C2; a read or write that
+              fails is C3 with the sentence. C1 no longer exists.
    obSignout  C -> A signed out, nothing written. A sign-out that fails
               (offline: the library keeps the local session) stays on C and
               says so. */
@@ -6402,39 +6441,16 @@ function obToC(){
   obPull();
 }
 async function obPull(){
-  const Y=window.PHAT_SYNC;
   if(!signedIn()){ S.sub="onboard"; S.ob=null; render(); return; }
   S.ob={status:"pulling"}; render();
   const h=document.getElementById("ob-h"); if(h) h.focus({preventScroll:true});
-  const r=await Y.pull();
-  /* He left the screen while the read was in flight (signed out): the
-     result has nowhere to go and writes nothing. */
-  if(S.sub!=="onboard-choose") return;
-  /* The result paints screen C only if the Train tab is still up: a render
-     while he is typing a bodyweight on another tab is B-19. Screen C reads
-     S.ob when he comes back. */
-  const paint=()=>{ if(S.tab==="train") render(); };
-  if(!r.ok){ S.ob={status:"failed",msg:"Could not read the backup. "+(r.message||"")}; paint(); return; }
-  const rp=PHAT.restorePayload(r.rows);
-  if(!rp.ok){
-    const n=rp.problems.length;
-    S.ob={status:"failed",msg:"Could not read the backup. "+rp.problems[0]+(n>1?" (and "+(n-1)+" more)":"")+"."};
-    paint(); return;
-  }
-  if(!rp.counts.sessions&&!rp.counts.bodyweight&&!rp.counts.plans){ S.ob={status:"empty"}; paint(); return; }
-  S.ob={status:"rows",rp:rp}; paint();
-}
-async function obRestore(){
-  const O=S.ob;
-  if(!O||O.status!=="rows"||!O.rp||!O.rp.ok||!signedIn()) return;
-  S.sync.pulled=O.rp;
-  await restoreApply();
+  await mergeOnOpen("firstrun");
 }
 async function obSignout(){
   const Y=window.PHAT_SYNC; if(!syncOn()) { S.sub="onboard"; S.ob=null; render(); return; }
   const r=await Y.signOut();
   if(r.ok){
-    S.sync.user=null; S.sync.last=null; S.sync.refused=null; S.ob=null; S.sub="onboard"; render();
+    S.sync.user=null; S.sync.last=null; S.sync.refused=null; S.sync.merge=null; S.ob=null; S.sub="onboard"; render();
     announce("Signed out. Your log is still on this device.");
     const b=document.getElementById("ob-signin"); if(b) b.focus({preventScroll:true});
   }else{
@@ -6557,7 +6573,16 @@ function loadSync(){
     /* WO-008 W5 (spec 18.4): a device that has not finished first run pushes
        NOTHING, on open as on sign-in - an empty log sent over an account's
        real backup is B-76 with a different owner. */
-    if(S.sync.user&&S.prefs.onboarded) backupSoon("open");
+    /* WO-011 W4. THE MERGE FIRST, THEN THE PUSH, never the other way: a
+       session logged offline is merged (local wins on its id) and then
+       pushed with the merged set, so the pull can never race the push into
+       a conflict. An owner refusal on the merge (R-d) skips the open push -
+       it would refuse with R-a and he would hear two sentences about one
+       fact (spec 20.3 M-c). */
+    if(S.sync.user){
+      const may=await mergeOnOpen("open");
+      if(may&&S.prefs.onboarded) backupSoon("open");
+    }
   });
   s.addEventListener("error",()=>{
     S.sync.mod="failed"; s.remove();
@@ -6573,12 +6598,15 @@ function onSync(snap){
   const was=S.sync.user?S.sync.user.id:null;
   S.sync.user=snap&&snap.user?snap.user:null;
   S.sync.busy=snap?snap.busy:null;
-  if((S.sync.user?S.sync.user.id:null)!==was){ S.sync.last=null; S.sync.refused=null; S.sync.pw=null; }
+  if((S.sync.user?S.sync.user.id:null)!==was){ S.sync.last=null; S.sync.refused=null; S.sync.pw=null; S.sync.merge=null; }
   paintBackup();
 }
 window.addEventListener("online",()=>{
   if(S.sync.mod==="off") loadSync();
-  else if(signedIn()&&S.prefs.onboarded) backupSoon("online");
+  /* WO-011 W4: the merge, then the push (the same order as open). */
+  else if(signedIn()&&S.prefs.onboarded){
+    mergeOnOpen("online").then(may=>{ if(may&&S.prefs.onboarded) backupSoon("online"); });
+  }
 });
 
 /* ---- the debounce. One timer; every trigger resets it; the payload is built
@@ -6588,6 +6616,10 @@ window.addEventListener("online",()=>{
 let bkTimer=0, bkAgain=false, bkRunning=false;
 function backupSoon(reason){
   if(!signedIn()) return;
+  /* WO-011 W4. While a merge is in flight the push waits for it: the
+     module refuses a push during a pull ("A backup is already running"),
+     and the push must carry the MERGED set anyway. The merge releases it. */
+  if(mergeRunning){ mergePushHeld=true; return; }
   clearTimeout(bkTimer);
   bkTimer=setTimeout(()=>{ runBackup(false,reason); },2000);
 }
@@ -6690,7 +6722,11 @@ async function authTap(kind){
        And a device that has not finished first run pushes NOTHING at all
        (spec §18.4): an empty log sent over an account's real backup is B-76
        with a different owner. Onboarding's own choices push, or restore. */
-    if(S.prefs.onboarded) backupSoon("signin");
+    /* WO-011 W4: the merge first, then the push (spec 20.4 Timing). */
+    if(S.prefs.onboarded){
+      const may=await mergeOnOpen("signin");
+      if(may&&S.prefs.onboarded) backupSoon("signin");
+    }
   }else{
     S.sync.last={ok:false,phase:"auth",message:r.message||"Could not sign in."}; paintBackup();
     announce(r.message||"Could not sign in.",true);
@@ -6699,7 +6735,7 @@ async function authTap(kind){
 async function signOutTap(){
   const Y=window.PHAT_SYNC; if(!signedIn()) return;
   const r=await Y.signOut();
-  if(r.ok){ S.sync.user=null; S.sync.last=null; S.sync.pw=null; announce("Signed out. Your log is still on this device."); }
+  if(r.ok){ S.sync.user=null; S.sync.last=null; S.sync.pw=null; S.sync.merge=null; announce("Signed out. Your log is still on this device."); }
   else S.sync.last={ok:false,phase:"auth",message:"Could not sign out. "+(r.message||"")};
   paintBackup();
 }
@@ -6738,6 +6774,255 @@ async function pwTap(){
     announce("Password changed.");
   }else{
     refuseWith((r&&r.message)||"Could not change the password.");
+  }
+}
+
+/* ============================================================ WO-011 W4: the merge on open
+   Chady's ruling (2026-09-13): "it needs to pull from the db". On every open,
+   after a sign-in, on `online`, and by hand (CHECK THE BACKUP NOW), the app
+   reads the account and RESTORES what this phone is missing. Union, local
+   wins, nothing removed - PHAT.mergeStores is the whole of that rule and it
+   is pure; this block is the wiring, and its own rules are:
+
+     1. First paint never waits on it. It starts after Y.ready(), which is
+        after the first render() by construction.
+     2. The merge runs BEFORE the push that follows it (open, sign-in,
+        online), and a push scheduled while it runs is held until it ends
+        (backupSoon) - so an offline-logged session is merged, then pushed
+        with the merged set, and never pulled into a conflict.
+     3. Disk is the input, twice (B-74): once before the pull for the owner
+        check, once after it for the merge, and the bytes are compared again
+        before the first write - a save that lands while the pull is in
+        flight (F6) is in the disk the merge is built from, or the merge is
+        rebuilt from the disk it is not.
+     4. Keep first, once per device (mergeSteps; prefs.merge.keptAt), then
+        the writes, log first, through save(); S adopts a store ONLY after
+        its write returned true. Memory never runs ahead of disk.
+     5. Paint by one predicate, mayPaint() (spec 20.4). Adopt always; render
+        only on Home with nothing open and nothing focused; otherwise hold
+        the sentence and let the first paintable render() say it. A merge
+        that adds nothing does not repaint at all (P14).
+     6. One carrier for the sentence: the toast, which feeds the live
+        region. Failures are named in Settings (#bk-check), never toasted.
+     7. Guards, in order: file://, signed out, offline, first run not
+        finished (screen C is the one first-run entry), blocked stores,
+        unreadable disk, demo store, foreign owner (R-d, and the open push
+        is skipped so he hears one sentence, not two).
+   Returns true when the caller may go on to push, false on the owner
+   refusal. The draft (phat:v1:draft) is never read or written here. */
+let mergeRunning=false, mergePushHeld=false;
+const inputFocused=()=>{
+  const a=document.activeElement; if(!a||a===document.body) return false;
+  const t=a.tagName; return t==="INPUT"||t==="TEXTAREA"||t==="SELECT"||a.isContentEditable===true;
+};
+/* THE REPAINT RULE, spec 20.4, verbatim. One screen, one predicate. */
+const mayPaint=()=>sheetState===null&&S.tab==="train"&&S.sub===""&&S.draft===null&&!inputFocused();
+/* "1 session" / "3 sessions and 2 weights" / "3 sessions, 2 weights and 1
+   plan" - non-zero parts only, in that order (spec 20.2 rule 2). "" when
+   every count is zero; restoreCounts prints zeros and is not used here. */
+function mergeCounts(a){
+  const A=a||{}, parts=[];
+  if(A.sessions>0) parts.push(plural(A.sessions,"session"));
+  if(A.bodyweight>0) parts.push(plural(A.bodyweight,"weight"));
+  if(A.plans>0) parts.push(plural(A.plans,"plan"));
+  if(!parts.length) return "";
+  return parts.length===1?parts[0]:parts.slice(0,-1).join(", ")+" and "+parts[parts.length-1];
+}
+/* R-d, spec 20.3, verbatim - the sentence is UX's. PHAT.ownerRefusal("merge")
+   carries backend's placeholder wording and is not used on screen. */
+function mergeRefusal(owner,me){
+  const o=(owner&&typeof owner.email==="string"&&owner.email!=="")?owner.email:null;
+  const who=o===null?"another account":o, way=o===null?"that account":o;
+  const m=(typeof me==="string"&&me.trim()!=="")?me:"this account";
+  return "This device's log belongs to "+who+". The backup under "+m+" was not read and nothing here changed. Sign in as "+way+" to restore what is missing.";
+}
+/* Hold the sentence for the next paintable render (spec 20.4 rule 4). A
+   second merge before the flush REPLACES it with the sum (P13). */
+function mergeHold(added,k){
+  const acc=S.merge.acc||{sessions:0,bodyweight:0,plans:0,refused:0};
+  acc.sessions+=added.sessions|0; acc.bodyweight+=added.bodyweight|0; acc.plans+=added.plans|0; acc.refused+=k|0;
+  S.merge.acc=acc;
+  const c=mergeCounts(acc);
+  S.merge.pending=c?"Restored "+c+" from your backup."+(acc.refused?" "+plural(acc.refused,"item")+" could not be restored. See Settings.":""):null;
+}
+const demoOnDisk=D=>{ const dm=v=>!!(v&&typeof v==="object"&&v.demo===true); return dm(D.log)||dm(D.bw)||dm(D.plans); };
+/* The keep landed but the merge did not finish: the keep's timestamp is
+   still recorded, or the next open would keep a second copy. */
+async function stampKeep(keptAt){
+  if(keptAt===null) return;
+  const pm=S.prefs.merge||{};
+  if(pm.keptAt===keptAt) return;
+  S.prefs.merge=Object.assign({},pm,{keptAt:keptAt});
+  await save(PREFS,prefsPayload());
+}
+async function mergeOnOpen(reason){
+  const Y=window.PHAT_SYNC;
+  if(location.protocol!=="https:"&&location.protocol!=="http:") return true;
+  if(!signedIn()) return true;
+  if(navigator.onLine===false) return true;
+  if(mergeRunning) return true;
+  const manual=reason==="manual", fromOb=S.sub==="onboard-choose";
+  /* First run merges from screen C only (spec 20.5): a merge landing under
+     screen A would move the screen by itself under a thumb heading for a
+     button. Sign in on A routes to C, and C merges. */
+  if(!fromOb&&!S.prefs.onboarded) return true;
+  /* M-k / F9: a store this boot could not read and could not copy aside is
+     never written. The store notice holds the slot; #bk-check says nothing. */
+  if(S.blockWrites[LOG]||S.blockWrites[BWK]||S.blockWrites[PLANS]){
+    S.sync.merge={ok:false,reason:"blocked",message:""}; paintBackup(); return true;
+  }
+  const me=S.sync.user;
+  const obPaint=()=>{ if(S.tab==="train"&&S.sub==="onboard-choose") render(); };
+  const fail=(why,message,obMsg,loud)=>{
+    S.sync.merge={ok:false,reason:why,message:message};
+    if(fromOb){ S.ob={status:"failed",msg:obMsg||message}; obPaint(); }
+    else paintBackup();
+    if(manual||loud) announce(message,true);
+    return true;
+  };
+  mergeRunning=true;
+  let keptAt=(S.prefs.merge&&typeof S.prefs.merge.keptAt==="number")?S.prefs.merge.keptAt:null;
+  try{
+    /* By hand: refused on a plan working copy, the way a restore is (spec
+       20.6 item 2). NOT on an open draft - the merge never touches it. */
+    if(manual){
+      const why=PHAT.restoreRefusal({draft:null,edits:S.edits});
+      if(why){
+        S.sync.last={ok:false,phase:"check",message:why};
+        S.sync.merge={ok:false,reason:"edits",message:why};
+        paintBackup(); announce(why,true); return true;
+      }
+    }
+    let D=await storesOnDisk();
+    const diskBad=()=>fail("local","Could not check the backup: the saved "+D.bad.join(" and ")+" on this device could not be read. Nothing here changed.");
+    if(D.bad.length) return diskBad();
+    if(demoOnDisk(D)) return fail("demo","Not checked: this device holds demo data. Nothing was read from the backup.");
+    /* B-88, the same rule as a push and a restore: a non-empty device's
+       stores belong to the account that first backed them up. Read from
+       disk, now. Nothing read from the server, nothing written. */
+    const owner=PHAT.backupOwner(S.prefs.backup);
+    const so=PHAT.storeOwner({ownerId:owner?owner.id:null,userId:me.id,hasData:!D.empty});
+    if(!so.allowed){
+      const msg=mergeRefusal(owner,me.email||"");
+      const again=!manual&&S.sync.refused===me.id;
+      S.sync.last={ok:false,phase:"check",reason:"owner",message:msg};
+      S.sync.merge={ok:false,reason:"owner",message:msg};
+      if(!again) announce(msg,true);
+      S.sync.refused=me.id;
+      paintBackup(); return false;
+    }
+    S.sync.merge={busy:true}; paintBackup();
+    /* A push already on the wire finishes first: the module refuses a
+       pull during a push, and that refusal is not a fact about the backup. */
+    for(let i=0;i<150&&bkRunning;i++) await new Promise(res=>setTimeout(res,200));
+    const r=await Y.pull();
+    /* He signed out, or changed account, while the read was in flight: the
+       result has nowhere to go and writes nothing. */
+    if(!S.sync.user||S.sync.user.id!==me.id||(fromOb&&S.sub!=="onboard-choose")){ S.sync.merge=null; return true; }
+    if(!r.ok) return fail(r.reason||"error","Could not check the backup: "+(r.message||"")+" Nothing here changed.","Could not read the backup. "+(r.message||""));
+    let mr=null, st=null;
+    for(let tries=0;;tries++){
+      /* B-74. Read AGAIN, after the pull: a session saved while the read
+         was in flight is on disk and must be in the merge. */
+      D=await storesOnDisk();
+      if(D.bad.length) return diskBad();
+      const loc=k=>D.stores[k]==="ok"?D[k]:undefined;
+      mr=PHAT.mergeStores({log:loc("log"),bw:loc("bw"),plans:loc("plans")},r.rows);
+      if(!mr.ok){
+        const m=(mr.refused[0]&&mr.refused[0].msg)||"nothing merged";
+        if(mr.reason==="demo") return fail("demo","Not checked: this device holds demo data. Nothing was read from the backup.");
+        return fail(mr.reason||"error","Could not check the backup: "+m+". Nothing here changed.","Could not read the backup. "+m+".");
+      }
+      if(fromOb){
+        /* Screen C's two other outcomes (spec 20.5): nothing under the
+           account is C2 and writes nothing; nothing usable is C3. */
+        const total=mr.added.sessions+mr.added.bodyweight+mr.added.plans;
+        const remote=total+mr.kept.sessions+mr.kept.bodyweight+mr.kept.plans;
+        if(!total&&!remote&&!mr.refused.length){
+          S.sync.merge={ok:true,added:mr.added,refused:[]}; S.ob={status:"empty"}; obPaint(); return true;
+        }
+        if(!total&&mr.refused.length){
+          const k=mr.refused.length, m=mr.refused[0].msg+(k>1?" (and "+(k-1)+" more)":"")+".";
+          return fail("rejected","Could not check the backup: "+m+" Nothing here changed.","Could not read the backup. "+m);
+        }
+      }
+      st=PHAT.mergeSteps(mr,{empty:D.empty,kept:keptAt!==null,log:D.log,bw:D.bw,plans:D.plans,blocked:S.blockWrites},
+                         {log:LOG,bw:BWK,plans:PLANS},Date.now());
+      if(!st.ok) return fail("local","Could not check the backup: "+st.message+" Nothing here changed.","Could not read the backup. "+st.message);
+      /* The keeps, all of them, before any write; one failure and nothing
+         is restored - named by which store's copy did not land (M-i). */
+      for(const k of st.keeps){
+        const ok=await save(k.key,k.value);
+        if(!ok) return fail("keep","Could not keep a copy of this device's "+k.label+". Nothing was restored.",null,true);
+        keptAt=k.value.savedAt;
+      }
+      if(!st.writes.length) break;
+      /* The bytes about to be overwritten are the bytes that were merged,
+         or the merge is rebuilt from what is there now (F6). */
+      const D2=await storesOnDisk();
+      if(D2.raw.log===D.raw.log&&D2.raw.bw===D.raw.bw&&D2.raw.plans===D.raw.plans) break;
+      if(tries>=2){ await stampKeep(keptAt); return fail("error","Could not check the backup: this device kept changing while the backup was being read. Nothing here changed."); }
+    }
+    /* The writes, log first. A failed first write stops with nothing
+       changed (M-j); a failed later write is reported, never hidden (M-j'). */
+    const landed={sessions:0,bodyweight:0,plans:0};
+    let partial=null;
+    for(let i=0;i<st.writes.length;i++){
+      const w=st.writes[i];
+      const ok=await save(w.key,w.value);
+      if(!ok){
+        if(i===0){
+          /* S.err is read BEFORE the keep is stamped: that prefs write is a
+             save() that succeeds, and a successful save() clears S.err. */
+          const why=S.err||"";
+          await stampKeep(keptAt);
+          return fail("write","Could not write the restored "+(w.key===LOG?"sessions":w.label)+". Nothing changed. "+why,null,true);
+        }
+        const rest=st.writes.slice(i).map(x=>x.key===BWK?plural(mr.added.bodyweight,"weight"):x.key===PLANS?plural(mr.added.plans,"plan"):plural(mr.added.sessions,"session")).join(" and ");
+        const c=mergeCounts(landed);
+        partial=(c?"Restored "+c+". ":"")+"Could not write "+rest+". Check the backup now to retry.";
+        break;
+      }
+      /* Adopted only now, after the write returned true. */
+      if(w.key===LOG){ adoptLog(w.value); landed.sessions=mr.added.sessions; }
+      else if(w.key===BWK){ adoptBw(w.value); landed.bodyweight=mr.added.bodyweight; }
+      else if(w.key===PLANS){ adoptPlans(w.value); landed.plans=mr.added.plans; }
+    }
+    const allOk=partial===null;
+    /* ONE prefs write: `onboarded` (first run is over - the log is on disk),
+       the backup stamp on the empty-device path (spec 20.5: the merged set
+       IS the backup, so the owner row reads H1 on the first paint and the
+       push that follows is a signature no-op - restoreApply's stamp, the
+       same way), and the merge record. On a non-empty device the stamp is
+       the push's: the merged set may hold more than the server does. */
+    if(fromOb) S.prefs.onboarded=true;
+    if(D.empty&&allOk){
+      const plans=await load(PLANS);
+      const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),plans));
+      S.prefs.backup={at:Date.now(),sig:sig,user:{id:me.id,email:me.email||null},n:S.sessions.length,m:S.bw.length,x:0};
+    }
+    S.prefs.merge=Object.assign({},S.prefs.merge||{},keptAt!==null?{keptAt:keptAt}:{},
+      {at:Date.now(),n:landed.sessions,m:landed.bodyweight,p:landed.plans});
+    await save(PREFS,prefsPayload());
+    S.sync.merge=partial?{ok:false,reason:"partial",message:partial}:{ok:true,added:landed,refused:mr.refused};
+    const total=landed.sessions+landed.bodyweight+landed.plans;
+    if(total) mergeHold(landed,mr.refused.length);
+    if(partial) announce(partial,true);
+    if(fromOb){
+      /* C-t routes to Home as the paint (P10). The flush inside render()
+         delivers the toast with it. */
+      S.ob=null; S.sub="";
+      if(mayPaint()) render(); else paintBackup();
+    }else if(total&&mayPaint()) render(true);
+    else paintBackup();
+    return true;
+  }catch(err){
+    console.warn("[phat] merge threw",err);
+    await stampKeep(keptAt);
+    return fail("error","Could not check the backup: "+String(err&&err.message||err)+" Nothing here changed.");
+  }finally{
+    mergeRunning=false;
+    if(mergePushHeld){ mergePushHeld=false; backupSoon("merge"); }
   }
 }
 
@@ -6816,28 +7101,25 @@ async function restoreStart(){
      be read refuses here - the keep it would need cannot be promised. */
   const D=await storesOnDisk();
   if(D.bad.length){ S.sync.last={ok:false,phase:"restore",reason:"local",message:diskRefusal(D)}; paintBackup(); return; }
+  /* WO-011 W4 (spec 20.6). The one-tap "Restore from backup?" sheet for an
+     empty device is gone: on an empty device the replace IS the merge, so
+     the trigger is not rendered there and, should the device have emptied
+     between the paint and the tap, the merge runs instead. */
+  if(D.empty){ S.sync.last=null; paintBackup(); await mergeOnOpen("manual"); return; }
   S.sync.pulled=rp; S.sync.last=null; paintBackup();
   const n=rp.counts.sessions, m=rp.counts.bodyweight, pn=rp.counts.plans;
   const ln=D.n, lm=D.m, lp=D.p;
-  if(D.empty){
-    askSheet({headline:"Restore from backup?",
-      body:restoreCounts(n,m,pn)+" land on this device. It holds nothing now.",
-      danger:"Restore "+plural(n,"session"), safe:"Not now", back:"bk-restore",
-      onDanger:()=>{ closeSheet(); restoreApply(); },
-      onSafe:()=>{ S.sync.pulled=null; }});
-  }else{
-    /* The plan sentence says which way the plans go, because R1 and R3 are
-       different outcomes and he is typing REPLACE on the strength of it. */
-    const planLine=!lp?"":rp.plans
-      ?" Your "+plural(lp,"plan")+" here "+(lp===1?"is":"are")+" replaced by "+plural(pn,"plan")+" from the backup."
-      :" Your "+plural(lp,"plan")+" here "+(lp===1?"stays":"stay")+".";
-    askSheet({headline:"Replace this device's log?",
-      body:"This replaces "+plural(ln,"session")+" and "+plural(lm,"weight")+" on this device with "+n+" and "+m+" from the backup."+
-           planLine+" What is on this device is exported first, and a copy is kept here.",
-      typed:"REPLACE", danger:"Replace "+plural(ln,"session"), safe:"Keep this device's log", back:"bk-restore",
-      onDanger:()=>{ closeSheet(); restoreApply(); },
-      onSafe:()=>{ S.sync.pulled=null; }});
-  }
+  /* The plan sentence says which way the plans go, because R1 and R3 are
+     different outcomes and he is typing REPLACE on the strength of it. */
+  const planLine=!lp?"":rp.plans
+    ?" Your "+plural(lp,"plan")+" here "+(lp===1?"is":"are")+" replaced by "+plural(pn,"plan")+" from the backup."
+    :" Your "+plural(lp,"plan")+" here "+(lp===1?"stays":"stay")+".";
+  askSheet({headline:"Replace this device's log?",
+    body:"This replaces "+plural(ln,"session")+" and "+plural(lm,"weight")+" on this device with "+n+" and "+m+" from the backup."+
+         planLine+" What is on this device is exported first, and a copy is kept here.",
+    typed:"REPLACE", danger:"Replace "+plural(ln,"session"), safe:"Keep this device's log", back:"bk-replace",
+    onDanger:()=>{ closeSheet(); restoreApply(); },
+    onSafe:()=>{ S.sync.pulled=null; }});
 }
 async function restoreApply(){
   const rp=S.sync.pulled; S.sync.pulled=null;
@@ -6987,20 +7269,73 @@ function vBackupBody(){
       <button class="ghostbtn" id="bk-signin"${busy?" disabled":""}>Sign in</button>
       <button class="ghostbtn" id="bk-signup"${busy?" disabled":""}>Create account</button>`;
   }
-  const busy=!!(S.sync.last&&S.sync.last.busy)||!!S.sync.busy;
+  const busy=!!(S.sync.last&&S.sync.last.busy)||!!S.sync.busy||!!(S.sync.merge&&S.sync.merge.busy);
   /* Spec §18.6 H3: signed in as someone other than the device's owner. The
      status block under it carries the refusal, when one has fired. */
   const ow=PHAT.backupOwner(S.prefs.backup);
   const line=(ow&&ow.id!==S.sync.user.id)
     ? "Signed in as "+(S.sync.user.email||"")+". This device's log belongs to "+(ow.email||"another account")+"."
-    : "Signed in as "+(S.sync.user.email||"")+". Backs up after every saved session and weight.";
+    : "Signed in as "+(S.sync.user.email||"")+". Backs up after every saved session and weight. Checks the backup when the app opens.";
+  /* WO-011 W4 (spec 20.6 item 3). The wholesale replace is rendered only
+     when the device holds something to replace; on an empty device it would
+     be the merge with a scarier name. A render gate on S - restoreStart
+     still reads the disk (B-74). */
+  const holds=S.sessions.length>0||S.bw.length>0||planHolds(S.plans);
   return `<p class="tiny">${esc(line)}</p>
     ${bkStatusLine()}
+    ${bkCheckLine()}
     <button class="ghostbtn" id="bk-push"${busy?" disabled":""}>Back up now</button>
-    <button class="ghostbtn" id="bk-restore"${busy?" disabled":""}>Restore from backup</button>
+    <button class="ghostbtn" id="bk-checknow"${busy?" disabled":""}>Check the backup now</button>
     <button class="ghostbtn" id="bk-signout"${busy?" disabled":""}>Sign out</button>
-    <p class="tiny">Restore replaces what is on this device with the backup. It asks first, and never touches an unfinished session.</p>
+    <p class="tiny">The backup is checked when the app opens and anything missing here is restored. Nothing on this phone is ever removed by that.</p>
+    ${holds?`<p class="tiny">Replacing throws away this phone's copy in favour of the backup. Exports first, keeps a copy here, asks you to type REPLACE, and never touches an unfinished session.</p>
+    <button class="ghostbtn txt" id="bk-replace"${busy?" disabled":""}>Replace this phone's log with the backup&hellip;</button>`:""}
     ${vPwBlock(busy)}`;
+}
+/* WO-011 W4 (spec 20.3). #bk-check: the standing fact about this phone -
+   when it last looked at the backup and what it found - on its own line
+   under #bk-status, so the push that follows a merge (which takes
+   #bk-status) never erases it. Every state, first match renders. A viewer
+   who is not the owner gets nothing here: the check history is the owner's
+   log's, and the refusal (M-c) is in #bk-status. */
+function planHolds(st){
+  if(!st||typeof st!=="object") return false;
+  if(Array.isArray(st.plans)&&st.plans.length>0) return true;
+  const a=String(st.activePlanId||"").trim();
+  return a!==""&&a!==PHAT.PHAT_PLAN_ID;
+}
+function bkCheckLine(){
+  const M=S.sync.merge, pm=S.prefs.merge, me=S.sync.user;
+  const ow=PHAT.backupOwner(S.prefs.backup);
+  if(ow&&me&&ow.id!==me.id) return "";
+  const at=(pm&&typeof pm.at==="number")?pm.at:null;
+  const ago=at!==null?PHAT.agoText(at):"";
+  const tiny=t=>`<p class="tiny" id="bk-check">${esc(t)}</p>`;
+  const lastP=at!==null?`<p>Last checked ${esc(ago)}.</p>`:`<p>Never checked.</p>`;
+  const refuse=(first,rest)=>`<div class="refuse" role="alert" id="bk-check"><p><span aria-hidden="true">! </span>${esc(first)}</p>${rest}</div>`;
+  const list=R=>R.slice(0,5).map(r=>`<p>${esc(r.msg)}</p>`).join("")+(R.length>5?`<p>and ${R.length-5} more.</p>`:"");
+  if(M&&M.busy) return tiny("Checking the backup.");
+  if(M&&M.ok===true){
+    const c=mergeCounts(M.added), R=M.refused||[], k=R.length;
+    if(c&&!k) return tiny("Checked the backup "+ago+" and restored "+c+".");
+    if(c&&k) return refuse("Restored "+c+". "+plural(k,"item")+" could not be restored:",list(R));
+    if(k) return refuse("Checked the backup "+ago+". "+plural(k,"item")+" could not be restored:",list(R));
+    return tiny("Checked the backup "+ago+". Nothing was missing here.");
+  }
+  if(M&&M.ok===false){
+    if(M.reason==="demo") return tiny("Not checked: this device holds demo data. Nothing was read from the backup.");
+    /* M-k (the store notice holds the slot), M-c (#bk-status carries it),
+       the plan-edit refusal (#bk-status, like a restore's): nothing here. */
+    if(M.reason==="blocked"||M.reason==="owner"||M.reason==="edits") return "";
+    if(M.reason==="partial") return refuse(M.message,"");
+    return refuse(M.message,lastP);
+  }
+  /* No outcome this open. The record says what the last check found. */
+  if(at!==null){
+    const c=mergeCounts({sessions:pm.n|0,bodyweight:pm.m|0,plans:pm.p|0});
+    return tiny(c?"Checked the backup "+ago+" and restored "+c+".":"Checked the backup "+ago+". Nothing was missing here.");
+  }
+  return "";
 }
 /* WO-009 W9 (B-102). Change password, signed-in branch ONLY - the caller
    above is the gate, so the block is never in the DOM signed out or while
@@ -7054,6 +7389,14 @@ function paintBackup(){
   const n1=document.getElementById("bk-new"), n2=document.getElementById("bk-new2");
   vals.n1=n1?n1.value:""; vals.n2=n2?n2.value:"";
   if(document.activeElement===n1) vals.f="n1"; else if(document.activeElement===n2) vals.f="n2";
+  /* WO-011 W4 (spec 20.9). The three buttons ride the carry too: CHECK THE
+     BACKUP NOW repaints this box busy (disabled) and then done, and focus
+     must come back to the button he tapped, not fall to the body. A
+     disabled button cannot take focus, so the id is remembered across the
+     busy paint and restored by the first paint that enables it again. */
+  const ae=document.activeElement, BK_BTNS=["bk-push","bk-checknow","bk-signout","bk-replace"];
+  let bid=(ae&&BK_BTNS.indexOf(ae.id)>=0)?ae.id:"";
+  if(!bid&&ae===document.body&&paintBackup._b) bid=paintBackup._b;
   box.innerHTML=vBackupBody();
   {
     const em2=document.getElementById("bk-email"), pw2=document.getElementById("bk-pass");
@@ -7062,6 +7405,11 @@ function paintBackup(){
     if(n1b) n1b.value=vals.n1; if(n2b) n2b.value=vals.n2;
     if(vals.f==="p"&&pw2) pw2.focus(); else if(vals.f==="e"&&em2) em2.focus();
     else if(vals.f==="n1"&&n1b) n1b.focus(); else if(vals.f==="n2"&&n2b) n2b.focus();
+    else if(bid){
+      const b=document.getElementById(bid);
+      if(b&&!b.disabled){ b.focus({preventScroll:true}); paintBackup._b=null; }
+      else paintBackup._b=bid;
+    }
   }
   reserveDock();
 }
@@ -7123,7 +7471,12 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   if(rp.status==="ok"&&rp.value&&typeof rp.value==="object"){
     S.prefsMeta={};
     Object.keys(rp.value).forEach(k=>{
-      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate"&&k!=="backup"&&k!=="gym") S.prefsMeta[k]=rp.value[k]; });
+      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate"&&k!=="backup"&&k!=="gym"&&k!=="merge") S.prefsMeta[k]=rp.value[k]; });
+    /* WO-011 W4. The merge record, shape-checked the way the stamp is: an
+       object with a numeric `at` or `keptAt`; anything else reads as "never
+       checked" and is not rewritten here (no boot write). */
+    S.prefs.merge=(rp.value.merge&&typeof rp.value.merge==="object"&&
+      (typeof rp.value.merge.at==="number"||typeof rp.value.merge.keptAt==="number"))?rp.value.merge:null;
     /* WO-010 W6. The gym profile, validated on the way in. A profile this
        build cannot read is NOT adopted and NOT rewritten here (no boot
        write): S.gymBad says so on the sheet and in Settings, and the next
