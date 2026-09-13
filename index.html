@@ -4374,6 +4374,21 @@ function render(keepScroll){
     const m=S.merge.pending; S.merge.pending=null; S.merge.acc=null;
     toastLater(m,4200);
   }
+  /* WO-011 P1: a WAITING sw.js may take over only at a paint where nothing is
+     in flight - mayPaint(): no sheet, Train home, no draft, no focused input.
+     Posted to reg.waiting, never the controller, so only a worker that is
+     actually waiting hears it. No reload follows, ever; the next launch gets
+     the new shell. Re-checked inside the callback: getRegistration is async.
+     Protocol guarded before the capability, as in the registration block:
+     file:// never calls getRegistration, so it cannot reject and cannot log.
+     Nothing here can throw - the promise is caught and the call is wrapped. */
+  if(mayPaint()&&(location.protocol==="https:"||location.protocol==="http:")&&"serviceWorker" in navigator){
+    try{
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if(reg&&reg.waiting&&mayPaint()) reg.waiting.postMessage({type:"phat-idle"});
+      }).catch(function(){});
+    }catch(e){}
+  }
 }
 /* ONE RENDERING OF ONE VERDICT OBJECT, and both screens that print a verdict
    go through it — the session card (W7) and the summary row (W8). Two
@@ -7613,11 +7628,14 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
         `controllerchange` listener and no `updatefound` listener in this file
         - not a disabled one, not a commented one. There is no code path to a
         reload because there is no listener to write one in.
-     4. NO skipWaiting. Not called here, and never messaged to sw.js (it has a
-        SKIP_WAITING handler; nothing in this app sends it, and nothing should
-        start). A new worker waits for the old pages to close, so a fresh
-        index.html can never activate underneath a page already running the
-        old logic.js - this project's black-screen failure mode.
+     4. skipWaiting IS NEVER UNCONDITIONAL. Not called here, and sw.js no
+        longer has an unguarded handler for it. render() posts `phat-idle` to
+        a WAITING worker only at a paint where mayPaint() holds (no sheet,
+        Train home, no draft, no focused input); the worker takes over then,
+        with no reload, and the next launch gets the new shell. A running page
+        never re-requests index.html or logic.js, so a fresh shell still
+        cannot activate underneath a page mid-session with the old logic.js -
+        this project's black-screen failure mode.
      5. A FAILURE TO REGISTER MAY NOT COST HIM THE APP. try/catch around the
         call and a rejection handler on the promise, covering private mode, a
         blocked origin, a disabled worker and a 404 on sw.js. With no worker
