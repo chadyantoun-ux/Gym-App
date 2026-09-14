@@ -1284,12 +1284,51 @@ function adoptStore(k,v){
      7. ADOPT: memory takes what was written.
    S.lastWrite[k] carries the {ok, kept, base, notes} truth of the last
    write; the return stays a boolean so no caller changes shape. */
+/* WO-013 W4 (B-135). THE LOCK. localStorage has no atomic read-modify-write:
+   two tabs that each read the disk, overlay and write in the same tick both
+   see ten, both write eleven, and one session is gone - the shrink guard
+   checks the writer's own read, not the disk at write time, so it cannot
+   see it. The Web Locks API serialises the read-overlay-write-adopt across
+   every document of this origin: one lock per store key ("phat:store:"+k),
+   held for exactly that span. The draft and the plan working copy are
+   per-tab and are not KIND_OF keys, so they never lock; the window.storage
+   bridge path is unchanged (one document, no race). Where navigator.locks
+   is absent (Safari < 15.4, an insecure context) the write proceeds
+   UNLOCKED, exactly as before - a missing lock is the old behaviour, never a
+   refusal. A request refused before the body ran (a document no longer
+   fully active) falls back the same way; an error thrown INSIDE the body
+   propagates as it always did.
+   RE-ENTRANCY: nothing inside the locked span may call save() on the same
+   key, or the inner request waits on the outer one forever. Audited at W4:
+   readRaw, writeStep, shrinkCheck, the payload builders, adoptLog / adoptBw /
+   adoptPlans / adoptPrefs (and gymAdopt, migrateOverrides under it) and
+   backupSoon (a timer, never an await) call no save(). The ONE caller that
+   holds the lock itself - finish(), which mints the session id under it -
+   says so with opts.locked:true, and save() then writes without requesting
+   it again. Set that flag nowhere else. */
+function withStoreLock(k,fn){
+  const L=navigator.locks;
+  if(hasNative||!L||typeof L.request!=="function") return fn();
+  let ran=false;
+  return L.request("phat:store:"+k,()=>{ ran=true; return fn(); }).catch(e=>{
+    if(ran) throw e;
+    console.warn("[phat] store lock unavailable, writing unlocked",k,e&&e.name);
+    return fn();
+  });
+}
 async function save(k,obj,opts){
   if(S.blockWrites[k]){
     S.err="Not saved. The stored copy of this data could not be read and must not be overwritten. Export, then reload.";
     return false;
   }
   const kind=KIND_OF[k];
+  if(!kind||(opts&&opts.locked===true)) return saveNow(k,obj,opts,kind);
+  return withStoreLock(k,()=>saveNow(k,obj,opts,kind));
+}
+/* The body of save(), unchanged from W1/W2 and byte-for-byte the same
+   writer: the read, the overlay, the two guards, the write, the adopt. Under
+   the lock for LOG / BWK / PLANS / PREFS; bare for every other key. */
+async function saveNow(k,obj,opts,kind){
   let next=obj, step=null;
   if(kind){
     const r=await readRaw(k);
@@ -6870,8 +6909,43 @@ async function finish(){
      offering a ghost across a prescription change. Both arguments are
      optional and additive; without them every entry stamps no rx and the
      epoch check can never fire. */
-  const sess=PHAT.buildSession(S.draft,S.dayId,S.draft.date,Date.now(),
-    sp().planId,sp());
+  /* WO-013 W4 (B-135, the second cause). The id was Date.now() at the tap,
+     and two tabs that tap Save in the same millisecond mint the SAME id -
+     every union (the overlay, the merge, the backup's client_id) then
+     rightly reads two sessions as one document and the second write
+     replaces the first: eleven on disk, not twelve, with the lock holding.
+     So the id is minted INSIDE the store lock, against the ids on disk and
+     in memory at that moment, bumped a millisecond past any it collides
+     with (sortSessions orders by date, never by id), and the write goes
+     out under the same lock - {locked:true} tells save() not to request
+     it again. Without navigator.locks this is the old path, unlocked. */
+  let sess=null, next=null;
+  const ok=await withStoreLock(LOG,async()=>{
+    const taken={};
+    S.sessions.forEach(s=>{ if(s&&s.id!=null) taken[String(s.id)]=true; });
+    const r=await readRaw(LOG);
+    if(r.status==="ok"&&r.value&&Array.isArray(r.value.sessions))
+      r.value.sessions.forEach(s=>{ if(s&&s.id!=null) taken[String(s.id)]=true; });
+    let id=Date.now(); while(taken[String(id)]) id++;
+    sess=PHAT.buildSession(S.draft,S.dayId,S.draft.date,id,
+      sp().planId,sp());
+    if(!sess) return false;
+    /* Build the next log without mutating S.sessions: a failed save used to
+       leave a phantom session in memory that a retry would duplicate. */
+    /* Sorted on the way to disk: a draft started yesterday and saved today
+       must land in date order, not at the end. sortSessions returns a new
+       array and never touches S.sessions, so a failed save still leaves
+       memory untouched. */
+    next=PHAT.sortSessions(S.sessions.concat([sess]));
+    /* WO-013 W2: patch {sessions: next} - union by id with the disk. A tab
+       that booted on an empty log and saves one lands that one BESIDE the
+       ten another document wrote (B-76), never over them; nothing else in
+       the store is carried from this tab's memory. After a true return
+       S.sessions IS the written list (save() adopted it, disk-only sessions
+       included) - it is NOT re-assigned from `next` here, which would put
+       the short list back in memory. */
+    return save(LOG,{sessions:next},{locked:true});
+  });
   if(!sess){
     /* Loud, and never save(LOG,null): a null session would overwrite the log
        with garbage, which is the failure this whole batch exists to prevent. */
@@ -6879,20 +6953,6 @@ async function finish(){
     S.err="Could not save. Your entries are still on screen — try again.";
     render(true); return;
   }
-  /* Build the next log without mutating S.sessions: a failed save used to
-     leave a phantom session in memory that a retry would duplicate. */
-  /* Sorted on the way to disk: a draft started yesterday and saved today must
-     land in date order, not at the end. sortSessions returns a new array and
-     never touches S.sessions, so a failed save still leaves memory untouched. */
-  const next=PHAT.sortSessions(S.sessions.concat([sess]));
-  /* WO-013 W2: patch {sessions: next} - union by id with the disk. A tab
-     that booted on an empty log and saves one lands that one BESIDE the ten
-     another document wrote (B-76), never over them; nothing else in the
-     store is carried from this tab's memory. After a true return
-     S.sessions IS the written list (save() adopted it, disk-only sessions
-     included) - it is NOT re-assigned from `next` here, which would put
-     the short list back in memory. */
-  const ok=await save(LOG,{sessions:next});
   /* Keep the scroll: the failure line renders where Save is, and throwing him
      to the top of a ten-exercise page to hide it would be its own bug. */
   if(!ok){ render(true); return; }   // draft still on disk, nothing committed
@@ -7781,7 +7841,11 @@ async function mergeOnOpen(reason){
          delivers the toast with it. */
       S.ob=null; S.sub="";
       if(mayPaint()) render(); else paintBackup();
-    }else if(total&&mayPaint()) render(true);
+    }else if((adopted||total)&&mayPaint()) render(true);
+    /* WO-013 W4 (B-134): `adopted` too - a merge that wrote nothing because
+       the disk was already ahead (another tab's merge, a session it saved)
+       adopted that disk into memory above, and the Home count must say so
+       now, not at the next navigation. Same gate, mayPaint(). */
     else paintBackup();
     return true;
   }catch(err){
