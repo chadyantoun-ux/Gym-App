@@ -17766,6 +17766,454 @@ T("W5 - up to the end of S47 no fixture wrote a phat:* key", function(a){
   a.deep(PHAT_KEY_WRITES, []);
 });
 
+group("S48 WO-013 W1 / read before write: overlayStore per store, the shrink guard, writeStep on readRaw, metaPatch, single-tab byte-identity against main @ 65465c3, the two-tab shapes pure / B-76 B-123 B-124 B-128 B-132");
+
+/* ---- The four stores AS main @ 65465c3 WRITES THEM. Transcribed from that
+   commit's builders (index.html:1410-1442 at 65465c3): logPayload is
+   S.logMeta (a fresh install's is {profile:null}) then schemaVersion,
+   sessions, includeCut; bwPayload is bwMeta then schemaVersion, entries;
+   plansPayload is plansMeta then schemaVersion, plans, activePlanId;
+   prefsPayload is prefsMeta then schemaVersion, restAuto, onboarded,
+   proteinDate, gym?, backup?, merge?. The gym key order (bars, unit, ex) is
+   readGymProfile's, which every writer commits through (gymAdopt). These
+   literals are the disk a single tab writes; A5 asserts the overlay does not
+   move one byte of them. ---- */
+var S48_BAR = { n: "Barbell", w: 20, u: "kg" }, S48_BAR2 = { n: "EZ bar", w: 10, u: "kg" };
+var S48_SESS = function(id, date){ return { id: id, date: date, dayId: "d1", planId: "phat", entries: { d1a: { note: "", sets: [{ w: 100, r: 5 }] } } }; };
+var S48_LOG65 = '{"profile":null,"schemaVersion":6,"sessions":[' + JSON.stringify(CHADY_EXPORT) + '],"includeCut":false}';
+var S48_BW65 = '{"schemaVersion":6,"entries":[{"date":"2026-09-11","kg":84.8},{"date":"2026-09-12","kg":85}]}';
+var S48_PLAN = function(pid){ return { planId: pid, name: "Copy " + pid, days: [] }; };
+var S48_PLANS65 = '{"schemaVersion":6,"plans":[' + JSON.stringify(S48_PLAN("p1")) + '],"activePlanId":"phat"}';
+var S48_PREFS65 = '{"schemaVersion":6,"restAuto":true,"onboarded":true,"proteinDate":"","gym":{"bars":[' + JSON.stringify(S48_BAR) + '],"unit":"lb","ex":{"d1a":{"au":"lb","v":2}}},"backup":{"at":1789318533835,"sig":"abc","user":{"id":"u1","email":"c@x"},"n":1,"m":2,"x":0},"merge":{"keptAt":1789300000000,"at":1789342088400,"n":0,"m":0,"p":0}}';
+var S48_SHRINK = "Not saved. This write would remove saved data. Reload and try again.";
+var S48_UNREAD = "Not saved. The stored copy of this data could not be read and must not be overwritten. Export, then reload.";
+function s48ten(){ var out = [], i; for (i = 0; i < 10; i++) out.push(S48_SESS(1789000000000 + i, "2026-08-" + (10 + i))); return out; }
+function s48log(sessions){ return { profile: null, schemaVersion: 6, sessions: sessions, includeCut: false }; }
+function s48ids(arr){ return arr.map(function(s){ return String(s.id); }); }
+
+/* ------------------------------------------------------ 0. the seam exists */
+
+T("S48 TRIPWIRE - PHAT exports overlayStore, shrinkCheck, writeStep, metaPatch, applyDrop and stableJson, and index.html's save() has nowhere else to get them", function(a){
+  ["overlayStore", "shrinkCheck", "writeStep", "metaPatch", "applyDrop", "stableJson"].forEach(function(n){ a.isFn(P[n], n); });
+});
+
+/* ------------------------------------------------------ A1. B-128 pure: the unit survives a bar save, and the reverse */
+
+T("A1 / B-128 - disk gym {bars:[b]}, memory {gym:{unit:'lb'}} -> gym = {bars:[b], unit:'lb'}; kept names gym.bars", function(a){
+  var r = P.overlayStore("prefs", { schemaVersion: 6, gym: { bars: [S48_BAR] } }, { gym: { unit: "lb" } });
+  a.eq(JSON.stringify(r.value.gym), '{"bars":[{"n":"Barbell","w":20,"u":"kg"}],"unit":"lb"}');
+  a.eq(r.value.schemaVersion, 6, "a top-level key not in memory is kept");
+  a.deep(r.kept.keys, ["schemaVersion", "gym.bars"]);
+  a.deep(r.notes, []);
+});
+
+T("A1 / B-128 the reverse - disk {bars, unit:'lb', ex:{d1a}}, a stale tab's bar save {gym:{bars:[b2]}} -> {bars:[b2], unit:'lb', ex:{d1a}}; kept.keys names gym.unit, kept.ex = ['d1a'] - Chady's setting on the row, pure", function(a){
+  var disk = JSON.parse(S48_PREFS65);
+  var r = P.overlayStore("prefs", disk, { gym: { bars: [S48_BAR2] } });
+  a.eq(JSON.stringify(r.value.gym), '{"bars":[{"n":"EZ bar","w":10,"u":"kg"}],"unit":"lb","ex":{"d1a":{"au":"lb","v":2}}}');
+  a.ok(r.kept.keys.indexOf("gym.unit") >= 0, "gym.unit kept: " + r.kept.keys.join(","));
+  a.deep(r.kept.ex, ["d1a"]);
+  a.eq(disk.gym.bars[0].n, "Barbell", "the disk object handed in is not mutated");
+  a.eq(JSON.stringify(disk), S48_PREFS65);
+});
+
+T("A1 / bars REPLACE, never union (B-132, named): disk bars [b, b2], memory bars [b] -> [b]; the unit and the override still survive it", function(a){
+  var r = P.overlayStore("prefs", { gym: { bars: [S48_BAR, S48_BAR2], unit: "lb", ex: { d1a: { au: "lb", v: 2 } } } }, { gym: { bars: [S48_BAR] } });
+  a.deep(r.value.gym.bars, [S48_BAR]);
+  a.eq(r.value.gym.unit, "lb"); a.deep(r.value.gym.ex, { d1a: { au: "lb", v: 2 } });
+});
+
+T("A1 / ex per id - memory's record wins under its id, disk-only ids are kept, memory-only ids are added, and an ex that ends {} is absent", function(a){
+  var r = P.overlayStore("prefs", { gym: { bars: [], unit: "lb", ex: { d1a: { au: "kg" }, d1b: { au: "lb" } } } },
+                                  { gym: { bars: [], ex: { d1a: { au: "lb", v: 2 }, d2a: { bar: 20, bu: "kg", v: 2 } } } });
+  a.eq(JSON.stringify(r.value.gym.ex), '{"d1a":{"au":"lb","v":2},"d1b":{"au":"lb"},"d2a":{"bar":20,"bu":"kg","v":2}}', "disk's id order, memory's new ids after");
+  a.deep(r.kept.ex, ["d1b"]);
+  var r2 = P.overlayStore("prefs", { gym: { bars: [], ex: {} } }, { gym: { bars: [] } });
+  a.eq(Object.prototype.hasOwnProperty.call(r2.value.gym, "ex"), false, "an empty ex on disk does not come back as {}");
+});
+
+/* ------------------------------------------------------ A2. B-124 pure: the stamp never regresses; keptAt never un-spends */
+
+T("A2 / B-124 - disk backup.at = T+1, memory backup.at = T -> disk's record whole (sig, n, user included); kept names backup", function(a){
+  var d = { at: 1001, sig: "newer", user: { id: "u1", email: "c@x" }, n: 11, m: 2, x: 0 };
+  var m = { at: 1000, sig: "older", user: { id: "u1", email: "c@x" }, n: 10, m: 2, x: 0 };
+  var r = P.overlayStore("prefs", { backup: d }, { backup: m });
+  a.eq(JSON.stringify(r.value.backup), JSON.stringify(d));
+  a.deep(r.kept.keys, ["backup"]);
+  var r2 = P.overlayStore("prefs", { backup: m }, { backup: d });
+  a.eq(JSON.stringify(r2.value.backup), JSON.stringify(d), "the greater at wins from either side");
+  a.deep(r2.kept.keys, []);
+  var r3 = P.overlayStore("prefs", { backup: { at: 1000, sig: "a" } }, { backup: { at: 1000, sig: "b" } });
+  a.eq(r3.value.backup.sig, "b", "equal at -> memory's");
+});
+
+T("A2 / attack 6 - backup.at a string on one side: the side with a numeric at wins; both non-numeric -> memory's; nothing throws", function(a){
+  var r = P.overlayStore("prefs", { backup: { at: "1789318533835", sig: "s" } }, { backup: { at: 5, sig: "m" } });
+  a.eq(r.value.backup.sig, "m");
+  var r2 = P.overlayStore("prefs", { backup: { at: 5, sig: "d" } }, { backup: { at: "x", sig: "m" } });
+  a.eq(r2.value.backup.sig, "d"); a.deep(r2.kept.keys, ["backup"]);
+  var r3 = P.overlayStore("prefs", { backup: { at: "x" } }, { backup: { at: null } });
+  a.deep(r3.value.backup, { at: null });
+});
+
+T("A2 / merge.keptAt = the greater of the two sides; at = the greater; n/m/p ride with the greater at; a patch {merge:{keptAt}} onto a full record keeps the record", function(a){
+  var d = { keptAt: 100, at: 500, n: 3, m: 0, p: 0 };
+  var r = P.overlayStore("prefs", { merge: d }, { merge: { keptAt: 200, at: 400, n: 9, m: 9, p: 9 } });
+  a.eq(JSON.stringify(r.value.merge), '{"keptAt":200,"at":500,"n":3,"m":0,"p":0}', "disk's at is greater: its counts, and the greater keptAt");
+  var r2 = P.overlayStore("prefs", { merge: d }, { merge: { keptAt: 100, at: 600, n: 1, m: 1, p: 1 } });
+  a.eq(JSON.stringify(r2.value.merge), '{"keptAt":100,"at":600,"n":1,"m":1,"p":1}', "memory's at is greater: memory's bytes");
+  var r3 = P.overlayStore("prefs", { merge: { at: 500, n: 3, m: 0, p: 0 } }, { merge: { keptAt: 777 } });
+  a.eq(JSON.stringify(r3.value.merge), '{"at":500,"n":3,"m":0,"p":0,"keptAt":777}', "stampKeep's patch: the record kept, keptAt appended - Object.assign({}, pm, {keptAt})'s order");
+  var r4 = P.overlayStore("prefs", { merge: { keptAt: 900, at: 500 } }, { merge: { keptAt: 100, at: 500 } });
+  a.eq(r4.value.merge.keptAt, 900, "a keep is never un-spent, even when memory's at ties");
+});
+
+/* ------------------------------------------------------ A3. B-76 pure: one over ten becomes eleven */
+
+T("A3 / B-76 - disk 10 sessions, memory 1 -> 11, sorted by date, kept.sessions lists the ten ids, the ten byte-identical", function(a){
+  var ten = s48ten(), one = S48_SESS(1789999999999, "2026-08-15");
+  var disk = s48log(ten);
+  var r = P.overlayStore("log", disk, { sessions: [one] });
+  a.eq(r.value.sessions.length, 11);
+  a.deep(r.kept.sessions, s48ids(ten));
+  a.eq(s48ids(r.value.sessions).join(","), s48ids(P.sortSessions([one].concat(ten))).join(","), "sorted, stable: memory first, then disk-only, then the sort - the one on 08-15 lands before the disk session on 08-15");
+  ten.forEach(function(s){ a.ok(r.value.sessions.indexOf(s) >= 0, "the disk session is the same reference, not a copy: " + s.id); });
+  a.eq(JSON.stringify(Object.keys(r.value)), '["profile","schemaVersion","sessions","includeCut"]', "disk's key order");
+  a.eq(r.value.profile, null); a.eq(r.value.includeCut, false);
+  a.ok(r.kept.keys.indexOf("schemaVersion") >= 0);
+});
+
+T("A3 / same id on both sides -> memory's bytes, count stays 10 (B-133 stated: sessions are immutable until B-05, whose writes must be per-session patches)", function(a){
+  var ten = s48ten(), edited = clone(ten[3]); edited.entries.d1a.sets[0].w = 102.5;
+  var r = P.overlayStore("log", s48log(ten), { sessions: ten.slice(0, 3).concat([edited]).concat(ten.slice(4)) });
+  a.eq(r.value.sessions.length, 10);
+  a.eq(r.value.sessions.filter(function(s){ return s.id === edited.id; })[0].entries.d1a.sets[0].w, 102.5);
+  a.deep(r.kept.sessions, []);
+});
+
+T("A3 / Chady's session through a log overlay: memory holds 0 sessions, disk holds client_id 1789264514484 -> kept, byte for byte, and the log's meta keys with it", function(a){
+  var disk = JSON.parse(S48_LOG65);
+  var r = P.overlayStore("log", disk, { sessions: [] });
+  a.eq(r.value.sessions.length, 1);
+  a.eq(JSON.stringify(r.value.sessions[0]), JSON.stringify(CHADY_EXPORT));
+  a.deep(r.kept.sessions, ["1789264514484"]);
+  a.eq(JSON.stringify(r.value), S48_LOG65, "a stale tab writing {sessions:[]} over his log changes nothing on disk");
+  var r2 = P.overlayStore("log", disk, { sessions: [S48_SESS(2, "2026-09-13")] });
+  a.eq(r2.value.sessions.length, 2, "and a stale tab's one session lands BESIDE his");
+  a.eq(JSON.stringify(r2.value.sessions[0]), JSON.stringify(CHADY_EXPORT), "his first by date");
+});
+
+T("A3 / attack 2 - a disk session with no id is never dropped: different bytes from anything in memory -> kept; the same bytes -> one row, not two", function(a){
+  var noId = { date: "2026-08-01", dayId: "d1", entries: {} };
+  var r = P.overlayStore("log", s48log([noId]), { sessions: [S48_SESS(5, "2026-08-02")] });
+  a.eq(r.value.sessions.length, 2); a.ok(r.value.sessions.indexOf(noId) >= 0);
+  a.deep(r.kept.sessions, [JSON.stringify(noId)]);
+  var r2 = P.overlayStore("log", s48log([noId]), { sessions: [clone(noId)] });
+  a.eq(r2.value.sessions.length, 1, "identical bytes are one document");
+  a.eq(P.shrinkCheck("log", s48log([noId]), r2.value), null);
+});
+
+T("A3 / attack 3 - two tabs finish in one tick: whichever read sees the other's write or not, the union is twelve, never eleven-with-one-missing", function(a){
+  var ten = s48ten(), a1 = S48_SESS(2001, "2026-09-01"), b1 = S48_SESS(2002, "2026-09-01");
+  /* A reads ten, writes eleven */
+  var wa = P.overlayStore("log", s48log(ten), { sessions: ten.concat([a1]) }).value;
+  a.eq(wa.sessions.length, 11);
+  /* B read ten (before A's write) and writes its eleven over A's eleven: the overlay reads A's disk */
+  var wb = P.overlayStore("log", wa, { sessions: ten.concat([b1]) }).value;
+  a.eq(wb.sessions.length, 12);
+  a.ok(wb.sessions.indexOf(a1) >= 0 && wb.sessions.indexOf(b1) >= 0);
+  /* B's read saw A's write: also twelve */
+  var wb2 = P.overlayStore("log", wa, { sessions: wa.sessions.concat([b1]) }).value;
+  a.eq(wb2.sessions.length, 12);
+});
+
+/* ------------------------------------------------------ A4. bw by date, plans by planId, activePlanId, disk-only meta */
+
+T("A4 / bw - union by date, memory's order first, disk-only dates appended; the same date takes memory's kg (the later tap is the intent); kept.entries names the disk-only dates", function(a){
+  var disk = { schemaVersion: 6, entries: [{ date: "2026-09-10", kg: 84.5 }, { date: "2026-09-11", kg: 84.8 }] };
+  var r = P.overlayStore("bw", disk, { entries: [{ date: "2026-09-11", kg: 85.1 }, { date: "2026-09-12", kg: 85 }] });
+  a.eq(JSON.stringify(r.value.entries), '[{"date":"2026-09-11","kg":85.1},{"date":"2026-09-12","kg":85},{"date":"2026-09-10","kg":84.5}]');
+  a.deep(r.kept.entries, ["2026-09-10"]);
+  a.eq(r.value.schemaVersion, 6);
+  /* F7's two shapes, pure: same date from two tabs -> one row; two dates -> both */
+  var t1 = P.overlayStore("bw", { entries: [{ date: "2026-09-12", kg: 85 }] }, { entries: [{ date: "2026-09-12", kg: 85.4 }] }).value;
+  a.deep(t1.entries, [{ date: "2026-09-12", kg: 85.4 }]);
+  var t2 = P.overlayStore("bw", { entries: [{ date: "2026-09-12", kg: 85 }] }, { entries: [{ date: "2026-09-13", kg: 85.4 }] }).value;
+  a.eq(t2.entries.length, 2);
+});
+
+T("A4 / plans - union by planId, memory's order, disk-only appended; activePlanId memory's where present, disk's where not; disk-only meta keys kept", function(a){
+  var disk = { schemaVersion: 6, plans: [S48_PLAN("p1"), S48_PLAN("p2")], activePlanId: "p1", future: { x: 1 } };
+  var r = P.overlayStore("plans", disk, { plans: [S48_PLAN("p3")], activePlanId: "p3" });
+  a.eq(r.value.plans.map(function(p){ return p.planId; }).join(","), "p3,p1,p2");
+  a.eq(r.value.activePlanId, "p3");
+  a.deep(r.kept.plans, ["p1", "p2"]);
+  a.deep(r.value.future, { x: 1 }); a.ok(r.kept.keys.indexOf("future") >= 0);
+  var r2 = P.overlayStore("plans", disk, { plans: [S48_PLAN("p2")] });
+  a.eq(r2.value.activePlanId, "p1", "a {plans} patch leaves activePlanId as disk has it");
+  a.eq(r2.value.plans.length, 2);
+});
+
+T("A4 / attack 7 - a duplicate planId already on disk: memory lacking the id keeps BOTH rows; memory holding the id replaces both with its one", function(a){
+  var dup1 = S48_PLAN("p1"), dup2 = S48_PLAN("p1"); dup2.name = "the other p1";
+  var disk = { plans: [dup1, dup2] };
+  var r = P.overlayStore("plans", disk, { plans: [S48_PLAN("p9")] });
+  a.eq(r.value.plans.length, 3);
+  a.eq(P.shrinkCheck("plans", disk, r.value), null);
+  var r2 = P.overlayStore("plans", disk, { plans: [S48_PLAN("p1")] });
+  a.eq(r2.value.plans.length, 1);
+  a.eq(P.shrinkCheck("plans", disk, r2.value), null, "one row per key is what the guard counts: the key survives");
+});
+
+T("A4 / the log's meta - a {sessions} patch keeps every disk-only meta key (calChangedAt, deload, reintro, profile) and a meta patch keeps every session", function(a){
+  var ten = s48ten();
+  var disk = { profile: { diet: "phat-brief" }, reintro: { d1: 1 }, lastReintroDate: {}, calChangedAt: "2026-09-01", deload: null, schemaVersion: 6, sessions: ten, includeCut: false };
+  var r = P.overlayStore("log", disk, { sessions: ten.concat([S48_SESS(77, "2026-09-13")]) });
+  a.eq(r.value.calChangedAt, "2026-09-01"); a.deep(r.value.profile, { diet: "phat-brief" }); a.deep(r.value.reintro, { d1: 1 });
+  var r2 = P.overlayStore("log", disk, { calChangedAt: null });
+  a.eq(r2.value.sessions, ten, "the sessions array is disk's own reference: untouched");
+  a.eq(r2.value.calChangedAt, null);
+  a.ok(r2.kept.keys.indexOf("sessions") >= 0);
+});
+
+/* ------------------------------------------------------ A5. single-tab byte-identity against main @ 65465c3, all four stores */
+
+T("A5 / log - disk as main writes it, memory = the builder's output with one session appended -> bytes identical to what main's finish() writes", function(a){
+  var disk = JSON.parse(S48_LOG65), added = S48_SESS(1789350000000, "2026-09-13");
+  var mem = { profile: null, schemaVersion: 6, sessions: P.sortSessions(disk.sessions.concat([added])), includeCut: false };
+  var today = JSON.stringify(mem);
+  var r = P.overlayStore("log", disk, mem);
+  a.eq(JSON.stringify(r.value), today);
+  a.eq(today, '{"profile":null,"schemaVersion":6,"sessions":[' + JSON.stringify(CHADY_EXPORT) + ',' + JSON.stringify(added) + '],"includeCut":false}');
+  a.deep(r.kept.keys, []); a.deep(r.kept.sessions, []);
+  /* and the patch form lands the same bytes */
+  var rp = P.overlayStore("log", disk, { sessions: mem.sessions });
+  a.eq(JSON.stringify(rp.value), today, "patch {sessions} == whole form == main");
+});
+
+T("A5 / bw - a bodyweight entry (main's filter-then-append on the date, so a same-date re-entry moves to the end) -> bytes identical, whole and patch", function(a){
+  var disk = JSON.parse(S48_BW65);
+  var re = disk.entries.filter(function(x){ return x.date !== "2026-09-11"; }).concat([{ date: "2026-09-11", kg: 85.2 }]);
+  var mem = { schemaVersion: 6, entries: re }, today = JSON.stringify(mem);
+  a.eq(today, '{"schemaVersion":6,"entries":[{"date":"2026-09-12","kg":85},{"date":"2026-09-11","kg":85.2}]}');
+  a.eq(JSON.stringify(P.overlayStore("bw", disk, mem).value), today);
+  a.eq(JSON.stringify(P.overlayStore("bw", disk, { entries: re }).value), today);
+  var add = disk.entries.concat([{ date: "2026-09-13", kg: 85.3 }]);
+  a.eq(JSON.stringify(P.overlayStore("bw", disk, { entries: add }).value), JSON.stringify({ schemaVersion: 6, entries: add }));
+});
+
+T("A5 / plans - a plan saved (appended) and USE THIS PLAN (activePlanId) -> bytes identical, whole and patch", function(a){
+  var disk = JSON.parse(S48_PLANS65);
+  var mem = { schemaVersion: 6, plans: disk.plans.concat([S48_PLAN("p2")]), activePlanId: "phat" }, today = JSON.stringify(mem);
+  a.eq(JSON.stringify(P.overlayStore("plans", disk, mem).value), today);
+  a.eq(JSON.stringify(P.overlayStore("plans", disk, { plans: mem.plans }).value), today);
+  var used = { schemaVersion: 6, plans: disk.plans, activePlanId: "p1" };
+  a.eq(JSON.stringify(P.overlayStore("plans", disk, { activePlanId: "p1" }).value), JSON.stringify(used));
+});
+
+T("A5 / prefs - a unit tap (readGymProfile's bars, unit, ex order), a bar save, an override, a push stamp, a merge record -> bytes identical to main's prefsPayload(), whole and patch", function(a){
+  var disk = JSON.parse(S48_PREFS65);
+  var mem = clone(disk); mem.gym.unit = "kg";
+  var today = JSON.stringify(mem);
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, mem).value), today, "whole form, unit tapped");
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, { gym: mem.gym }).value), today, "patch {gym}, unit tapped");
+  var bars = clone(disk); bars.gym.bars = [S48_BAR, S48_BAR2];
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, { gym: bars.gym }).value), JSON.stringify(bars), "a bar save");
+  var ov = clone(disk); ov.gym.ex.d2a = { bar: 20, bu: "kg", v: 2 };
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, { gym: ov.gym }).value), JSON.stringify(ov), "an override set");
+  var st = clone(disk); st.backup = { at: 1789400000000, sig: "def", user: { id: "u1", email: "c@x" }, n: 2, m: 2, x: 0 };
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, { backup: st.backup }).value), JSON.stringify(st), "a push stamp");
+  var mg = clone(disk); mg.merge = { keptAt: 1789300000000, at: 1789400000001, n: 0, m: 0, p: 0 };
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, { merge: mg.merge }).value), JSON.stringify(mg), "a merge on an unchanged server");
+  var ra = clone(disk); ra.restAuto = false;
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, { restAuto: false }).value), JSON.stringify(ra), "setRestAuto");
+  var pd = clone(disk); pd.proteinDate = "";
+  a.eq(JSON.stringify(P.overlayStore("prefs", disk, { proteinDate: "" }).value), JSON.stringify(pd), "toggleProtein: '' is a value, not a drop");
+});
+
+/* ------------------------------------------------------ A6. drop: exactly the named paths */
+
+T("A6 / drop removes exactly the named paths: gym.ex.d1a with two ids leaves one; with one id leaves gym.ex absent; a path not present, or through null, is a no-op", function(a){
+  var two = P.overlayStore("prefs", { gym: { bars: [], unit: "lb", ex: { d1a: { au: "lb" }, d1b: { au: "kg" } } } }, { gym: { bars: [] } }, { drop: ["gym.ex.d1a"] });
+  a.eq(JSON.stringify(two.value.gym), '{"bars":[],"unit":"lb","ex":{"d1b":{"au":"kg"}}}');
+  var one = P.overlayStore("prefs", { gym: { bars: [], unit: "lb", ex: { d1a: { au: "lb" } } } }, { gym: { bars: [] } }, { drop: ["gym.ex.d1a"] });
+  a.eq(JSON.stringify(one.value.gym), '{"bars":[],"unit":"lb"}');
+  var none = P.overlayStore("prefs", { gym: { bars: [], unit: "lb" } }, { gym: { bars: [] } }, { drop: ["gym.ex.d1a", "nope.deeper", "gym.unit.x"] });
+  a.eq(JSON.stringify(none.value.gym), '{"bars":[],"unit":"lb"}');
+  var thru = P.applyDrop({ a: null, b: { c: 1 } }, ["a.x", "b.c", "b.zzz", "", 7]);
+  a.eq(JSON.stringify(thru), '{"a":null,"b":{}}', "a parent other than gym.ex emptied by a drop stays");
+  var top = P.overlayStore("log", { calChangedAt: "2026-09-01", sessions: [] }, { sessions: [] }, { drop: ["calChangedAt"] });
+  a.eq(Object.prototype.hasOwnProperty.call(top.value, "calChangedAt"), false, "a top-level drop, named");
+  a.eq(P.shrinkCheck("log", { calChangedAt: "2026-09-01", sessions: [] }, top.value, { drop: ["calChangedAt"] }), null, "and the guard honours the name");
+  a.eq(P.shrinkCheck("log", { calChangedAt: "2026-09-01", sessions: [] }, top.value), S48_SHRINK, "without the name it is a shrink");
+});
+
+/* ------------------------------------------------------ A7. metaPatch on the engines' fixtures */
+
+T("A7 / metaPatch - setCalChanged, clearCalChanged, startDeload/endDeload, acceptReintro/declineReintro: set holds only what changed, drop names every key after lacks, and set+drop applied to before equals after", function(a){
+  var apply = function(before, patch){ var out = clone(before); Object.keys(patch.set).forEach(function(k){ out[k] = patch.set[k]; }); patch.drop.forEach(function(k){ delete out[k]; }); return out; };
+  var st0 = { profile: null, reintro: {}, lastReintroDate: {}, calChangedAt: null, deload: null };
+  var pairs = [];
+  var s1 = P.setCalChanged(st0, "2026-09-13"); pairs.push([st0, s1, ["calChangedAt"]]);
+  var s2 = P.clearCalChanged(s1); pairs.push([s1, s2, ["calChangedAt"]]);
+  var s3 = P.startDeload(st0, "2026-09-13", "stall"); pairs.push([st0, s3, null]);
+  var s4 = P.endDeload(s3, "2026-09-15"); pairs.push([s3, s4, ["deload"]]);
+  var s5 = P.acceptReintro(st0, "d3", "2026-09-13", 3); pairs.push([st0, s5, null]);
+  var s6 = P.declineReintro(st0, "d3", "2026-09-13"); pairs.push([st0, s6, ["lastReintroDate"]]);
+  pairs.forEach(function(pr, i){
+    a.ok(pr[1] && typeof pr[1] === "object", "engine " + i + " returned a state");
+    var mp = P.metaPatch(pr[0], pr[1]);
+    if (pr[2]) a.deep(Object.keys(mp.set), pr[2], "pair " + i + " set keys");
+    Object.keys(mp.set).forEach(function(k){ a.ne(P.stableJson(pr[0][k]), P.stableJson(pr[1][k]), "pair " + i + ": " + k + " really changed"); });
+    a.eq(P.stableJson(apply(pr[0], mp)), P.stableJson(pr[1]), "pair " + i + " round-trips");
+  });
+  /* an engine that deletes a key - none does today; the diff still names it */
+  var gone = clone(s1); delete gone.calChangedAt; delete gone.deload;
+  var mp2 = P.metaPatch(s1, gone);
+  a.deep(mp2.drop, ["calChangedAt", "deload"]); a.deep(mp2.set, {});
+  a.deep(P.metaPatch(null, { a: 1 }), { set: { a: 1 }, drop: [] });
+  a.deep(P.metaPatch({ a: 1 }, undefined), { set: {}, drop: ["a"] });
+  a.deep(P.metaPatch({ o: { x: 1, y: 2 } }, { o: { y: 2, x: 1 } }), { set: {}, drop: [] }, "key-order blind");
+});
+
+/* ------------------------------------------------------ A8. writeStep on readRaw: error refuses, absent bases on the payload */
+
+T("A8 / writeStep on a readRaw error (the store read fine at boot) refuses with the existing sentence and hands nothing to write", function(a){
+  var r = P.writeStep("log", { status: "error", reason: "parse", value: null }, { sessions: [S48_SESS(1, "2026-09-13")] }, null, { payload: s48log([]), bootError: false });
+  a.eq(r.ok, false); a.eq(r.reason, "unreadable"); a.eq(r.message, S48_UNREAD);
+  a.eq(r.value, undefined, "nothing to write");
+  var r2 = P.writeStep("prefs", { status: "error" }, { restAuto: false }, null, { payload: {} });
+  a.eq(r2.ok, false, "bootError absent reads as false");
+});
+
+T("A8 / writeStep on a readRaw error for a store that was ALREADY unreadable at boot (its bytes copied aside then) proceeds on the memory payload - today's write, not a refusal", function(a){
+  var pay = s48log([S48_SESS(1, "2026-09-12")]), one = S48_SESS(2, "2026-09-13");
+  var r = P.writeStep("log", { status: "error", reason: "parse" }, { sessions: pay.sessions.concat([one]) }, null, { payload: pay, bootError: true });
+  a.eq(r.ok, true); a.eq(r.base, "memory");
+  a.eq(JSON.stringify(r.value), JSON.stringify(s48log(pay.sessions.concat([one]))));
+  a.ok(r.notes.length === 1 && /unreadable since boot/.test(r.notes[0]), r.notes.join(";"));
+});
+
+T("A8 / absent disk: a first-ever finish() - patch {sessions:[one]} on an absent log with payload {profile:null, schemaVersion:6, sessions:[], includeCut:false} -> the bytes main writes today, schemaVersion included", function(a){
+  var one = S48_SESS(1789264514484, "2026-09-12");
+  var r = P.writeStep("log", { status: "absent", value: null }, { sessions: [one] }, null, { payload: s48log([]), bootError: false });
+  a.eq(r.ok, true); a.eq(r.base, "memory");
+  a.eq(JSON.stringify(r.value), '{"profile":null,"schemaVersion":6,"sessions":[' + JSON.stringify(one) + '],"includeCut":false}');
+  /* the whole form on absent is the same bytes */
+  var rw = P.writeStep("log", { status: "absent" }, s48log([one]), null, { payload: s48log([]) });
+  a.eq(JSON.stringify(rw.value), JSON.stringify(r.value));
+  /* prefs: finishOnboarding's patch on an absent store carries every default key */
+  var pp = { schemaVersion: 6, restAuto: true, onboarded: false, proteinDate: "" };
+  var rp = P.writeStep("prefs", { status: "absent" }, { onboarded: true }, null, { payload: pp });
+  a.eq(JSON.stringify(rp.value), '{"schemaVersion":6,"restAuto":true,"onboarded":true,"proteinDate":""}');
+  /* bw and plans first writes */
+  a.eq(JSON.stringify(P.writeStep("bw", { status: "absent" }, { entries: [{ date: "2026-09-12", kg: 85 }] }, null, { payload: { schemaVersion: 6, entries: [] } }).value), '{"schemaVersion":6,"entries":[{"date":"2026-09-12","kg":85}]}');
+  a.eq(JSON.stringify(P.writeStep("plans", { status: "absent" }, { plans: [S48_PLAN("p1")] }, null, { payload: { schemaVersion: 6, plans: [], activePlanId: "phat" } }).value), '{"schemaVersion":6,"plans":[' + JSON.stringify(S48_PLAN("p1")) + '],"activePlanId":"phat"}');
+});
+
+T("A8 / writeStep on an ok disk: the overlay runs against the disk, kept is reported, and a disk that is not an object (attack 5: an array) falls back to the memory payload as base with the reason in notes - then the guard rules", function(a){
+  var ten = s48ten();
+  var r = P.writeStep("log", { status: "ok", value: s48log(ten) }, { sessions: [S48_SESS(99, "2026-09-13")] }, null, { payload: s48log([]) });
+  a.eq(r.ok, true); a.eq(r.base, "disk"); a.eq(r.value.sessions.length, 11); a.eq(r.kept.sessions.length, 10);
+  var arr = P.writeStep("log", { status: "ok", value: [1, 2, 3] }, { sessions: [S48_SESS(99, "2026-09-13")] }, null, { payload: s48log([]) });
+  a.eq(arr.ok, true); a.eq(arr.base, "memory");
+  a.eq(JSON.stringify(arr.value), JSON.stringify(s48log([S48_SESS(99, "2026-09-13")])));
+  a.ok(arr.notes.join(";").indexOf("not an object") >= 0, arr.notes.join(";"));
+  var ov = P.overlayStore("log", [1, 2, 3], { sessions: [] });
+  a.eq(ov.failed, true); a.deep(ov.value, { sessions: [] }); a.ok(/not an object/.test(ov.notes[0]));
+});
+
+T("A8 / attack 1 - prefs.gym = 'garbage' on disk, a tab writes a unit: no throw, the overlay path, memory's gym stands, named in notes; the guard passes because gym is still a key", function(a){
+  var disk = { schemaVersion: 6, restAuto: true, onboarded: true, proteinDate: "", gym: "garbage" };
+  var r = P.writeStep("prefs", { status: "ok", value: disk }, { gym: { bars: [], unit: "lb" } }, null, { payload: disk });
+  a.eq(r.ok, true);
+  a.eq(JSON.stringify(r.value), '{"schemaVersion":6,"restAuto":true,"onboarded":true,"proteinDate":"","gym":{"bars":[],"unit":"lb"}}');
+  a.ok(r.notes.join(";").indexOf("disk gym is not an object") >= 0, r.notes.join(";"));
+  var r2 = P.overlayStore("prefs", { gym: { bars: [S48_BAR], unit: "lb" } }, { gym: "garbage" });
+  a.deep(r2.value.gym, { bars: [S48_BAR], unit: "lb" }, "the other way round, disk's is kept");
+});
+
+/* ------------------------------------------------------ A9. the shrink guard, by stubbing */
+
+T("A9 / shrinkCheck - a hand-built result missing a base key, or shorter in sessions, is refused with the named sentence; equal or larger passes; replace:true is the only exemption", function(a){
+  var ten = s48ten(), base = s48log(ten);
+  a.eq(P.shrinkCheck("log", base, s48log(ten.slice(0, 9))), S48_SHRINK, "nine over ten");
+  a.eq(P.shrinkCheck("log", base, { profile: null, schemaVersion: 6, sessions: ten }), S48_SHRINK, "includeCut missing");
+  a.eq(P.shrinkCheck("log", base, s48log(ten.slice(0, 9).concat([S48_SESS(555, "2026-09-13")]))), S48_SHRINK, "ten elements but one id lost");
+  a.eq(P.shrinkCheck("log", base, s48log(ten)), null);
+  a.eq(P.shrinkCheck("log", base, s48log(ten.concat([S48_SESS(555, "2026-09-13")]))), null);
+  a.eq(P.shrinkCheck("log", base, s48log([]), { replace: true }), null, "restore's word");
+  a.eq(P.shrinkCheck("log", base, "garbage"), S48_SHRINK);
+  a.eq(P.shrinkCheck("log", base, { profile: null, schemaVersion: 6, sessions: "x", includeCut: false }), S48_SHRINK, "sessions not an array");
+  a.eq(P.shrinkCheck("bw", { entries: [{ date: "2026-09-12" }] }, { entries: [] }), S48_SHRINK);
+  a.eq(P.shrinkCheck("plans", { plans: [S48_PLAN("p1")], activePlanId: "p1" }, { plans: [S48_PLAN("p1")] }), S48_SHRINK, "activePlanId missing");
+  a.eq(P.shrinkCheck("prefs", { gym: { bars: [] }, restAuto: true }, { restAuto: true }), S48_SHRINK, "gym gone");
+  a.eq(P.shrinkCheck("prefs", { gym: { bars: [] }, restAuto: true }, { restAuto: true, gym: {} }), null, "the guard is top-level keys and document keys; gym's insides are the overlay's contract, pinned above");
+  a.eq(P.shrinkCheck("log", null, {}), null, "no base, nothing to shrink from");
+});
+
+T("A9 / attack 8, through writeStep - a mutant overlay that filters sessions would be refused: the guard is checked against the DISK value even when the overlay fell back to memory", function(a){
+  var ten = s48ten();
+  /* the disk holds ten under a key the overlay cannot use as an object? No: make the overlay fail by handing an unknown kind through a wrapper is not possible from here, so pin the guard's independence directly: */
+  var r = P.writeStep("log", { status: "ok", value: s48log(ten) }, { sessions: ten.slice(0, 3) }, null, { payload: s48log(ten.slice(0, 3)) });
+  a.eq(r.ok, true, "the overlay unions, so a short memory is not a shrink");
+  a.eq(r.value.sessions.length, 10);
+  /* replace:true IS the shrink, and only it */
+  var rr = P.writeStep("log", { status: "ok", value: s48log(ten) }, s48log(ten.slice(0, 3)), { replace: true }, { payload: s48log(ten.slice(0, 3)) });
+  a.eq(rr.ok, true); a.eq(rr.value.sessions.length, 3); a.deep(rr.kept.sessions, []);
+  /* a drop that names a top-level key is honoured by the guard; an unnamed removal cannot happen through the overlay, so stub it: */
+  a.eq(P.shrinkCheck("log", s48log(ten), s48log(ten.slice(1))), S48_SHRINK);
+});
+
+T("A9 / the bodyweight migration's duplicate-date collapse is not a shrink: two disk rows on one date and one in memory keep the date, so a v1 store with duplicates can still be written after boot", function(a){
+  var disk = { entries: [{ date: "2026-01-01", kg: 80 }, { date: "2026-01-01", kg: 81 }, { date: "2026-01-02", kg: 82 }] };
+  var mem = { schemaVersion: 6, entries: [{ date: "2026-01-01", kg: 81, dateBasis: "utc" }, { date: "2026-01-02", kg: 82, dateBasis: "utc" }] };
+  var r = P.writeStep("bw", { status: "ok", value: disk }, mem, null, { payload: mem });
+  a.eq(r.ok, true); a.eq(r.value.entries.length, 2);
+  a.eq(P.shrinkCheck("bw", disk, r.value), null);
+});
+
+/* ------------------------------------------------------ replace and the exempt paths */
+
+T("replace:true - memory wholesale, kept empty, the disk ignored (restoreApply's three writes and nothing else); drop still applies; overlayStore never throws on garbage", function(a){
+  var ten = s48ten();
+  var r = P.overlayStore("log", s48log(ten), s48log([]), { replace: true });
+  a.eq(r.value.sessions.length, 0); a.deep(r.kept.sessions, []); a.deep(r.kept.keys, []);
+  var r2 = P.overlayStore("prefs", { gym: { bars: [], ex: { d1a: {} } } }, { gym: { bars: [], ex: { d1a: { au: "lb" }, d1b: { au: "kg" } } } }, { replace: true, drop: ["gym.ex.d1b"] });
+  a.eq(JSON.stringify(r2.value.gym), '{"bars":[],"ex":{"d1a":{"au":"lb"}}}');
+  [null, undefined, 7, "x", [], function(){}].forEach(function(bad){
+    a.noThrow(function(){ P.overlayStore("log", bad, { sessions: [] }); }, "disk " + show(bad));
+    a.noThrow(function(){ P.overlayStore("log", { sessions: [] }, bad); }, "mem " + show(bad));
+    a.noThrow(function(){ P.overlayStore(bad, { sessions: [] }, { sessions: [] }); }, "kind " + show(bad));
+    a.noThrow(function(){ P.shrinkCheck("log", bad, bad); });
+    a.noThrow(function(){ P.writeStep("log", bad, bad, bad, bad); });
+    a.noThrow(function(){ P.metaPatch(bad, bad); });
+  });
+  a.eq(P.overlayStore("nope", {}, {}).failed, true);
+  a.eq(P.overlayStore("log", { sessions: "garbage" }, { sessions: [S48_SESS(1, "2026-09-13")] }).value.sessions.length, 1, "disk sessions not an array: memory's list, noted");
+  a.eq(P.overlayStore("log", { sessions: [S48_SESS(1, "2026-09-13")] }, { sessions: "garbage" }).value.sessions.length, 1, "memory sessions not an array: disk's list kept");
+});
+
+T("kept - the three two-tab shapes as pure calls: disk has X and memory lacks X -> X kept and named; memory has Y -> Y added; memory changed Z -> Z taken", function(a){
+  var disk = { schemaVersion: 6, restAuto: true, onboarded: true, proteinDate: "2026-09-12", gym: { bars: [S48_BAR], unit: "lb" } };
+  var r = P.overlayStore("prefs", disk, { restAuto: false, backup: { at: 1, sig: "s" } });
+  a.eq(r.value.proteinDate, "2026-09-12", "X kept"); a.ok(r.kept.keys.indexOf("proteinDate") >= 0);
+  a.deep(r.value.backup, { at: 1, sig: "s" }, "Y added"); a.ok(r.kept.keys.indexOf("backup") < 0);
+  a.eq(r.value.restAuto, false, "Z taken"); a.ok(r.kept.keys.indexOf("restAuto") < 0);
+  a.eq(JSON.stringify(Object.keys(r.value)), '["schemaVersion","restAuto","onboarded","proteinDate","gym","backup"]', "disk's order, then memory's new key");
+  var idem = P.overlayStore("prefs", disk, disk);
+  a.eq(JSON.stringify(idem.value), JSON.stringify(disk)); a.deep(idem.kept, { keys: [], sessions: [], entries: [], plans: [], ex: [] });
+});
+
+T("S48 TRIPWIRE - the two refusal sentences are literals the screen shows; a copy change here is a copy change on his phone", function(a){
+  a.eq(P.writeStep("log", { status: "error" }, {}, null, {}).message, "Not saved. The stored copy of this data could not be read and must not be overwritten. Export, then reload.");
+  a.eq(P.shrinkCheck("log", { sessions: [S48_SESS(1, "2026-09-13")] }, { sessions: [] }), "Not saved. This write would remove saved data. Reload and try again.");
+});
+
+T("S48 TRIPWIRE - up to the end of S48 no fixture wrote a phat:* key", function(a){
+  a.deep(PHAT_KEY_WRITES, []);
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs in under 2 seconds with no manual input", function(a){

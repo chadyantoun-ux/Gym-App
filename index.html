@@ -1248,18 +1248,83 @@ async function readRaw(k){
   }catch(e){ return {status:"error",value:null,reason:"parse",raw:raw}; }
 }
 async function load(k){ const r=await readRaw(k); return r.status==="ok"?r.value:null; }
-async function save(k,obj){
+/* WO-013 W1. READ BEFORE WRITE. The four stores a stale tab can overwrite,
+   by kind, and the memory payload that is the base when the key is absent
+   (so a first write carries schemaVersion and every meta key exactly as it
+   did before - A8). Every other key (the draft, the plan working copy, the
+   recover:* keeps) is written as handed, untouched by this order. */
+const KIND_OF={[LOG]:"log",[BWK]:"bw",[PLANS]:"plans",[PREFS]:"prefs"};
+const PAYLOAD_OF={[LOG]:()=>logPayload(),[BWK]:()=>bwPayload(),[PLANS]:()=>plansPayload(),[PREFS]:()=>prefsPayload()};
+/* Memory takes what was written, through the same reader boot uses, so a
+   tab never lags the disk after its own write (B-123, in the direction that
+   closes B-76's stale page). Every other tab is stale until it writes. */
+function adoptStore(k,v){
+  if(k===LOG) adoptLog(v);
+  else if(k===BWK) adoptBw(v);
+  else if(k===PLANS) adoptPlans(v);
+  else if(k===PREFS) adoptPrefs(v);
+}
+/* save(k, obj, opts) -> true | false. S.err carries the refusal.
+   For LOG / BWK / PLANS / PREFS (WO-013 §2.1):
+     1. S.blockWrites[k] refuses as before.
+     2. The key is READ NOW - after any await the caller did, never cached.
+     3. `error` on a store that read fine at boot REFUSES: a storage fault
+        mid-session, and the only safe write is none. (A store that was
+        already unreadable at boot had its bytes copied aside then, and its
+        writes proceed on the memory base as they always have.)
+        `absent` -> the memory payload is the base. `ok` -> the disk is.
+     4. PHAT.overlayStore(kind, base, obj, opts): obj may be a PATCH (only
+        the keys the caller changes) or the whole payload; either way a key
+        or a document on disk and not in obj is KEPT. opts.drop names the
+        keys that leave; opts.replace (restore only) writes obj wholesale.
+     5. The shrink guard (PHAT.shrinkCheck) refuses a result that holds fewer
+        documents or fewer top-level keys than the disk - it cannot fire by
+        construction; it is the tripwire that says so.
+     6. Write. Then, as before: S.stores ok, the backup timer.
+     7. ADOPT: memory takes what was written.
+   S.lastWrite[k] carries the {ok, kept, base, notes} truth of the last
+   write; the return stays a boolean so no caller changes shape. */
+async function save(k,obj,opts){
   if(S.blockWrites[k]){
     S.err="Not saved. The stored copy of this data could not be read and must not be overwritten. Export, then reload.";
     return false;
   }
+  const kind=KIND_OF[k];
+  let next=obj, step=null;
+  if(kind){
+    const r=await readRaw(k);
+    const bootError=k===PREFS?S.prefsBad===true:S.stores[STORE_OF[k]]==="error";
+    step=PHAT.writeStep(kind,r,obj,opts,{payload:PAYLOAD_OF[k](),bootError:bootError});
+    if(!step.ok){
+      if(step.reason==="shrink") console.error("[phat] write refused: it would remove saved data",k,step.notes);
+      else console.warn("[phat] write refused: the stored copy could not be read",k,r.reason);
+      S.err=step.message; S.lastWrite[k]={ok:false,reason:step.reason,notes:step.notes};
+      return false;
+    }
+    next=step.value;
+    /* The guard, asserted HERE as well as inside writeStep: the adapter
+       does not trust the decision it was handed. A stubbed or mutated
+       writeStep that hands back fewer documents or keys than the disk holds
+       is refused at the seam that writes. */
+    const why=(r.status==="ok"&&r.value&&typeof r.value==="object")?PHAT.shrinkCheck(kind,r.value,next,opts):null;
+    if(why){
+      console.error("[phat] write refused: it would remove saved data",k,"(adapter guard)");
+      S.err=why; S.lastWrite[k]={ok:false,reason:"shrink",notes:step.notes};
+      return false;
+    }
+    if(step.notes.length) console.warn("[phat] write",k,step.notes.join("; "));
+  }
   try{
-    if(hasNative) await window.storage.set(k,JSON.stringify(obj));
-    else localStorage.setItem(k,JSON.stringify(obj));
+    if(hasNative) await window.storage.set(k,JSON.stringify(next));
+    else localStorage.setItem(k,JSON.stringify(next));
     S.err=null;
     /* B-73. The write landed, so the store on disk is what was just written:
        readable. Set for every store, not only plans - the truth is the same. */
     if(STORE_OF[k]) S.stores[STORE_OF[k]]="ok";
+    if(kind){
+      S.lastWrite[k]={ok:true,kept:step.kept,base:step.base,notes:step.notes};
+      adoptStore(k,next);
+    }
     /* E-3. The local write is DONE. Only now, and only for the three stores
        that back up, is a push scheduled - a timer, never an await, so nothing
        network-shaped sits between this return and the caller's toast. */
@@ -1385,6 +1450,14 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
          /* WO-012b. ovMigrated: how many overrides the boot's one-time pass
             rewrote (au dropped, v:2 stamped) - the count for its one write. */
          ovMigrated:0,
+         /* WO-013 W1. ovDropped: the ids that pass REMOVED (nothing tapped) -
+            the boot write names them in opts.drop, since a removal is never a
+            side effect of the overlay. */
+         ovDropped:[],
+         /* WO-013 W1. lastWrite: per store key, the truth of the last save()
+            - {ok, kept, base, notes} or {ok:false, reason, notes}. In memory
+            only; the return value of save() stays a boolean. */
+         lastWrite:{},
          prefsMeta:{},exp:null,
          /* E-3. The backup client's state, IN MEMORY. `mod` is whether sync.js
             loaded: "off" (never attempted - file://, or offline at boot),
@@ -2437,14 +2510,14 @@ function gymAdopt(raw){
    validation. Returns the count for the boot's one write; it never fires
    twice on one record because the write stamps v:2. */
 function migrateOverrides(g){
-  const out={gym:g,n:0};
+  const out={gym:g,n:0,dropped:[]};
   if(!isRec(g)||g.unit!=="lb"||!isRec(g.ex)) return out;
   const ex=Object.assign({},g.ex);
   Object.keys(ex).forEach(k=>{
     const r=ex[k];
     if(!isRec(r)||(typeof r.v==="number"&&r.v>=2)||r.au!=="kg") return;
     const nr={}; Object.keys(r).forEach(kk=>{ if(kk!=="au") nr[kk]=r[kk]; });
-    if(nr.bar===undefined) delete ex[k]; else{ nr.v=2; ex[k]=nr; }
+    if(nr.bar===undefined){ delete ex[k]; out.dropped.push(k); } else{ nr.v=2; ex[k]=nr; }
     out.n++;
   });
   if(out.n){ out.gym=Object.assign({},g,{ex:ex}); if(!Object.keys(ex).length) delete out.gym.ex; }
@@ -7057,6 +7130,86 @@ function adoptBw(bw){
   S.bwMeta={}; Object.keys(bw).forEach(k=>{ if(k!=="entries") S.bwMeta[k]=bw[k]; });
   S.bw=Array.isArray(bw.entries)?bw.entries:[];
 }
+/* WO-013 W1. THE PREFS READER, one path: boot calls it on the store it read
+   (o.boot), save() calls it on the bytes it just wrote. Same validation,
+   same gymAdopt, same S.gymKeep; it writes nothing. `v` is the parsed store
+   object. The override pass's count lands on S.ovMigrated at boot only -
+   it is the boot's one prefs write, and a post-write adoption re-running
+   the pass on records already stamped v:2 finds nothing. */
+function adoptPrefs(v,o){
+  if(!v||typeof v!=="object") return;
+  const boot=!!(o&&o.boot);
+  S.prefsMeta={};
+  Object.keys(v).forEach(k=>{
+    if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate"&&k!=="backup"&&k!=="gym"&&k!=="merge") S.prefsMeta[k]=v[k]; });
+  /* WO-011 W4. The merge record, shape-checked the way the stamp is: an
+     object with a numeric `at` or `keptAt`; anything else reads as "never
+     checked" and is not rewritten here (no boot write). */
+  S.prefs.merge=(v.merge&&typeof v.merge==="object"&&
+    (typeof v.merge.at==="number"||typeof v.merge.keptAt==="number"))?v.merge:null;
+  /* WO-010 W6. The gym profile, validated on the way in. A profile this
+     build cannot read is NOT adopted and NOT rewritten here (no boot
+     write): S.gymBad says so on the sheet and in Settings, and the next
+     Save from Settings writes a valid one over it. */
+  /* WO-012 W4 (D4). Through PHAT.readGymProfile: the bars decide `ok` as
+     before, and `unit` / `ex` ride along PER KEY - a bad unit, a bad ex
+     map or ONE bad override is dropped BY NAME from what is adopted (one
+     console.warn naming it), never a reason to refuse the bars. Nothing
+     is rewritten here; the next Gym write from Settings or a card writes
+     the clean profile over it. */
+  /* WO-012b. The override pass first, on the raw store (see
+     migrateOverrides), then gymAdopt: readGymProfile over the COMPOSED
+     profile, the records re-attached. The pass's count is the boot's one
+     prefs write, next to the log's own migration writes. */
+  if(v.gym!==undefined&&v.gym!==null){
+    const mig=migrateOverrides(v.gym), raw=mig.gym;
+    const rg=gymAdopt(raw);
+    if(rg&&rg.drop.length) console.warn("[phat] prefs.gym: dropped "+rg.drop.join(", "));
+    if(rg&&rg.ok){
+      S.prefs.gym=rg.gym; S.gymBad=false; S.gymKeep=null;
+      if(boot){ S.ovMigrated=mig.n; S.ovDropped=mig.dropped; }
+    }else{
+      S.gymBad=true; console.warn("[phat] prefs.gym did not validate");
+      /* The bars are refused; the unit and every override that reads are
+         NOT thrown away with them (§3.3). Kept aside, merged back under
+         the next write. Cards meanwhile are on kg (spec 21.2). */
+      const keep={};
+      try{
+        const drop=rg?rg.drop:[];
+        if(typeof raw==="object"&&(raw.unit==="kg"||raw.unit==="lb")&&drop.indexOf("unit")<0) keep.unit=raw.unit;
+        if(typeof raw==="object"&&raw.ex&&typeof raw.ex==="object"&&drop.indexOf("ex")<0){
+          const ex={}, eg=gymEngine(raw);
+          Object.keys(raw.ex).forEach(k=>{ const m=PHAT.overrideMode(eg,k); if(m) ex[k]=recFrom(raw.ex[k],m); });
+          if(Object.keys(ex).length) keep.ex=ex;
+        }
+      }catch(err){}
+      S.gymKeep=Object.keys(keep).length?keep:null;
+    }
+  }else{ S.prefs.gym=null; S.gymBad=false; S.gymKeep=null; }
+  /* E-3. The last successful backup, or null. Shape-checked: a stamp that
+     is not an object with a numeric `at` is treated as "never backed up",
+     which is the honest reading of a stamp this build cannot vouch for. */
+  S.prefs.backup = (v.backup&&typeof v.backup==="object"&&typeof v.backup.at==="number")
+    ? v.backup : null;
+  /* WO-008 W4. `user` is read in both shapes - the E-3 string id and the
+     {id, email} object - through PHAT.backupOwner, and normalised in memory
+     to the object so every reader sees one shape. Not written here: the
+     next stamp (a push or a restore that lands) writes the object form, and
+     a string stamp migrated offline carries email:null until the owner's
+     own push fills it. No boot write. */
+  if(S.prefs.backup){
+    const ow=PHAT.backupOwner(S.prefs.backup);
+    const nb={}; Object.keys(S.prefs.backup).forEach(k=>{ nb[k]=S.prefs.backup[k]; });
+    nb.user=ow?{id:ow.id,email:ow.email}:null;
+    S.prefs.backup=nb;
+  }
+  S.prefs.restAuto = v.restAuto===undefined ? true : !!v.restAuto;
+  S.prefs.onboarded = !!v.onboarded;
+  /* A stored tick from any day but today reads as off. It is kept, not
+     cleared: clearing it would be a write on boot, and this key is never
+     written except by a tap. */
+  S.prefs.proteinDate = typeof v.proteinDate==="string" ? v.proteinDate : "";
+}
 
 const syncOn=()=>S.sync.mod==="ready"&&!!window.PHAT_SYNC;
 const signedIn=()=>syncOn()&&!!S.sync.user;
@@ -7469,6 +7622,22 @@ async function mergeOnOpen(reason){
       const D2=await storesOnDisk();
       if(D2.raw.log===D.raw.log&&D2.raw.bw===D.raw.bw&&D2.raw.plans===D.raw.plans) break;
       if(tries>=2){ await stampKeep(keptAt); return fail("error","Could not check the backup: this device kept changing while the backup was being read. Nothing here changed."); }
+    }
+    /* WO-013 W1 (B-123). A store this merge will NOT write, whose disk copy
+       is not what this tab holds - another document wrote it (its own
+       merge, a session, a weight) - is adopted from the disk read the merge
+       was built on. Memory never lags disk after a merge: the header counts
+       it, the push that follows stamps it. Compared sorted and key-order
+       blind, so boot's own sort is not a difference. */
+    let adopted=false;
+    {
+      const wr={}; st.writes.forEach(w=>{ wr[w.key]=true; });
+      const SJ=PHAT.stableJson;
+      if(!wr[LOG]&&D.stores.log==="ok"&&D.log&&typeof D.log==="object"&&
+         SJ(Object.assign({},D.log,{sessions:PHAT.sortSessions(D.log.sessions)}))!==SJ(logPayload())){ adoptLog(D.log); adopted=true; }
+      if(!wr[BWK]&&D.stores.bw==="ok"&&D.bw&&typeof D.bw==="object"&&SJ(D.bw)!==SJ(bwPayload())){ adoptBw(D.bw); adopted=true; }
+      if(!wr[PLANS]&&D.stores.plans==="ok"&&D.plans&&typeof D.plans==="object"&&SJ(D.plans)!==SJ(plansPayload())){ adoptPlans(D.plans); adopted=true; }
+      if(adopted) console.info("[phat] merge: adopted what another document wrote");
     }
     /* The writes, log first. A failed first write stops with nothing
        changed (M-j); a failed later write is reported, never hidden (M-j'). */
@@ -7976,74 +8145,10 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      third claimant on the notice slot would push a real one off it (B-40). */
   const rp=await readRaw(PREFS);
   if(rp.status==="ok"&&rp.value&&typeof rp.value==="object"){
-    S.prefsMeta={};
-    Object.keys(rp.value).forEach(k=>{
-      if(k!=="restAuto"&&k!=="onboarded"&&k!=="proteinDate"&&k!=="backup"&&k!=="gym"&&k!=="merge") S.prefsMeta[k]=rp.value[k]; });
-    /* WO-011 W4. The merge record, shape-checked the way the stamp is: an
-       object with a numeric `at` or `keptAt`; anything else reads as "never
-       checked" and is not rewritten here (no boot write). */
-    S.prefs.merge=(rp.value.merge&&typeof rp.value.merge==="object"&&
-      (typeof rp.value.merge.at==="number"||typeof rp.value.merge.keptAt==="number"))?rp.value.merge:null;
-    /* WO-010 W6. The gym profile, validated on the way in. A profile this
-       build cannot read is NOT adopted and NOT rewritten here (no boot
-       write): S.gymBad says so on the sheet and in Settings, and the next
-       Save from Settings writes a valid one over it. */
-    /* WO-012 W4 (D4). Through PHAT.readGymProfile: the bars decide `ok` as
-       before, and `unit` / `ex` ride along PER KEY - a bad unit, a bad ex
-       map or ONE bad override is dropped BY NAME from what is adopted (one
-       console.warn naming it), never a reason to refuse the bars. Nothing
-       is rewritten here; the next Gym write from Settings or a card writes
-       the clean profile over it. */
-    /* WO-012b. The override pass first, on the raw store (see
-       migrateOverrides), then gymAdopt: readGymProfile over the COMPOSED
-       profile, the records re-attached. The pass's count is the boot's one
-       prefs write, below, next to the log's own migration writes. */
-    if(rp.value.gym!==undefined&&rp.value.gym!==null){
-      const mig=migrateOverrides(rp.value.gym), raw=mig.gym;
-      const rg=gymAdopt(raw);
-      if(rg&&rg.drop.length) console.warn("[phat] prefs.gym: dropped "+rg.drop.join(", "));
-      if(rg&&rg.ok){ S.prefs.gym=rg.gym; S.ovMigrated=mig.n; }
-      else{
-        S.gymBad=true; console.warn("[phat] prefs.gym did not validate");
-        /* The bars are refused; the unit and every override that reads are
-           NOT thrown away with them (§3.3). Kept aside, merged back under
-           the next write. Cards meanwhile are on kg (spec 21.2). */
-        const keep={};
-        try{
-          const drop=rg?rg.drop:[];
-          if(typeof raw==="object"&&(raw.unit==="kg"||raw.unit==="lb")&&drop.indexOf("unit")<0) keep.unit=raw.unit;
-          if(typeof raw==="object"&&raw.ex&&typeof raw.ex==="object"&&drop.indexOf("ex")<0){
-            const ex={}, eg=gymEngine(raw);
-            Object.keys(raw.ex).forEach(k=>{ const m=PHAT.overrideMode(eg,k); if(m) ex[k]=recFrom(raw.ex[k],m); });
-            if(Object.keys(ex).length) keep.ex=ex;
-          }
-        }catch(err){}
-        S.gymKeep=Object.keys(keep).length?keep:null;
-      }
-    }
-    /* E-3. The last successful backup, or null. Shape-checked: a stamp that
-       is not an object with a numeric `at` is treated as "never backed up",
-       which is the honest reading of a stamp this build cannot vouch for. */
-    S.prefs.backup = (rp.value.backup&&typeof rp.value.backup==="object"&&typeof rp.value.backup.at==="number")
-      ? rp.value.backup : null;
-    /* WO-008 W4. `user` is read in both shapes - the E-3 string id and the
-       {id, email} object - through PHAT.backupOwner, and normalised in memory
-       to the object so every reader sees one shape. Not written here: the
-       next stamp (a push or a restore that lands) writes the object form, and
-       a string stamp migrated offline carries email:null until the owner's
-       own push fills it. No boot write. */
-    if(S.prefs.backup){
-      const ow=PHAT.backupOwner(S.prefs.backup);
-      const nb={}; Object.keys(S.prefs.backup).forEach(k=>{ nb[k]=S.prefs.backup[k]; });
-      nb.user=ow?{id:ow.id,email:ow.email}:null;
-      S.prefs.backup=nb;
-    }
-    S.prefs.restAuto = rp.value.restAuto===undefined ? true : !!rp.value.restAuto;
-    S.prefs.onboarded = !!rp.value.onboarded;
-    /* A stored tick from any day but today reads as off. It is kept, not
-       cleared: clearing it would be a write on boot, and this key is never
-       written except by a tap. */
-    S.prefs.proteinDate = typeof rp.value.proteinDate==="string" ? rp.value.proteinDate : "";
+    /* WO-013 W1. The reader is adoptPrefs, one path for boot and for the
+       adoption after this tab's own prefs write. Same validation, same
+       gymAdopt, same S.gymKeep, and no boot write. */
+    adoptPrefs(rp.value,{boot:true});
   }else if(rp.status==="error"){
     console.warn("[phat] prefs unreadable:",rp.reason);
     /* WO-008 W5: the owner row says so (H7, spec 18.2). It stops nothing. */
@@ -8090,8 +8195,12 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      the raw store next boot to the same result - so it is silent: save()'s
      generic S.err is put back, as overrideCommit does. */
   if(S.ovMigrated&&!S.gymBad&&!S.prefsBad){
-    const e0=S.err; const okp=await save(PREFS,prefsPayload()); if(!okp) S.err=e0;
-    console.info("[phat] override pass: "+S.ovMigrated+" rewritten"+(okp?"":", not written"));
+    /* WO-013. Patch {gym}, and the records the pass REMOVED are named in
+       `drop`: a removal is never a side effect of the overlay, and without
+       the name the disk-only record would be kept and come back next boot. */
+    const n=S.ovMigrated, dropped=S.ovDropped.map(id=>"gym.ex."+id);
+    const e0=S.err; const okp=await save(PREFS,{gym:S.prefs.gym},dropped.length?{drop:dropped}:undefined); if(!okp) S.err=e0;
+    console.info("[phat] override pass: "+n+" rewritten"+(dropped.length?", "+dropped.length+" removed":"")+(okp?"":", not written"));
   }
   /* Read the draft here, before the first render and before any day can be
      tapped, so startDay() knows whether one exists. W5 turns "ok" into the
