@@ -9745,6 +9745,293 @@
     return out;
   }
 
+  /* ==================================================== WO-013 W1
+     READ BEFORE WRITE. Every write to the four stores (log, bw, plans,
+     prefs) re-reads the key and overlays what the caller changed onto what
+     is there, so a key or a document that is on disk and not in this tab's
+     memory is KEPT. A removal is explicit and named (opts.drop, opts.replace),
+     never a side effect of a stale S. B-76 / B-123 / B-124 / B-128: one
+     class, one fix. Pure: no DOM, no S, no storage - index.html's save()
+     reads the key, hands the bytes here, writes what comes back. */
+
+  var OV_KINDS = { log: "sessions", bw: "entries", plans: "plans", prefs: null };
+  var ovHas = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+  var ovKept = function () { return { keys: [], sessions: [], entries: [], plans: [], ex: [] }; };
+  /* The identity of a document inside a store's array. Sessions by id,
+     bodyweight by date, plans by planId. An element with no usable key is
+     identified by its own bytes: the same bytes on both sides are one
+     document; different bytes are two, and both are kept - nothing here can
+     drop a row it cannot name. */
+  function ovDocKey(kind, el) {
+    if (kind === "log") {
+      if (isObj(el) && el.id !== undefined && el.id !== null && str(el.id) !== "") return "id:" + str(el.id);
+    } else if (kind === "bw") {
+      if (isObj(el) && typeof el.date === "string" && el.date !== "") return "d:" + el.date;
+    } else if (kind === "plans") {
+      if (isObj(el) && typeof el.planId === "string" && el.planId.trim() !== "") return "p:" + el.planId.trim();
+    }
+    return "~" + stableJson(el);
+  }
+  function ovDocLabel(key) { return key.charAt(0) === "~" ? key.slice(1) : key.slice(key.indexOf(":") + 1); }
+  function ovKeptList(kind) { return kind === "log" ? "sessions" : kind === "bw" ? "entries" : "plans"; }
+
+  /* The array union: mem's elements in mem's order, then every disk element
+     whose key mem does not hold (two disk rows under one key are BOTH kept
+     when mem lacks the key - never one of two). Same key -> mem's bytes
+     (B-133). Sessions are re-sorted only when something was added (stable;
+     mem's own order is otherwise untouched, so a single tab's bytes hold). */
+  function ovUnion(kind, dArr, mArr, kept, notes) {
+    var name = OV_KINDS[kind];
+    var mOk = Array.isArray(mArr), dOk = Array.isArray(dArr);
+    if (!mOk && !dOk) return mArr !== undefined ? mArr : dArr;
+    if (!dOk) { if (dArr !== undefined) notes.push("disk " + name + " is not an array; memory's list stands"); return mArr; }
+    if (!mOk) { if (mArr !== undefined) notes.push("memory " + name + " is not an array; disk's list kept"); return dArr; }
+    var have = {};
+    mArr.forEach(function (el) { have[ovDocKey(kind, el)] = true; });
+    var out = mArr.slice(), list = kept[ovKeptList(kind)], added = 0;
+    dArr.forEach(function (el) {
+      var key = ovDocKey(kind, el);
+      if (have[key]) return;
+      out.push(el); added++;
+      list.push(ovDocLabel(key));
+    });
+    if (!added) return mArr;
+    return kind === "log" ? sortSessions(out) : out;
+  }
+
+  var ovAt = function (rec) { return isObj(rec) && typeof rec.at === "number" && isFinite(rec.at) ? rec.at : null; };
+  /* backup: the record with the greater `at` wins WHOLE (a stamp never
+     regresses - B-124); equal, or neither numeric -> mem's. A side with no
+     numeric `at` loses to a side with one. */
+  function ovBackup(d, m, kept) {
+    if (m === undefined) { if (d !== undefined) kept.keys.push("backup"); return d; }
+    if (d === undefined) return m;
+    var da = ovAt(d), ma = ovAt(m);
+    if (da !== null && (ma === null || da > ma)) { kept.keys.push("backup"); return d; }
+    return m;
+  }
+  /* merge: `at` = the greater, and n/m/p (every other key) from that side;
+     `keptAt` = the greater of the two (a keep is never un-spent). Key order
+     is the winner's with the loser's extra keys appended - the order
+     Object.assign({}, prev, {keptAt}) and Object.assign({}, prev, {at,n,m,p})
+     already produce, so a single tab's bytes do not move. */
+  function ovMerge(d, m, kept) {
+    if (m === undefined) { if (d !== undefined) kept.keys.push("merge"); return d; }
+    if (d === undefined) return m;
+    if (!isObj(d)) return m;
+    if (!isObj(m)) { kept.keys.push("merge"); return d; }
+    var da = ovAt(d), ma = ovAt(m);
+    var diskWins = da !== null && (ma === null || da > ma);
+    var win = diskWins ? d : m, lose = diskWins ? m : d;
+    var out = copyObj(win);
+    Object.keys(lose).forEach(function (k) { if (!ovHas(out, k)) out[k] = lose[k]; });
+    var dk = typeof d.keptAt === "number" ? d.keptAt : null, mk = typeof m.keptAt === "number" ? m.keptAt : null;
+    if (dk !== null && (mk === null || dk > mk)) { out.keptAt = dk; if (!diskWins) kept.keys.push("merge.keptAt"); }
+    else if (mk !== null) out.keptAt = mk;
+    if (diskWins) kept.keys.push("merge");
+    return out;
+  }
+  /* gym, deep: unit mem where present; bars REPLACE where present (B-132: a
+     bar he deleted stays deleted); ex per id - mem's records win, disk-only
+     ids kept; an ex that ends {} is absent. Any other gym key: mem wins
+     where present, disk-only kept. A gym that is not an object on one side
+     is the other side's. Key order: disk's, then mem's new keys. */
+  function ovGym(d, m, kept, notes) {
+    if (m === undefined) { if (d !== undefined) kept.keys.push("gym"); return d; }
+    if (d === undefined) return m;
+    if (!isObj(m)) { notes.push("memory gym is not an object; disk's kept"); kept.keys.push("gym"); return d; }
+    if (!isObj(d)) { notes.push("disk gym is not an object; memory's stands"); return m; }
+    var dex = isObj(d.ex) ? d.ex : null, mex = isObj(m.ex) ? m.ex : null;
+    if (ovHas(d, "ex") && !dex) notes.push("disk gym.ex is not an object; memory's stands");
+    if (ovHas(m, "ex") && !mex) notes.push("memory gym.ex is not an object; disk's kept");
+    var ex;
+    if (!dex && !mex) ex = undefined;
+    else if (!dex) ex = mex;
+    else if (!mex) { ex = dex; Object.keys(dex).forEach(function (id) { kept.ex.push(id); }); }
+    else {
+      ex = {};
+      Object.keys(dex).forEach(function (id) {
+        if (ovHas(mex, id)) ex[id] = mex[id];
+        else { ex[id] = dex[id]; kept.ex.push(id); }
+      });
+      Object.keys(mex).forEach(function (id) { if (!ovHas(ex, id)) ex[id] = mex[id]; });
+    }
+    if (ex !== undefined && !Object.keys(ex).length) ex = undefined;
+    var out = {};
+    var put = function (k) {
+      if (k === "ex") { if (ex !== undefined) out.ex = ex; return; }
+      if (ovHas(m, k)) out[k] = m[k];
+      else { out[k] = d[k]; kept.keys.push("gym." + k); }
+    };
+    Object.keys(d).forEach(put);
+    Object.keys(m).forEach(function (k) { if (!ovHas(d, k)) put(k); });
+    return out;
+  }
+
+  /* applyDrop(value, paths) -> the same object with the named dotted paths
+     removed. A path through a non-object, or one not present, is a no-op.
+     The ONLY way a key leaves a store. `gym.ex` emptied by a drop is
+     removed with it (an ex that ends {} is absent - the overlay's own rule);
+     no other parent is removed by side effect, and never a top-level key. */
+  function applyDrop(value, paths) {
+    if (!isObj(value) || !Array.isArray(paths)) return value;
+    paths.forEach(function (p) {
+      if (typeof p !== "string" || p === "") return;
+      var parts = p.split("."), cur = value, i;
+      for (i = 0; i < parts.length - 1; i++) {
+        if (!isObj(cur) || !ovHas(cur, parts[i])) return;
+        cur = cur[parts[i]];
+      }
+      if (!isObj(cur) || !ovHas(cur, parts[parts.length - 1])) return;
+      delete cur[parts[parts.length - 1]];
+    });
+    if (isObj(value.gym) && isObj(value.gym.ex) && !Object.keys(value.gym.ex).length) delete value.gym.ex;
+    return value;
+  }
+
+  /* overlayStore(kind, disk, mem, opts)
+       -> { value, kept:{keys:[], sessions:[id], entries:[date], plans:[planId], ex:[id]}, notes:[] }
+
+     kind  "log" | "bw" | "plans" | "prefs"
+     disk  the store as read from the key, NOW
+     mem   what the caller is writing: a patch (only the keys it changes) or
+           the whole payload - both overlay the same way
+     opts  { replace:true }  mem wholesale, the only path that shrinks
+                             (restore, and nothing else)
+           { drop:[path] }   dotted paths removed after the overlay
+
+     Key order: disk's keys in disk's order, then mem's new keys in mem's
+     order - so on a disk this build wrote, a single tab's write is byte for
+     byte what it wrote before (A5). Top level: mem wins where present,
+     disk-only kept. The store's document array unions by key (ovUnion);
+     prefs.gym / backup / merge merge deep (above). `kept` lists what was on
+     disk and not in mem, or what disk won. `value` is a NEW object at the
+     top level; the documents inside are the same references. Never throws:
+     a throw, a non-object on either side, or an unknown kind returns mem,
+     empty kept, `failed:true` and the reason in notes - the caller decides
+     what that means (writeStep bases on the memory payload and lets the
+     shrink guard rule against the disk that is really there). */
+  function overlayStore(kind, disk, mem, opts) {
+    var kept = ovKept(), notes = [];
+    var o = isObj(opts) ? opts : {};
+    try {
+      if (typeof kind !== "string" || !ovHas(OV_KINDS, kind)) { notes.push("unknown store kind " + str(kind) + "; memory stands"); return { value: mem, kept: kept, notes: notes, failed: true }; }
+      if (o.replace === true) return { value: applyDrop(mem, o.drop), kept: kept, notes: notes };
+      if (!isObj(mem)) { notes.push("memory is not an object; nothing overlaid"); return { value: mem, kept: kept, notes: notes, failed: true }; }
+      if (!isObj(disk)) { notes.push("disk is not an object; memory stands"); return { value: mem, kept: kept, notes: notes, failed: true }; }
+      var arr = OV_KINDS[kind], out = {};
+      var deep = kind === "prefs" ? { gym: ovGym, backup: ovBackup, merge: ovMerge } : {};
+      var setKey = function (k) {
+        if (arr && k === arr) {
+          var u = ovUnion(kind, disk[k], mem[k], kept, notes);
+          if (u !== undefined) out[k] = u;
+          if (!ovHas(mem, k)) kept.keys.push(k);
+          return;
+        }
+        if (ovHas(deep, k)) {
+          var v = deep[k](ovHas(disk, k) ? disk[k] : undefined, ovHas(mem, k) ? mem[k] : undefined, kept, notes);
+          if (v !== undefined) out[k] = v;
+          return;
+        }
+        if (ovHas(mem, k)) out[k] = mem[k];
+        else { out[k] = disk[k]; kept.keys.push(k); }
+      };
+      Object.keys(disk).forEach(setKey);
+      Object.keys(mem).forEach(function (k) { if (!ovHas(disk, k)) setKey(k); });
+      return { value: applyDrop(out, o.drop), kept: kept, notes: notes };
+    } catch (err) {
+      return { value: mem, kept: ovKept(), notes: ["overlay threw: " + (err && err.message)], failed: true };
+    }
+  }
+
+  /* shrinkCheck(kind, base, next, opts) -> null, or the sentence that refuses.
+     THE TRIPWIRE, asserted not assumed: unless opts.replace, `next` holds
+     every top-level key of `base` (except those named in opts.drop), every
+     document key base's array holds (by ovDocKey), and no fewer elements
+     than base has distinct keys. It cannot fire by construction; it is what
+     says so. Its sentence is the one save() puts in S.err. */
+  var SHRINK_MSG = "Not saved. This write would remove saved data. Reload and try again.";
+  function shrinkCheck(kind, base, next, opts) {
+    var o = isObj(opts) ? opts : {};
+    if (o.replace === true) return null;
+    if (!isObj(base)) return null;
+    if (!isObj(next)) return SHRINK_MSG;
+    var drop = {};
+    if (Array.isArray(o.drop)) o.drop.forEach(function (p) { if (typeof p === "string" && p.indexOf(".") < 0) drop[p] = true; });
+    var missing = [];
+    Object.keys(base).forEach(function (k) { if (!ovHas(next, k) && !drop[k]) missing.push(k); });
+    if (missing.length) return SHRINK_MSG;
+    var arr = OV_KINDS[kind];
+    if (arr && Array.isArray(base[arr])) {
+      if (!Array.isArray(next[arr])) return SHRINK_MSG;
+      var have = {}, seen = {}, distinct = 0, lost = 0;
+      next[arr].forEach(function (el) { have[ovDocKey(kind, el)] = true; });
+      base[arr].forEach(function (el) {
+        var key = ovDocKey(kind, el);
+        if (!seen[key]) { seen[key] = true; distinct++; if (!have[key]) lost++; }
+      });
+      if (lost || next[arr].length < distinct) return SHRINK_MSG;
+    }
+    return null;
+  }
+
+  /* writeStep(kind, read, mem, opts, ctx) -> what save() does, decided.
+       read  readRaw's result {status:"ok"|"absent"|"error", value}
+       mem   what the caller is writing (patch or whole)
+       ctx   { payload:   the store's memory payload - the base when the disk
+                          is absent, so a first write carries schemaVersion
+                          and every meta key exactly as it did before (A8);
+               bootError: true when THIS store's boot read was already an
+                          error - its bytes were copied aside then (or, for
+                          prefs, were garbage with nothing to keep), and the
+                          write proceeds on the memory base as it always has }
+     -> { ok:false, reason:"unreadable"|"shrink", message, notes }
+      | { ok:true, value, kept, notes, base:"disk"|"memory" }
+     A read `error` on a store that read fine at boot is a storage fault
+     mid-session; the only safe write is none. The shrink guard is always
+     checked against the disk value when there is one. */
+  var UNREADABLE_MSG = "Not saved. The stored copy of this data could not be read and must not be overwritten. Export, then reload.";
+  function writeStep(kind, read, mem, opts, ctx) {
+    var o = isObj(opts) ? opts : {}, c = isObj(ctx) ? ctx : {};
+    var r = isObj(read) ? read : { status: "error" };
+    var notes = [];
+    if (r.status === "error" && c.bootError !== true) return { ok: false, reason: "unreadable", message: UNREADABLE_MSG, notes: notes };
+    var onDisk = r.status === "ok" && isObj(r.value);
+    var base, from;
+    if (onDisk) { base = r.value; from = "disk"; }
+    else {
+      base = isObj(c.payload) ? c.payload : mem; from = "memory";
+      if (r.status === "ok") notes.push("disk value is not an object; the memory payload is the base");
+      if (r.status === "error") notes.push("store unreadable since boot; the memory payload is the base");
+    }
+    var ov = overlayStore(kind, base, mem, o);
+    if (ov.failed && from === "disk") {
+      /* the overlay could not use the disk: base on memory, and let the
+         guard below rule against the disk that is really there */
+      from = "memory";
+      ov = overlayStore(kind, isObj(c.payload) ? c.payload : mem, mem, o);
+    }
+    var value = ov.failed ? mem : ov.value;
+    var why = shrinkCheck(kind, onDisk ? r.value : base, value, o);
+    if (why) return { ok: false, reason: "shrink", message: why, notes: notes.concat(ov.notes) };
+    return { ok: true, value: value, kept: ov.kept, notes: notes.concat(ov.notes), base: from };
+  }
+
+  /* metaPatch(before, after) -> { set:{key: after[key]}, drop:[key] }
+     The keys that changed between two snapshots of a store's meta, so a
+     site that gets a whole next-state back from an engine writes only what
+     moved and names what the engine deleted. Applying set, then drop, to
+     `before` yields `after` (stableJson). Values compare key-order-blind. */
+  function metaPatch(before, after) {
+    var b = isObj(before) ? before : {}, a = isObj(after) ? after : {};
+    var out = { set: {}, drop: [] };
+    Object.keys(a).forEach(function (k) {
+      if (!ovHas(b, k) || stableJson(b[k]) !== stableJson(a[k])) out.set[k] = a[k];
+    });
+    Object.keys(b).forEach(function (k) { if (!ovHas(a, k)) out.drop.push(k); });
+    return out;
+  }
+
   /* ------------------------------------------------------------- exports */
 
   window.PHAT = {
@@ -10110,6 +10397,16 @@
     pullPayload: pullPayload,
     mergeStores: mergeStores,
     mergeSteps: mergeSteps,
+    /* WO-013 W1. Read before write, pure: overlayStore is the per-store
+       overlay (union by key, disk-only kept, named removals only), shrinkCheck
+       the tripwire save() asserts, writeStep the adapter's decision on a
+       readRaw result, metaPatch the diff a logMeta site writes. */
+    overlayStore: overlayStore,
+    shrinkCheck: shrinkCheck,
+    writeStep: writeStep,
+    metaPatch: metaPatch,
+    applyDrop: applyDrop,
+    stableJson: stableJson,
     agoText: agoText,
     /* WO-005 W2b — the pure sample-data generator. Writes nothing, reads no
        clock it was not handed, and every session it builds carries demo:true
