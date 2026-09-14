@@ -3381,3 +3381,91 @@ distribution), `w3-mutants.mjs` (four overlay mutants). file:// suite **940 / 94
 document a stale tab does not know about — is met and proven, byte for byte. It does **not** pass clean for release as written:
 attack 3 (B-135) is a data-loss path and A12's header clause (B-134) is unmet. Both go back to the PM to sequence — B-134 is a
 one-line render change; B-135 is a design call (lock vs accept-and-document). The interim guidance stands until then.
+
+---
+
+## 2026-09-13 — WO-013 W4 QA: the lock closes B-135 (200 / 200 twelve, no two ids equal) and B-134 repaints without a navigation; passes for release with one new P3 (a double-tap on Save throws after the first tap already saved) and one follow-up to number (session ids need entropy, not a millisecond)
+
+**Context.** Backend's `b81e958` on `wo-013-read-before-write` (`index.html` only): `withStoreLock(k, fn)` around every
+`LOG` / `BWK` / `PLANS` / `PREFS` write via `navigator.locks.request("phat:store:"+k)`, bare when `locks` is absent or the
+request is refused before the body ran; `finish()` mints the session id **under** the `LOG` lock against every id on disk and
+in memory and bumps past a collision, then writes with `{locked:true}`; `mergeOnOpen` paints on `adopted || total`. Verified
+against the re-run the PM set (six items) plus probes of my own.
+
+**Rig.** The W3 rig unchanged (Node + Playwright, two pages on ONE context, the real `index.html` over `http://127.0.0.1`, CDN
+and Supabase aborted, `sync.js` stubbed where a merge is needed, 400 × 850), with one addition for this pass: an init script
+that wraps `navigator.locks.request` to stamp every grant and listens for `storage` events, so the order the second tab saw
+things in is a measurement, not an inference. CDP `SystemInfo.getProcessInfo` shows the two pages in **two renderer
+processes** (33056 / 41928) — the cross-process case, where the lock grant and the other process's `localStorage` cache update
+travel on different channels and could in principle arrive out of order. Scratchpad: `w4-soak.mjs` (the 200), `w4-soak2.mjs`
+(60 more with a dispatch-order sequence number and a disk read at the instant of grant), `w4-checks.mjs` (steps 3–5 and the
+double-tap, 40 checks), `bytes-a6.mjs` (single-tab byte diff against a `git archive` of `a6efde0`).
+
+**1. The race, 200 trials.** Both tabs Save in one event-loop window (`Promise.all` of the two clicks), ten seeded.
+**Twelve on disk in 200 of 200** (baseline `a6efde0` on the same rig: 6 / 10 and 7 / 10 lost one). The two minted ids logged
+per trial: **0 equal pairs, 0 duplicates across all 400 ids**; in 53 trials the pair is adjacent (`…123 / …124`) — the two
+taps landed in one millisecond and the bump under the lock did its job. Second-granted tab 107 × A, 93 × B. Zero page or
+console errors in 200 trials.
+
+**2. The ordering soak.** In the second-granted tab the `storage` event for the other tab's `LOG` write arrived **before**
+the lock grant in **199 / 200**, by 0.1–47.9 ms (median 0.3 ms); the 200th is a tie inside the 100 µs clock resolution, not a
+reversal. **Grant-before-storage: 0**, so no trial could test "lock first and lost" — and none lost regardless. The 60-trial
+supplement replaces the clock with a per-page dispatch sequence number and reads `localStorage` at the instant the lock
+callback is entered: **storage-first by dispatch order 60 / 60; the disk read at grant already held eleven 60 / 60.**
+Backend's "empirical" label is right: this is a count on one machine's Chromium, not a guarantee from the spec. What matters
+is that the lock body reads through `readRaw` at grant time and that read was fresh every time. If a browser ever delivers
+the grant ahead of the cache update the shrink guard cannot see it (W3's finding stands) — the id follow-up below is the
+second line of defence, because a fresh-but-colliding id is the only way a union drops a document.
+
+**3. `navigator.locks` absent.** Deleted on `Navigator.prototype` before boot in both tabs: session, stale-tab session, a
+bodyweight entry and a unit tap all land (11 → 12 on disk, bw 1, `unit: lb`), zero errors — the unlocked path is W3's
+behaviour, never a refusal. `locks.request` rejecting before the body: one `[phat] store lock unavailable` warn, the save
+lands. A throw **inside** the body (`buildSession` made to throw) propagates as a page error, nothing written, the draft
+still on disk, and `navigator.locks.query()` shows the lock **released**; the other tab's next save proceeds.
+
+**4. B-134.** Q3's shape: A holds a pull, B merges (eleven), A released → A's Home reads **`11 sessions logged` with no
+navigation** (before the fix: `10` until a tap). A wrote nothing to the log; `recover:log` once; eleven on disk. The gate is
+still `mayPaint()`: the same shape with a draft open on A leaves the card and its typed values untouched, and A's finish
+then lands twelve (eleven adopted + one).
+
+**5. Refusals under the lock.** `blockWrites[LOG]` (a corrupt log whose recover copy fails at boot): the refusal renders on
+the Summary in place, `#finish` still there, disk untouched (the corrupt bytes), the draft on disk, the lock released, and
+the other tab's save proceeds (eleven). `buildSession` → `null`: the loud path (`Could not save. Your entries are still on
+screen — try again.` plus `console.error("[phat] buildSession refused")`), no `setItem` on the log, the draft kept, the lock
+released, the other tab's save proceeds.
+
+**6. The suite and the bytes.** `tests.html` from `file://` **940 / 940 / 0** (S48 = 35). `offline-check.mjs` PASS.
+Single-tab byte-identity against `a6efde0`: **16 / 16 snapshots identical** across the four stores plus the draft (unit
+tap, bar save, rest manual / auto, override set / clear, session, bw, cal stamp on / off, protein on / off, fresh boot,
+onboarding, the fresh unit tap), timestamps normalised — the lock changed *when* a write runs, never *what* it writes.
+
+**Found — new, P3, introduced by W4.** *A double-tap on Save throws after the first tap already saved.* `finish()` has no
+in-flight guard and never needed one: before W4 the whole save ran inside the first tap's microtasks, so a second tap found
+`S.draft` null and returned. Now the first tap awaits a lock grant (a task boundary), so a second dispatch that lands before
+the grant passes `if(!S.draft)`, queues on the lock, and when its turn comes the first tap has cleared the draft:
+`S.draft.date` on `null` → `TypeError: Cannot read properties of null (reading 'date')`, uncaught, from inside the lock
+body. **Data is safe** in every run: eleven on disk (never twelve — no duplicate), the draft cleared, Home reads eleven,
+no error line on screen; the throw releases the lock. Reproduced with two synchronous `click()`s in one task (always) and
+with two Playwright clicks back to back (one run in two); on `a6efde0` the same double-tap is clean. On a phone the grant is
+sub-millisecond and a thumb cannot double-tap inside it; under load the window is wider. The fix is **not**
+`if(!S.draft) return false` inside the body — that reaches the loud `Could not save` line after a save that succeeded. It is
+a re-entrancy guard on `finish()` (a flag set before the lock request and cleared after the draft is cleared; a second call
+returns silently) or an already-saved sentinel from the body that `finish()` treats as done. Backend; PM to number. No pin
+in `tests.html`: it is `S` and the DOM (B-20's request stands).
+
+**Follow-up to file (PM to number) — session ids are a millisecond, and only the lock makes them unique.** W4 proved the
+second cause of B-135: two documents minting `Date.now()` in one millisecond mint one id, and every union (overlay, merge,
+the backup's `client_id`) correctly reads two sessions as one. The lock closes that on one device. It cannot reach two
+devices: his phone and a laptop each saving a session offline in the same millisecond mint the same id, and the first merge
+collapses them — no lock spans devices, and the shrink guard counts documents by id so it cannot see it. Improbable per pair
+of taps; certain over a long enough life; and a loss with no copy on any key. The shape is already accepted everywhere:
+`buildSession` takes `typeof id === "string" && id.trim() !== ""`, `validateSessionDoc` accepts a non-empty string, the
+overlay and the merge compare `String(id)`, `sortSessions` orders by date never by id, and `sessions.client_id` is `text`
+with `unique (user_id, client_id)`. So: string ids with entropy (`Date.now()` plus random bits — a UUID is fine), minted in
+`finish()`; numeric ids already on disk stay as they are (no migration; every reader already strings them); the under-lock
+bump stays as belt-and-braces. Backend; `strength-coach` not needed.
+
+**Ruling.** **Pass for release.** Both W3 findings are closed and proven on the rig that found them; nothing on the single-tab
+path changed by a byte; the unlocked fallback is the W3 behaviour. The new P3 is an uncaught exception after a save that
+succeeded, not a data path, and does not hold the release. The id follow-up is the next data-loss seam and should be
+scheduled on its own, not folded into this merge.
