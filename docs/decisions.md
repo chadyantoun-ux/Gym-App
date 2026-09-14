@@ -3336,3 +3336,48 @@ WO-012b D6 profiles and his session. One extra local read per write; no bytes ma
 `lb` — the setting was overwritten, not migrated; nothing brings it back but a tap — and any override he had made.
 B-76 / B-123 / B-124 / B-128 are promoted to WO-013 and close against it; B-128 is P1 tonight by the "blocks real use"
 definition, not P3. Work order: `docs/work-orders/WO-013-read-before-write.md`.
+
+---
+
+## 2026-09-13 — WO-013 W3 QA: read-before-write closes the sequential stale-tab overwrite class (B-76 / B-123 / B-124 / B-128) and is byte-identical to `main`; two new findings — a P3 repaint lag on a write-nothing merge, and a P1 concurrent-finish lost-update that fails the order's own attack 3
+
+**Context.** Backend's `2762cbc` (`overlayStore` / `writeStep` / `metaPatch` / `adoptPrefs` / the B-123 merge clause + S48, 35 pins)
+and frontend's `4041d68` (every `save()` site to its named form) on `wo-013-read-before-write`. Verified against WO-013 §3 W3.
+
+**Rig.** Node + Playwright, two pages on ONE browser context (one `localStorage`), the real `index.html` over
+`http://127.0.0.1`, every non-origin request (CDN, Supabase) aborted, `sync.js` replaced by an in-process stub backup so two
+tabs share one server and a pull/push can be held per page; 400 × 850; a `Storage.prototype.setItem` spy on every navigation.
+Scratchpad: `w3-lib.mjs`, `w3-q1q4.mjs` (Q1–Q4, Q6, Q8, attack floor — 89 checks), `w3-q7.mjs`/`w3-q7b.mjs` (recover keeps
+vs `main`), `bytes.mjs` (single-tab byte diff vs a verified `git archive` of `65465c3`), `w3-race.mjs` (the concurrent-finish
+distribution), `w3-mutants.mjs` (four overlay mutants). file:// suite **940 / 940 / 0**, S48 = 35, three tripwires.
+
+**Verified fixed and safe (the order's target class — sequential stale-tab overwrite).**
+- **B-76** Q1: a tab booted on ten and a tab booted on nothing, the second saves → eleven on disk, the ten byte-identical;
+  offline (the ten never pushed) → eleven, and the push then stamps `n:11` — S44's local hole closed.
+- **B-128** Q2: both orders keep the unit and every override under a stale tab's bar or unit write.
+- **B-124** Q3: a held pull; the stamp is never regressed by the later merge, `merge.keptAt` never goes backwards,
+  `recover:log` exists once, the next push is a signature no-op.
+- **B-123** Q3/Q3b/Q4: a store the merge does not write is adopted from disk into memory (the push then stamps the real count).
+- Q4 (his exact shape): unit `lb`, the override and both bars survive a merge + a bar save + a finish; `diag.html` prints `unit:"lb"`.
+- Q5 byte-identity: 14/15 driven writes identical to `main @ 65465c3`; the one diff is the §0.1 stated exception (a first unit
+  tap on a device with no `gym` key writes `{unit}` without `bars:[]`). Q6 the draft untouched. Q7 `recover:*` keeps byte-shape
+  identical to `main`, none minted by an overlay write. Q8 the mid-session unreadable refusal holds. Four overlay mutants killed.
+
+**Two findings, both new.**
+- **B-134 (P3).** A B-123 merge that writes NOTHING (the disk already held what the server had) adopts into memory correctly —
+  memory, disk and the stamp all read eleven, the push stamps eleven — but the Home count is not repainted until the next
+  navigation, because `mergeOnOpen`'s final render is `else if(total&&mayPaint()) render(true); else paintBackup();` and `total`
+  (what THIS merge wrote) is 0. No data lost; self-heals on any tap; the order's A12 "its header reads eleven" clause is not met
+  until then. Fix: render on `adopted || total`. Frontend.
+- **B-135 (P1).** Two tabs finishing DISTINCT sessions in the same event-loop tick can lose one — 7/10 trials the disk held
+  eleven (ten + one), not twelve. The shrink guard does not fire: `save()` evaluates `shrinkCheck` against the value THIS tab
+  read, then `setItem`s later, and the other tab's write lands in the gap; `localStorage` has no atomic read-modify-write. This
+  is the order's own attack 3 ("twelve, never eleven-with-one-missing") and it fails. Strictly better than `main` (which clobbers
+  the whole store on any concurrent write); reachable only with two tabs each mid-session finishing at once. The interim "close
+  the other tabs" is the mitigation; a full fix needs a lock (`navigator.locks`) or an explicit accept-and-document ruling.
+  Reproduced in `w3-race.mjs`.
+
+**Ruling.** The order's stated purpose — never lose a number to a *sequential* stale tab, and never overwrite a setting or a
+document a stale tab does not know about — is met and proven, byte for byte. It does **not** pass clean for release as written:
+attack 3 (B-135) is a data-loss path and A12's header clause (B-134) is unmet. Both go back to the PM to sequence — B-134 is a
+one-line render change; B-135 is a design call (lock vs accept-and-document). The interim guidance stands until then.
