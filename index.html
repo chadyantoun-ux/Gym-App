@@ -2341,13 +2341,47 @@ function gymBase(){
   return Object.assign({bars:[]},S.gymKeep||{});
 }
 /* One commit path for phat:v1:prefs' gym key. Memory first, then the write;
-   a failed write puts memory back. Returns the save's verdict. */
-async function gymCommit(next){
+   a failed write puts memory back. Returns the save's verdict.
+   WO-013 W2: the PATCH form. `next` is the composed profile MEMORY holds
+   until the write answers; `patch` is what the write NAMES - only the gym
+   key the tap changed ({bars} from Settings, {unit} from the segment,
+   {ex:{id}} from a card, {} + a named drop for `Use my default`) - so a
+   stale tab's bar save carries no memory copy of the unit or of any
+   override over the disk's, and a stale tab's override tap carries no
+   memory copy of the unit or the bars (B-128, both halves, and the bars
+   too). Nothing outside `gym` is named, so restAuto / backup / merge are
+   the disk's. `opts` is clearOverride's named drop. After a true return
+   S.prefs.gym IS the written store (save() adopted it); what that changed
+   on screen is repainted in place, never render(). */
+async function gymCommit(next,patch,opts){
   const before=S.prefs.gym, keep=S.gymKeep;
   S.prefs.gym=next; S.gymKeep=null;
-  const ok=await save(PREFS,prefsPayload());
+  const ok=await save(PREFS,{gym:patch},opts);
   if(!ok){ S.prefs.gym=before; S.gymKeep=keep; }
+  if(!ok||gymMoved(next)) gymPaint();
   return ok;
+}
+/* Did the write leave memory holding a profile other than the one this tab
+   composed - the disk had a unit, a bar list or an override this tab did
+   not, and save() adopted it? Compared key-order blind. */
+const gymMoved=was=>PHAT.stableJson(S.prefs.gym)!==PHAT.stableJson(was);
+/* The bars this tab could not read (S.gymBad) are REPLACED by the empty
+   list under its next gym write - the cure every gym write applied before
+   this order, kept: without it a unit tap on a device with unreadable bars
+   would leave them on disk and the refusal on screen. Read the flag BEFORE
+   a caller clears it. Bars that read fine are not named by a unit or an
+   override write, so a stale tab cannot replace them. */
+const gymPatch=change=>S.gymBad?Object.assign({bars:[]},change):change;
+/* The segment (Settings) and the open card's chip, captions and labels,
+   IN PLACE - paintGymUnit and paintMode each find their own nodes and do
+   nothing when their screen is not up. The card's weight inputs are re-set
+   from the draft, which every keystroke already committed (syncSet), so
+   nothing typed is under this. Closes WO-012b P3 (a stale chip line after
+   a failed override write) on the failure branch. */
+function gymPaint(){
+  paintGymUnit();
+  const card=document.getElementById("excard");
+  if(card&&card.dataset.ex&&S.draft) paintMode(card.dataset.ex);
 }
 async function gymWrite(bars,okMsg,undoFn){
   /* WO-012 W4 - THE LINE THAT BROKE "DECIDE ONCE" (UX §21, finding 2): this
@@ -2355,7 +2389,7 @@ async function gymWrite(bars,okMsg,undoFn){
      override. It now replaces `bars` on the existing object and nothing else. */
   const next=Object.assign(gymBase(),{bars:bars});
   const wasBad=S.gymBad; S.gymBad=false;
-  const ok=await gymCommit(next);
+  const ok=await gymCommit(next,{bars:bars});   /* WO-013 W2: names the bars only (they replace - B-132) */
   if(!ok){ S.gymBad=wasBad; return false; }
   if(undoFn) toastUndo(okMsg,undoFn); else toast(okMsg);
   return true;
@@ -2382,8 +2416,11 @@ async function setGymUnit(u){
   /* WO-012b: validated composed, committed as records (gymAdopt). */
   const rg=gymAdopt(next);
   if(!rg||!rg.ok){ S.gymUnitErr="Could not save the unit. Nothing changed."; paintGymUnit(); return; }
+  /* WO-013 W2: the write names {unit} - the bars and every override are
+     the disk's, whatever this tab holds (B-128, second half). */
+  const patch=gymPatch({unit:u});
   const wasBad=S.gymBad; S.gymBad=false;
-  const ok=await gymCommit(rg.gym);
+  const ok=await gymCommit(rg.gym,patch);
   if(!ok){ S.gymBad=wasBad; S.gymUnitErr="Could not save the unit. Nothing changed."; paintGymUnit(); return; }
   S.gymUnitErr=null;
   /* The bars section's shape may have changed (a refused list is now an
@@ -2558,18 +2595,25 @@ async function writeOverride(id,patch){
 async function writeRec(id,rec){
   const base=gymBase(), ex=Object.assign({},base.ex||{});
   ex[id]=recCopy(rec);
-  return overrideCommit(Object.assign(base,{ex:ex}));
+  /* WO-013 W2: the write names THIS record - {ex:{id}} - and nothing else
+     in the profile; every other override, the unit and the bars are the
+     disk's. */
+  return overrideCommit(Object.assign(base,{ex:ex}),{ex:{[id]:ex[id]}});
 }
 async function clearOverride(id){
   const base=gymBase(), ex=Object.assign({},base.ex||{});
   if(!Object.prototype.hasOwnProperty.call(ex,id)&&!S.gymBad) return true;
   delete ex[id];
   if(Object.keys(ex).length) base.ex=ex; else delete base.ex;
-  return overrideCommit(base);
+  /* drop: `Use my default` REMOVES this exercise's record. Named, because
+     the overlay keeps every disk-only override - without the name the disk
+     copy would survive this write and the card would be back on it. The
+     patch itself names nothing ({}): the removal is the whole intent. */
+  return overrideCommit(base,{},{drop:["gym.ex."+id]});
 }
-async function overrideCommit(next){
+async function overrideCommit(next,patch,opts){
   const err=S.err;
-  const ok=await gymCommit(next);
+  const ok=await gymCommit(next,gymPatch(patch),opts);
   if(!ok){
     S.err=err;
     if(!ovSaid){ ovSaid=true; toast("Could not save the unit for next time. It holds for this session.",false,4200); }
@@ -4622,9 +4666,11 @@ async function usePlan(id){
   if(!r.ok){ refuse("That plan is not saved yet. Save it first.",true); return; }
   const prev=S.plans;
   S.plans={plans:r.store.plans,activePlanId:r.store.activePlanId};
-  const ok=await save(PLANS,plansPayload());
+  /* WO-013 W2: patch {activePlanId} - the one key this tap changes. A
+     successful save() adopts the written store (plans another tab saved
+     included), so nothing is re-adopted from memory here. */
+  const ok=await save(PLANS,{activePlanId:r.store.activePlanId});
   if(!ok){ S.plans=prev; refuse(S.err||"Could not switch. Nothing changed.",true); return; }
-  adoptPlans(plansPayload());
   S.pe.refuse=null; render(true);
   toast(S.plan.name+" is the active plan.");
 }
@@ -4646,9 +4692,11 @@ async function savePlan(){
   if(!r.ok){ refuse("Not saved. This plan cannot be stored.",false); return; }
   const prev=S.plans;
   S.plans={plans:r.store.plans,activePlanId:r.store.activePlanId};
-  const ok=await save(PLANS,plansPayload());
+  /* WO-013 W2: patch {plans} - union by planId with what is on disk, so a
+     plan another tab saved since this one booted is beside this one, not
+     under it. save() adopts the written store; no re-adopt from memory. */
+  const ok=await save(PLANS,{plans:r.store.plans});
   if(!ok){ S.plans=prev; refuse(S.err||"Could not save. Your edits are still here — try again.",false); return; }
-  adoptPlans(plansPayload());
   /* WO-007 Rule RI1: a day's reintro counter means the accessories it
      ACTUALLY reintroduced, and a move can change the order under it.
      Reconciled here, stored plan (before) against the working copy (after),
@@ -4657,7 +4705,7 @@ async function savePlan(){
   try{
     const next=PHAT.reconcileReintro(S.logMeta,before,w);
     if(next&&JSON.stringify(next.reintro||{})!==JSON.stringify(S.logMeta.reintro||{})){
-      S.logMeta=next; await save(LOG,logPayload());
+      await saveMeta(next);
     }
   }catch(err){}
   delete S.edits[id];
@@ -4713,9 +4761,9 @@ function askDuplicate(id,back){
       if(!up.ok){ say("Could not copy it. Nothing changed."); return; }
       const prev=S.plans;
       S.plans={plans:up.store.plans,activePlanId:up.store.activePlanId};
-      const ok=await save(PLANS,plansPayload());
+      /* WO-013 W2: patch {plans}, union by planId; save() adopts. */
+      const ok=await save(PLANS,{plans:up.store.plans});
       if(!ok){ S.plans=prev; say(S.err||"Could not save the copy. Nothing changed."); return; }
-      adoptPlans(plansPayload());
       S.plErr=null;
       openPlan(r.plan.planId);
       toast("Copied. This is "+r.plan.name+".");
@@ -5400,7 +5448,9 @@ document.getElementById("view").addEventListener("click",async e=>{
     S.bw=[...S.bw.filter(x=>x.date!==dt),{date:dt,kg:r1(v)}];
     /* On a failed write the number stays on screen and S.err says it failed —
        it must never both fail and look fine. */
-    const ok=await save(BWK,bwPayload());
+    /* WO-013 W2: patch {entries} - union by date with the disk, so a weight
+       another tab logged on another day is kept; the same date is this tap's. */
+    const ok=await save(BWK,{entries:S.bw});
     render(); if(ok) announceWeight("Weight logged."); return;
   }
   /* ---- W11: the calorie-change acknowledgement (spec §3.5). Two deliberate
@@ -5448,10 +5498,24 @@ function askCalChanged(){
 async function setCalStamp(on){
   const next=on?PHAT.setCalChanged(S.logMeta,PHAT.localDate()):PHAT.clearCalChanged(S.logMeta);
   if(!next) return;
-  S.logMeta=next;
-  const ok=await save(LOG,logPayload());
+  const ok=await saveMeta(next);
   render();
   if(ok) announceWeight(on?"Recorded.":"Hold cleared.");
+}
+/* WO-013 W2. THE ONE WRITE PATH FOR LOG META. Every engine here returns a
+   whole next-state and some of them DELETE a key (clearCalChanged, endDeload,
+   declineReintro). The site writes only what moved: PHAT.metaPatch names
+   the keys that changed (set) and the keys `next` lacks (drop), so a stale
+   tab's stamp never carries its memory's copy of every other meta key - or
+   its short session list - over the disk's. Memory takes `next` first, as
+   every site did before (a failed write leaves the answer on screen and
+   S.err says so); a successful save() adopts the disk. */
+async function saveMeta(next){
+  const mp=PHAT.metaPatch(S.logMeta,next);
+  S.logMeta=next;
+  /* drop: the meta keys the engine deleted, by name - the only way a key
+     leaves the log store. */
+  return save(LOG,mp.set,{drop:mp.drop});
 }
 
 document.getElementById("view").addEventListener("input",e=>{
@@ -6242,7 +6306,7 @@ async function v1Answer(add){
   const name=t.offer.name, exId=t.offer.exId;
   const next=add?PHAT.acceptReintro(S.logMeta,S.dayId,C.today,t.dayCuts)
                 :PHAT.declineReintro(S.logMeta,S.dayId,C.today);
-  if(next){ S.logMeta=next; await save(LOG,logPayload()); }
+  if(next) await saveMeta(next);   // WO-013 W2: metaPatch - set + named drops
   if(add){
     S.v1msg=name+" is back in. That is the only addition for 7 days.";
     S.v1added=exId;
@@ -6821,11 +6885,17 @@ async function finish(){
      land in date order, not at the end. sortSessions returns a new array and
      never touches S.sessions, so a failed save still leaves memory untouched. */
   const next=PHAT.sortSessions(S.sessions.concat([sess]));
-  const ok=await save(LOG,Object.assign(logPayload(),{sessions:next}));
+  /* WO-013 W2: patch {sessions: next} - union by id with the disk. A tab
+     that booted on an empty log and saves one lands that one BESIDE the ten
+     another document wrote (B-76), never over them; nothing else in the
+     store is carried from this tab's memory. After a true return
+     S.sessions IS the written list (save() adopted it, disk-only sessions
+     included) - it is NOT re-assigned from `next` here, which would put
+     the short list back in memory. */
+  const ok=await save(LOG,{sessions:next});
   /* Keep the scroll: the failure line renders where Save is, and throwing him
      to the top of a ten-exercise page to hide it would be its own bug. */
   if(!ok){ render(true); return; }   // draft still on disk, nothing committed
-  S.sessions=next;
   cancelDraftSave();             // a queued autosave must not resurrect the draft
   await clearDraft();
   S.draft=null; S.dayId=null; S.err=null; S.sessPlan=null;
@@ -6921,7 +6991,7 @@ async function setRestAuto(on){
   /* On MANUAL a running rest is stopped as well as hidden: leaving a live
      timestamp behind would restart a countdown the moment he switched back. */
   if(!on) S.rest=null;
-  const ok=await save(PREFS,prefsPayload());
+  const ok=await save(PREFS,{restAuto:!!on});   // WO-013 W2: patch, this key only
   render();
   /* A failed preference write is said out loud, because the setting on screen
      now disagrees with the one on disk and the next boot will disagree with
@@ -6957,7 +7027,9 @@ function setDietView(view){
 async function toggleProtein(){
   const on=!proteinHit();
   S.prefs.proteinDate=on?PHAT.localDate():"";
-  const ok=await save(PREFS,prefsPayload());
+  /* WO-013 W2: patch, this key only. "" is a VALUE (the tick is off), never
+     a drop: the key stays on disk as every build has written it. */
+  const ok=await save(PREFS,{proteinDate:S.prefs.proteinDate});
   render();
   /* A failed write is said out loud, for the same reason the rest-timer
      preference says it: what is on screen now disagrees with the disk. */
@@ -6980,14 +7052,14 @@ async function finishOnboarding(){
   if(v!==null&&v>30&&v<300){
     const dt=PHAT.localDate();
     S.bw=[...S.bw.filter(x=>x.date!==dt),{date:dt,kg:r1(v)}];
-    said=(await save(BWK,bwPayload()))?" Weight logged.":" Could not save that weight.";
+    said=(await save(BWK,{entries:S.bw}))?" Weight logged.":" Could not save that weight.";   // WO-013 W2: patch, union by date
   }else if(raw!==""){
     /* A number he typed that cannot be a bodyweight is refused rather than
        rounded into range or silently dropped. He stays on this screen. */
     toast("Enter a weight between 30 and 300 kg."); return;
   }
   S.prefs.onboarded=true;
-  await save(PREFS,prefsPayload());
+  await save(PREFS,{onboarded:true});   // WO-013 W2: patch - "it writes exactly one key and clears nothing"
   S.sub=""; S.ob=null; render();
   announce("Ready."+said);
 }
@@ -7066,8 +7138,7 @@ async function answerDeload(what){
          :                  PHAT.endDeload(S.logMeta,today);
   }catch(err){ next=null; }
   if(!next){ toast("Could not record that. Nothing changed."); return; }
-  S.logMeta=next;
-  const ok=await save(LOG,logPayload());
+  const ok=await saveMeta(next);       /* WO-013 W2: metaPatch - set + named drops */
   render();
   if(!ok) return;                       /* save() has already set S.err */
   /* `Noted. Asked again after the next session.` is D1_DECLINED, logic.js's
@@ -7341,8 +7412,13 @@ async function runBackup(manual,reason){
       /* The stamp: {id, email}, so every refusal can name the owner. This is
          also where a string-shaped E-3 stamp gains its email. */
       S.prefs.backup={at:r.at,sig:sig,user:{id:me.id,email:me.email||null},n:p.counts.sessions,m:p.counts.bodyweight,x:p.counts.refused};
-      /* The stamp's own write. Not a backed-up key, so it cannot re-trigger. */
-      await save(PREFS,prefsPayload());
+      /* The stamp's own write. Not a backed-up key, so it cannot re-trigger.
+         WO-013 W2: patch {backup} - the newer `at` wins whole, so a stamp
+         another tab landed since is never regressed (B-124). If the
+         adoption moved the default under an open card, the card is
+         repainted in place. */
+      const g0=S.prefs.gym; await save(PREFS,{backup:S.prefs.backup});
+      if(gymMoved(g0)) gymPaint();
     }
     S.sync.last={ok:!!r.ok,phase:"push",at:r.at||0,reason:r.reason||"",message:r.message||"",
       counts:p.counts,problems:p.problems,notes:p.notes,manual:!!manual};
@@ -7513,7 +7589,9 @@ async function stampKeep(keptAt){
   const pm=S.prefs.merge||{};
   if(pm.keptAt===keptAt) return;
   S.prefs.merge=Object.assign({},pm,{keptAt:keptAt});
-  await save(PREFS,prefsPayload());
+  /* WO-013 W2: patch {merge:{keptAt}} - the one key this records. The
+     overlay keeps the disk's at/n/m/p and takes the greater keptAt. */
+  await save(PREFS,{merge:{keptAt:keptAt}});
 }
 async function mergeOnOpen(reason){
   const Y=window.PHAT_SYNC;
@@ -7645,6 +7723,8 @@ async function mergeOnOpen(reason){
     let partial=null;
     for(let i=0;i<st.writes.length;i++){
       const w=st.writes[i];
+      /* WO-013 W2: the WHOLE form, overlaid - a no-op when F6's bytes held
+         (the disk is what was merged), and a union when they did not. */
       const ok=await save(w.key,w.value);
       if(!ok){
         if(i===0){
@@ -7659,10 +7739,14 @@ async function mergeOnOpen(reason){
         partial=(c?"Restored "+c+". ":"")+"Could not write "+rest+". Check the backup now to retry.";
         break;
       }
-      /* Adopted only now, after the write returned true. */
-      if(w.key===LOG){ adoptLog(w.value); landed.sessions=mr.added.sessions; }
-      else if(w.key===BWK){ adoptBw(w.value); landed.bodyweight=mr.added.bodyweight; }
-      else if(w.key===PLANS){ adoptPlans(w.value); landed.plans=mr.added.plans; }
+      /* Adopted only after the write returned true - inside save() now
+         (WO-013 W1), from the bytes it wrote, so a session that landed on
+         disk between the F6 read and this write is in memory too. Not
+         re-adopted from w.value here: that would put the merged-from copy
+         back over the union. */
+      if(w.key===LOG) landed.sessions=mr.added.sessions;
+      else if(w.key===BWK) landed.bodyweight=mr.added.bodyweight;
+      else if(w.key===PLANS) landed.plans=mr.added.plans;
     }
     const allOk=partial===null;
     /* ONE prefs write: `onboarded` (first run is over - the log is on disk),
@@ -7671,15 +7755,23 @@ async function mergeOnOpen(reason){
        push that follows is a signature no-op - restoreApply's stamp, the
        same way), and the merge record. On a non-empty device the stamp is
        the push's: the merged set may hold more than the server does. */
-    if(fromOb) S.prefs.onboarded=true;
+    /* WO-013 W2: the PATCH form - {merge}, plus {onboarded} on first run and
+       {backup} on the empty-device path - NEVER prefsPayload(). This is the
+       write that erased his `I lift in: lb` (B-124 / §0): a tab that booted
+       before the tap held no `unit` in memory and wrote its whole prefs
+       over the disk. The overlay keeps every key this patch does not name. */
+    const pp={};
+    if(fromOb){ S.prefs.onboarded=true; pp.onboarded=true; }
     if(D.empty&&allOk){
       const plans=await load(PLANS);
       const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),plans));
       S.prefs.backup={at:Date.now(),sig:sig,user:{id:me.id,email:me.email||null},n:S.sessions.length,m:S.bw.length,x:0};
+      pp.backup=S.prefs.backup;
     }
     S.prefs.merge=Object.assign({},S.prefs.merge||{},keptAt!==null?{keptAt:keptAt}:{},
       {at:Date.now(),n:landed.sessions,m:landed.bodyweight,p:landed.plans});
-    await save(PREFS,prefsPayload());
+    pp.merge=S.prefs.merge;
+    await save(PREFS,pp);
     S.sync.merge=partial?{ok:false,reason:"partial",message:partial}:{ok:true,added:landed,refused:mr.refused};
     const total=landed.sessions+landed.bodyweight+landed.plans;
     if(total) mergeHold(landed,mr.refused.length);
@@ -7831,17 +7923,26 @@ async function restoreApply(){
   /* The writes, log first. A failed log write stops everything with nothing
      changed; a failed later write is reported, never hidden (E-3's
      half-applied contract question stands - it is not made silent here). */
+  /* WO-013 W2. THE ONE WHOLESALE WRITE IN THE APP. REPLACE is his word on
+     the sheet and the keep (recover:*) precedes it, so each of the three
+     stores is written as pulled, no overlay - opts.replace, named PER
+     STORE so a key not in this table could never be replaced by this loop.
+     Nowhere else in index.html passes replace. */
+  const REPLACE={
+    [LOG]:{replace:true},     // replace: the restored log IS the log; the old one is under recover:log
+    [BWK]:{replace:true},     // replace: the restored weights; the old ones under recover:bw
+    [PLANS]:{replace:true}};  // replace: the restored plan store; the old one under recover:plans
   const wrote={};
   for(let i=0;i<st.writes.length;i++){
     const w=st.writes[i];
-    wrote[w.key]=await save(w.key,w.value);
+    wrote[w.key]=await save(w.key,w.value,REPLACE[w.key]);
     if(i===0&&!wrote[w.key]){ fail("Could not write the restored log. Nothing changed. "+(S.err||"")); return; }
   }
   const ok2=wrote[BWK]===true, ok3=st.plans?wrote[PLANS]===true:true;
-  adoptLog(st.log); if(ok2) adoptBw(st.bw);
-  /* WO-006 W1: the store just written is the store in memory, or the next
-     SAVE PLAN would overwrite the restored plans with the pre-restore ones. */
-  if(st.plans&&ok3) adoptPlans(st.plans);
+  /* The store just written is the store in memory (WO-006 W1), or the next
+     SAVE PLAN would overwrite the restored plans with the pre-restore ones.
+     save() adopted each one from the bytes it wrote (WO-013 W1) - which
+     under a replace are st.log / st.bw / st.plans exactly. */
   S.stores={log:"ok",bw:ok2?"ok":S.stores.bw,plans:(st.plans&&ok3)?"ok":S.stores.plans};
   /* The restored log IS the backup, so it is stamped as backed up, with the
      signature computed the way runBackup computes it: save() has already
@@ -7851,12 +7952,17 @@ async function restoreApply(){
      to the other stores: the flag rides the stamp's write when there is
      one, and gets its own otherwise (spec 18.4: onboarded is written by a
      completed restore, never by the sign-in). */
-  if(fromOb) S.prefs.onboarded=true;
+  /* WO-013 W2: patch {onboarded?, backup} - the prefs write here names only
+     the flag and the stamp; the unit, overrides and rest setting on disk
+     are kept whatever this tab held. */
+  const pp={};
+  if(fromOb){ S.prefs.onboarded=true; pp.onboarded=true; }
   if(ok2&&ok3){
     const sig=PHAT.backupSig(PHAT.backupPayload(logPayload(),bwPayload(),st.plans));
     S.prefs.backup={at:Date.now(),sig:sig,user:{id:S.sync.user.id,email:S.sync.user.email||null},n:rp.counts.sessions,m:rp.counts.bodyweight,x:0};
-    await save(PREFS,prefsPayload());
-  }else if(fromOb) await save(PREFS,prefsPayload());
+    pp.backup=S.prefs.backup;
+    await save(PREFS,pp);
+  }else if(fromOb) await save(PREFS,pp);
   const msg=ok2&&ok3
     ? "Restored "+restoreCounts(rp.counts.sessions,rp.counts.bodyweight,rp.counts.plans)+"."
     : "Restored "+plural(rp.counts.sessions,"session")+". Could not write "+(ok2?"the plans":"the weights")+" - try again.";
