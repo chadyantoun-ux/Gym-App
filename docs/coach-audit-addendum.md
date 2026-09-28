@@ -6418,3 +6418,679 @@ nearest for the seed, both reasoned above and both held. The in-session mismatch
 with is unreachable and stays as a fixture; the two cross-session faults it led to — a `down`
 verdict on an identical hypertrophy session and a deload trigger blind to a stall at 77.1 kg — are
 the reason this is a ruling and not a shrug.
+
+---
+
+# 22. WO-014 W1 — the library contract, movement identity, and the swap — 2026-09-28
+
+**Added 2026-09-28.** Answers `docs/work-orders/WO-014-library.md` §3 W1, its six items. Read with
+§2 (Rules I1, I2), §8.2 (A1), §8.4 (C7a, C7b), §9.1 (PE1), §9.12 (the unclassified-`k` rider),
+§12.3 (F1), §17.1 (F1p), §17.8 (the eye check) and §18.3 (the substitution mark, which this section
+supersedes and implements).
+
+Rule ids introduced here: **I3** (`equipment` → `implement`), **K3** (`k` is never derived),
+**AD1** (a movement added mid-session), **MV1** (which history is this slot's prior), **F1L**
+(photographs and cues for a library movement, and where `fig` lives). None collide.
+
+**The uncomfortable answer first, and it is about this document, not the feature.** The WO's
+acceptance criterion asks for the count of exercises behind every `equipment` value at SHA
+`a859101d633a01c4a1a920d6a8ce41dabba0705f`. **I cannot produce those counts from this lane** — no
+network, and the upstream JSON is not in the tree; only the 48 photograph files are. Writing numbers
+I cannot check is the exact failure this role exists to catch, so the count column below is empty and
+**Rule I3.4 makes the generator produce it and refuse anything not in the table.** The mapping itself
+does not depend on the counts. `[Certain]` that the value *set* is the thirteen the WO lists, because
+that list is the PM's reading of the same pinned SHA the photographs came from; `[Guessing]` on the
+total corpus size (order of 800), stated only so W3 can size its ≤ 200 KB check, **and not to be
+transcribed anywhere**.
+
+**The second uncomfortable thing, and it is about his real data.** His 12 Sep session already
+contains a swap, logged in a note: `d1b` — the weighted pull-up slot — carries
+`I have done iso-lateral front lat pull downs- forearm still not recovered` and a top set of 86 kg.
+Every rule in the app has been reading a 171 kg pull-up off that entry ever since. This order's
+`mv` / `sw` would have stopped it. **It does not fix it retroactively and must not try**: the entry
+carries no `mv`, D2 requires it byte-identical, and B-131 still needs his one sentence. **No rule in
+this section reads a note to infer a swap.** The pain word list (§13.5) is the only text the app
+parses, it fails safe by over-triggering a referral, and a note-parse that silently re-attributed
+logged sets would be a store rewrite driven by prose. `[Certain]`, and it is the single most
+important thing not to build here.
+
+## 22.0 Rulings at a glance
+
+| # | Question | Ruling |
+|---|---|---|
+| a | `equipment` → `implement` | **Six values map, seven are refused.** `barbell` and `e-z curl bar` → `bb`; `dumbbell` → `db`; `cable` → `cable`; `machine` → `machine`; `body only` → `bodyweight`. **Refused:** `kettlebells`, `bands`, `medicine ball`, `exercise ball`, `foam roll`, `other`, `null`. A refusal is not a default — on the plan-add path the field stays empty and WO-006 B2's existing refusal asks; on the swap path the entry makes **no implement claim** and the two implement-dependent strings go silent. Rule **I3**, 22.1. |
+| b | Is `k` derived? | **Never, from any upstream field.** `force`, `mechanic` and `level` are not progression protocols. A swap inherits `s` / `lo` / `hi` / `k` **unchanged**. A fresh add asks (B2 stands). **Rule K2 does not fire on a swap, and no new warning is built** — K2's inputs are `(k, lo, hi)` and a swap changes none of them. Rule **K3**, 22.2. |
+| c | A movement added mid-session | **Confirmed, with three amendments.** Logs freely, no prescription asked, every verdict silent behind one named line in C7a's shape; **plus** no rest target (R1 has no `k` to read), **plus** the pain referral line still renders — it is the one output that is about him and not about the prescription. Rule **AD1**, 22.3. |
+| d | When another slot's history counts | **Only with the same movement, the identical prescription `(s, lo, hi, k)`, within 56 days, and a source the app can name in words.** Fail any one: no prior, and a no-number line saying why. `d1h` (3 × 6–10 power) and `d5i` (3 × 12–15 hyp) **provably do not cross** — they fail the prescription clause on three of four fields. Rule **MV1**, 22.4. |
+| e | Photographs and cues for a library movement | **Confirmed: cue-only, and no cue, so the disclosure does not render at all.** F1p's *"Not enough data: the whole of this section"* binds at 800 movements exactly as it bound at 31. **New clause: a swapped card shows no photograph and no cue at all** — the slot's pair is authored for the movement he is not doing. Rule **F1L**, 22.5. |
+| f | Does `fig` move to the movement? | **No. It stays on the slot, this release and until B-142 is done.** `fig` is not a description of a movement, it is the **record of a check performed on a slot** against a criterion written for that slot (§17.2). Moving it converts a 32-row whitelist into a lookup over an unchecked namespace. Rule **F1L.3**, 22.6. |
+| — | The `Swapped` mark (B-111) | **Better than what I recommended in §18.3 and it supersedes it.** I asked for a tap he could forget; `sw` is derived from the movement he picked, so it cannot be forgotten. §18.3's ST1 and H1 clauses carry over, with the movement's name now available to the copy. 22.4.5. |
+
+---
+
+## 22.1 Rule I3 — `equipment` → `implement`, and what a refusal costs
+
+`implement` is read by Rule I1 (the `per DB` suffix, on every number the app prints for that
+exercise), Rule I2 (the increment appendix) and Rule Z2 (the word at zero load). Nothing else. So a
+wrong mapping does not produce a wrong load — it produces a **wrong fact next to a right load**,
+which is the B-131 class, and at library volume it produces it at scale.
+
+```
+Rule: I3 — the implement a library movement claims
+Applies to:   any movement resolved from assets/exercises.json, on three paths:
+              (1) the Plan Editor's add-exercise form, (2) a mid-session swap, (3) the
+              "make it permanent" write. Consumed by I1, I2, Z2 and L2's precedence.
+              NOT by L1 — the ladder reads the set's `ld` and never `implement` (§18.2).
+Inputs:       the upstream `eq` string (free-exercise-db `equipment`) at the pinned SHA
+              a859101d633a01c4a1a920d6a8ce41dabba0705f. Static. No history, no minimum data.
+Logic:        I3.1  THE TABLE. Six values map. Seven are REFUSED. A refused value yields no
+                    implement — it never yields a default, a nearest, or "machine".
+              I3.2  ON A FORM (plan add, make-it-permanent): a mapped value PRE-FILLS the
+                    field, which he may change. A refused value leaves it EMPTY and the
+                    existing refusal asks for it. WO-006 B2 is unchanged and is the whole
+                    mechanism; no new refusal machinery.
+              I3.3  ON A SWAP (no form, chalky hands, someone waiting): the implement FOLLOWS
+                    THE MOVEMENT, not the slot, derived at read time from the entry's `mv`
+                    through this table. It is NOT a stored field.
+                    A refused value = NO CLAIM for that entry: I1's ` · per DB` suffix is
+                    suppressed, I2's appendix is suppressed, and Z2's zero word falls back to
+                    the generic `zero load`. Two strings go quiet; nothing else changes.
+              I3.4  THE GENERATOR REFUSES AN UNKNOWN VALUE. scripts/make-library.mjs emits a
+                    histogram of distinct `eq` values with counts and FAILS the build if any
+                    value is absent from I3.1. The histogram is pasted into this section
+                    before W4 transcribes the table.
+              I3.5  A SHA BUMP MOVES DERIVED IMPLEMENTS. Because I3.3 derives at read time, a
+                    library SHA change can change what an old entry claims. That is one more
+                    reason a SHA bump is a migration, not an upgrade (WO-014 Decision 2).
+Output copy:  none of its own. It decides whether two existing strings render:
+              I1's ` · per DB` and I2's `If 2.5 kg is not available, …`.
+              On the make-it-permanent path with a refused value, the form's refusal reads
+              `Not changed. Choose an implement for Kettlebell swing.`
+Not enough data: a refused `eq` IS the not-enough-data state, and its answer is silence on two
+              strings — never a guess. The movement is still fully searchable, selectable and
+              loggable; `w` and `r` are his numbers and no rule here touches them.
+```
+
+### I3.1 — the complete derivation table
+
+Counts are W3's to fill (I3.4). Every value the WO lists at the pinned SHA appears exactly once.
+
+| Upstream `equipment` | → `implement` | Count at the SHA | Tag | Why, and what the mapping switches on |
+|---|---|---|---|---|
+| `barbell` | **`bb`** | — (W3) | `[Certain]` | A barbell makes a 2.5 kg total step with a 1.25 kg pair, so I2's appendix is false here and is correctly suppressed (§2, I2's rationale). |
+| `e-z curl bar` | **`bb`** | — (W3) | `[Certain]` | Cambered bar = EZ bar, one implement under two names — already ruled for `d1g` and `d5e` (§17.1). Same plate ladder, same suppression. |
+| `dumbbell` | **`db`** | — (W3) | `[Certain]` | I1's per-dumbbell reading, everywhere and without exception, plus the ` · per DB` suffix and the per-DB wording of I2. |
+| `cable` | **`cable`** | — (W3) | `[Certain]` | Pin stack. I2's appendix is true: stacks step 5 kg and often 7.5 kg. |
+| `machine` | **`machine`** | — (W3) | `[Certain]` | Pin stack or plate-loaded sled. I2's appendix is true for both. |
+| `body only` | **`bodyweight`** | — (W3) | `[Certain]` | Z2's word at zero load is `bodyweight`, and `w` is the **added** load (L4). This is the mapping with the most consequence and it is also the least ambiguous. |
+| `kettlebells` | **refused** | — (W3) | `[Certain]` on the refusal | `db` would print ` · per DB` on a two-hand swing or a goblet squat. The corpus contains both one-hand and two-hand kettlebell work and the field cannot tell them apart. A per-hand claim the app cannot support is B-131's defect with a different apparatus. |
+| `bands` | **refused** | — (W3) | `[Certain]` | A band has no kg. Any load word or increment line the app prints about a band is fiction. He may still log a number if he wants one; the app says nothing about it. |
+| `medicine ball` | **refused** | — (W3) | `[Likely]` | Fixed-weight implement; the increment is "whatever balls the gym owns", which is neither 2.5 kg nor a rack step. `db`'s per-hand claim is usually wrong here too. |
+| `exercise ball` | **refused** | — (W3) | `[Likely]` | The ball is a surface, not a load. `bodyweight` asserts that his mass is the resistance, which is true for some of these entries and false for others, and the app cannot tell which. |
+| `foam roll` | **refused** | — (W3) | `[Certain]` | Not resistance training. It carries no load, no progression and no rest target. It stays searchable (Decision 4: the library ships whole) and it must never be ordered first in the swap sheet. |
+| `other` | **refused** | — (W3) | `[Certain]` | It is upstream's own "unknown". Mapping an unknown is inventing a fact. |
+| `null` / absent | **refused** | — (W3) | `[Certain]` | Same, with less information. |
+
+**Six mapped, seven refused.** `[Opinion]`, held: the seven refusals cover the long tail of the
+corpus and cost two suppressed strings each; the alternative — a plausible-looking default — costs a
+confident sentence about equipment the app has never identified, on a card he reads between sets.
+
+### Two upstream fields that must not be read at all
+
+- **`lv` (`beginner` / `intermediate` / `expert`) is not read by any rule and must not order the
+  search results.** `[Opinion]`, and I expect it to be proposed as a relevance signal. It is an
+  upstream editorial judgement about an anonymous reader, and the moment it sorts his sheet the app
+  is telling a thirteen-year lifter which exercises are for him.
+- **`f` (force) and `m` (mechanic) do not touch `k`.** See K3.
+
+`pm` / `sm` (primary and secondary muscles) **are** legitimate search-ordering inputs — that is
+relevance, not advice, and W2 owns it.
+
+### Worked examples
+
+1. He swaps `d3c` (seated cable row, `cable`) for a chest-supported machine row, `eq: "machine"` →
+   I3.3 derives `machine` → I2's appendix still prints, Z2 unchanged, no `per DB`. Nothing visible
+   changes, which is correct: both are stack work.
+2. He swaps `d1d` (flat DB press, `db`) for `Machine_Bench_Press`, `eq: "machine"` → derived
+   `machine` → **the ` · per DB` suffix disappears for that entry.** Without I3.3 the card would say
+   `3 × 3–5 · per DB` over a machine, and his logged 60 would be read as 120.
+3. **Boundary — a refused value.** He swaps `d2a` (squat) for a kettlebell goblet squat,
+   `eq: "kettlebells"` → no claim → no `per DB`, no appendix. P1 still runs on `s`/`lo`/`hi`/`k`
+   inherited from the slot and still prints a kg load off what he lifted today. The two things the
+   app cannot know, it does not say.
+4. **Failing case.** A future generator meets `eq: "trap bar"` (not at this SHA). I3.4 **fails the
+   build** and nothing ships. The failure mode being prevented: a silent `undefined` implement that
+   reads as "not `bb`" and turns I2's appendix on for a barbell.
+5. On the Plan Editor form, he picks `Band_Pull_Apart` → `implement` empty → `ADD` refuses with the
+   shipped string `Not added. Choose an implement.` He answers it, or he does not add it. Either is
+   a correct outcome; a guessed `cable` is not.
+
+---
+
+## 22.2 Rule K3 — `k` is never derived, and Rule K2 does not fire on a swap
+
+```
+Rule: K3 — where `k` comes from
+Applies to:   every path that produces or changes an exercise: plan add, mid-session swap,
+              make-it-permanent, and every template in §23.
+Inputs:       for a swap: the slot's existing s, lo, hi, k. For a fresh add: the user.
+              NEVER the library. `f` (force), `m` (mechanic) and `lv` (level) are not inputs
+              to anything.
+Logic:        K3.1  NO UPSTREAM FIELD DERIVES `k`, ever. `k` routes the progression protocol
+                    (P1 vs H1 vs SP1) and the rest table (R1). It is a property of the SLOT in
+                    the programme, not of the movement.
+              K3.2  A SWAP INHERITS s, lo, hi and k UNCHANGED. He replaced the apparatus, not
+                    the prescription. The epoch `(s, lo, hi, k)` is therefore unchanged, PE1
+                    does not fire, the verdict engine keeps running, and R1 keeps its target.
+              K3.3  A FRESH ADD TO A PLAN ASKS. WO-006 B2 stands, unchanged.
+              K3.4  RULE K2 DOES NOT FIRE ON A SWAP, and no equivalent warning is built.
+Output copy:  none. K3 adds no string to the app.
+Not enough data: not applicable — K3 is a rule about where a value may come from.
+```
+
+**Why the library cannot supply `k`, in one line each.** `mechanic: compound | isolation` is the
+closest field and it is not a protocol: `d1h` skull crusher (isolation) is `power` and `d4b` hack
+squat (compound) is `hyp`. `force: push | pull | static` names a direction. `level` names an
+audience. **`d1h` and `d5i` are the proof standing in the shipped plan**: one movement, one upstream
+entry, two `k` values on purpose. Any derivation would have to pick one and would be wrong on the
+other. `[Certain]`.
+
+**K2 cannot fire on a swap, and this is arithmetic rather than a policy.** `kindWarn(k, lo, hi)`
+reads three values; a swap changes none of them; so on a slot that did not warn when it was created,
+the same three values cannot warn now. K2 is also a *form* rule — warn-once, armed on
+`(k, lo, hi)`, cleared by editing them — and the swap path has no form. `[Certain]`.
+
+**Should a new warning be built for "this movement does not suit this `k`"? No.** `[Opinion]`,
+and I will hold it:
+
+- There is no field to build it from. The only candidate is `mechanic`, and `mechanic → k` is the
+  derivation K3.1 just refused. A warning built on a guess is a guess with a modal around it.
+- The cost is paid at the worst moment. He is mid-session, the machine is taken, someone is waiting
+  for the one he is on, and the app puts a sentence between him and his first set. The WO's own
+  acceptance criterion is four taps; a warning makes it five and the fifth is a judgement.
+- The failure it would prevent is one he can see. If he swaps a 3 × 3–5 squat for a leg curl, the
+  card still says `3 × 3–5` and he has thirteen years. The failures worth interrupting for are the
+  ones he *cannot* see, which is why MV1 exists and this does not.
+
+**What the swap does change, and it is the only thing:** `implement` follows the movement (I3.3), so
+`per DB` and the increment line may appear or disappear. That is a fact about the apparatus, and it
+is the one thing the library genuinely knows.
+
+---
+
+## 22.3 Rule AD1 — a movement added mid-session has no prescription
+
+**The PM's recommendation is confirmed** — log freely, ask for no `s`/`lo`/`hi`, every verdict
+silent behind one named line — **with three amendments.** `[Certain]` on the confirmation: a
+guessed prescription becomes a confident recommendation next week, and it would be a prescription
+the app wrote for itself, which is the one thing §8.4 exists to prevent.
+
+```
+Rule: AD1 — an added movement carries no prescription
+Applies to:   a draft entry created by ADD in the swap sheet — a movement the day's plan does
+              not carry and which has no slot. Session screen, Summary. All roles.
+              NOT a swap (a swap has a slot and inherits its prescription — K3.2).
+Inputs:       the entry's `mv` and `n`. That is all there is; there is no s, lo, hi or k.
+Logic:        AD1.1  IT LOGS FREELY. Sets, reps, load, note, `ld`, the unit chip — every entry
+                     surface behaves exactly as it does on a slot. Nothing refuses, nothing is
+                     gated, and the sets are saved and backed up like any others.
+              AD1.2  EVERY VERDICT IS SILENT. P1, H1, SP1, X1's extra-set badge, I2's
+                     increment line, Z3, G1 and the rest target all require a prescription or
+                     a `k` and have neither. One named line renders in the verdict slot, in
+                     C7a's shape and §9.12's precedent: name what is missing, say what
+                     switches it on, never guess.
+              AD1.3  NO REST TARGET. R1 computes from `k` and `hi`. With neither there is no
+                     ready state, no cap and no colour. The clock may count up — elapsed time
+                     is a fact — but the app states no target.
+              AD1.4  THE PAIN REFERRAL LINE STILL RENDERS. Rule S1/S1b reads the note, not the
+                     prescription. It is the one output here that is about HIM rather than
+                     about the programme, and it is the one place silence is the wrong default.
+              AD1.5  IT FEEDS NO ENGINE. No `lift`, so no Trend line of its own; no slot, so
+                     no ST1, SP1 or D1 subject; no `cut`, so no V1 interaction. It counts for
+                     TW1 and the calendar exactly as the session it sits in already does.
+Output copy:  verdict slot:
+                Added today. No sets or reps set, so no verdict. Add it to your plan to get one.
+              rest row:
+                No type set, so no rest target.
+              pain referral: unchanged from S1. Not restated, not reworded, not suppressed.
+Not enough data: AD1 IS the not-enough-data state, and more logging will never resolve it —
+              only adding it to a plan will. So the copy names the plan and never says "log
+              more", exactly as C7a requires of an ABSENT state.
+```
+
+**On the copy.** `Added today.` states the fact; `No sets or reps set, so no verdict.` states the
+consequence in his own words rather than a rule's name; `Add it to your plan to get one.` is the one
+action that changes it. Nine words of advice and none of it is training advice, which is the point.
+`[Opinion]` on the wording, `[Certain]` on the three clauses it must contain (§9.12's shape).
+
+**If he adds the same movement three weeks running, does the app relent and offer a prescription?
+No.** `[Opinion]`, conservative. Three improvised sessions are not a decision to programme something,
+and the offer would arrive as "the app thinks I should do this". Making it permanent is a tap on
+Summary that already exists for the swap; the add path can reuse it and that is UX's to place.
+
+### Worked examples
+
+1. Cable station taken, he adds `Face_Pull` and logs `25 × 15, 25 × 15`. Saved, on disk, on the
+   Summary, in the backup. Verdict slot:
+   `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` No rest target.
+2. **The one that must not go silent.** Same session, note reads `left shoulder pinching`. S1b fires
+   → the referral line renders under the added movement exactly as it would under a slot. The app
+   has no verdict to suppress and says nothing about the training; it says the one thing it is
+   allowed to say about pain, and it is not the app's call to assess (§3).
+3. **Failing case — what a guessed prescription would do.** Suppose the app inferred `3 × 8–12, hyp`
+   from two logged sets. Next week the card opens with a target line, a ghost, an H1 tonnage
+   comparison and an increment appendix, all derived from one improvised session on a machine he
+   used because the cable was busy. That is the app writing a programme and then grading him against
+   it. `[Certain]` this is worse than a blank slot.
+
+---
+
+## 22.4 Rule MV1 — when another slot's history counts as this slot's prior
+
+This is the rule the order exists for. It has two halves that must not be confused: **MV1.1 takes
+poison out of the slot's own history** (B-136), and **MV1.2 lets a new slot find an old movement's
+history, disclosed** (B-137). One subtracts, one adds, and the second is far more dangerous, so its
+gate is much tighter.
+
+```
+Rule: MV1 — which logged entry is this slot's prior
+Applies to:   every read that answers "what did he do on THIS exercise last time": lastFor
+              (ghost, seed, PE1's prefill, H1's Cprev), e1rmByDate (ST1 and any e1RM chart),
+              speedLoad (SP1's target — a load he puts on a bar), d1Rows (D1's T1),
+              liftDays, loadModeFor. Session screen, Trend, Summary.
+              EXPLICITLY NOT painWindow: a pain note is his, whatever he was doing when he
+              wrote it, and a swap must never hide it.
+              EXPLICITLY NOT the Trend chart's raw load and tonnage series: those sets are
+              true lifts and stay on the chart (§18.3's position, carried forward).
+Inputs:       the sorted sessions array; the slot's exId; the slot's `mv`; the slot's current
+              {s, lo, hi, k}; each candidate entry's `mv`, `sw`, `rx` and its session's date
+              and dayId; today's date; the plan store, to resolve a name.
+              Minimum data: none to decide. One qualifying entry to produce a prior.
+Logic:        DEFINITIONS
+              effectiveMv(entry, slot) = entry.mv if present, else slot.mv.
+                (An entry with no `mv` is the slot's movement by definition — true of every
+                 session logged before schema 7, which is all four of his.)
+              epoch(x) = (s, lo, hi, k), compared by STRICT equality, no tolerance band.
+                Same test and same reason as PE1 (§9.1).
+
+              MV1.1  THE SLOT'S OWN HISTORY — the skip.
+                     (a) If the slot declares `mv`: an entry under this exId whose
+                         effectiveMv !== slot.mv is SKIPPED and the walk continues backwards.
+                         `sw` is NOT consulted on this path. This is deliberate: after "make
+                         it permanent" the slot's `mv` becomes the swapped movement, and those
+                         entries — which still carry sw:1 from log time — must become the
+                         slot's history, which is exactly what the offer promises.
+                     (b) If the slot declares no `mv` (an unmapped or user-built plan): an
+                         entry with `sw === 1` is SKIPPED. Best effort, and it is all the
+                         information there is.
+                     (c) Otherwise: today's behaviour, byte for byte. A two-argument
+                         lastFor call is unchanged.
+
+              MV1.2  THE CROSS-SLOT FALLBACK — five gates, ALL required.
+                     Fires ONLY when MV1.1 returned nothing. It never supplements a prior,
+                     never merges two, and never reaches past a qualifying one.
+                     (a) The slot declares `mv`. An unmapped slot gets no fallback, ever.
+                     (b) effectiveMv(candidate) === slot.mv, strict string equality.
+                     (c) The candidate carries `rx` AND epoch(candidate.rx) === epoch(slot),
+                         strictly. A candidate with no `rx` is REFUSED — not resolved from a
+                         plan, not assumed.
+                     (d) The candidate's session date is within 56 DAYS of today.
+                     (e) THE APP CAN NAME THE SOURCE, resolving in this order: the entry's
+                         `n`, then the source slot's `n` from any plan in the store, then the
+                         library name for `mv`. If all three fail, the fallback is REFUSED.
+                         A prior the app cannot attribute may not be shown.
+                     Among qualifying candidates: the most recent by session date; ties to the
+                     later position in the sorted sessions array (lastFor's own walk order).
+                     Returns {entry, from:"movement", exId, dayName, date}.
+
+              MV1.3  WHAT A FALLBACK PRIOR MAY AND MAY NOT DRIVE.
+                     MAY: the ghost line, with MV1-C1 rendered beside it; the weight seed and
+                          the card's unit/bar mode (gate (c) guarantees the same prescription
+                          of the same movement, so the number is a true target).
+                     MAY NOT: H1 cases 3 and 4. No tonnage comparison and no baseline test
+                          crosses a slot. H1 takes case 3 with MV1-C4's copy.
+                          No engine widens its read: ST1, SP1, D1, V1 and the Trend series are
+                          exactly as they are on main. `priorFor` is consumed by the card.
+
+              MV1.4  DISCLOSURE IS NOT OPTIONAL. A fallback prior renders MV1-C1. A refusal
+                     under (c) or (d) renders MV1-C2a or MV1-C2b, WITH NO NUMBER. A skip
+                     under MV1.1 that changed which entry was returned renders MV1-C3.
+                     Silence is the defect; an undisclosed number is the worse defect.
+Output copy:  MV1-C1  (fallback prior, beneath the existing ghost line)
+                From Bent-over row on Upper power, 22 Sep. Not this exercise's own history.
+              MV1-C1b (same, when the source day no longer exists in any plan)
+                From Bent-over row on 22 Sep. Not this exercise's own history.
+              MV1-C2a (refused: different prescription — NO number anywhere on the line)
+                First time here. Your other Skull crusher sets are under a different
+                prescription, so the app does not use them as a target.
+              MV1-C2b (refused: older than 56 days — NO number)
+                First time here. Your last Bent-over row was more than eight weeks ago, so the
+                app does not use it as a target.
+              MV1-C3  (MV1.1 skipped the most recent entry under this slot)
+                Last time you swapped this for Machine row. Not used as this exercise's history.
+              MV1-C4  (H1 case 3 on a slot whose only prior is a fallback)
+                First session on this exercise. This becomes your baseline. Your earlier
+                Bent-over row sets are still in the history and on the chart.
+Not enough data: MV1 needs no history to decide, deliberately — the ghost and the seed are the
+              first things on screen and a stale target is most dangerous before any new set
+              exists. Where a gate refuses, the copy above IS the not-enough-data state and it
+              carries no number, because a number is what he would act on.
+```
+
+### 22.4.1 Why 56 days, and why strict equality on the prescription
+
+**56 days** is SP1's outer window, already a constant in the file. It is not a new number and I
+decline to invent one. The failure it prevents is N4's (§7.7): six weeks of training, six months
+off, a comeback — and the app seeds the bar with a load from before the layoff. `[Certain]` that is
+detraining, not a target. The slot's *own* history keeps no recency bound, which is deliberate
+asymmetry: his own slot's last session is a number he recognises; a cross-slot prior is a connection
+**the app** asserted, and the app's assertions get the tighter bound. `[Opinion]` on the asymmetry,
+`[Likely]` that 56 days is the right figure — 42 or 90 would both be defensible and neither is worth
+a new constant.
+
+**Strict equality on `(s, lo, hi, k)`** is PE1's test, reused for PE1's reason: a tolerance band that
+calls 8–12 → 10–12 "close enough" but 8–12 → 8–15 not is a number I cannot defend, and getting it
+wrong seeds a weight for the wrong quality of work. It over-triggers on purpose. The cost of
+over-triggering is one session of a no-number line; the cost of under-triggering is a heavy-triple
+load typed into a box above a 12–15 target, with chalk on his hands. §9.1 already paid this exact
+price knowingly and this is the same trade one slot further out.
+
+### 22.4.2 The d1h / d5i test, stated so it cannot be transcribed away
+
+| | `d1h` | `d5i` |
+|---|---|---|
+| Day | d1 Upper power | d5 Chest & arms |
+| Name | Skull crusher | Skull crusher |
+| Prescription | `s:3, lo:6, hi:10, k:"power"` | `s:3, lo:12, hi:15, k:"hyp"` |
+| `lift` | `l_skull` | `l_skull` |
+| `mv` after W4's stamp | `mv_EZ-Bar_Skullcrusher` | `mv_EZ-Bar_Skullcrusher` |
+| MV1.2 (b) movement | **passes** | **passes** |
+| MV1.2 (c) prescription | **FAILS** — `lo`, `hi` and `k` all differ | **FAILS** |
+
+**`priorFor(sessions, plan, "d1h")` must return no fallback when only `d5i` has history, and
+`priorFor(sessions, plan, "d5i")` must return no fallback when only `d1h` has history.** Both cards
+print MV1-C2a and **no number**. `lastFor(sessions,"d1h")` and `lastFor(sessions,"d5i")` remain two
+different reads with two different answers, before and after this change. Pin all four assertions by
+id, with a comment saying this is B-46 and why it was rejected.
+
+**A finding W4 must act on, and it strengthens the case.** `mv` creates far more same-movement pairs
+than `lift` does — 42 slots over roughly 31 distinct movements. Reading the shipped plan slot by
+slot, **every** same-movement pair differs in prescription: `d1a`/`d3a` (3 × 3–5 power vs 6 × 3
+speed), `d1c`/`d3b` (2 × 6–10 power vs 3 × 8–12 hyp), `d1d`/`d5a` (3 × 3–5 power vs 6 × 3 speed),
+`d1f`/`d3f` (3 × 6–10 power vs 3 × 8–12 hyp), `d1h`/`d5i`, `d2b`/`d4b` (2 × 6–10 power vs 3 × 8–12
+hyp), `d2c`/`d4d` (2 × 6–10 power vs 3 × 15–20 hyp), `d2e`/`d4f` (2 × 6–10 power vs 2 × 12–15 hyp),
+`d2g`/`d4i` (2 × 6–10 power vs 3 × 15–20 hyp). **So on the shipped PHAT plan, MV1.2 never fires at
+all** — a checkable claim, and W4 should assert it mechanically rather than trust my reading of the
+table: *over `PHAT_PLAN`, no two slots share an `mv` and an epoch.* If that assertion ever goes red,
+either a template author has created a genuine duplicate slot or someone has widened gate (c).
+
+### 22.4.3 Two slots that must ship with NO `mv`
+
+`d1c` and `d3b` (**Rack chin**). §17.0 item 5 already established that no upstream entry shows this
+lift and that `Inverted_Row` is a different movement (body horizontal, feet on the floor — F1p.1
+fails on the ground reference). **Mapping them to the nearest thing would make MV1.2 treat an
+inverted row's history as a rack chin's prior and seed a load off it.** They ship unmapped,
+MV1.1(c) gives them today's behaviour, and MV1.2 never fires for them. `[Certain]`
+
+**The general rule this is an instance of: a slot whose movement the library does not contain is
+left unmapped.** `mv` absent is a supported state, the WO says so, and it is the honest one. W4 must
+not fill the 42 from the nearest name; any slot it cannot map from `fig` or an exact name match
+comes back to me as a list.
+
+### 22.4.4 What MV1.1 takes out of which engine, and why each one matters
+
+| Engine | Skips a foreign-movement entry? | The wrong advice it prevents |
+|---|---|---|
+| `lastFor` → ghost, seed, `loadModeFor` | **Yes** | The card opens as the machine left it and seeds a machine's load onto a barbell. |
+| H1 `Cprev` (cases 3, 4) | **Yes** | `Volume down 30%` for putting the bar back. |
+| `e1rmByDate` → ST1, the e1RM chart | **Yes** | §18.3's headline: a chest-supported row inflates the block max and **hides a real stall on the barbell row**, or a lighter machine **manufactures** one and the copy blames his effort or his diet. |
+| `speedLoad` → SP1 | **Yes, and this is the one with physical stakes** | SP1 names a load he puts on a bar and moves fast. Computed off a machine row's heavier triple, the number is too heavy for the lift he is actually doing. |
+| `d1Rows` → D1 T1 | **Yes** | A failure on a different apparatus is not a failure on this lift, and it would anchor a deload recommendation. |
+| `liftDays` | **Yes** | "You trained the row" is false if he trained a machine. |
+| `painWindow` | **No — never** | His pain is his pain. Suppressing a referral because the app decided the entry was a different movement is the one failure mode I will not accept here. |
+| Trend load and tonnage series | **No** | They are true lifts and belong on the chart (§18.3). A hollow marker for `sw: 1` is worth doing and is UX's call, not a gate. |
+| `volumeTier` / V1, `trainingWeeks` / TW1, W1's calorie decision | **No** | They count exercises, dates and bodyweight. A swap is not a missed session. |
+
+### 22.4.5 `sw` supersedes §18.3's tap, and inherits its two literals
+
+§18.3 recommended a manual `Swapped` chip and named its cost plainly: *"forgetting the tap costs
+exactly what he has today"*. **`sw` derived from the movement he picked is strictly better** — he
+cannot forget it, because the mark and the swap are the same action. B-111 is answered. Two of
+§18.3's rulings carry over unchanged in substance, with the movement's name now available:
+
+```
+ST1, when a swap leaves a block under its 2-session minimum (§18.3, unchanged):
+  Not enough unswapped sessions on Row to judge. Log it weekly.
+
+H1 on the swapped session itself (§18.3's string, now naming the movement):
+  Swapped to Machine row. Not compared to last session.
+```
+
+H1 cases 1 and 2 (range compliance) still run on the swapped session — they read today's sets only.
+P1 runs unchanged for the same reason: it is history-free (§9.1's table). **So a swapped session
+still gets a verdict about today's work; only the comparison to last week goes quiet.** That is the
+correct split and it is the same one §18.3 drew.
+
+### 22.4.6 "Make it permanent" — the consequence the copy must state
+
+Changing a slot's `mv` re-points MV1.1: the movement's entries under that slot become the slot's
+history, and the previous movement's entries stop being it. Nothing is deleted, nothing is re-keyed,
+everything stays on the chart. The confirmation must say so before he taps, because next session's
+card will look different and he must not be surprised by it:
+
+```
+Make Machine row this exercise from now on? Your Seated cable row sets stay in the history and
+on the chart, but they stop being this exercise's last session. The next verdict reads your
+Machine row sets.
+```
+
+`[Opinion]` on the wording; `[Certain]` that the three facts it carries — nothing is lost, the prior
+moves, the verdict follows — must all be in it. UX owns placement, and the PM has already ruled it
+belongs on Summary and never mid-set.
+
+### 22.4.7 Worked examples
+
+1. **The d1h / d5i test — must not cross.** Store: 26 Sep `d5i` `30 × 14 / 14 / 13`,
+   `rx {s:3, lo:12, hi:15, k:"hyp"}`. Nothing ever logged on `d1h`. He opens Day 1 on 29 Sep.
+   MV1.1 → nothing. MV1.2: (a) passes, (b) passes (same `mv`), **(c) fails** → no prior, no seed,
+   weight box empty. Card:
+   `First time here. Your other Skull crusher sets are under a different prescription, so the app
+   does not use them as a target.` H1 takes case 3a unchanged (`First time logged. This becomes your
+   baseline.`), because there is no fallback to describe. **Must not print** any load, `30`, or
+   `Last`.
+2. **The swap, the week after — B-136.** 18 Sep `d3c` seated cable row `55 × 12 / 12 / 11`. 25 Sep
+   he swaps `d3c` to a machine row and logs `70 × 12 / 12 / 12`, entry carries
+   `mv: mv_Machine_Row`, `sw: 1`. 2 Oct, `d3c` card. MV1.1(a): the 25 Sep entry's `mv` ≠ the slot's
+   `mv` → **skipped**; the 18 Sep entry is returned. Ghost `Last 55 kg × 12`, seed 55, and because a
+   skip changed the answer:
+   `Last time you swapped this for Machine row. Not used as this exercise's history.`
+   H1 compares 2 Oct against 18 Sep. Today, with no rule, the card would read `Last 70 kg × 12`,
+   seed 70, and print `Volume down 21%` for going back to the cable.
+3. **The restructure — B-137, and the payoff.** He builds a PPL plan. Pull day, slot `ex7f`,
+   `n: "Barbell row"`, `mv: mv_Bent_Over_Barbell_Row`, `s:3, lo:3, hi:5, k:"power"`. No history under
+   `ex7f`. His `d1a` entry of 22 Sep carries the same `mv`, `rx {3,3,5,power}`, six days old, and the
+   app can name it. All five gates pass → ghost `Last 100 kg × 5`, seed 100, and beneath it:
+   `From Bent-over row on Upper power, 22 Sep. Not this exercise's own history.`
+   H1 is not consulted (power slot, P1 is history-free). Today he would get `First time logged` on a
+   lift he has months of.
+4. **Boundary — 56 days.** Same as 3, with the `d1a` entry 57 days old. Gate (d) fails → no prior,
+   no seed:
+   `First time here. Your last Bent-over row was more than eight weeks ago, so the app does not use
+   it as a target.` At 56 days exactly it qualifies. `[Opinion]` on which side of the boundary the
+   equality falls; pin it either way so a refactor cannot move it silently.
+5. **Boundary — the source cannot be named.** Same as 3, but the old plan was deleted, the entry
+   carries no `n`, and the library lookup fails. Gate (e) fails → **no prior at all**, not an
+   anonymous one. The app does not print `Last 100 kg × 5` with nothing beside it.
+6. **Failing case — his real d1b, and the limit of this rule.** 12 Sep, `d1b` weighted pull-up,
+   `86 × 5` with the note about iso-lateral pulldowns. That entry has **no `mv`**, so
+   `effectiveMv` is the slot's and MV1.1 returns it exactly as today. **MV1 does not fix B-131 and
+   must not be described as fixing it.** It fixes every swap logged *after* schema 7 ships, and the
+   12 Sep entry stays byte-identical (D2). His one sentence is still owed.
+7. **The no-op case.** A plan with no `mv` anywhere, a two-argument `lastFor`, no `sw` on any entry:
+   every read returns what it returns on `main @ 6a87a3a`, no new string renders, and nothing about
+   the card changes. Pin it — it is the criterion that says this rule is additive.
+
+### 22.4.8 Rationale
+
+A logged set records two facts: **where in his week it happened** (the slot) and **what he lifted**
+(the movement). The app has only ever stored the first and has been inferring the second from it,
+which is true until the day a machine is occupied. MV1 stops the inference where it is false and
+lets the second fact carry history across a restructure — but only where the prescription, the
+movement and the calendar all agree, and never without saying where the number came from. The
+asymmetry between the two halves is deliberate: taking a wrong number out of a slot costs him a week
+of comparison; putting a wrong number in seeds a bar.
+
+---
+
+## 22.5 Rule F1L — photographs and cues for a library movement
+
+```
+Rule: F1L — what a library movement may show
+Applies to:   the MOVEMENT & CUE disclosure on the session card, for (1) a movement chosen
+              from the library by swap or add, (2) any card whose movement differs from the
+              slot's. All roles. No engine reads it; no advice depends on it.
+Inputs:       the slot's `fig` and `cue` (§17.2, §10.2); whether the card's movement is the
+              slot's. Static.
+Logic:        F1L.1  A LIBRARY MOVEMENT HAS NO PHOTOGRAPH AND NO CUE. It is outside the 24
+                     eye-checked ids and outside the 43 signed-off cues, so
+                     `hasFig(id) || cueFor(id)` is false and the disclosure does not render
+                     at all — no box, no placeholder, no label (§4.13). No new copy.
+              F1L.2  A SWAPPED CARD SHOWS NEITHER, EVEN THOUGH THE SLOT HAS BOTH. Where the
+                     card's movement differs from the slot's, the slot's photograph and the
+                     slot's cue are SUPPRESSED for that session. Both are authored for a
+                     movement he is not performing.
+              F1L.3  `fig` STAYS ON THE SLOT (22.6).
+Output copy:  none. F1L decides whether a node renders. Nothing is added, removed or reworded
+              in the 43 cues.
+Not enough data: the whole of F1p, restated at volume. Until an id's row reads `pass` against
+              a written criterion, that id is at `none`. "The name looks right" is not enough
+              data — that is the rule, not a caveat.
+```
+
+**F1p forbids shipping unchecked upstream frames at volume, and the eye check is the evidence.**
+`[Certain]`. On 2026-09-12, 31 candidate ids were checked against a criterion written per row by a
+human looking at 70 frames: **8 failed, and every one failed on position, not on cosmetics** — a
+"weighted pull-up" with a foot on the step and the chin below the bar; an upright row at the narrow
+grip F1p.3(b) exists to refuse; two hinges photographed at the kneecap. That is a 26% wrong-teaching
+rate *with* a criterion and *with* someone looking. At roughly 800 movements there is no criterion
+and nobody looking, so the rate is unknown and the errors are silent. And the tail is worse than the
+head: the 31 checked were the mainstream lifts, where stock photography is most likely to be right.
+
+**The failure this prevents is not cosmetic.** A photograph teaching the injury variant of a lift —
+F1p.3(b)'s three named cases — is the worst artefact this app could ship, because it is instruction
+he will copy under load, it arrives without a sentence he can argue with, and no test can see it.
+The wrong figure is worse than none; that has been the standing ruling since §11.8 and it does not
+weaken because the catalogue got bigger.
+
+**F1L.2 is new and it is required.** `d1a` ships `Bent_Over_Barbell_Row`; swap it for a machine row
+and the card would otherwise show two photographs of a barbell hinge and the cue *"Keep the torso at
+the same angle for every rep"* over a chest-supported machine — F1p.1 fails on the ground reference
+and the cue names a position the apparatus removes. `[Certain]`. Suppress both; do not substitute,
+do not guess, do not keep the cue "because it is good advice". It is good advice about a different
+exercise.
+
+**If a subset is ever promoted.** The procedure is WO-009's and it does not get cheaper: name the
+ids, write one criterion per id, have a human look at both frames, record `pass` / `fail` with
+initials and a date, and ship only the `pass` rows. Batches of ≤ 30 — that is what 31 ids cost and
+it is an evening's work. B-142 is the right home and I am not asking for it in this order.
+
+---
+
+## 22.6 `fig` stays on the slot — the ruling, and the argument against it
+
+**Ruling: `fig` does not move to the movement this release.** `[Opinion]`, held firmly, and the WO
+is right that a future session will re-litigate it — so here is the case both ways.
+
+**The case for moving it, stated at its strongest.** The movement is `fig`'s natural home: 32 slots
+carry 24 distinct ids, so the map is 25% redundant; once `mv` exists, slot-`fig` and slot-`mv` are
+two fields naming the same upstream entry and they can drift; and a movement-keyed map would survive
+a re-split, which is the very thing this order is about.
+
+**Why it loses.**
+
+1. **`fig` is not a description of a movement. It is the record of a check performed on a slot.**
+   §17.2's `Confirm by eye` column is written per row: `d1a`'s criterion is "torso hinged at about
+   the same angle in both frames", `d5b`'s is the bench angle, `d4h`'s was the block under the
+   forefoot. Two slots sharing an id passed on two different criteria. Move the map to the movement
+   and the per-slot criterion has nowhere to live; the audit record becomes a content lookup.
+2. **It converts a 32-row whitelist into a lookup over an unchecked namespace.** `figFor` reads the
+   shipped plan and nothing else, on purpose — a user-added exercise has no shipped slot, so it gets
+   no photograph. Keyed by movement, every one of ~800 library ids is a potential key, and the only
+   thing standing between the app and the 26% is that nobody has written the rows yet. That is
+   F1L.1 depending on an absence rather than on a rule.
+3. **It removes B-64's rename guard.** Rename a shipped slot and the view's `shippedName()` drops
+   its photograph, because a slot called "Leg press" showing a row is a lie. On a movement-keyed map
+   the photograph belongs to the movement and the rename cannot reach it.
+
+**The condition under which it should move**, so the next session does not have to re-derive it: the
+day a library subset is eye-checked as a set (B-142) and every shipping id has a `pass` row of its
+own, `fig` may move to the movement and the slot map becomes derived data. **Not before.**
+
+**Two things W4 owes while it is in here.**
+
+- **A consistency assertion.** For every slot carrying both, `"mv_" + fig === slot.mv`. On my
+  reading of §17.8 there is exactly **one** intended exception: `d1e` Weighted dip ships
+  `Dips_-_Chest_Version`, a documented fallback, and its movement is the weighted dip. If the list
+  of disagreements comes out longer than that one slot, it comes back to me before it ships — a
+  disagreement means either a wrong `mv` or a photograph on the wrong slot, and the second is the
+  defect §17 exists to prevent.
+- **The exception list lives here, not in a comment.** Add any further exception to this subsection
+  with its reason, the way §17.3's register works.
+
+---
+
+## 22.7 What changes, by work item
+
+| Item | Owner | Change |
+|---|---|---|
+| `scripts/make-library.mjs` | W3 | I3.4: emit the `eq` histogram with counts; **fail the build** on any value not in I3.1. Paste the histogram into 22.1 before W4 transcribes. |
+| `logic.js` — `implementFor` | W4 | I3.3: derive an entry's implement from its `mv` at read time; a refused `eq` returns no claim, and I1's suffix and I2's appendix are suppressed for that entry. No new stored field. |
+| `logic.js` — `lastFor`, `e1rmByDate`, `speedLoad`, `d1Rows`, `liftDays`, `loadModeFor` | W4 | MV1.1's skip, per 22.4.4's table. **`painWindow` and the Trend load/tonnage series are explicitly excluded** and should carry a comment saying so, or a later tidy-up will "fix" them. |
+| `logic.js` — `priorFor` | W4 | MV1.2's five gates, MV1.3's permissions, the `{entry, from, exId, dayName, date}` return. |
+| `logic.js` — `PHAT_PLAN` | W4 | `mv` on every slot the library contains; **`d1c` and `d3b` ship with no `mv`** (22.4.3); any other slot W4 cannot map from `fig` or an exact name match comes back to the coach as a list, not a guess. |
+| `logic.js` — H1 | W4 | Case 3 gains MV1-C4 for a fallback-only slot; the swapped session takes `Swapped to Machine row. Not compared to last session.` Cases 1 and 2 unchanged. P1 unchanged. |
+| `logic.js` — ST1 | W4 | §18.3's thin-data line with `unswapped` in it, when the skip empties a block. |
+| `index.html` — session card | W5 | MV1-C1 / C1b / C2a / C2b / C3 placement (UX §22); AD1's two lines; **F1L.2's suppression of the photograph and the cue on a swapped card.** |
+| `index.html` — Summary | W5 | 22.4.6's confirmation body on "make it permanent". |
+| Suite | W6 | 22.4.2's four `d1h` / `d5i` assertions by id with the B-46 comment; 22.4.7 #1–#7 as named tests, each `Must not` its own assertion; the mechanical *no two PHAT slots share an `mv` and an epoch*; the `"mv_" + fig === mv` consistency check with `d1e` as the only listed exception; a mutant that drops gate (c) must die, and a mutant that drops gate (e) must die. |
+
+---
+
+## 22.8 Left open, and what I will not fill in
+
+1. **The `equipment` counts.** Not available from this lane; I3.4 makes the generator produce them
+   and refuse the unknown. **W3 pastes the histogram into 22.1.** Until it does, the acceptance
+   criterion on this item is *not* met and the PM should not mark it so.
+2. **Whether the 56-day bound is right.** `[Likely]`. It reuses SP1's constant rather than inventing
+   one. Revisit when there is data on how often he restructures.
+3. **B-116, raised once as the WO asks.** A five-set ramp before a swap has an ambiguous owner: the
+   warm-ups belong to the movement he warmed up *for*, which may be the one he could not get on.
+   Nothing in this section depends on the answer — the data shape is the same either way — and it is
+   still the first question of the next planning pass.
+4. **B-131, still owed.** MV1 does not touch his `d1b` 86 kg or his `d1d` 81 kg, by design and by
+   D2. Every verdict on those two slots remains correct arithmetic on a wrong fact.
+5. **Anything touching pain, injury or the forearm in his 12 Sep note** is outside what this app
+   should advise on. S1's referral line is the whole of the app's response and AD1.4 keeps it
+   rendering on movements the app knows nothing else about. No rule here assesses, adapts around, or
+   comments on an injury.
+
+---
+
+## 22.9 Verdict
+
+**Sign off on all six, with three changes and one refusal.**
+
+- **(a)** Six values map, seven are refused, and the refusal is a *named* state rather than a
+  default. **Change:** the counts are W3's and the generator must fail on an unknown value.
+- **(b)** Confirmed: `k` is never derived, a swap inherits the prescription, K2 does not fire and
+  no equivalent warning is built. **Refusal:** no new mid-session warning, at any strength.
+- **(c)** Confirmed. **Changes:** no rest target, and the pain referral line still renders.
+- **(d)** Rule MV1 as written: a skip on the slot's own history, a five-gate fallback across slots,
+  disclosure in every branch, and `d1h` / `d5i` failing gate (c) on three of four fields.
+- **(e)** Confirmed, plus F1L.2 — a swapped card shows no photograph and no cue.
+- **(f)** `fig` stays on the slot, with the condition for moving it written down.
+
+**The standing item, for the ninth time.** Four logged sessions, and one of them already contains a
+swap he recorded in prose because the app had nowhere to put it. That is the best argument in this
+document for building the feature, and it is also the measure of everything else: the library will
+be right or wrong about 800 movements, and the only ones that matter are the ones he actually does.
