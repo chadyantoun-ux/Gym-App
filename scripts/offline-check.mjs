@@ -241,17 +241,30 @@ const lib = await page.evaluate(async () => {
     const q = "row";
     const hits = j.exercises.filter(r => String(r.n || "").toLowerCase().includes(q));
     const swappable = hits.filter(r => r.eq === "machine" || r.eq === "cable");
+    // The `c` field's whole reason for being, asserted rather than assumed:
+    // searching a MUSCLE must be able to separate resistance work from a
+    // stretch. Without `c`, "90/90 Hamstring" (a stretch) and a leg curl are
+    // indistinguishable to the ordering rule.
+    const ham = j.exercises.filter(r => (r.pm || []).includes("hamstrings"));
+    const hamWork = ham.filter(r => r.c === "strength" || r.c === "powerlifting" ||
+                                    r.c === "olympic weightlifting" || r.c === "strongman");
+    const hamStretch = ham.filter(r => r.c === "stretching");
     return { count: j.count, rows: j.exercises.length, sha: j.sha,
              header: typeof j._ === "string" && j._.indexOf("GENERATED") === 0,
              hits: hits.length, swappable: swappable.length,
-             sample: swappable.slice(0, 3).map(r => r.n + " (" + r.eq + ")") };
+             sample: swappable.slice(0, 3).map(r => r.n + " (" + r.eq + ")"),
+             cats: Object.keys(j.category || {}).length,
+             ham: ham.length, hamWork: hamWork.length, hamStretch: hamStretch.length };
   } catch (e) { return { err: String((e && e.message) || e) }; }
 });
 const libOk = !lib.err && lib.header && lib.rows === LIB.count && lib.count === LIB.count &&
-              lib.sha === LIB.sha && lib.hits > 0 && lib.swappable > 0;
+              lib.sha === LIB.sha && lib.hits > 0 && lib.swappable > 0 &&
+              lib.cats > 1 && lib.hamWork > 0 && lib.hamStretch > 0;
 say("7c. the exercise library offline: " + (lib.err ? "FAILED: " + lib.err :
     lib.rows + "/" + LIB.count + " movements, header " + lib.header + ", sha " + String(lib.sha).slice(0, 7) +
     ' - search "row" -> ' + lib.hits + " hits, " + lib.swappable + " on a machine or cable: " + lib.sample.join(", ")));
+say("    category (c) separates work from stretching: " + lib.cats + " categories; " + lib.ham +
+    " hamstring movements -> " + lib.hamWork + " resistance, " + lib.hamStretch + " stretches");
 
 say("8. page errors: " + (errs.length ? errs.join(" | ") : "NONE"));
 

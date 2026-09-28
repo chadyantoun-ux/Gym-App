@@ -40,13 +40,29 @@ since WO-011**. `docs/work-orders/WO-005-overnight.md` still says six and is sta
 `assets/ex/manifest.json` and `scripts/verify-deploy.sh` are the authority — and they are checked
 against each other by script, not by eye (see the photo set below).
 
-> **`diag.html` was live and unverified for a fortnight.** It is on production today (fetch it and
-> see), it is what CLAUDE.md tells you to open first when the phone and the server disagree, and it
-> was in neither this table nor `verify-deploy.sh`. The verifier printed `PASS 59/59` while the
-> deploy was sixty files. A deploy that dropped it would have passed every check in this document.
-> It is #4 below now. **The lesson is the one already written at the bottom of this section: a file
-> that is deployed but unverified is not covered by anything here, and nobody notices until the
-> morning it is needed.** Add the row in the same commit as the file.
+### THE LIST IS THE CONTRACT
+
+**Whatever is served must be on this list. A file that is not on it is not deployable — not
+"deployed but unchecked", not deployable.** There is no second category.
+
+This is a rule with teeth now, not an instruction. `scripts/verify-deploy.sh` enforces it in **both**
+directions:
+
+- **downward** — every file on the list must be live, 200, right content-type, byte-identical;
+- **upward** — every deployable-looking file **in the tree** (top-level `*.html`, `*.js`,
+  `*.webmanifest`; `assets/*.css`, `*.json`, `*.png`) must be **on the list**, or the script exits
+  **2** and refuses to certify the deploy at all. Adding a file is therefore a two-line change: the
+  file, and its row in `CORE_FILES` **and** in the table below. If the app genuinely never fetches
+  it, it goes in the script's `NOT_DEPLOYED` list **with a sentence saying why** — "it is not in the
+  deploy" is not a reason.
+
+> **Why the teeth exist: `diag.html` was live and unverified for a fortnight.** It was created and
+> pushed through an ad-hoc deploy script, and never added to this table or to `verify-deploy.sh`.
+> The verifier printed `PASS 59/59` while the deploy was sixty files. It is the file CLAUDE.md tells
+> you to open first when the phone and the server disagree, and **a deploy that silently dropped it
+> would have passed every check in this document.** The tooling was not wrong; it was never told.
+> That is the failure mode the upward check now makes impossible: the next file added out-of-band
+> fails the verifier instead of passing silently. `diag.html` is #4 below.
 
 Nine core files plus four icons, then the photographs. Upload them in this order; the order does not
 matter to Vercel, but keeping one order means a half-finished upload is obvious in the terminal.
@@ -69,7 +85,7 @@ matter to Vercel, but keeping one order means a half-finished upload is obvious 
 | 3 | `tests.html` | `text/html` | The QA harness, deployed deliberately so the manual checklist can be run from the phone |
 | 4 | `diag.html` | `text/html` | The read-only storage report. Open it first when the phone and the server disagree. **Not** precached by `sw.js` (deliberate — it must read the live state, not a cached one), so it is the one file here that needs signal; a 404 means no way to diagnose a phone |
 | 5 | `assets/archivo-inline.css` | `text/css` | The typeface. Missing = fallback stack, and every 44 px measurement was taken against Archivo |
-| 6 | `assets/exercises.json` | `application/json` | WO-014: the exercise library, 876 movements, 150,281 bytes. On `sw.js`'s **REQUIRED** list, which is the all-or-nothing install set: **a 404 here fails the service-worker install outright for anyone installing for the first time, and a failed install means no offline shell at all.** An already-installed phone is untouched — it keeps its own cache — but a new one gets nothing. Measured, not assumed (§9 log) |
+| 6 | `assets/exercises.json` | `application/json` | WO-014: the exercise library, 876 movements, 164,611 bytes (18,932 gzipped). On `sw.js`'s **REQUIRED** list, which is the all-or-nothing install set: **a 404 here fails the service-worker install outright for anyone installing for the first time, and a failed install means no offline shell at all.** An already-installed phone is untouched — it keeps its own cache — but a new one gets nothing. Measured, not assumed (§9 log) |
 | 7 | `manifest.webmanifest` | `application/json` | No manifest, no install prompt, no PWA |
 | 8 | `sw.js` | `application/javascript` | Offline. Missing = the gym has no app |
 | 9 | `sync.js` | `application/javascript` | E-3, the backup client: an ES module `index.html` injects after boot. Missing = Settings says `Backup could not load` and nothing else changes; but `sw.js` precaches it, and a 404 is a file that is never cached |
@@ -81,7 +97,12 @@ matter to Vercel, but keeping one order means a half-finished upload is obvious 
 **The exercise library — one generated file, and the same doctrine as the photographs.**
 `assets/exercises.json` is written by `scripts/make-library.mjs` from `yuhonas/free-exercise-db` at
 the pinned SHA `a859101d633a01c4a1a920d6a8ce41dabba0705f` — the same commit the photographs came
-from, so an id in `assets/ex/` is an id in the library. It carries its own provenance header
+from, so an id in `assets/ex/` is an id in the library. Nine fields per movement: `id`, `n` name,
+`eq` equipment, `pm`/`sm` muscles, `f` force, `m` mechanic, `lv` level, `c` category. **A `null`
+means upstream did not say, not "none"** — 77 rows have no equipment, 30 no force, 87 no mechanic —
+so a reader never has to tell absent from unknown. `instructions` and `images` are deliberately
+absent: the coach's cues are this app's instruction layer, and 1,752 upstream frames passed no eye
+check (F1p, B-142). It carries its own provenance header
 (source, SHA, sha256 of the upstream bytes, licence, fetch date, counts). It is **byte-reproducible**:
 `node scripts/make-library.mjs --check` exits 0 when the file on disk is what a fresh run would
 write, and 1 when it is not. Nobody edits it by hand; `verify-deploy.sh` refuses to run when its
@@ -228,8 +249,11 @@ ls -lR "$TREE"
 
 > **The photographs are binary and `git cat-file blob` is exactly right for them.** `core.autocrlf`
 > cannot touch a JPEG (git detects the NUL bytes and never converts), so the extract is byte-identical
-> whichever way it is made. `.gitattributes` marks `*.png binary`; it does not yet say `*.jpg` — belt
-> and braces would be one line, and it is outside W3's file list, so it is noted here rather than done.
+> whichever way it is made. `.gitattributes` now marks `*.png binary`, `*.jpg binary`, `*.sh text
+> eol=lf` **and `*.json text eol=lf`** (the last added 2026-09-28 for `assets/exercises.json`, which
+> is deployed: without it `core.autocrlf` rewrites the worktree copy to CRLF while the blob stays LF,
+> and the tree and the uploaded bytes differ by 876 bytes for no reason). Every tracked `.json` was
+> already LF in the index, so that line normalised nothing and rewrote no history.
 
 Then the credential grep from §3, run against `$TREE`, not the repo.
 
@@ -672,9 +696,10 @@ trusting any step above.
 | §2/§5 photo set (2026-09-12, W3) | Against a stand-in origin serving the tree: `PASS 59/59 (eleven + 48 photographs)`, exit 0. With one JPEG removed from the tree: exit 2, `in manifest, not on disk : assets/ex/Leg_Press-1.jpg`. With one entry deleted from `sw.js` by hand: exit 2, `in manifest, not in sw.js : assets/ex/Spider_Curl-0.jpg`. With the origin 404ing one photo: exit 1, `FAIL assets/ex/Seated_Leg_Curl-1.jpg HTTP 404` |
 | `sw.js` v5 install and gap-fill (2026-09-12) | Playwright: `phat-shell-v5` holds 57 entries (2 + 7 + 48) after install; all 48 decode offline from cache; one photo evicted by hand is back after the next navigation with exactly one origin fetch, and a present photo is fetched zero times |
 | `sw.js` v6 update path (2026-09-13, WO-011 P1) | `offline-check.mjs` §9, Playwright over `http://127.0.0.1`: install v6 (57 files + stamp); stamp aged by hand; origin swaps `index.html` and `logic.js`; N1 serves the old pair and fetches the new pair exactly once each; N2 serves the new pair from cache with zero origin hits; N3 zero hits, no reload (3 gotos = 3 navigations); a byte-different `sw.js` installs behind a page holding a draft and stays WAITING; `phat-idle` to `registration.waiting` activates it, old cache gone, page not reloaded, draft intact. **Same section against the v5 worker: 7 FAIL lines** — N1 fetched nothing, N2 served the old shell, `phat-idle` ignored — the phone's failure reproduced on the desk |
-| §2 library reproducibility (2026-09-28, WO-014 W3) | `make-library.mjs` run twice: second run reports `assets/exercises.json unchanged`. `--check` exit 0; `--offline --check` exit 0. 876 rows, **150,281 bytes** (LF, which is what `git cat-file blob` emits), sha256 `61510d0d9bc7eeb8fd474557487a3642ed414ec1772840beee359acc2ea8c15c`, upstream sha256 `5bb747e3…40bf`. Budget 200 KB — **26.6 % of headroom unused; nothing was curated to fit** |
+| §2 library reproducibility (2026-09-28, WO-014 W3) | `make-library.mjs` run twice: second run reports `assets/exercises.json unchanged`. `--check` exit 0; `--offline --check` exit 0. 876 rows, **164,611 bytes** raw / **18,932** gzipped (LF, which is what `git cat-file blob` emits), sha256 `e0ba2c2a415c9610b0c459295c472600d83787198abee724d81d73735a89a481`, upstream sha256 `5bb747e3…40bf`. Budget 200 KB — **19.6 % of headroom unused; nothing was curated to fit.** `c` (category) added on the PM's ruling the same day, +14,330 bytes: 198 of the 876 rows are `stretching` (123), `plyometrics` (61) or `cardio` (14), and without it a mid-workout search cannot tell `90/90 Hamstring` (a stretch) from a leg curl |
 | §2/§5 the thirteen + library (2026-09-28, W3) | Against a stand-in origin serving the tree: `PASS 61/61 (thirteen + 48 photographs)`, exit 0. Origin 404ing `assets/exercises.json` **and** `diag.html`: exit 1, both named — the second of which the old script would have missed entirely. `sw.js` `REQUIRED` edited to drop the library: exit 2, `names assets/exercises.json 0 times (expected exactly 1)`. Library truncated to 90,000 bytes: exit 2, `says count=876 but holds 523 rows` |
-| `sw.js` v7 library offline (2026-09-28, W3) | `offline-check.mjs`: `phat-shell-v7` holds **58 files + the stamp** (3 + 7 + 48 + 1 = 59); with the radio off and a cold reload, `fetch("assets/exercises.json")` returns 876/876 movements with the provenance header intact and a search for `row` returns **53 hits, 18 of them machine or cable**. §9b: the library is re-fetched with the pair, exactly once; §9c: zero hits on the next navigation. Whole run `OFFLINE VERDICT: PASS` |
+| §2 the list is the contract (2026-09-28, W3) | The upward check, which is the `diag.html` fix. Clean tree: `13 deployable-looking files in the tree, 0 unlisted`. A stray `debug-panel.html` dropped into a deploy extract — the exact shape of how `diag.html` shipped — **exit 2, `unlisted: debug-panel.html`**, deploy refused. Before this check the same tree printed `PASS` |
+| `sw.js` v7 library offline (2026-09-28, W3) | `offline-check.mjs`: `phat-shell-v7` holds **58 files + the stamp** (3 + 7 + 48 + 1 = 59); with the radio off and a cold reload, `fetch("assets/exercises.json")` returns 876/876 movements with the provenance header intact and a search for `row` returns **53 hits, 18 of them machine or cable**, and `c` separates the 79 hamstring movements into **50 resistance and 19 stretches** — the field earning its 14 KB, offline, asserted. §9b: the library is re-fetched with the pair, exactly once; §9c: zero hits on the next navigation. Whole run `OFFLINE VERDICT: PASS` |
 | `sw.js` v7 REQUIRED failure modes (2026-09-28, W3) | Measured, not assumed. **First-ever install against an origin that 404s the library: the install fails, no worker, no cache — online the app runs, offline there is nothing.** That is the price of REQUIRED and it is why the library is a hard check in `verify-deploy.sh`. **An already-installed phone is untouched:** with the library 404ing and a bumped `sw.js` on the origin, `phat-shell-v7` survived intact, the app ran offline and the library still read 876 movements — a failed install removes nothing |
 
 ### NOT proven — no Vercel token was available, so no API call was made

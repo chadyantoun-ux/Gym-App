@@ -301,6 +301,67 @@ esac
 echo "ok    library on disk, self-consistent, on sw.js REQUIRED, and in this script's list"
 echo
 
+# --------------------------------------------------------------------------
+# THE LIST IS THE CONTRACT (2026-09-28). Everything above this point verifies
+# that the files THIS SCRIPT KNOWS ABOUT are live and correct. None of it can
+# see a file that was added to the repo and shipped without ever being written
+# down - and that is not hypothetical. diag.html was created, deployed by an
+# ad-hoc script, and never added to docs/deploy.md or to CORE_FILES. This
+# script printed "PASS 59/59" for a fortnight while the deploy was sixty
+# files, and a deploy that silently dropped diag.html would have passed too.
+#
+# So the list is now enforced in BOTH directions:
+#   downward  every listed file must be live and byte-identical (below);
+#   upward    every deployable-looking file in the tree must be ON the list.
+#
+# The upward check is what closes the hole. A new top-level .html/.js/.web-
+# manifest, or a new assets/*.css/.json/.png, that nobody added to CORE_FILES
+# is a HARD FAILURE (exit 2) - the script refuses to certify a deploy whose
+# contents it cannot enumerate. Adding a file is then a two-line change:
+# the file, and its row here and in docs/deploy.md. That is the cost, and it
+# is the point.
+#
+# NOT_DEPLOYED is the explicit, reasoned exception list. A path goes here only
+# with a sentence saying why the app never fetches it. "It is not in the
+# deploy" is not a reason; "the app never fetches it, because X" is.
+# Deliberately NOT recursive into assets/ex/ - the photographs have their own
+# three-way check above, and manifest.json is their authority.
+# --------------------------------------------------------------------------
+NOT_DEPLOYED='
+assets/ex/manifest.json
+assets/ex/map.json
+'
+( cd "$ROOT" && ls *.html *.js *.webmanifest assets/*.css assets/*.json assets/*.png 2>/dev/null ) \
+  | sed 's|\\|/|g' | sort -u > "$TMP/onDisk"
+: > "$TMP/unlisted"
+while read -r f; do
+  [ -n "$f" ] || continue
+  case "
+$NOT_DEPLOYED" in *"
+$f
+"*) continue ;; esac
+  case "$CORE_FILES$ICON_FILES" in
+    *"
+$f|"*) ;;
+    *) echo "$f" >> "$TMP/unlisted" ;;
+  esac
+done < "$TMP/onDisk"
+UNLISTED=$(wc -l < "$TMP/unlisted" | tr -d ' ')
+echo "--- the list is the contract: $(wc -l < "$TMP/onDisk" | tr -d ' ') deployable-looking files in the tree, $UNLISTED unlisted"
+if [ "$UNLISTED" -ne 0 ]; then
+  echo "FATAL: these files are in the tree and on NO list. Refusing to certify a deploy I cannot enumerate."
+  sed 's|^|  unlisted: |' "$TMP/unlisted"
+  echo "  A file that ships without a row here is invisible to every check in this"
+  echo "  repo, and stays invisible until the morning it 404s. diag.html did exactly"
+  echo "  this for a fortnight."
+  echo "  fix: add it to CORE_FILES or ICON_FILES above AND to the table in"
+  echo "  docs/deploy.md section 2, in the same commit - or, if the app genuinely"
+  echo "  never fetches it, to NOT_DEPLOYED above with a sentence saying why."
+  exit 2
+fi
+echo "ok    every deployable-looking file in the tree is on this script's list"
+echo
+
 # A subshell in a pipeline cannot update FAILED, so feed the loop from a file.
 printf '%s\n%s\n' "$CORE_FILES" "$ICON_FILES" | grep '|' > "$TMP/list"
 

@@ -15,3 +15,17 @@
 # git cat-file blob which never converts either way; this line is the same
 # belt and braces as *.png - no future text rule can sweep them in.
 *.jpg binary
+
+# WO-014 W3 added assets/exercises.json, which is DEPLOYED. Without this line
+# core.autocrlf rewrites it to CRLF on checkout while the blob stays LF, so a
+# freshly cloned tree and the bytes the deploy uploads (git cat-file blob,
+# always LF) differ by one byte per line - 876 of them. verify-deploy.sh
+# already diagnoses that symptom in words, because index.html and tests.html
+# hit it; this removes the class instead of explaining it again.
+# Every tracked .json is ALREADY LF in the index (checked 2026-09-28:
+# assets/ex/manifest.json, assets/ex/map.json, assets/exercises.json), so this
+# normalises nothing and rewrites no history - it only stops the worktree copy
+# drifting from the blob on the next checkout.
+# It also makes the generator's reported sha256 true of the file on disk on
+# every machine, not just the one that first wrote it.
+*.json text eol=lf
