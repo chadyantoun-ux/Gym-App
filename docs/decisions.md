@@ -3469,3 +3469,138 @@ bump stays as belt-and-braces. Backend; `strength-coach` not needed.
 path changed by a byte; the unlocked fallback is the W3 behaviour. The new P3 is an uncaught exception after a save that
 succeeded, not a data path, and does not hold the release. The id follow-up is the next data-loss seam and should be
 scheduled on its own, not folded into this merge.
+
+---
+
+## 2026-09-28 — WO-014: history stays keyed on the slot; movement identity is additive; the library ships whole and the swap ships alone
+
+**The ask.** Chady, across several messages: he no longer wants to be confined to PHAT; he wants to pick exercises
+from a database and set his own sets and reps; and — the part that costs him every session — *"sometimes I replace
+one exercise with another on the spot… the machine is not available or it's occupied and I cannot wait — I need to
+be quick and just click on something, search for another exercise and add it or replace the exercise with that."*
+Plus four more splits, named: **Push · Pull · Legs · rest · Upper · rest · Lower** (his words, 5 training days on a
+7-day cycle), 3-day PPL, 2-day Upper/Lower, and the standard bodybuilder split — *"yes, please build the other
+one."* Answered since: a mid-session swap changes only that session, with *make it permanent* offered afterwards;
+the `Swapped` mark ships. On B-131 he said only "ok", which is not an answer, so both entries stay exactly as
+logged and no rule guesses their meaning. **Four real logged sessions** on the server at the time of writing.
+
+### Decision 1 — history stays keyed on the slot id. Movement identity is additive. `[Certain]`
+
+The diagnosis in the brief is right and is live twice. `lastFor(sessions, exId)` (`logic.js:1414`) keys history on
+the **plan slot id**, so a swap in place writes a different movement's numbers into the slot and the next verdict
+reads them as the slot's (B-136), and a plan rebuilt with fresh slot ids orphans the history of the same movement
+(B-137). A movement identity layer — a stable shared vocabulary that a slot *references* and an entry *records* —
+is the correct foundation and is built.
+
+**Re-keying `session.entries` from slot id to movement id is rejected.** Three reasons, in descending cost:
+
+1. **It reintroduces B-46, which this repo already rejected outright (WO-004 C-6).** `d1h` skull crusher
+   3 × 6–10 on a power day and `d5i` skull crusher 3 × 12–15 on a hypertrophy day are the **same movement kept as
+   two histories on purpose**. A movement-keyed `entries` collapses them again by a different key, and Monday's
+   power card would ghost Friday's light high-rep set with P1 recommending off it. `d1a` / `d3a` (row: power and
+   speed) and `d1c` / `d3b` (rack chin) have the same shape — six of the 42 shipped slots pair up.
+2. **It manufactures a destructive P0 out of a read-side problem.** Re-keying means rewriting four real sessions on
+   disk and four JSONB documents on the server, reversibly and byte-checked, for a benefit a disclosed fallback
+   read delivers without touching one stored byte.
+3. **It discards the honest record.** The slot id says *where in his week the set happened*; the movement says
+   *what he lifted*. Both are facts, and collapsing to one loses the other irrecoverably.
+
+**The shape that ships instead** — three additive fields and one read rule:
+
+| Where | Field | Meaning |
+|---|---|---|
+| plan slot | `mv` | the movement this slot references |
+| logged entry | `mv` | the movement he actually performed |
+| logged entry | `sw: 1` | it differed from the slot at log time — the `Swapped` mark (B-111) |
+| logged entry | `n` | display name, only for a movement added mid-session that no plan carries |
+
+```
+Rule MV1 (content owned by strength-coach, WO-014 W1 item 4)
+  lastFor(sessions, exId, mv) returns an entry ONLY IF the entry's movement is the slot's.
+  An entry whose `mv` disagrees is skipped. An entry with no `mv` is the slot's movement by
+  definition (every session logged before schema 7).
+  When the slot's own history is empty, PHAT.priorFor may fall back to the most recent entry
+  for the same `mv` under a DIFFERENT slot — named in words on the card, never silent, never
+  merged into the slot's history. Prescription compatibility gates it: d1h and d5i must not cross.
+```
+
+**Schema 7 on `V_MV` stamps `mv` onto plan-store slots only. It moves zero bytes in the log store**, and his four
+logged sessions round-trip byte-identical (WO-014 D1 as a string comparison, D2 pinning the two B-131 entries
+individually by id). The server needs no row rewrite — entry keys are unconstrained by `phat_validate_session_doc`
+and the three new keys are additive — but `migrate-007-mv.sql` is applied **before** the client deploy, not after.
+
+**What this trade costs, stated so nobody re-litigates it as a discovery.** `lift` today is plan data: *"read live
+off the plan, never written into a session, and therefore re-groupable later without touching a logged number"*
+(`logic.js:1455`). Writing `mv` into the entry gives that property up for the entry's copy. That is correct and
+deliberate: *what he actually lifted* is a fact about the session, not about the plan, and a plan edit six months
+from now must not be able to rewrite it.
+
+### Decision 2 — a movement id derived from a pinned upstream id does not violate WO-004 C-6. `[Certain]`
+
+`mv_<upstreamId>` (`mv_Barbell_Squat`) looks name-derived and is not, in the sense C-6 protects. C-6 forbids an id
+that *our own rename* can move, because a typo in the Plan Editor would then orphan a history in silence. An
+upstream id at a pinned SHA cannot be moved by anything this app does. A user-created movement with no upstream
+row mints from the plan namespace and is never derived from its name. **Corollary, and it is the part a future
+session will otherwise get wrong: a free-exercise-db SHA bump is a migration, not an upgrade.** The SHA
+`a859101d633a01c4a1a920d6a8ce41dabba0705f` is pinned in the generator, in the emitted file's header and here.
+
+### Decision 3 — `lift` and `mv` coexist this release. `[Certain]`
+
+`lift` is plan data and re-groupable; `mv` on an entry is a stored fact about the session. Collapsing the two, and
+wiring Trend to group across plans by `mv`, is a second change riding a first and is filed as **B-141**, not built.
+The foundation's job is the session card, which is where the loss actually reaches him.
+
+### Decision 4 — the library ships whole, not curated. `[Likely]`
+
+All ~800 movements from `free-exercise-db` at the pinned SHA, emitted as one generated `assets/exercises.json`
+(name, equipment, primary and secondary muscles, force, mechanic, level — **not** `instructions`, which are most of
+the bytes and which the app never shows). The failure mode of a curated subset is *"the one I need is missing"*, in
+the gym, with someone waiting for the machine — which is the exact moment the feature exists for. Curation is a
+**search-ordering** problem, not a deletion problem, and it lives in the UX spec's ordering rule. The library is in
+`sw.js`'s **REQUIRED** shell list, not OPTIONAL: an app that cannot search offline fails CLAUDE.md §3.2. That
+changes the shell file list, so `sw.js` goes to **`v7`** by its own header rule and the deploy becomes **61 files or
+nothing**. Ceiling: 200 KB on the wire — if the emitted file exceeds it, report the number rather than quietly
+curating the set to fit.
+
+`k` is never derived from upstream data (WO-006 C-7 stands). A **swap** inherits the slot's `s` / `lo` / `hi` / `k`
+unchanged, because he replaced the apparatus, not the prescription; a **fresh add** still asks. `implement` is
+derived from upstream `equipment` through a table the coach writes in full, every value mapped or explicitly
+refused — Rules I1 and I2 read `implement` for the load word and the increment line, so a wrong mapping is wrong
+advice, not a cosmetic slip.
+
+### Decision 5 — 800 movements, 24 eye-checked photographs, and that asymmetry is correct. `[Certain]`
+
+Rule F1p's *"Not enough data: THE WHOLE OF THIS SECTION"* binds. A library movement outside the eye-checked set is
+cue-only and has no cue, so `hasFig(e.id)||cueFor(e.id)` renders no disclosure at all — which is already the right
+behaviour and needs no new code. Shipping unchecked upstream frames at volume is refused: a wrong figure is worse
+than none, and F1p.3(b) exists because a photograph can teach the injury variant the cue was written against.
+Promoting a subset means naming the ids and eye-checking them, which is its own item. Filed as **B-142**, accepted.
+
+### Sequencing, and what is deliberately not in this order
+
+**Track A (library, movement ids, swap) ships alone, before the templates.** The swap is what costs him every
+session he trains; the templates are what he wants next. W1 (coach) ∥ W2 (ux) ∥ W3 (release) run in parallel, then
+W4 backend → W5 frontend → W6 QA → W7 release, serial because W4 and W5 own `logic.js` and `index.html` in turn
+(CLAUDE.md §4b). **Track B (four templates) is gated on Chady's answer to one question** and does not hold Track A.
+
+**The foundation is buildable this week and was not buildable last week.** This order writes to the `plans` and
+`log` stores on the same taps, and the stale-tab overwrite class (B-76 / B-123 / B-124 / B-128) closed with WO-013
+at `6a87a3a`. Nothing gets built on a store that loses sets; that store was fixed the night before.
+
+**Out of scope, said plainly:** Trend grouping across plans (B-141); promoting library photographs (B-142);
+collapsing `lift` into `mv`; and **B-05, edit or delete a saved session — which this order makes more urgent, not
+less, because a mis-tapped swap is now a second wrong fact with no correction path. B-05 is the next order.** Also
+rejected and recorded so it is not re-proposed: a cheap swap with no library, where he types the movement name into
+`n` — typing one-handed with chalky hands is slower than the problem it solves, and a free-text name has no stable
+id, so it buys the mark and none of the history.
+
+### The open question that gates the templates, and what rides on it
+
+**Are Upper and Lower his heavy days** — 3–5 reps on the compounds — with Push, Pull and Legs carrying 8–12? If
+yes, `keyLifts`, `speedSource`, the week-6 test (ST1) and the deload triggers (D1 T1/T2) all have four lifts to
+point at and survive the move off PHAT. If no, C7a and C7b take over: the 5-day goes silent on stalls, deloads and
+speed loads, honestly, and the app stops telling him when he has stalled. The coach lays out both columns; the
+answer is Chady's. Three answers are still owed beside it: B-131 (what 86 kg on `d1b` and 81 kg on `d1d` meant),
+B-116 (warm-ups — logged, marked or omitted; the PM's standing first question), and the day order of "the regular
+split that any bodybuilder does", which the coach will name as chest / back / shoulders / arms / legs unless he
+corrects it.
