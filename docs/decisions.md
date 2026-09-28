@@ -3604,3 +3604,83 @@ answer is Chady's. Three answers are still owed beside it: B-131 (what 86 kg on 
 B-116 (warm-ups — logged, marked or omitted; the PM's standing first question), and the day order of "the regular
 split that any bodybuilder does", which the coach will name as chest / back / shoulders / arms / legs unless he
 corrects it.
+
+---
+
+## 2026-09-28 — WO-014 amendment: two gaps that belonged to no one, the chart's exclusion predicate, and a suite that was green by the day of the week
+
+Five rulings, made after W1–W5 landed on `wo-014-library` and **before** QA was dispatched. Recorded because a
+future session would otherwise re-litigate all five, and two of them are corrections to documents this repo signed.
+
+### Decision 6 — the chart excludes by movement, never by `sw: 1`. `[Certain]`
+
+UX §22.6 (1) reads *"a sparkline excludes every entry marked `sw: 1`"*. **That predicate is wrong and the spec is
+amended.** Coach MV1.1(a) is explicit that `sw` is not consulted on the slot's own history, for a stated reason:
+after *make it permanent* the slot's `mv` becomes the swapped movement, and those entries — which still carry
+`sw: 1` from log time — **must become** the slot's history. Coach §22.4.6's confirmation copy promises him exactly
+that: *"Your Seated cable row sets stay in the history and on the chart."* An `sw`-based filter would delete his own
+sessions from the line the instant he accepted that offer. The predicate is `effectiveMv(entry, slot) !== slot.mv`;
+a slot with no `mv` excludes nothing; and the disclosure line's count is **sessions this line leaves out**, not
+swapped sessions. A mutant that swaps the predicate back to `sw: 1` must die on an after-permanent fixture — that
+test is the memory of this decision.
+
+**Not excluded, and the comment in the code must say so:** load and tonnage series, `volumeTier`, `trainingWeeks`,
+`painWindow`, and the `Recent sessions` list. A swapped session is a session he trained. Coach §22.4.4's table is
+the list, and it was written to stop a later tidy-up "fixing" the exclusions that are deliberate.
+
+### Decision 7 — a wrong-feeling sentence on a correct number is a blocking defect here. `[Certain]`
+
+A swapped card currently prints H1.3a, `First time logged. This becomes your baseline.` No number is wrong. It
+still blocks, because the app's whole credibility rule is that it never guesses which fact applies and that silence
+looks deliberate: calling a swapped session a baseline on a lift with four months of history is a guess dressed as
+a reading. This is the class the repo has shipped three times — the duplicate `PROGRAM`, the diet screen with no
+day type, `Drop to {the same load}` — and each one shipped for a while because the code was fine.
+
+**The sentence goes in `verdictHyp` beside `epochChanged`, not in the view.** The frontend declined to write it in
+`index.html` on the grounds that a second phrasing of one fact in a second place is how B-66's `PROGRAM` drift
+happened. That refusal is upheld and is the correct instinct; the residue is B-148, where Rule AD1's sentence
+*does* live in the view because an added movement has no `ex` to hand `verdict`. Filed, not built, and named so the
+next person does not create the drift by phrasing it in `logic.js` too.
+
+### Decision 8 — a scope that says "Out" must name who has it, or nobody does. `[Certain]`
+
+Both gaps fell between two work items that each correctly excluded them. W5's scope said *"Out: … Trend changes"*,
+which was right about W5 and silent about the order; W4's eight items did not list the Trend read or the two coach
+literals, and §22.7's assignment table was not reconciled against W4's scope before dispatch. **The process change:
+a work item's "Out" line names the item that owns it, or the PM re-homes it in the same breath.** "Out of this
+item" and "out of this order" are different sentences and were read as one.
+
+### Decision 9 — nothing pins a string or a series that is about to move. `[Certain]`
+
+QA was not dispatched against `feb3f88`, and this is the sequencing rule behind that. W6's value is that its
+expectations are deliberate — 24 pins already moved under W4 and must be re-pinned one at a time, each with its
+reason on its own line. Pinning against a build about to gain a verdict branch, a chart filter and three rewritten
+strings buys a pin that has to be redone, and a second full pass over `logic.js` verdicts is the most expensive
+pass in this repo. W6.0 (the harness fix) ∥ W8 (ux copy) ∥ W9 (backend engines) → W10 (frontend) → **then** W6.
+
+### Decision 10 — the suite has been conditionally green since WO-006. `[Certain]`
+
+`tests.html:2685` seeds three sessions from `P.weekStart(P.localDate())` and asserts `trainingWeeks() === 1` with
+`todayStr` omitted. Early in the week two of the three are future-dated and the future-date guard the test above it
+asserts does its job, so **the suite is red or green by the day of the week**; `main @ 6a87a3a` reads 939 / 940 / 1.
+Every "suite green" release gate from WO-006 to WO-013 was therefore passed on a day the clock cooperated. None of
+those counts is wrong and nothing shipped on a false pass — but "green" meant "green today", and this repo's whole
+verification story rests on it meaning more than that. One line, in `tests.html`, fixed first inside WO-014 (W6.0),
+filed as **B-146**. QA reports whether other tests read the real clock without pinning it and does not fix them in
+that commit.
+
+### Two open questions, ruled as far as the PM can rule them
+
+**The empty photograph slot on a swapped card (B-147) does not hold the deploy.** Coach F1L.2 denies the slot's
+authored pair to a movement he is not doing; it does not say what fills the space. UX ruled nothing, W5 built
+nothing, and the PM's counter-proposal — the movement name in large type — is isolated to one line. It touches no
+number, nobody has measured which reads better mid-set, and it is reversible. It ships as built and Chady's one
+line moves it.
+
+**Track B can start in exactly one form: the heavy-days keep/lose table (T1a).** Q1 has been open for two dispatch
+rounds because Chady is being asked to rule without the artefact that would let him — the two columns of what he
+keeps and what he loses under each reading. That table is the coach's, it writes only to
+`docs/coach-audit-addendum.md` §23, and it collides with no file in Track A. The four templates themselves — all
+four, including PPL and Upper/Lower, whose plan-level declarations turn on the same reading — wait for his answer.
+And the standing diagnosis at its ninth asking: four logged sessions, and the swap is what costs him one every
+week. **Track A ships alone.**

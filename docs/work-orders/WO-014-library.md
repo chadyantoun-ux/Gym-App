@@ -623,3 +623,234 @@ work by every engine. Warm-ups: logged, marked, or left out?
 | B-143 | Two copies of one shipped template share exercise ids and therefore share history | P3 |
 
 **B-111 (`Swapped` mark) is answered and closes inside this order.** **B-04** now owes schema **2–7**.
+
+---
+
+## 9. Amendment — 2026-09-28, after W5. Two gaps, three items, and what blocks the deploy
+
+Building Track A surfaced two requirements that are in the signed-off documents and not in the code,
+plus three smaller items. Ruled here, in the order's own file, so nothing is re-litigated.
+
+**The governing principle for every ruling below: nothing pins a string or a series that is about to
+move.** W6's whole value is that its expectations are deliberate. Dispatching QA against a build that
+is about to gain a verdict branch, a chart filter and three rewritten strings buys a pin that has to be
+redone, and a second full pass over `logic.js` verdicts is the most expensive pass in this repo.
+
+### 9.1 Gap 1 — Trend plots swapped entries on the original lift's line. **BLOCKS. In this order.**
+
+`index.html:3938` calls `PHAT.e1rmByDate(S.sessions, id)` with no `mv`, so MV1.1's skip — which W4
+built into the engine — never fires for the chart. UX §22.6 (1) and (2) specify both the exclusion and
+its disclosure line; neither exists.
+
+It blocks, for three reasons and not for the one that looks obvious:
+
+1. **It is wrong advice on the screen whose only question is *is this working*.** A lighter machine row
+   plotted on the Bent-over row sparkline draws a drop he never lifted, and the delta token above it
+   prints that drop as a number with a sign. UX §22.6's own words: *"the one outcome that is not
+   acceptable."*
+2. **It is the one surface left inconsistent.** The card, the seed, ST1, SP1, D1 and `liftDays` all skip
+   after W4. A chart that does not is not a missing feature — it is the app contradicting itself, and
+   the chart is the one he will believe.
+3. **It is cheap now and expensive later.** The engine already takes `mv`. Discovering it after three
+   weeks of logged swaps means the line he has been reading was wrong the whole time, and there is no
+   way to tell him which sessions moved.
+
+**One correction that must land with it, or the engineer will transcribe the wrong predicate.** UX
+§22.6 (1) says the sparkline excludes every entry marked `sw: 1`. **It must not.** MV1.1(a) is explicit
+that `sw` is not consulted, and coach §22.4.6 promises that after *make it permanent* the swapped
+entries **become** the slot's history and stay on the chart. Filtering on `sw` would delete them from
+the line the moment he accepts the offer — the opposite of what the confirmation just told him. The
+predicate is MV1.1's: an entry whose `effectiveMv` differs from the slot's `mv` is excluded, and a slot
+with no `mv` excludes nothing. The count in the disclosure line is the number of **excluded sessions**,
+not the number of swapped ones.
+
+**Explicitly not excluded:** the `Recent sessions` list, its session count, tonnage, `volumeTier`,
+`trainingWeeks` and `painWindow`. Coach §22.4.4's table is the list; a swapped session is a session he
+trained.
+
+### 9.2 Gap 2 — the swapped-card verdict sentence. **BLOCKS. In this order.**
+
+Coach §22.4.5 gives two literals and §22.7 assigns both to W4. Neither landed. A swapped card falls to
+H1.3a, `First time logged. This becomes your baseline.`
+
+It is not merely a wrong-feeling sentence. **It is the app making a false claim about his history and
+calling a swapped session a baseline** — on a lift with months behind it. This repo's standing rule is
+that silence looks deliberate and the app never guesses which fact applies; H1.3a here is a guess
+dressed as a reading. It is the same class as the duplicate `PROGRAM` and the diet screen with no day
+type: correct code, wrong sentence, shipped for a while because nobody could see it.
+
+**I uphold the frontend's refusal to write the sentence in the view.** One fact phrased in two places is
+how B-66 happened. The sentence belongs beside `epochChanged`'s branch in `verdictHyp`
+(`logic.js:7154`), which is the exact structural sibling: *the comparison to last week is not
+available, and here is why.*
+
+**No new coach pass is owed.** §22.4.5 is the sign-off, `[Certain]`, with both literals written out.
+CLAUDE.md §5's coach requirement is satisfied by the document that already exists. Do not dispatch a
+redundant coach item; do dispatch the coach if the ST1 half needs a sentence §22.4.5 does not give.
+
+### 9.3 Item 3 — the *make it permanent* copy. **In this order, UX's pen.**
+
+W5 appended `The next verdict reads your {new} sets.` to UX §22.7's two body lines, because coach
+§22.4.6 is `[Certain]` that three facts must be carried and UX's copy carried two. **W5 was right to
+notice and right to flag rather than settle it.** UX either adopts the sentence into §22.7 verbatim or
+writes its own carrying the third fact; either way the spec and the code say the same thing before QA
+pins it. The coach owns *which facts*; UX owns *the words*. Neither owns the other's half.
+
+### 9.4 Item 4 — the added-movement copy redundancy. **In this order, UX's pen. Filed as B-149.**
+
+The card prints the mark `Added today` and then a verdict beginning `Added today.`; Summary states the
+same fact three times (`ADDED`, `Added during the session. No prescription.`, then `No prescription` +
+`Added today. No sets or reps set, so no verdict…`). It is cosmetic, it is real, and it costs nothing
+to fix while UX is already in the file for item 3. Rendering the coach's copy verbatim next to UX's
+marks is the cause; the fix is UX deciding which surface owns the fact, not deleting a coach sentence.
+
+### 9.5 Item 5 — the suite is conditionally red. **Fixed in this order, first, before anything is pinned.**
+
+`B-30 / TW1 — "todayStr omitted falls back to today"` (`tests.html:2685`) builds a week from
+`P.weekStart(P.localDate())` and asserts `1`. Early in the week two of its three seeded sessions are
+future-dated, the future-date guard the test above it asserts does its job, and the assertion fails.
+The suite is therefore **green or red depending on the day of the week**, and `main @ 6a87a3a` reads
+939 / 940 / 1 today.
+
+This is not a backlog item and it is not QA's convenience. **Every "suite green" claim in this repo —
+WO-006 through WO-013, each one a release gate — was made on a day the clock happened to cooperate.**
+W6's own acceptance criterion is "suite green with zero expected failures"; it cannot be met or even
+honestly evaluated while the suite's colour is a function of the date. It is a one-line harness fix, it
+touches no product code, and it goes first so that every red QA sees afterwards is a real red.
+
+Filed as **B-146** so the class is on the record: a test that reads the real clock without pinning it is
+a tripwire violation in spirit, and W6 reports whether there are others rather than fixing them.
+
+### 9.6 The two open questions from this order
+
+**The photograph slot on a swapped card — ship as built.** Coach F1L.2 forbids showing the slot's
+authored pair on a movement he is not doing; it does not require the space to be empty, so this is a
+hole, not a conflict. W5 has isolated the alternative (the movement name in large type) to one line.
+Nobody has measured which reads better mid-set, it is reversible in one line, and it touches no number.
+**It does not hold the deploy.** Filed as **B-147**, with the PM's recommendation on the row and
+Chady's one-line answer owed.
+
+**Heavy days (Q1) — Track B can start in exactly one form and no more.** The ruling Chady is being
+asked to make needs an artefact he does not have: the two-column keep/lose table. That table is the
+coach's, it is short, it writes only to `docs/coach-audit-addendum.md` §23, and it collides with no
+file in Track A. **T1a (the table alone) may be dispatched at any time.** The four templates
+themselves — all four, including PPL and Upper/Lower, whose plan-level declarations turn on the same
+reading — wait for his answer, and T2 waits for W4 merged, as §3 already says.
+
+**And the standing diagnosis, for the record.** Four logged sessions. The swap is the thing that costs
+him a session every week; a fifth split he cannot pick yet is more tooling. **Track A ships first and
+alone.** Do not let Track B's table become Track B's templates before the swap is on his phone.
+
+### 9.7 The amended work items
+
+**W6.0 · The clock-dependent test — owner: `qa-engineer`.** `tests.html` only. Pin `B-30 / TW1`'s last
+assertion to a seed that cannot be future-dated on any day of the week, keeping what it tests (an
+omitted `todayStr` falls back to today). Report whether any other test reads the real clock without
+pinning it; **do not fix them in this commit.** Depends on: —
+
+Acceptance criteria:
+- `tests.html` on the branch is green with the clock forced to a Monday, a Sunday and a Wednesday, and
+  the assertion still fails if `trainingWeeks` stops defaulting `todayStr`.
+- The count after the fix is in the commit message.
+- No product file is touched. `git diff --stat` names `tests.html` and nothing else.
+
+**W8 · The copy reconciliation — owner: `ux-designer`.** `docs/specs/wo-004-screens.md` §22 only.
+Three things: (a) rule on W5's third sentence in §22.7's confirmation body — adopt verbatim or rewrite,
+carrying all three of coach §22.4.6's facts; (b) rule the added-movement redundancy (B-149) — decide
+which surface owns the fact on the card and which on Summary, and strike the rest; (c) amend §22.6's
+exclusion predicate from `sw: 1` to MV1.1's movement comparison, and rewrite the disclosure literal so
+its count means *sessions this line leaves out*, not *swapped sessions*. Out: any new control, any
+change to the sheet, anything in §22.1–§22.5. Depends on: —
+
+Acceptance criteria:
+- Every changed string is a literal in §22.12's table, marked `AMENDED`, with the string it replaces
+  beside it, so W10 transcribes and QA pins without interpretation.
+- §22.7's body carries all three facts, and §22.6 no longer contradicts coach §22.4.6 — the spec states
+  in one sentence why `sw: 1` is the wrong predicate, so it is not re-proposed.
+- The added-movement fact appears **once** on the card and **once** on Summary; the spec names which
+  element carries it in each place and which is deleted.
+- No string on a card that is neither swapped nor added changes. Stated explicitly in the section.
+
+**W9 · The two engine gaps — owner: `backend-engineer`.** `logic.js` only, all pure.
+
+1. Coach §22.4.5's H1 literal as a branch in `verdictHyp` beside `epochChanged` (`logic.js:7154`),
+   reading a `swapped` fact threaded through `ctx` the way `pain`, `b` and `unit` already are — never
+   re-derived from storage inside the engine. `Swapped to {new}. Not compared to last session.`
+   H1 cases 1 and 2 still run; P1 is untouched (history-free).
+2. Coach §22.4.5's ST1 variant — `Not enough unswapped sessions on {n} to judge. Log it weekly.` — when
+   MV1.1's skip is what emptied a block. `stallReport` may gain a field; it may not change the shape any
+   existing caller reads. **If surfacing that signal needs more than an additive field, stop and report
+   the shape before building it** — the generic thin line is not false, only less informative, and a
+   named fallback beats a refactor riding a copy fix.
+3. The Trend exclusion's pure half: a count of the sessions MV1.1 excludes for a given `exId` and slot
+   `mv`, so the view never re-implements the predicate. `e1rmByDate`'s existing return with no `mv`
+   argument does not move.
+
+Out: `painWindow`, tonnage, `volumeTier`, `trainingWeeks`, the `Recent sessions` list, any DOM, any
+string UX owns. Depends on: —
+
+Acceptance criteria:
+- On a fixture where `d3c` holds a cable row on 18 Sep and a machine row on 25 Sep, the 25 Sep card's
+  verdict is `Swapped to Machine row. Not compared to last session.` and **not** `First time logged.`,
+  asserted as a literal.
+- On the same fixture, every verdict on every **unswapped** card is byte-identical to `main @ 6a87a3a`,
+  asserted as a string comparison over a generated sweep, not by eye.
+- The exclusion count for `d3c` with the slot's `mv` is 1 before *make it permanent* and **0 after it**
+  — the entry that carried `sw: 1` becomes the slot's history, exactly as §22.4.6's confirmation
+  promised. A test asserts both, by id.
+- `PHAT.e1rmByDate(sessions, exId)` called with two arguments returns what it returns on `b78439d`.
+- **Data:** nothing in W9 writes. The log store is byte-identical before and after every function added
+  here is called, asserted as a string comparison on his four-session export, with the two B-131
+  entries pinned individually as D2 requires.
+
+**W10 · The chart and the strings on screen — owner: `frontend-engineer`.** `index.html` only.
+`liftPoints` passes each id's own slot `mv` to `e1rmByDate`; the disclosure line renders under an
+affected sparkline from W9's count, in W8's amended literal; W8's rewritten strings replace W5's; the
+`swapped` fact reaches `verdict`'s ctx from `cardMovement`, which already computes it. Out: the
+`Recent sessions` list, `stallCard`'s copy, the load chip, the set rows, the `ld` row. Depends on:
+W8, W9.
+
+Acceptance criteria:
+- With a swapped entry in the store, the affected sparkline has one fewer point than on `feb3f88`, the
+  delta token above it recomputes from the remaining points, and the disclosure line renders beneath it
+  in W8's literal with the right count.
+- A lift with no swapped entry renders a sparkline, a delta and a footer byte-identical to
+  `main @ 6a87a3a`. No line gains an empty element.
+- The `Recent sessions` list and the session count are unchanged: a swapped session is still listed.
+- At 400 px with the network off, the disclosure line wraps without pushing the next lift row off; every
+  new string goes through `esc()`.
+- **Data:** logging, saving and reloading a swapped session after this change still round-trips `mv`,
+  `sw`, `n`, `w`, `ld` and `r` intact — D3 and D4 re-run, not assumed, because this item changes the
+  ctx a card is rendered from.
+
+**W6 · Verify — owner: `qa-engineer`.** Unchanged in §3, with three additions: the 24 moved pins are
+re-pinned **one at a time, each with the reason it moved on its own line**, never in bulk; the Trend
+exclusion gets a red-first proof against `feb3f88`; and a mutant that swaps W9's exclusion predicate
+from the movement comparison to `sw: 1` **must die on the after-permanent fixture**. Depends on: W10.
+
+**W7 · Ship — owner: `release-engineer`.** Unchanged in §3. Depends on: W6.
+
+### 9.8 Amended sequence
+
+```
+  W6.0 qa      (tests.html) ─┐
+  W8   ux      (spec)       ─┼──> W10 frontend ──> W6 QA ──> W7 release
+  W9   backend (logic.js)   ─┘
+
+  [now] ──> T1a coach (the keep/lose table only) ──> [Chady answers Q1] ──> T1 ──> T2 ──> T3 ──> T4
+```
+
+Three parallel: W6.0, W8 and W9 write `tests.html`, `docs/specs/wo-004-screens.md` and `logic.js` — no
+shared file. W10 is alone in `index.html` afterwards. T1a writes only to
+`docs/coach-audit-addendum.md` and collides with none of them.
+
+### 9.9 Amended risks
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| The chart exclusion is implemented on `sw: 1`, and *make it permanent* then deletes his own history from the line he was just promised it would stay on | P1, wrong advice and a broken promise | W9's after-permanent criterion (1 → 0) and W6's mutant. The predicate is stated twice, in §9.1 and in W8's spec amendment |
+| The verdict branch changes a string on an unswapped card | P1 | W9's sweep criterion — every unswapped verdict byte-identical, string comparison |
+| The 24 moved pins are re-pinned in bulk and a real change hides among them | P1 | W6's one-at-a-time rule, each with its reason on its own line. This is the whole reason the count was reported rather than absorbed |
+| ST1's `unswapped` variant turns into a `stallReport` refactor riding a copy fix | P2 | W9's stop-and-report clause. The generic thin line is the named fallback |
+| The deploy slips while three small items run | P2 | Three files, three owners, one round. The alternative is QA twice |
+| B-147 (the empty photograph slot) is treated as a blocker | P3 | Ruled: it is not. It ships as built, and Chady's answer moves one line |
