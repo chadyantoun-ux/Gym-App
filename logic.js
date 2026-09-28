@@ -46,9 +46,21 @@
           every set logged before this version, including the first real one
           (2026-09-12, client_id 1789264514484). The v6 pass writes the
           version and nothing else: no set gains a key, no w moves.
+       7  WO-014 W4 — movement identity. A PLAN SLOT may carry `mv`, the
+          movement it references; a logged ENTRY may carry `mv` (the movement
+          he actually performed), `sw: 1` (it differed from the slot at log
+          time) and `n` (a display name for a movement no plan carries).
+          THE LOG STORE IS NOT TOUCHED, at all: an entry with no `mv` IS the
+          slot's movement by definition, which is exactly true of every
+          session logged before this version, so stamping one would invent a
+          fact. The v7 log pass writes the version and nothing else, as v4,
+          v5 and v6 did. The PLAN store is the one thing schema 7 writes to:
+          it stamps `mv` onto slots the shipped PHAT map names, by slot id,
+          and leaves every slot the map does not name unmapped. `mv` absent
+          is a supported state, forever (coach §22.4.3).
      A store written by any earlier version must still load, forever.
-     WO-002's importer therefore owes schema 2, 3, 4, 5 AND 6. */
-  var SCHEMA_VERSION = 6;
+     WO-002's importer therefore owes schema 2, 3, 4, 5, 6 AND 7. */
+  var SCHEMA_VERSION = 7;
   /* EVERY migration pass gates on its OWN constant, never on SCHEMA_VERSION.
      The near-miss on record (decisions.md, "Schema 3, and what it obliges"):
      the dateBasis pass was gated on `logVer < SCHEMA_VERSION`, so bumping the
@@ -61,6 +73,15 @@
   var V_PLAN = 4;        /* the plan document */
   var V_RX = 5;          /* Rule PE1 — entries may carry `rx` */
   var V_LD = 6;          /* WO-010 — sets may carry `ld`, the load's components */
+  /* WO-014 — movement identity. TWO passes under one gate, and they are not
+     symmetrical: the LOG pass stamps the version and moves zero bytes, the
+     PLAN pass writes `mv` onto plan-store slots from the shipped map. The log
+     pass gates on the LOG store's version, the plan pass on the PLAN store's
+     own version, so a device whose plan store is newer than its log store (or
+     the reverse, after a restore) cannot have one pass skipped by the other's
+     number. Gated on V_MV, never on SCHEMA_VERSION — the trap decisions.md
+     records twice. */
+  var V_MV = 7;
   /* The keys schema 3 adds to the log store, and their defaults. Built fresh
      on every call — a shared {} default would be handed to two stores. */
   var V3_KEYS = ["reintro", "lastReintroDate", "calChangedAt", "deload"];
@@ -499,10 +520,14 @@
      Also accepts (sessions, exId) or (exId, sessions) and resolves the entry
      through lastFor — the dispatch named that form; the work order §1 named
      this one. One function, one answer. */
-  function loadModeFor(a, b) {
+  /* WO-014. A THIRD argument, on the two-array forms only, is Rule MV1.1's
+     skip, with lastFor's exact three-state contract. The card would otherwise
+     open as the machine left it and seed a machine's load onto a barbell
+     (coach §22.4.4). The one-argument form (an entry) is untouched. */
+  function loadModeFor(a, b, mv) {
     var e = a;
-    if (Array.isArray(a) && typeof b === "string") e = lastFor(a, b);
-    else if (typeof a === "string" && Array.isArray(b)) e = lastFor(b, a);
+    if (Array.isArray(a) && typeof b === "string") e = lastFor(a, b, mv);
+    else if (typeof a === "string" && Array.isArray(b)) e = lastFor(b, a, mv);
     var mode = { au: "kg" };
     if (!isObj(e) || !Array.isArray(e.sets)) return mode;
     for (var i = 0; i < e.sets.length; i++) {
@@ -758,12 +783,53 @@
     } else if (a.typedKg === true) {
       return { mode: { au: "kg" }, tier: "typed" };
     }
+    /* ---- WO-014: the swapped-card branch (UX §22.11) ----
+       `prefs.gym.ex[exId]` is keyed by SLOT ID. After a swap the slot holds a
+       different movement, so the override is a setting he made for something
+       he is not doing — a lb + 20 kg bar override applied silently to a kg
+       machine stack, which stores the wrong kg total for every set of the
+       session. So a swapped card SKIPS the override tier and opens on the
+       default, exactly as a first-time card does.
+
+       It skips HISTORY too, and for the same reason one step further out: the
+       slot's history is the slot's movement, and remembering the cable row's
+       build on a machine row is the identical error wearing WO-010's coat.
+
+       `swapped` is taken from the caller when it says so, and otherwise
+       DERIVED — the entry names a movement and it is not the slot's. Derived
+       is the safer default: a view that forgets to pass the flag still gets
+       the protection, and this is precisely the clause that is wrong-by-
+       default if nobody names it.
+
+       The bar rule needs the NEW movement's implement, not the slot's, and
+       this function cannot reach the library. `a.implement` is how the caller
+       supplies it (Rule I3.3's read-time derivation, PHAT.libraryImplementOf).
+       Absent, the card gets the unit and NO BAR — the conservative answer,
+       because a wrong bar silently changes the kg total that is stored. */
+    var swapped = a.swapped === true;
+    var slotEx = isObj(a.ex) ? a.ex : (typeof id === "string" ? exById(isPlanDoc(a.plan) ? a.plan : PHAT_PLAN, id) : null);
+    var slotMv = (isObj(slotEx) && isMvId(slotEx.mv)) ? slotEx.mv : null;
+    if (!swapped && isObj(entry) && isMvId(entry.mv) && entry.mv !== slotMv) swapped = true;
+
+    if (swapped) {
+      var shim = { id: id, implement: typeof a.implement === "string" ? a.implement : null };
+      var g2 = gymOf(a.prefs);
+      if (g2 && isUnit(g2.unit)) return { mode: defaultMode(a.prefs, shim, a.plan), tier: "default", swapped: true };
+      return { mode: { au: "kg" }, tier: "kg", swapped: true };
+    }
+
     var ov = overrideMode(a.prefs, id);
     if (ov) return { mode: ov, tier: "override" };
     var g = gymOf(a.prefs);
     if (g && isUnit(g.unit)) return { mode: defaultMode(a.prefs, isObj(a.ex) ? a.ex : id, a.plan), tier: "default" };
     var prev = a.prev;
-    if (prev === undefined && Array.isArray(a.sessions) && typeof id === "string") prev = lastFor(a.sessions, id);
+    if (prev === undefined && Array.isArray(a.sessions) && typeof id === "string") {
+      /* Rule MV1.1 on the history tier: the slot's own movement, so a swapped
+         entry in the slot's past cannot supply this card's remembered build.
+         A slot that declares no movement is MV1.1(b); no slot at all leaves
+         the rule off, which is main's read. */
+      prev = lastFor(a.sessions, id, slotEx ? slotMv : undefined);
+    }
     var h = historyMode(prev);
     if (h) return { mode: h, tier: "history" };
     return { mode: { au: "kg" }, tier: "kg" };
@@ -1078,6 +1144,76 @@
     return out;
   }
 
+  /* ---- WO-014 W4 item 4: `mv`, `sw` and `n` on an entry ----
+
+     THE THREE KEYS, and what absence means for each:
+       mv    the movement he ACTUALLY performed. Absent = the slot's movement,
+             by definition. True of every entry logged before schema 7.
+       sw    1, and only ever 1, when it differed from the slot's movement at
+             log time — the `Swapped` mark (B-111). Absent = not swapped.
+       n     a display name, for a movement no plan carries. Absent = the
+             slot's name. Never a fallback for a name the plan has.
+
+     entryMeta(e) -> { mv?, sw?, n? } — the three keys, validated, with the
+     invalid and the absent both simply not present. entryMetaProblems(e) is
+     its refusing twin, and validateDraft calls BOTH: the value is carried
+     when it is good and the SAVE IS REFUSED when it is not. Nothing is ever
+     coerced into range and nothing is dropped quietly.
+
+     THIS IS B-112's EXACT FAILURE MODE and it is the reason entryMeta exists
+     as an exported function rather than three inline copies. validateEntry
+     used to rebuild {w, r} from scratch, so any third key on a set died
+     silently on save; the same shape one level up — a validator that rebuilds
+     {sets, note} — would kill `mv`, `sw` and `n` on the first save after a
+     swap and take the swap with it. index.html's saveDraft and hydrateDraft
+     round-trip the draft through the SAME function, so there is one
+     definition of "these three survive" and not three.
+
+     Why `n` is carried even when the plan does carry the exId: a swapped slot
+     IS in the plan, under the OLD movement's name, and the entry's `n` is the
+     only durable record of what he actually did there. Drop it and MV1.2's
+     gate (e) loses its first and best link — the app can no longer name where
+     a number came from, and a prior it cannot attribute may not be shown.
+     Carrying a name costs bytes; dropping one costs the disclosure. */
+  var N_MAX = 120;
+  /* THE ENTRY'S KEY ORDER, in one place, read by buildSession (which writes
+     it) and canonSession (which restores it after a JSONB round trip). `sets`
+     and `note` first and `rx` last are exactly where they were before schema
+     7, so an entry carrying none of the three new keys serialises to the
+     byte-identical string it always did. */
+  var ENTRY_KEYS = ["sets", "note", "mv", "sw", "n", "rx"];
+  function entryMetaProblems(e) {
+    var out = [];
+    if (!isObj(e)) return out;
+    if (e.mv !== undefined && !isMvId(e.mv)) {
+      out.push({ field: "mv", reason: "type", value: str(e.mv) });
+    }
+    /* `sw` is 1 or it is absent. Not true, not "1", not 0 — exactly the test
+       `cut` gets on a plan slot, for the same reason: a marker with two
+       spellings is a marker two readers disagree about. */
+    if (e.sw !== undefined && e.sw !== 1) {
+      out.push({ field: "sw", reason: "type", value: str(e.sw) });
+    }
+    if (e.n !== undefined && typeof e.n !== "string") {
+      out.push({ field: "n", reason: "type", value: str(e.n) });
+    } else if (typeof e.n === "string" && e.n.trim().length > N_MAX) {
+      out.push({ field: "n", reason: "range", value: e.n });
+    }
+    return out;
+  }
+  function entryMeta(e) {
+    var out = {};
+    if (!isObj(e)) return out;
+    if (isMvId(e.mv)) out.mv = e.mv;
+    if (e.sw === 1) out.sw = 1;
+    /* A whitespace-only `n` is no name, not a name of nothing: it is trimmed
+       away rather than stored, exactly as every other name field in this file
+       treats "". A non-string `n` is a PROBLEM above and is not carried here,
+       so a refused save cannot half-apply. */
+    if (typeof e.n === "string" && e.n.trim() !== "" && e.n.trim().length <= N_MAX) out.n = e.n.trim();
+    return out;
+  }
+
   /* validateDraft(draft)
        → { ok, entries, problems:[{exId, setIndex, field, reason}], setCount }
      `entries` is the object to persist: {exId:{sets:[{w,r}], note}}. An entry
@@ -1101,9 +1237,31 @@
         if (p.field === "ld") { q.sub = p.sub; if (p.reason === "mismatch") q.kg = p.kg; }
         res.problems.push(q);
       });
+      /* WO-014. The three movement keys are validated BEFORE the entry is
+         built, so a malformed one refuses the save rather than riding it. */
+      entryMetaProblems(e).forEach(function (p) {
+        res.problems.push({
+          exId: exId, setIndex: null, field: p.field, reason: p.reason,
+          value: p.value, status: "malformed"
+        });
+      });
       var note = isObj(e) ? str(e.note) : "";
-      if (v.sets.length || note.trim() !== "") {
-        res.entries[exId] = { sets: v.sets, note: note };
+      var meta = entryMeta(e);
+      var hasMeta = meta.mv !== undefined || meta.sw !== undefined || meta.n !== undefined;
+      /* An entry survives on a completed set OR a typed note OR — new — a
+         movement. A swapped or added card he has not typed a number into yet
+         still records WHICH MOVEMENT he went to; dropping that on save is how
+         a swap becomes invisible the moment the first set is blank. The entry
+         it keeps holds no sets and no note, which is exactly what a
+         notes-only entry already looks like to every reader (B-33). */
+      if (v.sets.length || note.trim() !== "" || hasMeta) {
+        var built = { sets: v.sets, note: note };
+        /* AFTER sets and note, always — an entry with none of the three is
+           the byte-identical string this function has always produced. */
+        if (meta.mv !== undefined) built.mv = meta.mv;
+        if (meta.sw !== undefined) built.sw = meta.sw;
+        if (meta.n !== undefined) built.n = meta.n;
+        res.entries[exId] = built;
       }
       res.setCount += v.sets.length;
     });
@@ -1232,11 +1390,226 @@
     if (p || isObj(draft.entries)) {
       Object.keys(out.entries).forEach(function (exId) {
         var src = isObj(draft.entries) ? draft.entries[exId] : null;
+        /* ---- Rule MV1's stamp (WO-014 W4 item 4) ----
+           The same precedence shape `rx` uses, and for the same reason: THE
+           DRAFT'S OWN COPY WINS. The draft records what he chose when the
+           card was open; the plan records what the slot says now. If he swaps
+           the movement and then edits the plan mid-session, the draft's copy
+           is the true one.
+
+           `mv` is stamped from the plan when the draft has none, so the entry
+           is SELF-DESCRIBING from here on. That matters for MV1.2: an entry
+           with no `mv` can only be resolved through its own slot's CURRENT
+           mv, so a slot re-pointed six months from now would silently change
+           what an old entry claims to be. Writing it at log time is exactly
+           the trade §1.3 of the work order names: what he actually lifted is
+           a fact about the SESSION, and a later plan edit must not rewrite it.
+
+           `sw: 1` is DERIVED, never asked for — coach §22.4.5, and it is why
+           `sw` beats the manual chip §18.3 recommended: he cannot forget a
+           mark that is the same action as the swap. It is set only when the
+           plan CONTAINS this slot (an added movement has no slot and is not a
+           swap — it is marked by having no slot at all), and only when the
+           draft names a movement that is not the slot's. An unmapped slot
+           counts: swapping d1c to a machine row is a swap, and `sw` is the
+           only evidence MV1.1(b) has on a plan with no `mv` anywhere.
+
+           `n` is already on the entry, carried verbatim by validateDraft.
+           Nothing here reads it, rewrites it or drops it. */
+        var meta = entryMeta(src);
+        var slot = p ? exById(p, exId) : null;
+        var slotMv = (isObj(slot) && isMvId(slot.mv)) ? slot.mv : null;
+        var mv = meta.mv !== undefined ? meta.mv : slotMv;
+        if (mv !== null && mv !== undefined && out.entries[exId].mv === undefined) {
+          out.entries[exId].mv = mv;
+        }
+        if (out.entries[exId].sw === undefined && isObj(slot) &&
+            meta.mv !== undefined && meta.mv !== slotMv) {
+          out.entries[exId].sw = 1;
+        }
         var rx = entryRx(src) || (p ? rxOf(exById(p, exId)) : null);
         if (rx) out.entries[exId].rx = rx;
+        /* ONE ENTRY KEY ORDER, and canonSession uses the same constant.
+           Without this the builder could emit {sets, note, n, mv, sw, rx}
+           (a draft that carried only `n`) while the canonical wire form is
+           {sets, note, mv, sw, n, rx} — and mergeStores, which compares the
+           local document against the canonicalised server one, would report
+           a conflict on a session whose numbers are identical. Local wins, so
+           nothing is lost, but it would name a false conflict on every open
+           forever. The order is a fact of the shape; it lives in one place. */
+        out.entries[exId] = orderKeys(out.entries[exId], ENTRY_KEYS);
       });
     }
     return out;
+  }
+
+  /* ------------------------------------------- the swap's pure ops (W4.7)
+
+     Two functions, one contract: THE ARGUMENT IS NEVER MUTATED. Each returns
+     a NEW draft, the same way every plan editor in this file returns a new
+     plan, so a refused swap cannot half-apply and an Undo is the old object.
+     Neither touches storage, neither touches the log, and neither can lose a
+     typed number — see the refusal in swapDraftEntry, which is the whole of
+     UX §22.5's no-loss rule expressed as a return value. */
+
+  /* A draft set row with nothing typed in it. `ld` is not consulted: a row
+     with no w and no r holds no number whatever else is hanging off it. */
+  function blankRow(s) {
+    return !isObj(s) || (str(s.w).trim() === "" && str(s.r).trim() === "");
+  }
+  function typedRows(e) {
+    var out = [];
+    if (!isObj(e) || !Array.isArray(e.sets)) return out;
+    e.sets.forEach(function (s, i) { if (!blankRow(s)) out.push({ i: i, set: s }); });
+    return out;
+  }
+  function copyDraft(d) {
+    var out = {}, k;
+    for (k in d) if (Object.prototype.hasOwnProperty.call(d, k)) out[k] = d[k];
+    var ents = {};
+    Object.keys(d.entries).forEach(function (id) { ents[id] = d.entries[id]; });
+    out.entries = ents;
+    return out;
+  }
+  function copyEntry(e) {
+    var out = {}, k;
+    if (isObj(e)) for (k in e) if (Object.prototype.hasOwnProperty.call(e, k)) out[k] = e[k];
+    return out;
+  }
+  function draftFail(draft, reason, field, extra) {
+    var out = { ok: false, draft: draft, exId: null, mv: null, kept: [], keptCount: 0,
+                problems: [{ field: field, reason: reason }] };
+    if (isObj(extra)) Object.keys(extra).forEach(function (k) { out[k] = extra[k]; });
+    return out;
+  }
+
+  /* swapDraftEntry(draft, exId, mv, n, opts)
+       -> { ok, draft, exId, mv, kept, keptCount, problems }
+
+     Replace the movement on ONE card, for TODAY ONLY. The slot keeps its id
+     (WO-007; W4 §3 forbids moving it), so it keeps its history and its
+     prescription — he replaced the apparatus, not the prescription (Rule
+     K3.2). Nothing is written to the plan: that is `setExerciseMovement`, on
+     Summary, after the work, and never mid-set.
+
+     THE NO-LOSS RULE, AND IT IS A REFUSAL, NOT A FLAG. If any row on the card
+     holds a typed weight or rep, this REFUSES with reason "sets" and hands
+     the typed rows back in `kept`. Those sets HAPPENED. Carrying them under a
+     different movement's name is B-131's "correct arithmetic on a wrong fact"
+     manufactured by the app itself; discarding them is a P0. So the only
+     honest outcomes are "add the new movement beside them" (addDraftEntry,
+     which is what UX §22.5 does) or "leave it alone", and this function
+     refuses rather than picking one. `opts.force` exists for a caller that
+     has ASKED him and been answered; it blanks the rows and returns every one
+     of them in `kept`, so even the forced path hands the numbers back rather
+     than dropping them. UX's spec never reaches it — Replace is not offered
+     on a card that holds a set — and that is the point: the contract is safe
+     by construction, not by the view remembering.
+
+     `mv` is required and must be a movement id. Passing the slot's own
+     movement back is the PUT-BACK path (UX §22.2) and is legal: the entry's
+     `mv` becomes the slot's again, so buildSession derives no `sw` and the
+     card is the slot's card. `n` is optional; supply the display name and it
+     rides through to the log, which is what lets the app name the movement
+     afterwards.
+
+     `mode` — the chip's this-session unit choice — is DROPPED. It was chosen
+     for the movement he is no longer doing, and leaving it would beat
+     cardModeFor's swapped branch from the tier above it, which is the very
+     override UX §22.11 exists to stop. Blank rows are normalised to
+     {w:"", r:""} for the same reason: an `ld` on an untyped row is the
+     replaced movement's build and it holds no number. */
+  function swapDraftEntry(draft, exId, mv, n, opts) {
+    var o = isObj(opts) ? opts : {};
+    if (!isObj(draft) || !isObj(draft.entries)) return draftFail(draft, "missing", null);
+    var id = str(exId).trim();
+    if (id === "") return draftFail(draft, "missing", "exId");
+    if (!isMvId(mv)) return draftFail(draft, "type", "mv");
+    var nm = null;
+    if (n !== undefined && n !== null) {
+      if (typeof n !== "string" || n.trim() === "") return draftFail(draft, "empty", "n");
+      if (n.trim().length > N_MAX) return draftFail(draft, "range", "n");
+      nm = n.trim();
+    }
+    var cur = draft.entries[id];
+    var typed = typedRows(cur);
+    if (typed.length && o.force !== true) {
+      return draftFail(draft, "sets", "sets",
+        { kept: typed.map(function (t) { return t.set; }), keptCount: typed.length, exId: id });
+    }
+    var next = copyDraft(draft);
+    var e = copyEntry(cur);
+    var rows = Array.isArray(e.sets) ? e.sets : [];
+    var len = Math.max(1, rows.length);
+    var kept = typed.map(function (t) { return t.set; });
+    e.sets = [];
+    for (var i = 0; i < len; i++) e.sets.push({ w: "", r: "" });
+    if (typeof e.note !== "string") e.note = str(e.note);
+    delete e.mode;
+    delete e.sw;                       /* derived at save from the plan, never carried across a swap */
+    e.mv = mv;
+    if (nm !== null) e.n = nm; else delete e.n;
+    next.entries[id] = e;
+    return { ok: true, draft: next, exId: id, mv: mv, kept: kept, keptCount: kept.length, problems: [] };
+  }
+
+  /* addDraftEntry(draft, mv, n, opts)
+       -> { ok, draft, exId, mv, kept, keptCount, problems }
+
+     Add a movement the day's plan does not carry, mid-session. It has NO
+     slot, therefore NO prescription, and Rule AD1 is the whole of what the
+     screen may say about it: it logs freely and every verdict is silent
+     behind one named line. Nothing here invents an `s`, `lo`, `hi` or `k`,
+     and nothing may add one later from the sets he logs — a guessed
+     prescription becomes a confident recommendation next week.
+
+     THE ID IS MINTED, never derived from the movement. Keying the entry on
+     `mv` would make two different sessions' improvised Face pulls one
+     history under a name-shaped key, which is WO-004 C-6 by a side door.
+     `opts.plan` (or `opts.taken`) widens the taken set so a minted id cannot
+     collide with a plan slot that exists but is not on today's card — a
+     collision there would merge two exercises' histories, which is the one
+     failure mode mintId exists to make impossible. PASS THE PLAN.
+
+     `opts.afterExId` puts the new card directly after the one he was on —
+     he added it NOW because he is doing it NOW (UX §22.5). The draft's
+     entries object carries that order, so the insertion is a rebuild of the
+     key order and nothing else; every existing entry keeps its identity and
+     its object. Omit it and the entry is appended, which is the honest
+     fallback UX gives a different toast for. */
+  function addDraftEntry(draft, mv, n, opts) {
+    var o = isObj(opts) ? opts : {};
+    if (!isObj(draft) || !isObj(draft.entries)) return draftFail(draft, "missing", null);
+    if (!isMvId(mv)) return draftFail(draft, "type", "mv");
+    if (typeof n !== "string" || n.trim() === "") return draftFail(draft, "empty", "n");
+    if (n.trim().length > N_MAX) return draftFail(draft, "range", "n");
+    var nm = n.trim();
+
+    var taken = {};
+    Object.keys(draft.entries).forEach(function (k) { taken[k] = true; });
+    if (isPlanDoc(o.plan)) { var t = takenIds(o.plan); Object.keys(t).forEach(function (k) { taken[k] = true; }); }
+    if (Array.isArray(o.plans)) o.plans.forEach(function (pl) {
+      if (!isPlanDoc(pl)) return;
+      var tp = takenIds(pl);
+      Object.keys(tp).forEach(function (k) { taken[k] = true; });
+    });
+    if (Array.isArray(o.taken)) o.taken.forEach(function (k) { if (typeof k === "string") taken[k] = true; });
+    var exId = mintId(taken, "ex");
+
+    var next = copyDraft(draft);
+    var entry = { sets: [{ w: "", r: "" }], note: "", mv: mv, n: nm };
+    var after = str(o.afterExId).trim();
+    if (after !== "" && Object.prototype.hasOwnProperty.call(next.entries, after)) {
+      var rebuilt = {};
+      Object.keys(next.entries).forEach(function (k) {
+        rebuilt[k] = next.entries[k];
+        if (k === after) rebuilt[exId] = entry;
+      });
+      next.entries = rebuilt;
+    } else {
+      next.entries[exId] = entry;
+    }
+    return { ok: true, draft: next, exId: exId, mv: mv, kept: [], keptCount: 0, problems: [] };
   }
 
   /* --------------------------------------------------- session history */
@@ -1411,7 +1784,52 @@
      Returns the stored entry BY REFERENCE, for the same reason `sortSessions`
      does not copy: callers read it. Nothing in PHAT writes through it, and
      nothing else may either. */
-  function lastFor(sessions, exId) {
+  /* ---- Rule MV1.1, the skip (WO-014 W4 item 6, coach addendum §22.4) ----
+
+     THE THIRD ARGUMENT IS OPTIONAL AND HAS THREE STATES, NOT TWO. That is
+     deliberate and it is the only slightly surprising thing in this function,
+     so it is spelled out:
+
+       undefined   MV1 IS OFF. Today's behaviour, byte for byte — the walk
+                   below is the walk that shipped on main @ 6a87a3a and no
+                   entry is skipped for any reason. EVERY existing two-argument
+                   call site, in this file, in index.html and in the suite,
+                   lands here and cannot tell the difference. This is clause
+                   MV1.1(c) and it is the default because an omitted argument
+                   must never change an answer.
+       a movement  MV1.1(a). The SLOT DECLARES a movement: an entry whose
+                   effective movement disagrees is skipped and the walk
+                   continues backwards. `sw` is NOT consulted — after "make it
+                   permanent" the slot's mv becomes the swapped movement, and
+                   those entries still carry sw:1 from log time yet must now
+                   BE the slot's history, which is exactly what the offer
+                   promised him.
+       null        MV1.1(b). The slot exists and declares NO movement (an
+                   unmapped or user-built plan): an entry with `sw === 1` is
+                   skipped. Best effort, and it is all the information there
+                   is.
+
+     `undefined` and `null` must not collapse into each other, for the same
+     reason "no draft" and "unreadable draft" must not: one of them means "do
+     not apply the rule" and the other means "apply it with no movement to
+     compare against", and a caller that conflates them either loses the skip
+     or applies it where nothing asked for it. priorFor passes `slot.mv ||
+     null` precisely so a slot always gets a rule and a non-slot never does. */
+  function effectiveMv(entry, slotMv) {
+    if (isObj(entry) && isMvId(entry.mv)) return entry.mv;
+    return isMvId(slotMv) ? slotMv : null;
+  }
+  /* mvSkips(entry, mv) -> true when MV1.1 skips this entry. One definition,
+     read by lastFor and by every engine in §22.4.4's table, so a mutant that
+     drops the comparison dies once rather than six times. */
+  function mvSkips(entry, mv) {
+    if (mv === undefined) return false;                  /* (c) rule off */
+    if (mv === null) return isObj(entry) && entry.sw === 1;   /* (b) */
+    if (!isMvId(mv)) return false;                       /* garbage: rule off, never a blanket skip */
+    return effectiveMv(entry, mv) !== mv;                /* (a) */
+  }
+
+  function lastFor(sessions, exId, mv) {
     if (!Array.isArray(sessions)) return null;
     if (typeof exId !== "string" || exId.trim() === "") return null;
     var id = exId.trim();
@@ -1421,11 +1839,255 @@
       if (!Object.prototype.hasOwnProperty.call(s.entries, id)) continue;
       var e = s.entries[id];
       if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      if (mvSkips(e, mv)) continue;
       for (var j = 0; j < e.sets.length; j++) {
         if (isDoneSet(e.sets[j])) return e;
       }
     }
     return null;
+  }
+
+  /* ---- Rule MV1.2, the cross-slot fallback (coach addendum §22.4) ----
+
+     FIVE GATES, ALL REQUIRED, and the asymmetry with MV1.1 is deliberate:
+     taking a wrong number OUT of a slot costs him a week of comparison;
+     putting a wrong number IN seeds a bar. So the half that adds gets the
+     tighter gate, and the half that adds may never be silent.
+
+     56 days is SP1's outer window (SP1_WIDE), reused rather than invented —
+     the coach declined to mint a new number. It is a SEPARATE CONSTANT on
+     purpose: SP1's window is about how stale a heavy triple may be before it
+     stops being a load target, MV1's is about how stale a cross-slot prior
+     may be, and a future change to one must not silently move the other. */
+  var MV1_DAYS = 56;
+
+  /* The session object holding this exact entry reference, or null. lastFor
+     returns the entry by reference (its documented contract), so identity is
+     an exact match and no re-walk can pick a different row. */
+  function sessionOfEntry(sessions, exId, entry) {
+    if (!Array.isArray(sessions) || !isObj(entry)) return null;
+    for (var i = sessions.length - 1; i >= 0; i--) {
+      var s = sessions[i];
+      if (isObj(s) && isObj(s.entries) && s.entries[exId] === entry) return s;
+    }
+    return null;
+  }
+  function hasDone(e) {
+    if (!isObj(e) || !Array.isArray(e.sets)) return false;
+    for (var j = 0; j < e.sets.length; j++) if (isDoneSet(e.sets[j])) return true;
+    return false;
+  }
+  /* The movement an entry logged under `exId` records. The entry's own copy
+     first; failing that, the slot's movement from any plan in the store —
+     which is what "an entry with no mv IS the slot's movement" means, read
+     across a whole store rather than one plan. */
+  function entryMvIn(entry, exId, plans) {
+    if (isObj(entry) && isMvId(entry.mv)) return entry.mv;
+    for (var i = 0; i < plans.length; i++) {
+      var e = exById(plans[i], exId);
+      if (isObj(e) && isMvId(e.mv)) return e.mv;
+    }
+    return null;
+  }
+  /* MV1.2 gate (e): the app must be able to NAME the source, in this order —
+     the entry's own `n`, then the source slot's `n` from any plan in the
+     store, then the library name for the movement. All three fail: the
+     fallback is REFUSED, not shown anonymously. A prior the app cannot
+     attribute may not be shown, because the disclosure IS the permission. */
+  function mvSourceName(entry, exId, plans, index, mv) {
+    if (isObj(entry) && typeof entry.n === "string" && entry.n.trim() !== "") return entry.n.trim();
+    for (var i = 0; i < plans.length; i++) {
+      var e = exById(plans[i], exId);
+      if (isObj(e) && typeof e.n === "string" && e.n.trim() !== "") return e.n.trim();
+    }
+    var ln = libraryName(index, mv);
+    return (typeof ln === "string" && ln.trim() !== "") ? ln.trim() : null;
+  }
+  function dayNameOf(plans, dayId) {
+    for (var i = 0; i < plans.length; i++) {
+      var d = dayById(plans[i], dayId);
+      if (isObj(d) && typeof d.name === "string" && d.name.trim() !== "") return d.name.trim();
+    }
+    return null;
+  }
+
+  /* priorFor(sessions, plan, exId, opts)
+       -> { entry, from, exId, dayId, dayName, date, name, mv, skipped, reason }
+
+     THE CARD'S ONE QUESTION — "what are the last numbers on this exercise,
+     and where did they come from" — answered once, with its provenance
+     attached, so the screen can never print a number without the sentence
+     that says where it is from. MV1.4: silence is the defect, and an
+     undisclosed number is the worse defect.
+
+       entry    the prior entry, by reference, or null
+       from     "slot"     the slot's own history (today's answer)
+                "movement" another slot's history of the same movement
+                null       no prior
+       exId     which slot the entry came from
+       dayId /
+       dayName  the day that session was logged under, resolved through the
+                plans handed in — null when that day no longer exists, which
+                is MV1-C1b's case and is a different sentence, not a hole
+       date     the session's local date
+       name     the movement's display name at the source (gate (e)'s chain).
+                Populated on a REFUSAL too: MV1-C2a and MV1-C2b both name the
+                movement, and a refusal the app cannot name prints nothing
+       mv       the slot's movement, or null when it declares none
+       skipped  {exId, date, mv, name} — the most recent entry under THIS slot
+                that MV1.1 skipped, when the skip changed the answer. This is
+                MV1-C3: `Last time you swapped this for Machine row.`
+       reason   null          a prior was found
+                "none"        nothing to say
+                "prescription" a same-movement prior exists under a DIFFERENT
+                              prescription — MV1-C2a, and NO NUMBER
+                "stale"       a same-movement prior exists, right prescription,
+                              older than 56 days — MV1-C2b, and NO NUMBER
+                "unnamed"     a candidate passed every gate but (e): the app
+                              cannot say where it came from, so it does not
+                              show it
+
+     opts: { todayStr, plans (every plan in the store, for names), library
+             (a libraryLoad index, for gate (e)'s last link) }
+
+     WHAT THIS DOES NOT DO (MV1.3). A fallback prior MAY drive the ghost line,
+     the seed and the card's unit. It MAY NOT drive H1's tonnage comparison or
+     its baseline test, and NO ENGINE WIDENS ITS READ because of it: ST1, SP1,
+     D1, V1 and the Trend series are exactly what they are on main. priorFor
+     is consumed by the card and by nothing else. */
+  function priorFor(sessions, plan, exId, opts) {
+    var o = isObj(opts) ? opts : {};
+    var out = { entry: null, from: null, exId: null, dayId: null, dayName: null,
+                date: null, name: null, mv: null, skipped: null, reason: "none" };
+    if (!Array.isArray(sessions)) return out;
+    var id = str(exId).trim();
+    if (id === "") return out;
+    var p = isPlanDoc(plan) ? plan : null;
+    /* The resolution chain, in order: the card's own plan, then every plan in
+       the store, then THE SHIPPED PHAT DOCUMENT, always, last.
+
+       PHAT_PLAN is appended unconditionally because it is CODE, not data: it
+       is compiled into this file, it is never stored, and `planIdOf` already
+       reads a session with no planId as belonging to it. Without it in the
+       chain, an entry logged before schema 7 — which is every session he has
+       — has no `mv` of its own AND no slot to borrow one from, so MV1.2 could
+       never find his bent-over row history from a new plan's row slot. That
+       is the whole of B-137 and it would have failed silently on the exact
+       data the criterion names. Last in the order, so a user plan that shares
+       a slot id (a copy of PHAT does, by design) answers first. */
+    var plans = [];
+    if (p) plans.push(p);
+    if (Array.isArray(o.plans)) o.plans.forEach(function (x) { if (isPlanDoc(x) && plans.indexOf(x) < 0) plans.push(x); });
+    if (plans.indexOf(PHAT_PLAN) < 0) plans.push(PHAT_PLAN);
+    var index = o.library;
+    var slot = p ? exById(p, id) : null;
+    /* undefined = there is no slot, so MV1 does not apply at all (an added
+       movement). null = the slot exists and declares no movement: MV1.1(b). */
+    var mv = slot ? (isMvId(slot.mv) ? slot.mv : null) : undefined;
+    out.mv = (mv === undefined || mv === null) ? null : mv;
+
+    /* ---- MV1.1: the slot's own history ---- */
+    var own = lastFor(sessions, id, mv);
+
+    /* The skip that changed the answer, walking the same direction lastFor
+       walks. The FIRST skipped entry with a completed set going backwards is
+       by definition the most recent one the slot's own read passed over. */
+    if (mv !== undefined) {
+      for (var i = sessions.length - 1; i >= 0 && out.skipped === null; i--) {
+        var s0 = sessions[i];
+        if (!isObj(s0) || !isObj(s0.entries)) continue;
+        if (!Object.prototype.hasOwnProperty.call(s0.entries, id)) continue;
+        var e0 = s0.entries[id];
+        if (e0 === own) break;                    /* reached the answer: no earlier skip changed it */
+        if (!hasDone(e0)) continue;
+        if (!mvSkips(e0, mv)) continue;
+        var m0 = entryMvIn(e0, id, plans);
+        out.skipped = {
+          exId: id, date: sessionDate(s0), mv: m0,
+          name: mvSourceName(e0, id, plans, index, m0)
+        };
+      }
+    }
+
+    if (own) {
+      var ses = sessionOfEntry(sessions, id, own);
+      out.entry = own; out.from = "slot"; out.exId = id; out.reason = null;
+      out.date = ses ? sessionDate(ses) : null;
+      out.dayId = (ses && typeof ses.dayId === "string") ? ses.dayId : null;
+      out.dayName = out.dayId === null ? null : dayNameOf(plans, out.dayId);
+      out.name = mvSourceName(own, id, plans, index, entryMvIn(own, id, plans));
+      return out;
+    }
+
+    /* ---- MV1.2: the cross-slot fallback. Gate (a) first and hardest: an
+       UNMAPPED slot gets no fallback, ever, and a card with no slot at all
+       gets none either. ---- */
+    if (mv === undefined || mv === null) return out;
+
+    var today = safeToday(o.todayStr);
+    var slotEpoch = epochKey(slot);
+    var best = null, stale = null, presc = null, unnamed = null;
+
+    for (var k = 0; k < sessions.length; k++) {
+      var s = sessions[k];
+      if (!isObj(s) || !isObj(s.entries)) continue;
+      var d = sessionDate(s);
+      if (d === "" || d > today) continue;       /* a future row is not evidence of a past session */
+      var keys = Object.keys(s.entries);
+      for (var q = 0; q < keys.length; q++) {
+        var cid = keys[q];
+        if (cid === id) continue;                /* a DIFFERENT slot — the slot's own history is MV1.1's */
+        var ce = s.entries[cid];
+        if (!hasDone(ce)) continue;
+        /* (b) the same movement, strict string equality */
+        var cmv = entryMvIn(ce, cid, plans);
+        if (cmv !== mv) continue;
+        var cname = mvSourceName(ce, cid, plans, index, cmv);
+        var cand = { entry: ce, exId: cid, date: d, name: cname,
+                     dayId: (typeof s.dayId === "string" ? s.dayId : null) };
+        /* (c) the candidate CARRIES rx and its epoch is identical. A
+           candidate with no rx is REFUSED — not resolved from a plan, not
+           assumed. This is the clause that keeps d1h and d5i apart. */
+        var ck = epochKey(entryRx(ce));
+        if (ck === null || slotEpoch === null || ck !== slotEpoch) {
+          if (cname !== null && (presc === null || d >= presc.date)) presc = cand;
+          continue;
+        }
+        /* (d) within 56 days. The equality is INCLUSIVE at 56: pinned here so
+           a refactor cannot move the boundary in silence. */
+        var gap = dayGap(d, today);
+        if (gap === null || gap > MV1_DAYS) {
+          if (cname !== null && (stale === null || d >= stale.date)) stale = cand;
+          continue;
+        }
+        /* (e) the app can name the source */
+        if (cname === null) {
+          if (unnamed === null || d >= unnamed.date) unnamed = cand;
+          continue;
+        }
+        /* Most recent by date; ties to the LATER position in the sorted
+           array, which is lastFor's own walk order. `>=` on an ascending
+           scan is exactly that. */
+        if (best === null || d >= best.date) best = cand;
+      }
+    }
+
+    if (best) {
+      out.entry = best.entry; out.from = "movement"; out.exId = best.exId;
+      out.date = best.date; out.dayId = best.dayId; out.name = best.name;
+      out.dayName = best.dayId === null ? null : dayNameOf(plans, best.dayId);
+      out.reason = null;
+      return out;
+    }
+    /* The refusal order, and it is a judgement stated rather than assumed:
+       a prior at the RIGHT prescription that is merely old (MV1-C2b) is more
+       informative than one at the wrong prescription, because it names a
+       number he actually has. Both print NO NUMBER — a number is what he
+       would act on. */
+    if (stale) { out.reason = "stale"; out.exId = stale.exId; out.date = stale.date; out.name = stale.name; return out; }
+    if (presc) { out.reason = "prescription"; out.exId = presc.exId; out.date = presc.date; out.name = presc.name; return out; }
+    if (unnamed) { out.reason = "unnamed"; out.exId = unnamed.exId; out.date = unnamed.date; return out; }
+    return out;
   }
 
   /* ====================================================== the plan document
@@ -1483,6 +2145,121 @@
   /* Rule I1's implement tags. Exported so an add-exercise form cannot drift
      from the validator, for the same reason LIMITS is exported. */
   var PLAN_IMPLEMENTS = ["bb", "db", "machine", "cable", "bodyweight"];
+
+  /* ================================================== movement identity
+
+     WO-014 W4 item 2. A MOVEMENT is what he lifted; a SLOT is where in his
+     week he lifted it. Two facts, two fields, and the whole of Rule MV1 is
+     built on keeping them apart.
+
+     THE ID. `mv_<upstreamId>` for a library movement, at the pinned SHA
+     a859101d633a01c4a1a920d6a8ce41dabba0705f; a plan-namespace minted id
+     (`x_3f9dz01`) for a user-created one.
+
+     WHY THAT DOES NOT VIOLATE WO-004 C-6 (Decision 2, recorded). C-6 forbids
+     an id THIS APP'S RENAME CAN MOVE — a slug of `n`, recomputed whenever a
+     name is edited, which turns a typo into orphaned history. An upstream id
+     at a pinned SHA is not that: nothing in this app derives it, nothing in
+     this app can rewrite it, and `renameExercise` does not touch it. It LOOKS
+     name-derived and it is not renameable by us, which is the property C-6
+     actually protects. The consequence is stated rather than hidden: a
+     LIBRARY SHA BUMP IS A MIGRATION, NOT AN UPGRADE — upstream renaming an
+     entry moves the id, and the entries that carry the old one must be
+     migrated deliberately, with a version and a pass, like any other shape
+     change. The SHA is pinned in the generator, in the emitted header, in
+     docs/decisions.md and here.
+
+     MV_RE is deliberately wider than the upstream charset (which is only
+     [A-Za-z0-9_-] at this SHA): it has to admit a minted plan id too, and a
+     validator that refused a legal id would refuse a save. It is a FORMAT
+     check, never an existence check — whether a movement is in the library
+     is the reader's answer, not the validator's, and a slot referencing a
+     movement the library no longer carries must still load, forever. */
+  var MV_PREFIX = "mv_";
+  var MV_MAX = 96;                       /* longest upstream id at the SHA is 58 */
+  var MV_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
+  /* isMvId(v) -> true when v is a usable movement id. Format only. */
+  function isMvId(v) {
+    return typeof v === "string" && v.length <= MV_MAX && MV_RE.test(v);
+  }
+  /* mvId(upstreamId) -> "mv_<id>" | null. The ONE place the prefix is built. */
+  function mvId(upstreamId) {
+    if (typeof upstreamId !== "string") return null;
+    var u = upstreamId.trim();
+    if (u === "" || !MV_RE.test(u) || u.length + MV_PREFIX.length > MV_MAX) return null;
+    return MV_PREFIX + u;
+  }
+  /* mvUpstreamId(mv) -> the library id inside a movement id, or null for a
+     minted one. Used to look a movement up in the library index. */
+  function mvUpstreamId(mv) {
+    if (!isMvId(mv) || mv.indexOf(MV_PREFIX) !== 0) return null;
+    var u = mv.slice(MV_PREFIX.length);
+    return u === "" ? null : u;
+  }
+
+  /* ---- Rule I3 (coach addendum §22.1): upstream `equipment` -> implement.
+
+     SIX VALUES MAP, SEVEN ARE REFUSED, and a refusal is NOT a default: it
+     yields null, which means "the app makes no implement claim for this
+     movement". Rules I1 (the ` · per DB` suffix), I2 (the increment line) and
+     Z2 (the word at zero load) read `implement`; a wrong mapping is a wrong
+     FACT beside a right load, which is B-131's class at library volume.
+
+     `null` in the library means UPSTREAM DID NOT SAY — 77 rows — and is not
+     the same as "no equipment". Both land on the same answer here (no claim)
+     and the reader keeps them apart, because only one of them is a gap
+     somebody could fill. `other` is upstream's own "unknown": 122 rows.
+     122 + 77 = 199 rows with no honest implement mapping, and the app says so
+     rather than guessing. */
+  var EQ_IMPLEMENT = {
+    "barbell": "bb",
+    "e-z curl bar": "bb",
+    "dumbbell": "db",
+    "cable": "cable",
+    "machine": "machine",
+    "body only": "bodyweight"
+  };
+  /* The seven, named, so a reader can tell "refused" from "not in the table".
+     A value in NEITHER list is an upstream value this build has never seen —
+     the generator fails the build on one (I3.4), and here it is refused. */
+  var EQ_REFUSED = ["kettlebells", "bands", "medicine ball", "exercise ball",
+                    "foam roll", "other"];
+
+  /* libraryImplement(eq) -> "bb"|"db"|"cable"|"machine"|"bodyweight"|null
+     I3.1. null for every refused value, for null (upstream did not say), and
+     for anything this table has never seen. NEVER a nearest, never a default. */
+  function libraryImplement(eq) {
+    if (typeof eq !== "string") return null;
+    var k = eq.trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(EQ_IMPLEMENT, k) ? EQ_IMPLEMENT[k] : null;
+  }
+  /* The reverse, for UX §22.3.1's unmapped-slot fallback: the upstream values
+     an app implement covers, most representative first. Not a round trip —
+     `bb` covers two upstream values and `barbell` is the one it means. */
+  var IMPLEMENT_EQ = {
+    bb: ["barbell", "e-z curl bar"],
+    db: ["dumbbell"],
+    cable: ["cable"],
+    machine: ["machine"],
+    bodyweight: ["body only"]
+  };
+  /* UX §22.3.1, and it is UX's table, not the coach's: adjacency for SEARCH
+     ORDERING only. Nothing here decides an implement, a load word or an
+     increment; the worst a wrong row can do is put a good candidate third.
+     A value not in the table has no near set, which is the honest answer for
+     `exercise ball`, `foam roll`, `other` and null. */
+  var EQ_NEAR = {
+    "machine": ["cable"],
+    "cable": ["machine", "bands"],
+    "barbell": ["e-z curl bar", "dumbbell"],
+    "dumbbell": ["barbell", "kettlebells", "e-z curl bar"],
+    "e-z curl bar": ["barbell", "dumbbell"],
+    "kettlebells": ["dumbbell"],
+    "body only": ["bands", "machine"],
+    "bands": ["body only", "cable"],
+    "medicine ball": ["exercise ball", "body only"]
+  };
 
   var ID_KIND = { ex: "x", day: "y", lift: "l", plan: "p" };
   var idSeq = 0;
@@ -2032,6 +2809,16 @@
         if (e.fig !== undefined && !(typeof e.fig === "string" && FIG_RE.test(e.fig))) {
           bad("ex", id || where, "fig", "type");
         }
+        /* WO-014 W4. `mv` is OPTIONAL and its ABSENCE IS A SUPPORTED STATE,
+           permanently (coach §22.4.3: d1c and d3b ship with no `mv` because
+           no upstream entry is a rack chin, and mapping them to the nearest
+           name would seed a load off an inverted row). A slot with no `mv`
+           renders and logs exactly as it did on main; MV1.1(c) gives it
+           today's read and MV1.2 never fires for it.
+           Present, it is a movement id and nothing else. FORMAT ONLY —
+           whether the library contains it is the reader's answer, and a plan
+           that references a movement a later SHA dropped must still load. */
+        if (e.mv !== undefined && !isMvId(e.mv)) bad("ex", id || where, "mv", "type");
         /* UX §11.5 (WO-009 W2): a slot that shows a photograph must carry its
            cue - the cue is the accessible carrier and the photo is decorative,
            so a photo with no cue is an instruction nobody can read. Asserted
@@ -2166,6 +2953,11 @@
     if (PLAN_IMPLEMENTS.indexOf(spec.implement) < 0) problems.push({ scope: "ex", id: null, field: "implement", reason: "enum" });
     if (spec.cut !== undefined && spec.cut !== 1) problems.push({ scope: "ex", id: null, field: "cut", reason: "type" });
     if (spec.cue !== undefined && typeof spec.cue !== "string") problems.push({ scope: "ex", id: null, field: "cue", reason: "type" });
+    /* WO-014. `mv` is optional here exactly as it is in validatePlan: the
+       library picker supplies one, a hand-typed exercise does not, and an
+       unmapped slot is a supported state. `k` and `implement` stay REQUIRED
+       (WO-006 B2, coach K3.3) — the library never supplies `k`. */
+    if (spec.mv !== undefined && !isMvId(spec.mv)) problems.push({ scope: "ex", id: null, field: "mv", reason: "type" });
     if (problems.length) return { ok: false, plan: plan, exId: null, lift: null, problems: problems };
 
     var next = clonePlan(plan);
@@ -2188,8 +2980,60 @@
               k: spec.k, implement: spec.implement, lift: lift };
     if (spec.cut === 1) e.cut = 1;
     if (typeof spec.cue === "string" && spec.cue.trim() !== "") e.cue = spec.cue.trim();
+    if (isMvId(spec.mv)) e.mv = spec.mv;
     day.ex.push(e);
     return { ok: true, plan: next, exId: exId, lift: lift, problems: [] };
+  }
+
+  /* setExerciseMovement(plan, exId, mv, n) -> {ok, plan, exId, before, problems}
+
+     WO-014 W4 item 3 — the "make it permanent" primitive (UX §22.7), and the
+     one pure op behind coach §22.4.6's confirmation.
+
+     IT DOES NOT TOUCH `id`. WO-007's ruling and WO-004 C-6: an id is minted
+     once and never rewritten, not by a rename, not by a re-split, and not by
+     this. That is the whole point of the offer — the slot KEEPS its id and
+     therefore keeps its history, and what changes is which of that history
+     MV1.1 now reads as the slot's own. Nothing is deleted, nothing is
+     re-keyed, every logged set stays exactly where it is and stays on the
+     chart. The previous movement's entries simply stop being this slot's
+     prior, which is precisely what the confirmation says out loud before he
+     taps it.
+
+     `mv`  a movement id            -> set it
+           null                     -> REMOVE the key; the slot becomes
+                                       unmapped, a supported state, and
+                                       MV1.1(b) takes over
+           anything else            -> refused, {field:"mv", reason:"type"}
+     `n`   OPTIONAL. A non-empty string renames the slot as renameExercise
+           would (it writes `n` and nothing else). Omit it — undefined — and
+           the name is untouched, which is the two-argument-ish call a caller
+           that only wants to re-point the movement makes. An empty or
+           whitespace-only string is REFUSED rather than silently ignored: a
+           blank name is what validatePlan rejects, and accepting it here
+           would write a plan that cannot be revalidated.
+
+     `before` is the mv the slot carried, or null — so a caller can offer an
+     Undo that is a second call to this function and nothing more. */
+  function setExerciseMovement(plan, exId, mv, n) {
+    var id = str(exId).trim();
+    if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (id === "") return editFail(plan, [{ scope: "ex", id: null, field: "id", reason: "missing" }]);
+    if (plan.readOnly === true) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (mv !== null && !isMvId(mv)) return editFail(plan, [{ scope: "ex", id: id, field: "mv", reason: "type" }]);
+    var nm = null;
+    if (n !== undefined) {
+      if (typeof n !== "string" || n.trim() === "") return editFail(plan, [{ scope: "ex", id: id, field: "n", reason: "empty" }]);
+      nm = n.trim();
+    }
+    if (!exById(plan, id)) return editFail(plan, [{ scope: "ex", id: id, field: "id", reason: "unknown" }]);
+    var next = clonePlan(plan);
+    if (!next) return editFail(plan, [{ scope: "plan", id: str(plan.planId), field: null, reason: "unclonable" }]);
+    var target = exById(next, id);
+    var before = isMvId(target.mv) ? target.mv : null;
+    if (mv === null) delete target.mv; else target.mv = mv;
+    if (nm !== null) target.n = nm;
+    return { ok: true, plan: next, exId: id, before: before, problems: [] };
   }
 
   function addDay(plan, name) {
@@ -2840,6 +3684,36 @@
      `keyLifts` is ids only, never names. The name is resolved from the slot at
      read time (planKeyLifts), so a rename reaches ST1's copy with no second
      place to update - the same reason `lift` carries no name. */
+  /* WO-014 W4. THE 42 SLOTS' `mv`, and the two that do not have one.
+
+     40 slots carry a movement id at the pinned library SHA. 32 of them are
+     `"mv_" + fig`, because a `fig` IS the upstream id of the movement the
+     slot's photograph was eye-checked for; the 8 cue-only slots whose photo
+     failed the check still name the movement the check was run against, so
+     they are mapped from that name. The invariant a test should hold is:
+
+         "mv_" + slot.fig === slot.mv, for every slot carrying both,
+         WITH EXACTLY ONE INTENDED EXCEPTION — d1e.
+
+     d1e is a weighted dip. Its movement is `Dips_-_Triceps_Version`, which is
+     the row §17.2 eye-checked and FAILED (feet cropped, a bystander in frame);
+     the photograph that ships is that row's own fallback, the chest version.
+     So the slot's `fig` records which PICTURE passed and its `mv` records
+     which MOVEMENT it is, and on this one slot they are different strings.
+     That is the coach's F1L.3 ruling made visible: `fig` is the record of a
+     check performed on a slot, `mv` is the identity of the movement.
+
+     d1c and d3b — RACK CHIN — ship with NO `mv`, deliberately (coach §22.4.3).
+     No upstream entry shows heels on a rack; `Inverted_Row` is a different
+     movement (body horizontal, feet on the floor). Mapping them to the
+     nearest name would let MV1.2 read an inverted row's history as a rack
+     chin's prior and SEED A LOAD OFF IT. They stay unmapped, MV1.1(c) gives
+     them today's read, and nothing about them changes. Do not "finish the
+     map" — the gap is the ruling.
+
+     No two slots share both an `mv` and a prescription epoch, which is what
+     makes MV1.2 unreachable on the shipped plan; `planMvEpochDupes` asserts
+     it mechanically rather than trusting this paragraph. */
   var PHAT_PLAN = deepFreeze({
     planId: PHAT_PLAN_ID,
     name: "PHAT",
@@ -2862,41 +3736,41 @@
     reducedWeeks: 4,
     days: [
       { id: "d1", name: "Upper power", wd: "Mon", ex: [
-        { id: "d1a", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_row",
+        { id: "d1a", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_row", mv: "mv_Bent_Over_Barbell_Row",
           cue: "Keep the torso at the same angle for every rep.", fig: "Bent_Over_Barbell_Row" },
         /* §17.2 d1b: `Weighted_Pull_Ups` FAILED the eye check (frame 0 is not
            a hang; chin stays below the bar). Cue only. */
-        { id: "d1b", n: "Weighted pull-up", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_pullup",
+        { id: "d1b", n: "Weighted pull-up", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_pullup", mv: "mv_Weighted_Pull_Ups",
           cue: "Reach a full dead hang at the bottom of every rep." },
         /* §17.2 d1c: no upstream source shows heels on a rack. Cue only (B-105). */
         { id: "d1c", n: "Rack chin", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_rackchin", cut: 1,
           cue: "Rest the heels on the rack without pushing through them." },
-        { id: "d1d", n: "Flat DB press", s: 3, lo: 3, hi: 5, k: "power", implement: "db", lift: "l_dbbench",
+        { id: "d1d", n: "Flat DB press", s: 3, lo: 3, hi: 5, k: "power", implement: "db", lift: "l_dbbench", mv: "mv_Dumbbell_Bench_Press",
           cue: "Keep each wrist stacked under the dumbbell.", fig: "Dumbbell_Bench_Press" },
         /* §17.2 d1e: the named `Dips_-_Triceps_Version` failed (feet cropped,
            bystander); the row's own fallback passed and ships. */
-        { id: "d1e", n: "Weighted dip", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_dip",
+        { id: "d1e", n: "Weighted dip", s: 2, lo: 6, hi: 10, k: "power", implement: "bodyweight", lift: "l_dip", mv: "mv_Dips_-_Triceps_Version",
           cue: "Keep the shoulders down, away from the ears.", fig: "Dips_-_Chest_Version" },
         /* §17.2 d1f: `Seated_Dumbbell_Press` FAILED (no back pad - the brace
            the row requires is absent). Cue only; d3f shares the absence. */
-        { id: "d1f", n: "Seated DB shoulder press", s: 3, lo: 6, hi: 10, k: "power", implement: "db", lift: "l_dbshoulder",
+        { id: "d1f", n: "Seated DB shoulder press", s: 3, lo: 6, hi: 10, k: "power", implement: "db", lift: "l_dbshoulder", mv: "mv_Seated_Dumbbell_Press",
           cue: "Ribs down, do not arch the lower back." },
-        { id: "d1g", n: "Cambered bar curl", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_barcurl",
+        { id: "d1g", n: "Cambered bar curl", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_barcurl", mv: "mv_EZ-Bar_Curl",
           cue: "Do not rock the torso to start the rep.", fig: "EZ-Bar_Curl" },
-        { id: "d1h", n: "Skull crusher", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_skull",
+        { id: "d1h", n: "Skull crusher", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l_skull", mv: "mv_EZ-Bar_Skullcrusher",
           cue: "Take the bar to the forehead on every rep.", fig: "EZ-Bar_Skullcrusher" }
       ] },
       { id: "d2", name: "Lower power", wd: "Tue", ex: [
-        { id: "d2a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_squat",
+        { id: "d2a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l_squat", mv: "mv_Barbell_Squat",
           cue: "Drive the hips and shoulders up together.", fig: "Barbell_Squat" },
-        { id: "d2b", n: "Hack squat", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_hack",
+        { id: "d2b", n: "Hack squat", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_hack", mv: "mv_Hack_Squat",
           cue: "Set the feet high enough that the heels stay down.", fig: "Hack_Squat" },
-        { id: "d2c", n: "Leg extension", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_legext", cut: 1,
+        { id: "d2c", n: "Leg extension", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_legext", mv: "mv_Leg_Extensions", cut: 1,
           cue: "Keep the hips down in the seat, do not swing the pad up.", fig: "Leg_Extensions" },
         /* §17.2 d2d: `Stiff-Legged_Barbell_Deadlift` FAILED (bar at the
            kneecap, a half-range SLDL). Pair test 17.5 with d4e: both fail on
            bar height, both cue only. */
-        { id: "d2d", n: "Stiff-leg deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l_sldl",
+        { id: "d2d", n: "Stiff-leg deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l_sldl", mv: "mv_Stiff-Legged_Barbell_Deadlift",
           cue: "Keep the lower back flat for the whole rep." },
         /* Rule A1 (addendum §8.2), resolved. The brief's slot reads "Glute-ham
            raise or lying leg curl" — TWO exercises, not two names for one:
@@ -2910,7 +3784,7 @@
            load word (Z2) and gain an increment line (I2). Done now for that
            reason. `lift` stays `l_ghr`: an id is opaque, minted once and never
            recomputed from a name (WO-004 C-6). */
-        { id: "d2e", n: "Lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_ghr",
+        { id: "d2e", n: "Lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_ghr", mv: "mv_Lying_Leg_Curls",
           /* Rule Q1 (addendum §10.2) - NEW. This slot carried no cue; nothing had
              ever written one. Written for the lying leg curl, the design's current
              default and what Rule A1 (§8.2) resolved this slot to.
@@ -2923,18 +3797,18 @@
              `bodyweight` and switches Rule I2's increment line off. The cue is one
              string; the slot is not. */
           cue: "Line the knees up with the machine's pivot.", fig: "Lying_Leg_Curls" },
-        { id: "d2f", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfstand",
+        { id: "d2f", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfstand", mv: "mv_Standing_Calf_Raises",
           cue: "Keep the knees straight on every rep.", fig: "Standing_Calf_Raises" },
-        { id: "d2g", n: "Seated calf raise", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfseat",
+        { id: "d2g", n: "Seated calf raise", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l_calfseat", mv: "mv_Seated_Calf_Raise",
           cue: "Do not bounce out of the bottom position.", fig: "Seated_Calf_Raise" }
       ] },
       { id: "d3", name: "Back & shoulders", wd: "Thu", ex: [
-        { id: "d3a", n: "Row — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_row",
+        { id: "d3a", n: "Row — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_row", mv: "mv_Bent_Over_Barbell_Row",
           cue: "Keep the torso at the same angle for every rep.", fig: "Bent_Over_Barbell_Row" },
         /* §17.2 d3b: cue only, as d1c. */
         { id: "d3b", n: "Rack chin", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bodyweight", lift: "l_rackchin",
           cue: "Rest the heels on the rack without pushing through them." },
-        { id: "d3c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l_cablerow",
+        { id: "d3c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l_cablerow", mv: "mv_Seated_Cable_Rows",
           cue: "Keep the torso still, do not swing back with the weight.", fig: "Seated_Cable_Rows" },
         /* B-65 (WO-005 §4.3), 2026-09-11. REVERSIBLE DEFAULT, chosen in Chady's
            absence - this is the design's choice standing in for an answer, not
@@ -2950,7 +3824,7 @@
            `implement` and with it Rules Z2 and I2. The id is opaque, minted once
            and never recomputed from a name (WO-004 C-6), so any logged history
            stays attached to d3d whichever name wins. */
-        { id: "d3d", n: "DB row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_dbrow", cut: 1,
+        { id: "d3d", n: "DB row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_dbrow", mv: "mv_One-Arm_Dumbbell_Row", cut: 1,
           /* Rule Q1 (addendum §10.2) - NEW. This slot carried no cue. Written for
              the DB row, which B-65 above has now made the slot's name.
              REVERT (§10.5): if the slot becomes a shrug the cue is exactly
@@ -2962,64 +3836,64 @@
           fig: "One-Arm_Dumbbell_Row" },
         /* §17.2 d3e: `Close-Grip_Front_Lat_Pulldown` FAILED (wide bar, shot
            from behind). Cue only. */
-        { id: "d3e", n: "Close-grip pulldown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pulldown",
+        { id: "d3e", n: "Close-grip pulldown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pulldown", mv: "mv_Close-Grip_Front_Lat_Pulldown",
           cue: "Set the lean once and hold it for every rep." },
         /* §17.2 d3f: shares d1f's row - FAILED. Cue only. */
-        { id: "d3f", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_dbpress",
+        { id: "d3f", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_dbpress", mv: "mv_Seated_Dumbbell_Press",
           cue: "Ribs down, do not arch the lower back." },
         /* §17.2 d3g: `Upright_Barbell_Row` FAILED under F1p.3(b) - the photo
            is the narrow-grip injury variant the cue exists to prevent. Cue only. */
-        { id: "d3g", n: "Upright row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_uprightrow", cut: 1,
+        { id: "d3g", n: "Upright row", s: 2, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_uprightrow", mv: "mv_Upright_Barbell_Row", cut: 1,
           cue: "Take a grip wider than shoulder width." },
-        { id: "d3h", n: "Lateral raise", s: 3, lo: 12, hi: 20, k: "hyp", implement: "db", lift: "l_lateral",
+        { id: "d3h", n: "Lateral raise", s: 3, lo: 12, hi: 20, k: "hyp", implement: "db", lift: "l_lateral", mv: "mv_Side_Lateral_Raise",
           cue: "Raise the weight without help from the hips.", fig: "Side_Lateral_Raise" }
       ] },
       { id: "d4", name: "Lower hypertrophy", wd: "Fri", ex: [
-        { id: "d4a", n: "Squat — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_squat",
+        { id: "d4a", n: "Squat — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "bb", lift: "l_squat", mv: "mv_Barbell_Squat",
           cue: "Drive the hips and shoulders up together.", fig: "Barbell_Squat" },
-        { id: "d4b", n: "Hack squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine", lift: "l_hack",
+        { id: "d4b", n: "Hack squat", s: 3, lo: 8, hi: 12, k: "hyp", implement: "machine", lift: "l_hack", mv: "mv_Hack_Squat",
           cue: "Set the feet high enough that the heels stay down.", fig: "Hack_Squat" },
-        { id: "d4c", n: "Leg press", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legpress", cut: 1,
+        { id: "d4c", n: "Leg press", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legpress", mv: "mv_Leg_Press", cut: 1,
           cue: "Do not let the lower back round off the pad.", fig: "Leg_Press" },
-        { id: "d4d", n: "Leg extension", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legext",
+        { id: "d4d", n: "Leg extension", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legext", mv: "mv_Leg_Extensions",
           cue: "Keep the hips down in the seat, do not swing the pad up.", fig: "Leg_Extensions" },
         /* §17.2 d4e: `Romanian_Deadlift` FAILED (bar at the kneecap, head-on
            view hides hips and back). Pair test 17.5 with d2d: both cue only. */
-        { id: "d4e", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_rdl",
+        { id: "d4e", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_rdl", mv: "mv_Romanian_Deadlift",
           cue: "Do not add knee bend to reach lower." },
-        { id: "d4f", n: "Lying leg curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legcurl",
+        { id: "d4f", n: "Lying leg curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_legcurl", mv: "mv_Lying_Leg_Curls",
           cue: "Line the knees up with the machine's pivot.", fig: "Lying_Leg_Curls" },
-        { id: "d4g", n: "Seated leg curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legcurlseat", cut: 1,
+        { id: "d4g", n: "Seated leg curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_legcurlseat", mv: "mv_Seated_Leg_Curl", cut: 1,
           cue: "Set the lap pad tight enough that the hips cannot lift.", fig: "Seated_Leg_Curl" },
         /* §17.2 d4h: `Donkey_Calf_Raises` FAILED (no block under the forefoot,
            so no bottom position). Cue only; the 17.3 release is moot. */
-        { id: "d4h", n: "Donkey calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l_calfdonkey",
+        { id: "d4h", n: "Donkey calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l_calfdonkey", mv: "mv_Donkey_Calf_Raises",
           cue: "Keep the hips bent at the same angle for every rep." },
-        { id: "d4i", n: "Seated calf raise", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_calfseat",
+        { id: "d4i", n: "Seated calf raise", s: 3, lo: 15, hi: 20, k: "hyp", implement: "machine", lift: "l_calfseat", mv: "mv_Seated_Calf_Raise",
           cue: "Do not bounce out of the bottom position.", fig: "Seated_Calf_Raise" }
       ] },
       { id: "d5", name: "Chest & arms", wd: "Sat", ex: [
-        { id: "d5a", n: "Flat DB press — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "db", lift: "l_dbbench",
+        { id: "d5a", n: "Flat DB press — speed work", s: 6, lo: 3, hi: 3, k: "speed", implement: "db", lift: "l_dbbench", mv: "mv_Dumbbell_Bench_Press",
           cue: "Keep each wrist stacked under the dumbbell.", fig: "Dumbbell_Bench_Press" },
         /* §17.3: the bench angle in the photo is a pinned F1.3 dependency on
            this cue's `30–35°` whatever the photo reads as. */
-        { id: "d5b", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_inclinedb",
+        { id: "d5b", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l_inclinedb", mv: "mv_Incline_Dumbbell_Press",
           cue: "Set the bench to 30–35°, no steeper.", fig: "Incline_Dumbbell_Press" },
-        { id: "d5c", n: "Machine chest press", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_machinepress",
+        { id: "d5c", n: "Machine chest press", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l_machinepress", mv: "mv_Machine_Bench_Press",
           cue: "Set the seat so the handles line up with mid-chest.", fig: "Machine_Bench_Press" },
-        { id: "d5d", n: "Incline cable fly", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_fly", cut: 1,
+        { id: "d5d", n: "Incline cable fly", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_fly", mv: "mv_Incline_Cable_Flye", cut: 1,
           cue: "Hold the same slight elbow bend throughout.", fig: "Incline_Cable_Flye" },
-        { id: "d5e", n: "Cambered bar preacher curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_preacher",
+        { id: "d5e", n: "Cambered bar preacher curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_preacher", mv: "mv_Preacher_Curl",
           cue: "Keep the upper arms flat on the pad.", fig: "Preacher_Curl" },
-        { id: "d5f", n: "DB concentration curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_concurl",
+        { id: "d5f", n: "DB concentration curl", s: 2, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l_concurl", mv: "mv_Concentration_Curls",
           cue: "Brace the elbow against the inner thigh.", fig: "Concentration_Curls" },
-        { id: "d5g", n: "Spider curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "bb", lift: "l_spider", cut: 1,
+        { id: "d5g", n: "Spider curl", s: 2, lo: 15, hi: 20, k: "hyp", implement: "bb", lift: "l_spider", mv: "mv_Spider_Curl", cut: 1,
           cue: "Keep the upper arms vertical throughout.", fig: "Spider_Curl" },
-        { id: "d5h", n: "Close-grip bench", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_cgbench",
+        { id: "d5h", n: "Close-grip bench", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l_cgbench", mv: "mv_Close-Grip_Barbell_Bench_Press",
           cue: "Take a shoulder-width grip, no narrower.", fig: "Close-Grip_Barbell_Bench_Press" },
-        { id: "d5i", n: "Skull crusher", s: 3, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_skull",
+        { id: "d5i", n: "Skull crusher", s: 3, lo: 12, hi: 15, k: "hyp", implement: "bb", lift: "l_skull", mv: "mv_EZ-Bar_Skullcrusher",
           cue: "Take the bar to the forehead on every rep.", fig: "EZ-Bar_Skullcrusher" },
-        { id: "d5j", n: "Rope pressdown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pressdown", cut: 1,
+        { id: "d5j", n: "Rope pressdown", s: 2, lo: 15, hi: 20, k: "hyp", implement: "cable", lift: "l_pressdown", mv: "mv_Triceps_Pushdown_-_Rope_Attachment", cut: 1,
           /* The ONLY one of the design prototype's 40 cues kept verbatim
              (§10.2, marked K). One subject, un-drawable - the figure has no
              rope - and it fixes the real error, incomplete extension. Worth
@@ -3031,6 +3905,62 @@
       ] }
     ]
   });
+
+  /* planMvMap(plan) -> { exId: mv } for every slot that declares one.
+
+     Schema 7's migration map, derived from the shipped document rather than
+     written out a second time: two copies of 40 pairs is two copies that can
+     drift, and the one that drifts silently is the one nobody reads. A slot
+     with no `mv` is simply absent from the map, and the pass leaves it
+     unmapped — d1c and d3b, permanently. */
+  function planMvMap(plan) {
+    var out = {};
+    planDays(plan).forEach(function (d) {
+      if (!isObj(d) || !Array.isArray(d.ex)) return;
+      d.ex.forEach(function (e) {
+        if (!isObj(e)) return;
+        var id = str(e.id).trim();
+        if (id !== "" && isMvId(e.mv)) out[id] = e.mv;
+      });
+    });
+    return out;
+  }
+  var PHAT_MV = planMvMap(PHAT_PLAN);
+
+  /* planMvEpochDupes(plan) -> [{mv, a, b}] — every pair of slots in one plan
+     that share a movement AND a prescription epoch (s, lo, hi, k).
+
+     THE MV1.2 TRIPWIRE, and it is here rather than in the suite because the
+     claim it checks is about the PLAN, not about the code. MV1.2's gate (c)
+     demands strict epoch equality, so a cross-slot fallback can only ever
+     fire between two slots that appear in this list. Over PHAT_PLAN the list
+     is EMPTY — nine same-movement pairs (d1a/d3a, d2a/d4a, d1d/d5a, d1f/d3f,
+     d1h/d5i, d2b/d4b, d2c/d4d, d2e/d4f, d2g/d4i) and every one of them
+     differs in prescription, most of them in three fields of four.
+
+     So on the shipped plan MV1.2 is unreachable, by construction. If this
+     ever returns a pair, one of two things happened: a template author
+     created a genuine duplicate slot, or somebody widened gate (c) to a
+     tolerance band. Both need a human. In particular d1h (3 × 6–10, power)
+     and d5i (3 × 12–15, hyp) are the B-46 pair: same movement, two
+     prescriptions, TWO HISTORIES ON PURPOSE, and the day they cross is the
+     day the app recommends a power load off a light high-rep set. */
+  function planMvEpochDupes(plan) {
+    var seen = {}, out = [];
+    planDays(plan).forEach(function (d) {
+      if (!isObj(d) || !Array.isArray(d.ex)) return;
+      d.ex.forEach(function (e) {
+        if (!isObj(e) || !isMvId(e.mv)) return;
+        var ek = epochKey(e);
+        if (ek === null) return;               /* no readable prescription: gate (c) refuses it anyway */
+        var key = e.mv + "\u0000" + ek;
+        var id = str(e.id).trim();
+        if (Object.prototype.hasOwnProperty.call(seen, key)) out.push({ mv: e.mv, a: seen[key], b: id });
+        else seen[key] = id;
+      });
+    });
+    return out;
+  }
 
   /* ------------------------------------------------------ the plan store
 
@@ -3091,6 +4021,387 @@
     return out;
   }
 
+  /* stampPlanMv(store, map) -> { store, changed, stamped:[{planId, exId, mv}] }
+
+     Schema 7's plan-store pass, pure and gated by its CALLER (migrateStore,
+     on the plan store's own version). `map` defaults to the shipped PHAT map
+     derived from PHAT_PLAN — one source, never a second transcription.
+
+     ADD ONLY. It writes `mv` where the map names the slot id and the slot
+     does not already have one. It never overwrites an `mv`, never removes
+     one, never reads or writes any other field, and never touches an id. A
+     slot the map does not name comes out byte-identical; a store where every
+     named slot is already stamped comes out as the SAME OBJECT REFERENCE and
+     changed:false, which is what makes D5 (run it twice, zero bytes) true by
+     construction rather than by arithmetic.
+
+     The map is keyed by SLOT ID because that is the only thing a copy of PHAT
+     reliably shares with PHAT — copyPlan preserves exercise ids (WO-007), and
+     names can have been edited. A user-built plan whose slots were minted
+     fresh matches nothing and is left entirely alone, which is correct: this
+     code has no idea what movement `x_3f9dz01` is, and guessing from its name
+     is the whole class of error WO-004 C-6 exists to forbid. */
+  function stampPlanMv(store, map) {
+    var out = { store: store, changed: false, stamped: [] };
+    if (!isObj(store) || !Array.isArray(store.plans)) return out;
+    var m = isObj(map) ? map : PHAT_MV;
+    var stamped = [], changed = false;
+    var plans = store.plans.map(function (p) {
+      if (!isObj(p) || !Array.isArray(p.days)) return p;
+      var hits = [];
+      p.days.forEach(function (d) {
+        if (!isObj(d) || !Array.isArray(d.ex)) return;
+        d.ex.forEach(function (e) {
+          if (!isObj(e) || e.mv !== undefined) return;
+          var id = str(e.id).trim();
+          if (id !== "" && Object.prototype.hasOwnProperty.call(m, id)) hits.push(id);
+        });
+      });
+      if (!hits.length) return p;
+      var np = clonePlan(p);
+      if (!np) return p;                     /* unclonable: left exactly as it is */
+      np.days.forEach(function (d) {
+        if (!isObj(d) || !Array.isArray(d.ex)) return;
+        d.ex.forEach(function (e) {
+          if (!isObj(e) || e.mv !== undefined) return;
+          var id = str(e.id).trim();
+          if (id !== "" && Object.prototype.hasOwnProperty.call(m, id)) {
+            e.mv = m[id];
+            stamped.push({ planId: str(np.planId), exId: id, mv: m[id] });
+          }
+        });
+      });
+      changed = true;
+      return np;
+    });
+    if (!changed) return out;
+    var next = copyObj(store);
+    next.plans = plans;
+    out.store = next; out.changed = true; out.stamped = stamped;
+    return out;
+  }
+
+  /* ================================================== the exercise library
+
+     WO-014 W4 item 1. `assets/exercises.json` is a GENERATED, byte-reproducible
+     static asset at a pinned SHA (W3). Everything below is pure: it takes the
+     parsed document (or its text) and returns an index, and it never fetches.
+     The fetch, the cache and the failure copy are W5's.
+
+     THREE THINGS THIS READER IS CAREFUL ABOUT.
+
+     1. NULL IS NOT EMPTY. The upstream data has 77 rows with no `eq`, 30 with
+        no `f` and 87 with no `m`, and in every case null means UPSTREAM DID
+        NOT SAY — not "this movement uses no equipment". They are kept as null
+        and are never coerced to "" or to a default, because "" would score,
+        sort and read as a value. `pm`/`sm` are arrays and an EMPTY array is
+        an empty array; the file has 0 rows with no primary muscle.
+     2. A HALF-READ INDEX IS NEVER SEARCHED (UX §22.10). A document whose
+        shape is wrong, or that yields no usable row, is a NAMED REFUSAL —
+        never a partial index the sheet would quietly search.
+     3. A SKIPPED ROW IS COUNTED AND NAMED, never dropped in silence. This is
+        reference data, not his sweat: refusing the whole library over one
+        malformed row would cost him the swap in the gym, which is the thing
+        the order exists to give him. So a row that is not an object, or has
+        no usable id or name, is skipped, counted in `skipped`, and the first
+        few reasons ride back in `problems` — visible to anyone who looks,
+        and never applied to anything he typed. Nothing in this file writes a
+        library row anywhere near a store.
+
+     THE INDEX
+       { sha, source, fetched, count, rows:[row], byId:{id: row} }
+     A ROW
+       { id, mv, n, eq, pm, sm, f, m, lv, c }
+     `mv` is precomputed (`mv_<id>`), so no caller ever builds the prefix. */
+  var LIB_PROBLEM_MAX = 12;          /* enough to diagnose, not a second file */
+
+  function libRow(raw) {
+    if (!isObj(raw)) return null;
+    var id = typeof raw.id === "string" ? raw.id.trim() : "";
+    if (id === "") return null;
+    var mv = mvId(id);
+    if (mv === null) return null;
+    var n = typeof raw.n === "string" ? raw.n.trim() : "";
+    if (n === "") return null;
+    /* null means UPSTREAM DID NOT SAY and is preserved as null. A value that
+       is present but not a string is not a fact either: it becomes null too,
+       and the row still ships — a movement with a garbled `force` is still a
+       movement he can pick. */
+    var strOrNull = function (v) {
+      return (typeof v === "string" && v.trim() !== "") ? v.trim() : null;
+    };
+    var arr = function (v) {
+      if (!Array.isArray(v)) return [];
+      var o = [];
+      v.forEach(function (x) { if (typeof x === "string" && x.trim() !== "") o.push(x.trim()); });
+      return o;
+    };
+    return {
+      id: id, mv: mv, n: n,
+      eq: strOrNull(raw.eq),
+      pm: arr(raw.pm), sm: arr(raw.sm),
+      f: strOrNull(raw.f), m: strOrNull(raw.m),
+      lv: strOrNull(raw.lv), c: strOrNull(raw.c)
+    };
+  }
+
+  /* libraryLoad(json) -> { ok:true, index, skipped, problems }
+                        | { ok:false, reason, problems }
+     `json` is the parsed document OR its text. Refusal reasons, all named so
+     the caller can say which happened and none of them collapse into each
+     other:
+       "missing"  nothing was handed in (null / undefined / "")
+       "parse"    text that is not JSON
+       "shape"    JSON, but not an object with an `exercises` array
+       "empty"    an array with no usable row in it
+     Never throws. */
+  function libraryLoad(json) {
+    var problems = [];
+    if (json === null || json === undefined || json === "") {
+      return { ok: false, reason: "missing", problems: ["no library document"] };
+    }
+    var doc = json;
+    if (typeof json === "string") {
+      if (json.trim() === "") return { ok: false, reason: "missing", problems: ["no library document"] };
+      try { doc = JSON.parse(json); }
+      catch (e) { return { ok: false, reason: "parse", problems: ["library is not JSON"] }; }
+    }
+    if (!isObj(doc) || !Array.isArray(doc.exercises)) {
+      return { ok: false, reason: "shape", problems: ["library has no exercises array"] };
+    }
+    var rows = [], byId = {}, skipped = 0, i, r;
+    for (i = 0; i < doc.exercises.length; i++) {
+      r = libRow(doc.exercises[i]);
+      if (r === null) {
+        skipped++;
+        if (problems.length < LIB_PROBLEM_MAX) problems.push("row " + i + " has no usable id or name");
+        continue;
+      }
+      if (Object.prototype.hasOwnProperty.call(byId, r.id)) {
+        skipped++;
+        if (problems.length < LIB_PROBLEM_MAX) problems.push("row " + i + " repeats id " + r.id);
+        continue;
+      }
+      byId[r.id] = r;
+      rows.push(r);
+    }
+    if (!rows.length) return { ok: false, reason: "empty", problems: problems.concat(["no usable rows"]) };
+    return {
+      ok: true, skipped: skipped, problems: problems,
+      index: {
+        sha: typeof doc.sha === "string" ? doc.sha : null,
+        source: typeof doc.source === "string" ? doc.source : null,
+        fetched: typeof doc.fetched === "string" ? doc.fetched : null,
+        count: rows.length,
+        rows: rows,
+        byId: byId
+      }
+    };
+  }
+
+  function isLibIndex(ix) { return isObj(ix) && Array.isArray(ix.rows) && isObj(ix.byId); }
+
+  /* libraryRow(index, mv) -> the row a movement id names, or null. Accepts
+     either the movement id (`mv_Barbell_Squat`) or the bare upstream id. A
+     minted, user-created movement is never in the library and is null — which
+     is why every naming chain in this file has the entry's own `n` ahead of
+     this lookup. */
+  function libraryRow(index, mv) {
+    if (!isLibIndex(index) || typeof mv !== "string") return null;
+    var u = mvUpstreamId(mv);
+    var id = u === null ? mv.trim() : u;
+    return Object.prototype.hasOwnProperty.call(index.byId, id) ? index.byId[id] : null;
+  }
+  /* libraryName(index, mv) -> the display name, or null. The LAST link in
+     MV1.2 gate (e)'s chain, and the one that can fail. */
+  function libraryName(index, mv) {
+    var r = libraryRow(index, mv);
+    return r === null ? null : r.n;
+  }
+  /* libraryImplementOf(index, mv) -> Rule I3.3's read-time derivation: the
+     implement a movement CLAIMS, or null for no claim. Not a stored field, on
+     purpose — I3.3 — so a SHA bump moves it, which is I3.5 and is written
+     down rather than discovered. */
+  function libraryImplementOf(index, mv) {
+    var r = libraryRow(index, mv);
+    return r === null ? null : libraryImplement(r.eq);
+  }
+
+  /* ---- search (Rule SW-ORDER, UX §22.3) ----
+
+     One sentence, transcribed: with no query, every movement except the
+     slot's own, ordered by score descending then name ascending; with a
+     query, only movements whose name contains EVERY whitespace-separated
+     token (case-insensitive, punctuation- and accent-folded), ordered the
+     same way with +6 when the name BEGINS with the query. */
+  var SW_SCORE = { pm: 5, near: 3, eqExact: 2, force: 2, recent: 2, mech: 1, prefix: 6 };
+  var SW_LIMIT = 40;                 /* display cap; the ordering decides which 40 */
+  var SW_RECENT_DAYS = 56;           /* "the gym he actually trains in" — SP1's window */
+
+  /* fold(s) — lower-case, accents stripped, punctuation to spaces, collapsed.
+     `normalize` is present in every browser this app runs in; a build without
+     it degrades to case-folding only rather than throwing. */
+  function fold(s) {
+    var t = str(s);
+    try { t = t.normalize("NFD").replace(/[̀-ͯ]/g, ""); } catch (e) { /* older engine */ }
+    return t.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/^ +| +$/g, "");
+  }
+
+  /* recentMovements(sessions, plan, todayStr, days) -> { mv: true }
+     Every movement with at least one COMPLETED set inside the window. An
+     entry with no `mv` is its slot's movement by definition (the same
+     `effectiveMv` reading Rule MV1 uses), resolved through the plan handed
+     in. Pure; `plan` may be a plan document or an array of them. */
+  function recentMovements(sessions, plan, todayStr, days) {
+    var out = {};
+    if (!Array.isArray(sessions)) return out;
+    var today = safeToday(todayStr);
+    var n = (typeof days === "number" && isFinite(days) && days > 0) ? days : SW_RECENT_DAYS;
+    var from = dateAdd(today, -n);
+    if (from === null) return out;
+    var plans = Array.isArray(plan) ? plan : (isPlanDoc(plan) ? [plan] : []);
+    var slotMv = function (exId) {
+      for (var i = 0; i < plans.length; i++) {
+        var e = exById(plans[i], exId);
+        if (isObj(e) && isMvId(e.mv)) return e.mv;
+      }
+      return null;
+    };
+    sessions.forEach(function (s) {
+      var d = sessionDate(s);
+      if (d === "" || d < from || d > today) return;
+      if (!isObj(s) || !isObj(s.entries)) return;
+      Object.keys(s.entries).forEach(function (exId) {
+        var e = s.entries[exId];
+        if (!isObj(e) || !Array.isArray(e.sets)) return;
+        var done = false, j;
+        for (j = 0; j < e.sets.length && !done; j++) if (isDoneSet(e.sets[j])) done = true;
+        if (!done) return;
+        var mv = isMvId(e.mv) ? e.mv : slotMv(exId);
+        if (mv !== null) out[mv] = true;
+      });
+    });
+    return out;
+  }
+
+  /* librarySearch(index, query, opts)
+       -> { ok, rows, order:"score"|"name", basis:"movement"|"equipment"|null,
+            total, limit, query }
+
+     opts: { slot   the slot's exercise object — its `mv` and `implement` are
+                    what the list is ranked AGAINST
+             mv     the slot's movement id, if there is no slot object
+             exclude  a movement id, or an array of them, kept out of the list
+                      (the slot's own movement is excluded automatically —
+                      replacing a movement with itself is a no-op and its row
+                      is the one a tired thumb mis-taps)
+             recent   { mv: true } from recentMovements, or pass
+                      { sessions, plan, todayStr } and it is computed here
+             limit    display cap, default 40 }
+
+     `basis` says WHAT the ranking is against, so the sheet can print UX
+     string #12 rather than an order it cannot explain:
+       "movement"   the slot names a movement that is in the library
+       "equipment"  it does not, but the slot's `implement` maps backwards
+       null         neither — the list is NAME ASCENDING and the sheet says so
+     Never a silent wrong order. Pure, and never throws.
+
+     `rows` holds the index's own row objects BY REFERENCE, for the same
+     reason lastFor returns a stored entry by reference: callers read them.
+     Nothing in PHAT writes through one and nothing else may either — a
+     mutation there would corrupt the index for every later search in the
+     session, silently, and the library is not re-read until the next load. */
+  function librarySearch(index, query, opts) {
+    var o = isObj(opts) ? opts : {};
+    var q = str(query);
+    var out = { ok: false, rows: [], order: "name", basis: null, total: 0,
+                limit: SW_LIMIT, query: q };
+    if (!isLibIndex(index)) return out;
+    out.ok = true;
+    var limit = (typeof o.limit === "number" && isFinite(o.limit) && o.limit > 0)
+      ? Math.floor(o.limit) : SW_LIMIT;
+    out.limit = limit;
+
+    var slot = isObj(o.slot) ? o.slot : null;
+    var slotMv = isMvId(o.mv) ? o.mv : (slot && isMvId(slot.mv) ? slot.mv : null);
+    var ref = slotMv === null ? null : libraryRow(index, slotMv);
+    var refEq = null;
+    if (ref) { out.basis = "movement"; refEq = ref.eq; }
+    else if (slot && Object.prototype.hasOwnProperty.call(IMPLEMENT_EQ, slot.implement)) {
+      /* UX §22.3.1's unmapped-slot fallback: no movement to score against, so
+         score on EQUIPMENT alone, derived from the slot's implement read
+         backwards through I3's table. */
+      out.basis = "equipment";
+      refEq = IMPLEMENT_EQ[slot.implement][0];
+    }
+    if (out.basis !== null) out.order = "score";
+
+    var excl = {};
+    if (slotMv !== null) excl[slotMv] = true;
+    var ex = o.exclude;
+    (Array.isArray(ex) ? ex : (ex === undefined || ex === null ? [] : [ex]))
+      .forEach(function (v) { if (typeof v === "string" && v !== "") excl[v] = true; });
+
+    var recent = isObj(o.recent) ? o.recent
+      : recentMovements(o.sessions, o.plan, o.todayStr, o.recentDays);
+
+    var near = {};
+    if (refEq !== null && Object.prototype.hasOwnProperty.call(EQ_NEAR, refEq)) {
+      EQ_NEAR[refEq].forEach(function (v) { near[v] = true; });
+    }
+
+    var fq = fold(q);
+    var toks = fq === "" ? [] : fq.split(" ");
+    var scored = [], i, r, sc, fn;
+    for (i = 0; i < index.rows.length; i++) {
+      r = index.rows[i];
+      if (Object.prototype.hasOwnProperty.call(excl, r.mv)) continue;
+      fn = fold(r.n);
+      if (toks.length) {
+        var all = true, t;
+        for (t = 0; t < toks.length && all; t++) if (fn.indexOf(toks[t]) < 0) all = false;
+        if (!all) continue;
+      }
+      sc = 0;
+      /* The slot-relative half of the score is suppressed entirely when there
+         is no basis: UX §22.3.1 rules that list NAME ASCENDING and the sheet
+         prints `Ordered by name. This slot does not name a movement.` A
+         notice that says "by name" over a list ordered by anything else is
+         the silent wrong order that rule exists to forbid. The query's own
+         prefix bonus still applies — it is relevance to what he TYPED, which
+         is true whatever the slot is. */
+      if (out.order === "score" && ref) {
+        /* +5 the primary muscle. pm[0] only, and both sides must HAVE one —
+           an empty array is not a match with another empty array. */
+        if (ref.pm.length && r.pm.length && r.pm[0] === ref.pm[0]) sc += SW_SCORE.pm;
+        if (r.f !== null && ref.f !== null && r.f === ref.f) sc += SW_SCORE.force;
+        if (r.m !== null && ref.m !== null && r.m === ref.m) sc += SW_SCORE.mech;
+      }
+      if (out.order === "score" && refEq !== null && r.eq !== null) {
+        /* Exact equipment scores the near points AND the exact points — UX's
+           table says "+2 … on top of the +3", and the near sets deliberately
+           do not contain their own key. */
+        if (r.eq === refEq) sc += SW_SCORE.near + SW_SCORE.eqExact;
+        else if (Object.prototype.hasOwnProperty.call(near, r.eq)) sc += SW_SCORE.near;
+      }
+      if (out.order === "score" && Object.prototype.hasOwnProperty.call(recent, r.mv)) sc += SW_SCORE.recent;
+      if (toks.length && fq !== "" && fn.indexOf(fq) === 0) sc += SW_SCORE.prefix;
+      scored.push({ row: r, sc: sc, fn: fn });
+    }
+    out.total = scored.length;
+    /* Score descending, then NAME ascending — the folded name, so the tie
+       break is the same on any locale. A stable answer for a fixed slice and
+       a fixed slot is what makes this testable (UX §22.3). */
+    scored.sort(function (a, b) {
+      if (b.sc !== a.sc) return b.sc - a.sc;
+      if (a.fn < b.fn) return -1;
+      if (a.fn > b.fn) return 1;
+      return a.row.id < b.row.id ? -1 : (a.row.id > b.row.id ? 1 : 0);
+    });
+    out.rows = scored.slice(0, limit).map(function (x) { return x.row; });
+    return out;
+  }
+
   /* --------------------------------------------------------- migration */
 
   /* migrateStore(log, bw, plans)
@@ -3119,6 +4430,7 @@
     var out = {
       log: log, bw: bw, plans: plans,
       changed: false, logChanged: false, bwChanged: false, plansChanged: false,
+      plansMv: false, plansMvStamped: [],
       notes: notes
     };
     try {
@@ -3360,14 +4672,55 @@
         });
       }
 
+      /* ---- schema 7, part one: the LOG store (WO-014 W4) ----
+         AN ENTRY may now carry `mv` (the movement he actually performed),
+         `sw: 1` (it differed from the slot at log time) and `n` (a display
+         name for a movement no plan carries). NOT ONE BYTE MOVES HERE.
+
+         An entry with no `mv` IS the slot's movement, by definition, and that
+         reading is exactly true of every session logged before this version —
+         including his 12 Sep session, whose `d1b` note records a substitution
+         the app could not know about. Stamping a movement onto those entries
+         would be this code deciding what he lifted, and a note-parse that
+         re-attributed logged sets would be a store rewrite driven by prose
+         (coach §22's second uncomfortable thing). It does not happen here and
+         it must not happen later: B-131 is still owed his one sentence, and
+         D2 pins his `d1b` 86 kg and `d1d` 81 kg byte-identical through this
+         pass, individually, by id.
+
+         So all this writes is the version, the v5/v6 idiom exactly: the store
+         stops understating its shape to WO-002's importer (which now owes
+         2–7) and to sync. Gated on V_MV, never on SCHEMA_VERSION. */
+      var v7Bumped = false;
+      if (logVer < V_MV && (nlog || logIsObj)) {
+        if (!nlog) {
+          nlog = {};
+          Object.keys(log).forEach(function (k) { nlog[k] = log[k]; });
+        }
+        v7Bumped = true;
+        nlog.schemaVersion = SCHEMA_VERSION;
+        notes.push({
+          level: "info", key: "log",
+          msg: "Schema " + V_MV + ": entries may now carry mv, sw and n, the movement " +
+               "performed. No entry was touched and no key was added."
+        });
+      }
+
       /* ---- the plan store, if the caller has one ----
          Absent (undefined) is the normal case today and does nothing: an empty
          install still boots with zero writes. Repairs are additive only. */
       var pres = { store: plans, changed: false, added: [] };
+      var mvres = { store: null, changed: false, stamped: [] };
       if (plans !== undefined && plans !== null) {
         if (!isObj(plans)) {
           notes.push({ level: "error", key: "plans", msg: "Plan store is not an object. Left untouched." });
         } else {
+          /* The plan store's OWN version, read before normalisePlanStore
+             stamps it. Schema 7's plan pass must not be gated on the LOG
+             store's number: a restore can hand a v7 log store a v6 plan
+             store, and gating on the wrong one skips the pass on exactly the
+             store that needs it. */
+          var planVer = (typeof plans.schemaVersion === "number") ? plans.schemaVersion : 1;
           pres = normalisePlanStore(plans);
           if (pres.changed) {
             notes.push({
@@ -3376,6 +4729,32 @@
                    (pres.added.length ? " (" + pres.added.join(", ") + ")" : "") +
                    ". No existing value was changed."
             });
+          }
+          /* ---- schema 7, part two: the PLAN store (WO-014 W4) ----
+             The one store schema 7 writes content to, and it is deliberately
+             the smallest write that does the job: `mv` onto slots the shipped
+             PHAT map NAMES, BY SLOT ID, and onto nothing else. A copy of PHAT
+             is stamped too, because copyPlan preserves exercise ids — that is
+             the ruling of WO-007 paying off, not a coincidence.
+
+             A slot the map does not name is LEFT UNMAPPED. A slot that
+             already carries an `mv` is left alone: this pass only ever ADDS
+             the key, so a movement he chose through "make it permanent" can
+             never be overwritten by a re-run. Nothing else on the slot is
+             read or written — not `n`, not `id`, not `lift`, not `fig`.
+             D5 (run it twice, second run moves zero bytes) holds two ways
+             over: the version gate, and the add-only rule under it. */
+          if (planVer < V_MV) {
+            mvres = stampPlanMv(pres.store);
+            if (mvres.changed) {
+              pres = { store: mvres.store, changed: true, added: pres.added };
+              notes.push({
+                level: "info", key: "plans",
+                msg: "Schema " + V_MV + ": stamped mv on " + mvres.stamped.length +
+                     " plan slot" + (mvres.stamped.length === 1 ? "" : "s") +
+                     " from the shipped map. No other value was changed."
+              });
+            }
           }
         }
       }
@@ -3387,15 +4766,26 @@
          The bodyweight store carries no schema-3 key, so a v2 bw store is not
          rewritten just to restamp its version — bwPayload() stamps it on the
          next real bodyweight entry. One less boot write, no content at stake. */
-      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped || v5Bumped || v6Bumped;
+      out.logChanged = hadLegacy || v3Added.length > 0 || v3Bumped || v4Bumped || v5Bumped ||
+                       v6Bumped || v7Bumped;
       out.bwChanged = markedBw > 0 || dropped.length > 0;
       out.plansChanged = pres.changed === true;
+      /* D7's signal, hoisted out where the boot path can see it WITHOUT
+         diffing two stores: `plansMv` is true exactly when this pass wrote
+         content (not just a version) into a plan store that already held
+         plans. That is the one moment a `recover:*` keep is owed before the
+         store is replaced — the WRITE is index.html's, because this function
+         touches no storage, but the decision is made here so it cannot be
+         made differently by two callers. */
+      out.plansMv = mvres.changed === true;
+      out.plansMvStamped = mvres.stamped;
       out.changed = out.logChanged || out.bwChanged || out.plansChanged;
       return out;
     } catch (err) {
       return {
         log: log, bw: bw, plans: plans,
         changed: false, logChanged: false, bwChanged: false, plansChanged: false,
+        plansMv: false, plansMvStamped: [],
         notes: [{ level: "error", key: null, msg: "Migration failed, data left untouched: " + (err && err.message) }]
       };
     }
@@ -3612,6 +5002,19 @@
       else Object.keys(doc.entries).forEach(function (exId) {
         var e = doc.entries[exId];
         if (!isObj(e)) { p.push("entry " + exId + " must be an object"); return; }
+        /* WO-014 schema 7. The three movement keys, checked BEFORE the sets,
+           which is where the SQL mirror checks them too, so the FIRST fault
+           named is the same sentence on both sides. All three are optional
+           and an absent one is a MEANING, not a hole: no mv = the slot's
+           movement, no sw = not swapped, no n = the slot's name. */
+        if (e.mv !== undefined && !isMvId(e.mv))
+          p.push("entry " + exId + " mv must be a movement id, got: " + str(e.mv));
+        if (e.sw !== undefined && e.sw !== 1)
+          p.push("entry " + exId + " sw must be 1 when present, got: " + str(e.sw));
+        if (e.n !== undefined && typeof e.n !== "string")
+          p.push("entry " + exId + " n must be a string, got: " + str(e.n));
+        else if (typeof e.n === "string" && e.n.trim().length > N_MAX)
+          p.push("entry " + exId + " n is longer than " + N_MAX + " characters");
         if (e.sets === undefined) return;
         if (!Array.isArray(e.sets)) { p.push("entry " + exId + ".sets must be an array"); return; }
         e.sets.forEach(function (s, si) {
@@ -3871,7 +5274,12 @@
     if (isObj(s.entries)) {
       var ents = {};
       Object.keys(s.entries).forEach(function (exId) {
-        var e = orderKeys(s.entries[exId], ["sets", "note", "rx"]);
+        /* ENTRY_KEYS, not a literal: schema 7's mv / sw / n sit between
+           `note` and `rx` on the wire, and buildSession writes the same
+           order, so the builder's bytes and the canonical bytes are one
+           string. An entry with none of them canonicalises exactly as it
+           did before. */
+        var e = orderKeys(s.entries[exId], ENTRY_KEYS);
         if (Array.isArray(e.sets)) e.sets = e.sets.map(function (x) {
           var y = orderKeys(x, ["w", "r", "ld"]);
           if (isObj(y.ld)) y.ld = orderKeys(y.ld, LD_KEYS);   /* §1's order: bar, bu, add, au */
@@ -6581,7 +7989,13 @@
 
      An omitted or unusable bound is treated as open on that side. New objects
      out; nothing here is a reference into the store. */
-  function e1rmByDate(sessions, exId, fromStr, toStr) {
+  /* WO-014. The fifth argument is Rule MV1.1's skip, with lastFor's exact
+     three-state contract: undefined = off and today's answer byte for byte,
+     a movement id = skip a foreign one, null = skip an `sw:1` entry. Why ST1
+     needs it (coach §22.4.4): a chest-supported row logged into the barbell
+     row's slot inflates the block max and HIDES A REAL STALL, or a lighter
+     machine manufactures one and the copy blames his effort or his diet. */
+  function e1rmByDate(sessions, exId, fromStr, toStr, mv) {
     var out = [];
     if (!Array.isArray(sessions)) return out;
     if (typeof exId !== "string" || exId.trim() === "") return out;
@@ -6599,6 +8013,7 @@
       if (!Object.prototype.hasOwnProperty.call(s.entries, id)) continue;
       e = s.entries[id];
       if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      if (mvSkips(e, mv)) continue;
       for (j = 0; j < e.sets.length; j++) {
         v = st1Score(e.sets[j]);
         if (v === null) continue;
@@ -6624,7 +8039,9 @@
      TRAINED, that one counts a date where the lift produced a usable estimate.
      A session of 100x12 is a training day for the lift and not a data point
      for ST1. */
-  function liftDays(sessions, exId, todayStr) {
+  /* WO-014. The fourth argument is Rule MV1.1's skip, lastFor's contract
+     exactly. "You trained the row" is false if he trained a machine. */
+  function liftDays(sessions, exId, todayStr, mv) {
     var out = [];
     if (!Array.isArray(sessions)) return out;
     if (typeof exId !== "string" || exId.trim() === "") return out;
@@ -6639,6 +8056,7 @@
       if (!Object.prototype.hasOwnProperty.call(s.entries, id)) continue;
       e = s.entries[id];
       if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      if (mvSkips(e, mv)) continue;
       for (j = 0; j < e.sets.length; j++) {
         if (isDoneSet(e.sets[j])) { seen[d] = true; break; }
       }
@@ -6712,8 +8130,13 @@
       if (id === "") continue;
       var name = (typeof l.n === "string" && l.n.trim() !== "") ? l.n : id;
 
-      var R = dropDeloadRows(e1rmByDate(sessions, id, rFrom, today), wins);
-      var P = dropDeloadRows(e1rmByDate(sessions, id, pFrom, pTo), wins);
+      /* WO-014, Rule MV1.1, and NO SIGNATURE CHANGE: `keyLifts` has always
+         been an array of the plan's exercise OBJECTS (planKeyLifts), so the
+         slot's movement arrives with the lift. A declared movement is
+         MV1.1(a); a slot without one is MV1.1(b), `null`. */
+      var lmv = isMvId(l.mv) ? l.mv : null;
+      var R = dropDeloadRows(e1rmByDate(sessions, id, rFrom, today, lmv), wins);
+      var P = dropDeloadRows(e1rmByDate(sessions, id, pFrom, pTo, lmv), wins);
       if (R.length < ST1_DATES || P.length < ST1_DATES) { out.untested.push(name); continue; }
 
       var rb = bestE(R), pb = bestE(P);
@@ -7009,7 +8432,11 @@
      w > 0 is required. R = 0 would make every load above 0 "too heavy" - the
      coach's ruling on SP1: the rule requires R > 0 or speedTooHeavy(w, 0)
      flags every set ever logged. A 0 kg source set is also not a 3-5RM. */
-  function sp1Source(sessions, srcId, todayStr, days) {
+  /* WO-014. The fifth argument is Rule MV1.1's skip on the SOURCE lift, and
+     it is the one with physical stakes (coach §22.4.4): SP1 names a load he
+     puts on a bar and moves fast. Computed off a machine row's heavier
+     triple, the number is too heavy for the lift he is actually doing. */
+  function sp1Source(sessions, srcId, todayStr, days, mv) {
     if (!Array.isArray(sessions)) return null;
     var today = safeToday(todayStr);
     var from = dateAdd(today, -days);
@@ -7022,6 +8449,7 @@
       if (!isObj(s) || !isObj(s.entries) || !own(s.entries, srcId)) continue;
       e = s.entries[srcId];
       if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      if (mvSkips(e, mv)) continue;
       for (j = 0; j < e.sets.length; j++) {
         n = numSet(e.sets[j]);
         if (!n) continue;
@@ -7096,9 +8524,14 @@
     var name = (typeof srcName === "string" && srcName.trim() !== "")
       ? srcName.trim() : out.srcId;
 
-    var src = sp1Source(sessions, out.srcId, todayStr, SP1_WINDOW);
+    /* WO-014, Rule MV1.1, and NO SIGNATURE CHANGE: speedLoad already holds
+       the plan, so the SOURCE slot's movement is one lookup away. A source
+       slot that declares one is MV1.1(a); one that does not is MV1.1(b). */
+    var srcEx = exById(p, out.srcId);
+    var srcMv = (isObj(srcEx) && isMvId(srcEx.mv)) ? srcEx.mv : null;
+    var src = sp1Source(sessions, out.srcId, todayStr, SP1_WINDOW, srcMv);
     var win = SP1_WINDOW;
-    if (src === null) { src = sp1Source(sessions, out.srcId, todayStr, SP1_WIDE); win = SP1_WIDE; }
+    if (src === null) { src = sp1Source(sessions, out.srcId, todayStr, SP1_WIDE, srcMv); win = SP1_WIDE; }
     if (src === null) {
       /* Rule PE1's SP1 clause (addendum §9.1). SP1 self-limits — its
          reps-in-[3,5] filter means a source lift moved to 8–12 simply stops
@@ -8488,7 +9921,10 @@
                   side, through workingLoadStrict: a load read off a session he
                   abandoned after one set is a confident wrong number with no
                   tell (B-24). */
-  function d1Rows(sessions, exId, s, lo, todayStr, sinceStr, windows) {
+  /* WO-014. The eighth argument is Rule MV1.1's skip, lastFor's contract
+     exactly. A failure on a different apparatus is not a failure on this
+     lift, and it would anchor a deload recommendation (coach §22.4.4). */
+  function d1Rows(sessions, exId, s, lo, todayStr, sinceStr, windows, mv) {
     var out = [];
     if (!Array.isArray(sessions)) return out;
     var today = safeToday(todayStr);
@@ -8503,6 +9939,7 @@
       if (!isObj(ses) || !isObj(ses.entries) || !own(ses.entries, exId)) continue;
       e = ses.entries[exId];
       if (!isObj(e) || !Array.isArray(e.sets)) continue;
+      if (mvSkips(e, mv)) continue;
       C = completedSets(e.sets);
       if (!C.length) continue;                   /* the lift was not trained */
       if (!own(by, d)) {
@@ -8594,7 +10031,14 @@
     if (typeof s !== "number" || !isFinite(s) || s < 1) return null;
     if (typeof lo !== "number" || !isFinite(lo) || lo < 1) return null;
     var today = safeToday(todayStr);
-    var rows = d1Rows(sessions, id, Math.floor(s), lo, today, sinceStr, windows);
+    /* WO-014, Rule MV1.1, and NO SIGNATURE CHANGE: `lift` is already the plan's
+       exercise object, so the slot's movement is a field this function has
+       always been handed. THERE IS A SLOT, so the rule applies: a declared
+       movement is MV1.1(a) and an unmapped slot is MV1.1(b) — `null`, which
+       skips an `sw:1` entry and nothing else. On every session logged before
+       schema 7 no entry carries `sw`, so both branches return main's rows. */
+    var rows = d1Rows(sessions, id, Math.floor(s), lo, today, sinceStr, windows,
+                      isMvId(lift.mv) ? lift.mv : null);
     var done = [];                               /* every COMPLETE date, ascending */
     var run = 0, prevFail = null, i, r, best, g;
     for (i = 0; i < rows.length; i++) {
@@ -10111,6 +11555,62 @@
     trainingWeeks: trainingWeeks,
     liftDays: liftDays,
     lastFor: lastFor,
+    /* ---- WO-014 W4: movement identity, Rule MV1, the swap ----
+       `mv` on a plan slot is the movement it REFERENCES; `mv` on a logged
+       entry is the movement he PERFORMED, `sw:1` that the two differed at log
+       time, `n` its name when no plan carries it. History stays keyed on the
+       SLOT ID — re-keying `entries` to a movement would collapse d1h and d5i
+       back into one history, which is B-46, rejected (Decision 1).
+
+       lastFor's third argument is MV1.1's skip and has THREE states:
+       undefined = off and main's answer byte for byte, a movement id =
+       MV1.1(a), null = MV1.1(b). Same contract on e1rmByDate, liftDays,
+       d1Rows, sp1Source and loadModeFor. priorFor is MV1.2, the disclosed
+       cross-slot fallback, and it is consumed by the CARD and by nothing
+       else: no engine widens its read (MV1.3).
+
+       planMvEpochDupes is the tripwire. Over PHAT_PLAN it is EMPTY, which is
+       what makes MV1.2 unreachable on the shipped plan; if it ever returns a
+       pair, either a template created a duplicate slot or somebody widened
+       gate (c). */
+    V_MV: V_MV,
+    MV1_DAYS: MV1_DAYS,
+    isMvId: isMvId,
+    mvId: mvId,
+    mvUpstreamId: mvUpstreamId,
+    effectiveMv: effectiveMv,
+    mvSkips: mvSkips,
+    priorFor: priorFor,
+    entryMeta: entryMeta,
+    entryMetaProblems: entryMetaProblems,
+    ENTRY_NAME_MAX: N_MAX,
+    swapDraftEntry: swapDraftEntry,
+    addDraftEntry: addDraftEntry,
+    setExerciseMovement: setExerciseMovement,
+    planMvMap: planMvMap,
+    planMvEpochDupes: planMvEpochDupes,
+    stampPlanMv: stampPlanMv,
+    PHAT_MV: PHAT_MV,
+    /* The library. libraryLoad is the reader (a validated index or a NAMED
+       refusal — "missing", "parse", "shape", "empty"; a half-read index is
+       never searched); librarySearch is Rule SW-ORDER; libraryImplement is
+       Rule I3's derivation table, six values mapped and seven refused, and a
+       refusal is null — never a nearest, never "machine". A library `null`
+       means UPSTREAM DID NOT SAY and is kept as null, not flattened to "". */
+    libraryLoad: libraryLoad,
+    librarySearch: librarySearch,
+    libraryRow: libraryRow,
+    libraryName: libraryName,
+    libraryImplement: libraryImplement,
+    libraryImplementOf: libraryImplementOf,
+    recentMovements: recentMovements,
+    EQ_IMPLEMENT: EQ_IMPLEMENT,
+    EQ_REFUSED: EQ_REFUSED.slice(0),
+    EQ_NEAR: EQ_NEAR,
+    IMPLEMENT_EQ: IMPLEMENT_EQ,
+    SW_SCORE: SW_SCORE,
+    SW_LIMIT: SW_LIMIT,
+    SW_RECENT_DAYS: SW_RECENT_DAYS,
     /* ---- the plan document — WO-004 W2. Identity, editing, grouping.
        Every editor is pure: it returns a NEW plan and mutates nothing. An id
        is opaque, minted once, and never derived from or rewritten by a name.
