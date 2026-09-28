@@ -4300,3 +4300,611 @@ implement, per plan or per gym · a default bar on non-`bb` slots · any change 
 stepper's tap (B-117) · converting stored history (`w` never changes) · the Summary's `Volume kg`
 counter · plate math (B-10) · syncing `prefs` (B-113) · a marker on the row that a ghost is converted
 (§21.12 item 7) · `B-114` (`+ 0 lb`) and `B-111` (`Swapped`).
+
+---
+
+# 22. The on-the-spot swap — the trigger, the search sheet, Replace and Add, the marks (WO-014 W2, 2026-09-28)
+
+```
+Flow:   The machine is taken — put another movement on this card, now
+Entry:  Swap, on the control strip above the load chip, on every exercise screen of a session.
+Exit:   Replace · Add as well · Not now / scrim / Escape. Nothing here writes to the log; the draft
+        is the only thing that changes, and every change is one Undo away.
+```
+
+**The scene this is built for, in his words:** *"the machine is not available or it's occupied and I
+cannot wait. I need to be quick and just click on something, search for another exercise and add it or
+replace the exercise with that."* One thumb, chalky, a rest clock running, and someone waiting on the
+station he is standing at. **Nothing in this section may require typing to reach the common answer.**
+That is the whole reason §22.3 exists.
+
+**Fixed before this spec and not reopened here:** a swap changes **only that session**; *make it
+permanent* is offered afterwards, on Summary, never mid-set; a swapped entry carries `sw: 1` and shows
+a `Swapped` mark.
+
+## 22.0 The tap budget — counted, and it is 3
+
+From *the machine is taken* to *the replacement on screen with an empty first set row*:
+
+| # | Tap | State after |
+|---|---|---|
+| 1 | `Swap` on the control strip | Sheet opens on the **pick** state, already holding a ranked list (§22.3). No keyboard, no query typed |
+| 2 | A result row | Sheet swaps to the **confirm** state, naming the movement he picked and what will happen to the card |
+| 3 | `Replace` | Sheet closes. The card repaints under the new name with an empty first set row, focus on the first weight `−`. Toast + `Undo` |
+
+**3 taps.** `Add as well` is also 3 (tap 3 is the other button). The fourth tap in the PM's budget is
+spent, when it is needed, on **one scroll of the list or one `✕`** — never on a required step. Typing is
+possible and is never required; each character is a keystroke, not a tap, and §22.3 exists so the
+keystrokes are usually zero.
+
+## 22.1 The trigger — the control strip, and it costs zero pixels
+
+**Position — normative.** The `MOVEMENT & CUE` disclosure line (§4.13, full width × 44) becomes a
+**control strip** of fixed height 44 px: the disclosure on the left, flexed; `Swap` on the right, fixed
+88 × 44; 8 px gap. The strip sits where the disclosure sits today — under the prescription lines, above
+the load chip (§4.4b.1), above the first set row.
+
+```
+[REF] 393 px, three lines of the card
+
+│ Bent-over row                                       │  name
+│ 3 × 3–5                                             │  target
+│ Last 100 × 5, 100 × 5.                              │  prescription
+│ ▸ movement & cue                          [ Swap ]  │  control strip, 44, fixed
+│ Weight in lb + Barbell 20 kg                     ›  │  chip line 1
+│ Your default · first bar in your gym                │  chip line 2        } 56
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ 1  + LB               REPS                      │ │  set row 1
+```
+
+**Why there and not anywhere else.**
+
+1. **It is the load chip's own argument, reused.** A control is allowed above the inputs when it is
+   *present from first paint at a fixed height* and its text changes only as the result of a tap inside
+   a modal he opened (§4.4b.1). `Swap`'s label is **constant** — it reads `Swap` on a swapped card too
+   (§22.6) — so the strip can never reflow the rows.
+2. **Not the header.** §4.2 ruled the header is information, not a control, and §0.4 keeps the top
+   corners clear.
+3. **Not on the name line.** The name may wrap to a second line (§4.3); a control anchored to a block
+   whose height depends on a string is a control whose position moves between cards.
+4. **Not below the set rows.** It changes what the rows *are*. A control that reshapes the inputs must
+   sit above them, for the same reason `+ ADD SET` sits below them (§4.1).
+
+**The 393 × 852 fold — the cost is zero, and here is the arithmetic.** `[REF]` heights: top padding 16
++ header 46 + pips 12 + name 30 + target 22 + prescription 20 + **strip 44** + chip 56 + three set rows
+at 84 (caption 16 + row 48 + ghost 20) = **498 px** to the bottom of set row 3, against ≈ 707 px of
+usable height above the dock at 393 × 852 standalone (852 − 59 top inset − 34 home indicator − 52 dock).
+The strip was already 44 px on this card. **No card that exists on `main @ 6a87a3a` gains a pixel, and
+no set row moves.** W5 measures in Archivo (B-67); QA asserts the set-row DOM byte-identity that
+WO-010 D8 already requires.
+
+**The one card that does gain 44 px** is a card with neither a figure nor a cue, where §4.13 renders no
+disclosure at all. Today that is `d2e` / `d3d`-shaped slots and user-created exercises; after this order
+it is every library movement (B-142). **Ruling: the strip renders at 44 px there too, with `Swap` alone,
+right-aligned.** The strip's height is an invariant of the session card, not a function of its contents.
+Those cards are new or already exceptional, so nothing regresses.
+
+**B-97 is untouched.** Nothing in §22 renders on Home. The day list's fold budget (§18.2) is not read or
+spent here.
+
+| Rule | |
+|---|---|
+| Label | `Swap` **NEW**. Constant, on every card, in every state |
+| Size | 88 × 44 minimum, right-aligned, 8 px from the disclosure. Not a top corner |
+| Presence | Every exercise screen of a session, from first paint, including a deload card, a speed card, a read-only plan's card and an added movement's own card |
+| Absent | Never. If the library is unavailable the button stays and its sheet says why (§22.10) — a control that disappears is a control whose row reflows |
+| Accessible name | `Swap {ex} for another movement` **NEW**. Visible text is a prefix (WCAG 2.5.3) |
+
+## 22.2 The sheet — pick state
+
+Opens in `#modal`, the list variant of §9.9.3: `.sheet`, scrim, `role="dialog"`, `aria-modal`, heading
+focused on open.
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ Swap Bent-over row                       │  h2, tabindex=-1, focused
+│ Today only. The plan does not change.    │  .det
+│ [ Search movements            ] [  ✕  ]  │  input full×48 · clear 44×44
+│ CLOSEST TO BENT-OVER ROW                 │  .lbl
+│ ┌──────────────────────────────────────┐ │
+│ │ Machine row                          │ │  row, full × 64, <button>
+│ │ Machine · middle back                │ │
+│ ├──────────────────────────────────────┤ │
+│ │ Seated cable row                     │ │
+│ │ Cable · middle back                  │ │
+│ ├──────────────────────────────────────┤ │
+│ │ T-bar row                            │ │
+│ │ Barbell · middle back                │ │
+│ └──────────────────────────────────────┘ │
+│ [               Not now               ]  │  full × 52, lowest, pinned
+└──────────────────────────────────────────┘
+```
+
+| Element | Rule |
+|---|---|
+| Heading | `Swap {ex}` **NEW** — the trigger's word, so the sheet is obviously the thing he tapped |
+| Body, card empty | `Today only. The plan does not change.` **NEW** |
+| Body, card holds any typed set | `{ex} holds {n} sets. They stay where they are, so the movement you pick is added.` **NEW** (`1 set` written out). This is the whole of §22.5's no-loss rule, said once, before he picks |
+| Put-back row | On a **swapped** card with no typed set, directly under the body and above the search field: `Put {original} back` **NEW**, `.ghostbtn`, full × 48. Applies and closes. It is the likeliest tap on that card, so it is the highest |
+| Search field | `<input type="search">`, full × 48, placeholder `Search movements` **NEW**, real `<label>` rendered as the kicker `SEARCH`. **Never auto-focused** — auto-focus raises the keyboard, the keyboard covers the ranked list, and the ranked list is the thing that makes this fast. The keyboard appears only if he taps the field |
+| Clear | `✕`, 44 × 44, right of the field, rendered **only** when the query is non-empty. Accessible name `Clear the search` **NEW** |
+| List kicker | No query: `CLOSEST TO {EX}` **NEW**, uppercase — it tells him *why* the order is what it is, which is the only defence against "why is this list not alphabetical". With a query: `MATCHES` **NEW** |
+| Row | Full width × **64**, whole row is the `<button>`. Line 1 `{name}`, `--bone`, 1 rem, `overflow-wrap:anywhere`. Line 2 `{Equipment} · {primary muscle}` **NEW**, `--dim` (7.0 : 1 on `--surface`), `.75rem`. Never `--faint` inside a sheet (§0.5 rule 2) |
+| List length | Capped at **40 rows**; the list scrolls, `Not now` stays pinned at the sheet's bottom edge. 800 rows in a scroller is not a list, it is a wall. The cap is a display cap only and the ordering rule decides which 40 |
+| Current movement | The slot's own movement is **not in the list**. Replacing a movement with itself is a no-op, and its row is the one a tired thumb would mis-tap. The way back is the put-back row |
+| `Not now` | Full × 52, `.ghostbtn`, **last**, pinned. Also scrim and `Escape`. Closes with nothing written; focus returns to `Swap` |
+| Arm delay | None. No row in this sheet destroys anything (§22.5) |
+
+**Reuse.** The Plan Editor's add-exercise picker (W5) is **this sheet**, with two differences it owns,
+not this section: its heading and body name the day, and its commit is `addExercise`, not a draft
+change. Do not build a second sheet.
+
+## 22.3 The ordering rule — `SW-ORDER`, one sentence, testable
+
+> **Rule SW-ORDER.** With no query, the list is every movement in the library except the slot's own,
+> ordered by `score` descending and then by name ascending; with a query, only movements whose name
+> contains **every** whitespace-separated token of the query (case-insensitive, punctuation- and
+> accent-folded) are listed, ordered the same way with `+6` added when the name *begins* with the query.
+
+`score` is computed against the **slot's movement** (its `mv` entry in the library) and is the sum of:
+
+| Points | Condition | Why |
+|---|---|---|
+| +5 | primary muscle (`pm[0]`) equals the slot's | A row replaces a row |
+| +3 | equipment (`eq`) is in the slot equipment's **near set** (§22.3.1) | Machine and cable are the same movement with a different handle |
+| +2 | equipment equals the slot's exactly | On top of the +3 |
+| +2 | force (`f`) equals the slot's | A pull does not replace a press |
+| +2 | he has a completed set of this movement in the last **56 days** | The gym he actually trains in has about forty movements in it |
+| +1 | mechanic (`m`) equals the slot's | Compound for compound |
+
+Worked: replacing a **seated cable row** (`cable`, `middle back`, `pull`, `compound`), *machine row*
+scores 5 + 3 + 2 + 1 = 11 and *lever t-bar row* 5 + 3 + 2 + 1 = 11 (tie broken by name), while
+*alternating hammer curl* scores 0 and *barbell bench press* scores 0. Alphabetical puts
+*Ab roller* first. That is the difference this rule buys.
+
+**Testable, and that is deliberate.** `librarySearch(index, query, opts)` (W4) is a pure function; QA
+asserts a fixed expected order for a fixed library slice and a fixed slot, and one mutant per line of
+the table must die.
+
+### 22.3.1 Near-equipment sets — **placeholder, `[W1 SLOT — strength-coach]`**
+
+W1 item 1 owns the `equipment` → `implement` derivation table, and that table is the natural home for
+adjacency. Until it returns, W4 implements this, and it is mine, not the coach's:
+
+| Equipment | Near set |
+|---|---|
+| `machine` | `cable` |
+| `cable` | `machine`, `bands` |
+| `barbell` | `e-z curl bar`, `dumbbell` |
+| `dumbbell` | `barbell`, `kettlebells`, `e-z curl bar` |
+| `e-z curl bar` | `barbell`, `dumbbell` |
+| `kettlebells` | `dumbbell` |
+| `body only` | `bands`, `machine` |
+| `bands` | `body only`, `cable` |
+| `medicine ball` | `exercise ball`, `body only` |
+| `exercise ball`, `foam roll`, `other`, `null` | — none |
+
+**Unmapped slot.** A slot with no `mv` (schema-7 leaves unmapped slots unmapped, by design) has no
+movement to score against. Ruling: fall back to equipment alone, derived from `ex.implement` through
+W1's table read backwards; if that is absent too, the list is **name ascending** and the kicker is
+replaced by the line `Ordered by name. This slot does not name a movement.` **NEW**, `--dim`. Never a
+silent wrong order.
+
+## 22.4 The sheet — confirm state
+
+One tap on a result row swaps the sheet in place. It does not close, does not commit, and does not
+touch the draft.
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ ‹   Machine row                          │  back 56×44 · h2, tabindex=-1, focused
+│ Machine · middle back                    │  .det
+│ Replaces Bent-over row for today.        │  .det
+│ The plan does not change.                │
+│ [               Replace               ]  │  full × 52, primary
+│ [            Add as well              ]  │  full × 48
+│ [               Not now               ]  │  full × 52, lowest, pinned
+└──────────────────────────────────────────┘
+```
+
+| Element | Rule |
+|---|---|
+| Back | `‹`, 56 × 44, sheet top-left — permitted, non-destructive (§18.4's precedent). Returns to the pick state **with the query and the scroll position intact**. Accessible name `Back to the list` **NEW** |
+| Heading | `{picked name}` — the thing he is about to do is named by what he picked, at heading weight, because this state exists to catch a mis-tap |
+| Meta | `{Equipment} · {primary muscle}` |
+| Consequence, card empty | `Replaces {ex} for today.` **NEW** + `The plan does not change.` **NEW** — two short lines, not one long one |
+| Consequence, card holds typed sets | `{ex} holds {n} sets. They stay where they are, so this one is added.` **NEW** |
+| `Replace` | Full × 52, primary. **Rendered only when no weight and no rep field on the card holds a value.** One word, and it is the first word he reads |
+| `Add as well` | Full × 48. Three words. Promoted to full × 52 and primary when `Replace` is absent |
+| `Not now` | Full × 52, `.ghostbtn`, lowest, pinned. Scrim and `Escape` the same. Closes the whole sheet, not just this state |
+| Arm delay | None, on either button. Neither loses a number (§22.5), both are one `Undo` away |
+| Order | Replace above Add: replacing is the reason he opened the sheet, and the safe option is lowest as always |
+
+**Replace and Add are distinguishable in one word each** — `Replace`, `Add as well` — with the
+consequence line above them naming the object of each. That satisfies the PM's three-word criterion
+without a mode, a toggle, or a per-row split target.
+
+## 22.5 What each one does — and why nothing here can lose a number
+
+**Replace** — `swapDraftEntry(draft, exId, mv, n)` (W4).
+
+1. The slot keeps its id (WO-007's ruling; W4 §3 forbids moving it).
+2. The new movement **inherits the slot's `s` / `lo` / `hi` / `k`** — he replaced the apparatus, not the
+   prescription (W1 item 2a). So the target line, the rest band, the verdict and `+ ADD SET {n}` all
+   keep working.
+3. The card repaints: new name, `Swapped · was {original}` under it (§22.6), **an empty first set row**,
+   ghosts from `priorFor` (§22.8) or `No prior set.`, the load chip re-derived per §22.11.
+4. Focus lands on the **first weight `−`** — the next thing he does is enter a number.
+5. Toast `{new} replaces {original}.` **NEW** with `Undo`. Undo restores the slot's movement and every
+   field byte for byte; `Bent-over row is back.` **NEW**.
+
+**Replace is offered only on an empty card. That is the no-loss rule and it is absolute.** If he has
+already typed `55 × 12` on the cable row and then gets moved off the station, those two sets *happened*;
+carrying them under a different movement's name is B-131's "correct arithmetic on a wrong fact" created
+by the app itself, and discarding them is a P0. So the sheet does not offer the choice: the card keeps
+its sets and the new movement is **added**. One rule, no confirmation sheet, no discard path, no
+`Undo`-that-restores-deleted-numbers. W4's "typed sets preserved and returned" contract is used, and the
+"ask before discarding" branch is never reached from this spec.
+
+**Add as well** — `addDraftEntry(draft, mv, n)` (W4).
+
+1. A new entry with the entry's own `n`, no `s` / `lo` / `hi` / `k`, and therefore **no prescription**
+   (§22.9). Nothing is guessed.
+2. **Position: directly after the current exercise.** He added it *now* because he is doing it *now*.
+   The header count `{i} of {n}` grows by one and the pips gain a pip.
+3. The session navigates to it immediately — that is the "on screen with an empty first set row" the tap
+   budget is measured against. `← PREV` returns to the exercise he was on.
+4. Toast `{new} added after {ex}.` **NEW** with `Undo`. Undo removes the card and returns to the
+   previous exercise; `{new} removed.` **NEW**.
+5. **Fallback if ordering cannot be expressed in the draft this release** (`sessionCtx` appends
+   plan-less entries today — W5's seam): the movement lands at the end, the session still navigates to
+   it, and the toast tells the truth instead: `{new} added at the end of the session.` **NEW**. State
+   which of the two shipped in the decision record; do not ship the first toast with the second
+   behaviour.
+
+**Both, always:** nothing is written to `phat:v1:log`. The draft is the only store touched, through its
+existing debounce. Killing the tab after a swap and reloading restores the swapped card with its sets
+attached to the swapped movement (W4 D4).
+
+### 22.5.1 Interactions, tap by tap
+
+| # | Tap | What changes |
+|---|---|---|
+| 1 | `Swap` on Bent-over row, card empty | Sheet opens on the pick state. Focus on `Swap Bent-over row`. `CLOSEST TO BENT-OVER ROW`, ranked list, no keyboard |
+| 2 | `Machine row` | Confirm state. Heading `Machine row`, `Replaces Bent-over row for today.` `Replace` present |
+| 3 | `Replace` | Sheet closes. Card reads `Machine row`, `Swapped · was Bent-over row`, `3 × 3–5` unchanged, row 1 empty, focus on the first weight `−`. Toast `Machine row replaces Bent-over row.` + `Undo` |
+| 4 | `Undo` | Card is Bent-over row again, byte for byte. Toast `Bent-over row is back.` |
+| 5 | `Swap`, with `55` and `12` typed in row 1 | Pick state, body `Bent-over row holds 1 set. It stays where it is, so the movement you pick is added.` |
+| 6 | `Machine row`, then `Add as well` | Sheet closes. New card after Bent-over row, header `Upper power · 4 of 8`, empty row 1. Bent-over row still holds `55 × 12`. Toast `Machine row added after Bent-over row.` + `Undo` |
+| 7 | `Swap` on a swapped card, no sets typed | Pick state with `Put Bent-over row back` above the search field |
+| 8 | `Put Bent-over row back` | Applies, sheet closes, card is Bent-over row. Toast `Bent-over row is back.` |
+| — | `Not now` / scrim / `Escape` at any point | Sheet closes. Nothing written. Focus returns to `Swap`. Every typed number untouched |
+
+## 22.6 The `Swapped` mark — card, Summary, Trend
+
+The mark is not decoration. It is the screen's statement that **this number is not the slot's number**,
+which is the whole of Rule MV1 made visible.
+
+**On the session card.** One line directly under the exercise name, `.75rem`, bone `.55` (5.3 : 1 on
+`--bg`), never `--faint`:
+
+| Case | String |
+|---|---|
+| Swapped | `Swapped · was {original}` **NEW** |
+| Added mid-session | `Added today` **NEW** |
+
+`· ` is the app's established separator (§4.4b.1, §21.2). The line costs ~18 px and renders **only** on
+a card that is swapped or added — cards that exist on `main @ 6a87a3a` never gain it.
+
+**On Summary** (§5.2's per-exercise block). The record is the point of Summary, so the mark is a kicker
+plus a line, in the shape `SKIPPED` already uses:
+
+| Case | Kicker | Line under the name |
+|---|---|---|
+| Swapped | `SWAPPED` **NEW** | `Was {original}.` **NEW** |
+| Added | `ADDED` **NEW** | `Added during the session. No prescription.` **NEW** |
+
+Both at `.55` — `SKIPPED`'s `.45` already failed §0.5 and was raised; do not reintroduce it here. The
+count line (`{n} exercises · {n} notes`) counts an added movement like any other exercise with a
+completed set.
+
+**On Trend.** Trend's one question is *is this working*, and a machine-row number plotted on a
+Bent-over row sparkline answers it with a lie in the shape of a chart.
+
+1. **A sparkline excludes every entry marked `sw: 1`.** The line is the slot's lift; a swapped entry is
+   not that lift.
+2. **The exclusion is never silent.** Under the affected sparkline: `{n} swapped sessions are not on
+   this line.` **NEW** (`1 swapped session is not on this line.`), `--dim`.
+3. **An added movement is on no sparkline** and no line claims it is. It has no `lift` to group by.
+   Where those numbers eventually live is B-141, and B-141 is not this order.
+
+**Dependency, stated:** (1) is a read-side change in an engine this order's W4 scope says it does not
+change signatures of (`e1rmByDate` / `liftPoints`). It is a screen requirement, not an engine design —
+**backend and `strength-coach` own how.** If it cannot land this release, the **minimum** is (2) alone,
+with the line rewritten to the truth: `{n} swapped sessions are on this line.` **NEW**. A chart that
+silently mixes movements is the one outcome that is not acceptable.
+
+## 22.7 *Make it permanent* — Summary only
+
+```
+Flow:   Keep the swap
+Entry:  Inside a swapped exercise's block on Summary, below its verdict. Never on a session card.
+Exit:   Change the plan · Not now / scrim / Escape.
+```
+
+| Element | Rule |
+|---|---|
+| Trigger | `Put {new} in the plan` **NEW**, `.ghostbtn`, full × 48, inside the swapped block, **below** the verdict — after the reading, not before it |
+| Presence | Only on a swapped entry, only when the active plan is **editable**, only on Summary, and only before `SAVE SESSION` or after it on the same summary. Never on an added movement (there is no slot to put it in) |
+| Confirm heading | `Put {new} in the plan?` **NEW** |
+| Body line 1 | `It replaces {original} on {day} from your next session.` **NEW** |
+| Body line 2 | `Your {original} sets stay where they are. They stop being this slot's last numbers.` **NEW** |
+| Primary | `Change the plan` **NEW**, full × 52 |
+| Safe, lowest | `Not now` **NEW**, full × 52 |
+| Arm delay | 300 ms on `Change the plan`, WO-001 §1F. It is the one control in §22 that changes something outside this session |
+| On confirm | `setExerciseMovement(plan, exId, mv, n)` (W4). **The slot id does not move** — the slot keeps its id, its position, its `s` / `lo` / `hi` / `k` and its whole history. Sheet closes. Toast `{day} now has {new}.` **NEW** + `Undo`; undo toast `{day} has {original} again.` **NEW** |
+| Write failed | `Could not change the plan. Nothing changed.` **NEW**, in §2.2's refusal shape. The session and its saved sets are untouched — this control is downstream of the log write |
+| Read-only plan | Button **absent**. In its place, one line: `Today only. The PHAT plan is read-only — duplicate it in Plans to keep a change.` **NEW** |
+
+**Why the consequence is spelled out in two sentences and not one.** The slot keeps its history and
+*stops pointing at it* — those are two different facts and the second is the one that will surprise him
+six weeks later, when the Bent-over row ghost that used to be on that card is gone. Rule MV1 makes it
+true; this sentence is where he is told.
+
+## 22.8 The prior that came from another slot — Rule MV1's disclosure
+
+**Content is `strength-coach`'s (W1 item 4). Placement and weight are mine.**
+
+| Rule | |
+|---|---|
+| Where | Its **own line, directly under the prescription line, above the control strip.** Not in the ghost row |
+| Why not the ghost row | The ghost row is per set index and its geometry is pinned by §4.4a's budget at 393 px. The fallback is a fact about the **card**, not about set 3 |
+| Weight | `.75rem`, bone `.55`, wraps freely, one line per card. Low emphasis, **never absent** when a fallback prior is in use. Silence here is the defect (W1 item 4) |
+| Presence | Rendered exactly when `priorFor(...).from === "movement"`. When the prior is the slot's own, nothing renders and the card is `main @ 6a87a3a`'s card |
+| Placeholder | `Last numbers are from Pull, 22 Sep.` **`[W1 SLOT — strength-coach]`** — W1's sentence replaces this **verbatim**, and must name where it came from |
+| Cost | ~20 px, only on a card that has a cross-slot prior. A card with a normal prior gains nothing |
+
+The ghosts themselves read normally (`Last {w} × {r}`) — the line above says where they are from, once,
+instead of decorating three rows.
+
+## 22.9 A movement with no prescription
+
+An **added** movement has no `s` / `lo` / `hi` / `k`. Nothing is guessed (W1 item 3), so every slot that
+consumes a prescription states its absence instead of going quiet.
+
+| Slot | Normal | With no prescription |
+|---|---|---|
+| Target line (§4.3) | `3 × 3–5` | `No prescription` **NEW**, bone `.55` — the line keeps its height; it never disappears |
+| Prescription line | `Last 100 × 5, 100 × 5.` | absent (there is no prior) — or §22.8's line if a movement prior exists |
+| Set rows | `ex.s` rows | **One row**, and `+ ADD SET {n}` adds more as usual |
+| `EXTRA` flag | Rows beyond `ex.s` | **Never.** With no prescription nothing is beyond it. §4.5's `Set 4 is beyond the prescription.` line does not render |
+| Verdict slot (§4.7) | `WAITING` / a verdict | Present, fixed height, holding `No prescription. Nothing to compare this to.` **`[W1 SLOT — strength-coach]`** — W1 item 3 owns the sentence |
+| Rest band (§4.10) | `restTarget(ex)` from `k` | Rule R1 has no `k` to read. **`[W1 SLOT]`** — the band's absent state, the coach's. My recommendation: the band shows the elapsed clock and no target, and says nothing about how long to rest |
+| Load chip | §21 | Unchanged — the chip reads the card's unit, not the prescription |
+| Summary | verdict verbatim | `ADDED` + `Added during the session. No prescription.` and **no verdict row**. An absent verdict is never rendered as a verdict |
+
+**It still logs.** Sets, reps, notes, the draft, the save, the export and the backup all behave
+identically. The only thing missing is advice, and the screen says which.
+
+## 22.10 When the library is not there
+
+The library is fetched after first render, the way `sync.js` is (W5). **The trigger's presence never
+depends on it** — the strip is fixed height from first paint, so a failed fetch cannot move a set row.
+
+| State | The sheet |
+|---|---|
+| Fetch in flight when he taps | Opens with the heading, the body and the line `Loading the exercise list.` **NEW**. The field and the list appear **in place** when it lands; nothing re-opens, nothing steals focus |
+| Failed, absent or unparseable | Heading and body as normal, then `Could not open the exercise list.` **NEW** and `It is not on this phone yet. Open the app once with a connection and it will be here.` **NEW**, in §2.2's refusal shape *without* the `!` marker (nothing he typed is at risk). Only `Not now` below. On a swapped card the put-back row is **still offered** — it needs no library |
+| Query matches nothing | List replaced by `No movement matches "{query}".` **NEW** + `Clear the search` **NEW** (full × 48) |
+| Library loaded but empty / fails its validator | Treated as failed, same two strings. A half-read index is never searched |
+| Offline, primed cache | **Identical to online.** W3 precaches it REQUIRED; §3.2 means search works with the network off |
+| Offline, never primed | The failed state above. The copy names the fix and does not blame him |
+
+**Non-negotiable in all of these:** the card renders normally, every set row is present and editable, the
+load chip works, the note works, `SAVE SESSION` works. **No set row is lost or blocked by anything in
+§22.** (W5's acceptance criterion; it is also the only reason a swap is allowed to be a network-fed
+feature at all.)
+
+## 22.11 The load chip on a swapped card — the WO-012 interaction
+
+`prefs.gym.ex[exId]` is keyed by **slot id** (§21). After a swap the slot holds a different movement, so
+the override is a setting he made for something he is not doing: a lb + 20 kg bar override applied
+silently to a kg machine stack. That is B-136's class inside the prefs store.
+
+**Ruling, three parts.**
+
+1. **A swapped card ignores `prefs.gym.ex[slotId]`.** It opens on the **default** tier
+   (`prefs.gym.unit`, no bar unless the new movement's `implement` is `bb`), exactly as a first-time card
+   does.
+2. **The sheet on a swapped card does not write `prefs.gym.ex`.** A unit or bar chosen there lives in the
+   draft for this session only.
+3. **Chip line 2 on a swapped card reads `Set for this session` NEW** once he has changed anything in the
+   sheet, and `Your default` before that. §21.9 #11's `Set for this exercise` would be false: it is not
+   this exercise's setting, and it is not being kept.
+
+`Last time:` in the load sheet (§4.4b.2) follows the same logic: on a swapped card it renders from the
+**movement** prior if §22.8's fallback found one, and is absent otherwise. It must never print the
+replaced movement's build.
+
+**Dependency:** `cardModeFor` gains the swapped-card branch. Backend (W4), one clause, and it is the
+kind of clause that is wrong-by-default if nobody names it — which is why it is named here.
+
+## 22.12 Strings — every new one, in one table
+
+| # | Where | Case | String |
+|---|---|---|---|
+| 1 | session, control strip | all | `Swap` |
+| 2 | session, control strip | accessible name | `Swap {ex} for another movement` |
+| 3 | sheet, h2 | pick | `Swap {ex}` |
+| 4 | sheet, `.det` | card empty | `Today only. The plan does not change.` |
+| 5 | sheet, `.det` | card holds sets | `{ex} holds {n} sets. They stay where they are, so the movement you pick is added.` |
+| 6 | sheet, row | swapped card, no sets | `Put {original} back` |
+| 7 | sheet, field | all | `Search movements` (placeholder) · `SEARCH` (label) |
+| 8 | sheet, clear | query non-empty | `Clear the search` (accessible name) |
+| 9 | sheet, `.lbl` | no query | `CLOSEST TO {EX}` |
+| 10 | sheet, `.lbl` | query typed | `MATCHES` |
+| 11 | sheet, result line 2 | all | `{Equipment} · {primary muscle}` |
+| 12 | sheet, notice | slot has no `mv` | `Ordered by name. This slot does not name a movement.` |
+| 13 | sheet, empty result | query matches nothing | `No movement matches "{query}".` |
+| 14 | sheet, button | query matches nothing | `Clear the search` |
+| 15 | sheet, loading | fetch in flight | `Loading the exercise list.` |
+| 16 | sheet, refusal | library absent or unparseable | `Could not open the exercise list.` |
+| 17 | sheet, refusal body | library absent or unparseable | `It is not on this phone yet. Open the app once with a connection and it will be here.` |
+| 18 | sheet, back | confirm state | `Back to the list` (accessible name on `‹`) |
+| 19 | sheet, `.det` | confirm, card empty | `Replaces {ex} for today.` |
+| 20 | sheet, `.det` | confirm, card empty | `The plan does not change.` |
+| 21 | sheet, `.det` | confirm, card holds sets | `{ex} holds {n} sets. They stay where they are, so this one is added.` |
+| 22 | sheet, button | confirm, card empty | `Replace` |
+| 23 | sheet, button | confirm, always | `Add as well` |
+| 24 | sheet, button | all states | `Not now` *(existing)* |
+| 25 | toast | after Replace | `{new} replaces {original}.` + `Undo` |
+| 26 | toast | undo of Replace, or put-back | `{original} is back.` |
+| 27 | toast | after Add, inserted | `{new} added after {ex}.` + `Undo` |
+| 28 | toast | after Add, appended (fallback) | `{new} added at the end of the session.` + `Undo` |
+| 29 | toast | undo of Add | `{new} removed.` |
+| 30 | card, under the name | swapped | `Swapped · was {original}` |
+| 31 | card, under the name | added | `Added today` |
+| 32 | card, target line | no prescription | `No prescription` |
+| 33 | card, under the prescription | cross-slot prior | `Last numbers are from {day}, {date}.` **[W1 SLOT]** |
+| 34 | card, verdict slot | no prescription | `No prescription. Nothing to compare this to.` **[W1 SLOT]** |
+| 35 | summary, kicker | swapped | `SWAPPED` |
+| 36 | summary, line | swapped | `Was {original}.` |
+| 37 | summary, kicker | added | `ADDED` |
+| 38 | summary, line | added | `Added during the session. No prescription.` |
+| 39 | summary, button | swapped, editable plan | `Put {new} in the plan` |
+| 40 | summary, sheet h2 | — | `Put {new} in the plan?` |
+| 41 | summary, sheet body | — | `It replaces {original} on {day} from your next session.` |
+| 42 | summary, sheet body | — | `Your {original} sets stay where they are. They stop being this slot's last numbers.` |
+| 43 | summary, sheet button | destructive | `Change the plan` |
+| 44 | summary, toast | applied | `{day} now has {new}.` + `Undo` |
+| 45 | summary, toast | undone | `{day} has {original} again.` |
+| 46 | summary, refusal | plan write failed | `Could not change the plan. Nothing changed.` |
+| 47 | summary, line | read-only plan | `Today only. The PHAT plan is read-only — duplicate it in Plans to keep a change.` |
+| 48 | trend, under a sparkline | swapped entries excluded | `{n} swapped sessions are not on this line.` (`1 swapped session is not on this line.`) |
+| 49 | trend, under a sparkline | fallback if exclusion does not land | `{n} swapped sessions are on this line.` |
+| 50 | chip, line 2 | swapped card, changed in the sheet | `Set for this session` |
+
+Substitutions beyond §0.8: `{original}` the movement the slot carried before the swap, escaped ·
+`{new}` the movement picked, escaped · `{query}` the typed query, escaped · `{Equipment}` the library's
+`eq` word, sentence-cased. **Every one of these goes through `esc()`** — library names are upstream data
+and a name containing `<` must render as text (W5's criterion).
+
+**Voice check.** No exclamation marks, no emoji. Second person only where he acts (`Open the app once…`,
+`duplicate it in Plans`). Every `Could not …` ends on what is true (`Nothing changed.`). No word
+congratulates him for swapping.
+
+## 22.13 Control inventory — rows added to §0.4.1
+
+| # | Screen | Control | Min hit area | Notes |
+|---|---|---|---|---|
+| 15 (amended) | session | `MOVEMENT & CUE` disclosure | flex × 44 | now shares the 44 px strip with #78; ≥ 200 px wide at 393 |
+| 78 | session | `Swap` | 88 × 44 | Right of the disclosure, 8 px gap. Present on every card from first paint |
+| 79 | swap sheet | Search field | full × 48 | Not auto-focused |
+| 80 | swap sheet | `✕` clear | 44 × 44 | Only with a non-empty query |
+| 81 | swap sheet | Result row | full × 64 | Whole row is the button; two lines |
+| 82 | swap sheet | `Put {original} back` | full × 48 | Swapped card, no typed set |
+| 83 | swap sheet | `‹` back to the list | 56 × 44 | Confirm state, sheet top-left |
+| 84 | swap sheet | `Replace` | full × 52 | Confirm state, empty card only |
+| 85 | swap sheet | `Add as well` | full × 48 (× 52 when primary) | Confirm state, always |
+| 86 | swap sheet | `Not now` | full × 52 | Lowest, pinned, every state |
+| 87 | swap sheet | `Clear the search` | full × 48 | Empty-result state only |
+| 88 | summary | `Put {new} in the plan` | full × 48 | Swapped entry, editable plan |
+| 89 | summary | `Change the plan` / `Not now` | full × 52 each | 300 ms arm on the first |
+
+Every one is ≥ 44 px on **both** axes. None is in a top corner of the screen; #83 is in a top corner of a
+*sheet*, which §18.4 already permits for a non-destructive back.
+
+## 22.14 A11y
+
+- **Trigger.** `<button aria-haspopup="dialog">`, visible text `Swap`, accessible name §22.12 #2.
+  Visible text is a prefix of the name (WCAG 2.5.3). Focus returns to it on every close of the sheet,
+  in every state, including after `Not now`, scrim and `Escape`.
+- **Sheet.** `role="dialog" aria-modal="true" aria-labelledby=` the heading. Heading `tabindex="-1"`,
+  focused on open **and again on the state change to confirm** — the heading is the name of what he
+  picked, so re-focusing it is the confirmation read aloud.
+- **Focus order, pick state:** heading → put-back row (if present) → search field → `✕` (if present) →
+  result rows in list order → `Not now`.
+  **Confirm state:** heading → `‹` back → `Replace` (if present) → `Add as well` → `Not now`.
+- **Result rows** are `<button>`; accessible name `{name}, {equipment}, {primary muscle}`. The heading
+  supplies the verb, so the row does not repeat "swap".
+- **The list is not a live region.** Re-ordering on every keystroke through a live region is a screen
+  reader shouting 40 names into his ear. Instead the result count is announced, debounced 400 ms, through
+  `#bs-live`, polite: `{n} movements.` **NEW** (`1 movement.`), and `No movement matches.` **NEW** when
+  empty. The field is `<input type="search">` with `aria-controls` pointing at the list container.
+- **Live regions.** Every commit announces through `#bs-live` via `toastUndo` → `announce()`: §22.12 #25,
+  #26, #27/#28, #29, #44, #45. The toast node itself stays `aria-hidden` (§2.6).
+- **Marks are text.** `Swapped · was {original}`, `SWAPPED`, `ADDED`, `No prescription` are read by a
+  screen reader in the card's normal reading order. Nothing here is conveyed by an icon or a colour.
+- **Greyscale.** Every state in §22 survives a greyscale render: the mark is words, the list order is
+  order, the chosen movement is a heading, the two outcomes are two labelled buttons. No hue carries
+  anything.
+- **Contrast.** Sheet ground is `--surface`: heading `--bone` 12.7 : 1; `.det` and result line 2 `--dim`
+  7.0 : 1; kickers `.55` 4.9 : 1 — **never `--faint` and never `.50` inside the sheet** (§0.5 rule 2).
+  Card ground is `--bg`: the swapped line and `No prescription` at bone `.55` = 5.3 : 1 at 12 px, pass.
+- **200 %.** The strip may grow to two lines (disclosure above, `Swap` below, each ≥ 44) — it grows
+  *before* the set rows and from first paint, so nothing moves on a tap. Result rows wrap to three or
+  four lines; the list scrolls; `Not now` stays pinned. No set row is touched by anything in §22.
+- **Pinch-zoom** is already restored (§0.6, B-13). Nothing here reintroduces `maximum-scale`.
+
+## 22.15 What is preserved when he backs out
+
+| He does | What is preserved |
+|---|---|
+| `Not now`, scrim or `Escape`, any sheet state | Everything. No draft write, no prefs write, no log write. Focus back on `Swap` |
+| `‹` back from confirm | The query, the scroll position and the ranked list |
+| `Undo` after Replace | The slot's movement, every weight and rep string byte for byte, the note, the load chip's mode |
+| `Undo` after Add | The card is removed, the header count returns, the previous card's numbers are untouched |
+| `Undo` after `Change the plan` | The plan's slot carries `{original}` again, with the same id |
+| Reload, phone lock, tab kill mid-swap | The draft holds the swapped movement and its sets (W4 D3/D4). Declining the restore offer discards the draft and leaves the log untouched, as today |
+| Library fails after a swap | The swapped card keeps working: it is draft state, not library state. Only the *next* search fails |
+
+## 22.16 Findings for `project-manager`
+
+1. **`Make it permanent` is unreachable for Chady today.** His active plan is the shipped `PHAT_PLAN`,
+   `readOnly: true`; `setExerciseMovement` cannot write it. §22.7 renders the honest line instead
+   (#47) and routes him to `Duplicate PHAT and rearrange it` (§9.9.7). **The correct answer is
+   copy-on-write** — duplicate the plan, apply the movement, make the copy active, one tap — but that
+   silently changes which plan is active, which is a decision and an order of its own. Recommending it;
+   not specifying it here.
+2. **Trend needs an engine clause this order's W4 scope does not contain** (§22.6). Filed as a screen
+   requirement with a named fallback so it cannot ship silently either way.
+3. **`cardModeFor` needs a swapped-card branch** (§22.11), or a swap silently applies one movement's
+   unit and bar to another. One clause, wrong by default.
+4. **B-05 is now load-bearing for this flow.** Every safety net in §22 lives in the draft and expires at
+   `SAVE SESSION`. A swap mis-tapped and saved is permanent, exactly like a mistyped weight. §22 buys it
+   down (confirm state, no Replace once a set is typed, undo on every commit) and cannot close it.
+
+## 22.17 What I could not settle
+
+1. **Whether `Add` can insert after the current exercise.** `sessionCtx` appends plan-less draft entries
+   (W5's seam, `index.html:2707`). Inserting needs an order the draft does not currently express.
+   §22.5 states the requirement and gives the fallback with its own toast. **Backend's call, one
+   answer, and the toast must match it.**
+2. **The near-equipment table (§22.3.1) is mine and should be the coach's.** It is the second-largest
+   term in the ordering score, and W1 item 1's derivation table is where it belongs. Adopt or replace.
+3. **The 40-row display cap.** Chosen by judgement, not measurement: 800 rows is not a list. If W3
+   reports the library is smaller than expected, or if a plausible query legitimately matches more than
+   40, the cap is the first thing to raise. It changes no other rule.
+4. **The 56-day recency bonus.** Mine, and it is presentation, not advice — it orders a list, it never
+   recommends a load. If `strength-coach` reads any window as a training claim, it is the coach's and
+   this is the line to change.
+5. **Rest on a movement with no prescription** (§22.9). Rule R1 reads `k`, and there is no `k`. My
+   recommendation is an elapsed clock with no target. **W1's.**
+6. **Warm-up sets before a swap — B-116, unchanged and now visible.** If he ramps 20 → 70 kg and then
+   swaps, §22.5 makes the ramp stay on the original movement, which I believe is right. It is still an
+   unanswered question and this spec does not close it.
+7. **Whether `Swap` should read `Swap` on a card that is already swapped.** I kept it constant so the
+   control never moves or changes under his thumb; the cost is that the put-back action is one level in.
+   If the frontend finds the put-back is what he reaches for most, the counter-proposal is a second
+   trigger and I would want to see it measured first.
+
+## 22.18 Out of scope, deliberately
+
+The Plan Editor's picker beyond noting it reuses this sheet (W5 owns it) · the templates picker (T3) ·
+Trend grouping by movement (B-141) · photographs or cues for a library movement (B-142 — a library card
+renders no disclosure at all, §4.13 already handles it) · editing or deleting a **saved** swap (B-05) ·
+free-text movement names (rejected in the order, §1.4) · plate math (B-10) · any change to the set rows,
+the ghost row, the `ld` row or the load chip's own sheet beyond §22.11's one branch — WO-010 D8 still
+requires the kg-direct row to be `main`'s DOM byte for byte · a rest timer (B-09) · anything on Home.
