@@ -2948,9 +2948,18 @@ function mv1Line(p){
   if(p.reason==="prescription"&&p.name)
     return "First time here. Your other "+p.name+" sets are under a different prescription, "+
            "so the app does not use them as a target.";
+  /* MV1-C2b, AS AMENDED 2026-09-28 (coach §22.4.1a). `at this prescription`
+     is load-bearing: under MV1.5's stale-before-prescription ordering this
+     line prints in exactly the case where he DID train the movement last
+     Thursday, at a different prescription - so the old sentence, which
+     claimed the movement itself had not been trained in eight weeks, would
+     have been false precisely when it rendered. */
   if(p.reason==="stale"&&p.name)
-    return "First time here. Your last "+p.name+" was more than eight weeks ago, "+
-           "so the app does not use it as a target.";
+    return "First time here. Your last "+p.name+" at this prescription was more than "+
+           "eight weeks ago, so the app does not use it as a target.";
+  /* MV1-C2c (refused under gate (e), the app cannot name the source): NO
+     LINE. There is no string. Do not invent one - C2a and C2b both name the
+     exercise, and a refusal that cannot name it can render neither. */
   return "";
 }
 function mv1SkipLine(p){
@@ -5649,6 +5658,17 @@ function paintRest(){
     const card=document.getElementById("excard");
     const id=S.rest?S.rest.exId:(card?card.dataset.ex:null);
     ex=day.ex.find(x=>x.id===id)||null;
+    /* WO-014, Rule AD1.3. A movement added mid-session has no `k` and no
+       `hi`, so Rule R1 has nothing to compute from: there is no ready state,
+       no cap and no colour, and the app states NO TARGET rather than falling
+       back to the generic idle line, which promises a countdown that cannot
+       come. The clock is not shown either - elapsed time is a fact, but
+       nothing here starts one on a card R1 cannot read. */
+    if(!ex&&id&&exAnywhere(id).added===true){
+      const t="No type set, so no rest target.";
+      if(node.nodeValue!==t) node.nodeValue=t;
+      reserveDock(); return;
+    }
   }
   let r;
   /* Rule R1 renders its idle state rather than NaN:aN for every bad input
@@ -5674,6 +5694,15 @@ function restStart(exId,k){
      never changes what counts as a commit. Typing the 1 of 12 starts nothing
      in either mode. */
   if(!S.prefs.restAuto) return;
+  /* WO-014, Rule AD1.3. NOTHING STARTS A REST ON A MOVEMENT WITH NO TYPE.
+     R1 computes `ready` and `cap` from `k` and `hi`; an added movement has
+     neither, so there is no target to count toward. Gated at the single
+     entry point, with the other gate, rather than in paintRest: starting a
+     timer whose only possible reading is "no target" would also leave the
+     band stuck on that sentence after he navigates to a card that HAS one,
+     because R1 rule 1 is one timer for the whole app and it follows the
+     running exercise, not the visible card. */
+  try{ if(exAnywhere(exId).added===true) return; }catch(err){}
   const key=exId+"|"+k;
   if(S.rest&&S.rest.key===key) return;
   S.rest={key:key,exId:exId,at:Date.now(),said:{}};
