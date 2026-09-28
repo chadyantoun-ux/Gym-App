@@ -295,6 +295,34 @@
      against the unicode-range in assets/archivo-inline.css first. */
   .showfig .chv{display:inline-block; width:1em; text-align:center; line-height:1}
   .showfig[aria-expanded="true"] .chv{transform:rotate(90deg)}
+
+  /* ---- WO-014 (UX §22.1). THE CONTROL STRIP. The `movement & cue`
+     disclosure and `Swap` share the 44 px row the disclosure already
+     occupied, so no card on `main @ 6a87a3a` gains a pixel and no set row
+     moves. The strip's height is an INVARIANT of the card - it renders at
+     44 even with nothing on its left (a library movement has neither figure
+     nor cue, Rule F1L.1, and a swapped card is denied both, F1L.2) - so the
+     button can never appear, disappear or reflow under a thumb.
+     At 200 % text the strip is allowed to wrap: it grows BEFORE the set
+     rows and from first paint, so nothing moves on a tap. */
+  .ctrlstrip{display:flex; align-items:center; gap:var(--s2); min-height:var(--tap);
+    flex-wrap:wrap; padding-right:var(--s4)}
+  .ctrlstrip .showfig{flex:1 1 12rem; width:auto; padding-right:0}
+  .figgap{flex:1 1 12rem; min-width:0}
+  /* `Swap` is a control, not an accent. Amber is the single accent and it is
+     already spent on the disclosure's label beside it; a second amber here
+     would dilute it and the two would compete. Bone on a --line border is
+     the app's control shape (.ghostbtn's) at the size UX fixed. */
+  .swapbtn{flex:none; min-width:88px; min-height:var(--tap); padding:0 var(--s3);
+    background:transparent; color:var(--bone); border:2px solid var(--line);
+    border-radius:var(--r); font-size:.8125rem; font-weight:800; letter-spacing:.05em}
+  .swapbtn:active{background:var(--amber); color:var(--bg); border-color:var(--amber)}
+  /* The mark, and Rule MV1's disclosure. Words, never a colour and never an
+     icon: greyscale the screen and both still read. Both sit on --bg, where
+     --faint is bone .55 = 5.3 : 1 - the floor, not below it. */
+  .swmark,.mv1{color:var(--faint); font-size:.75rem; line-height:1.45; padding:6px var(--s4) 0}
+  .swmark{font-weight:800; letter-spacing:.02em}
+  .mv1+.mv1{padding-top:2px}
   /* -- WO-009: TWO PHOTOGRAPHS, START LEFT, END RIGHT, CUE BELOW (spec 11.4)
      A grid, not flex, and auto-fill, not auto-fit - that word is load-
      bearing. Each track is max(8em, 50% - 6px): at 368 of content and 14 px
@@ -1025,6 +1053,56 @@
   /* Armed after a warn-once (K2): the sentence names the day; the rule is redundant. */
   .mvrow[aria-pressed="true"]{border-left-color:var(--amber)}
   .sheet .btns .mvno{min-height:52px}
+
+  /* ---- WO-014 (UX §22.2, §22.4). THE SWAP SHEET. It reuses the list sheet
+     (§9.9.3) wholesale; everything below is the two-line result row and the
+     search field, and nothing else. Sheet ground is --surface, where the
+     alpha floor is .55 - so --dim (7.0 : 1) for the meta line and never
+     --faint and never .45 inside a sheet (§0.5 rule 2). */
+  .swsheet .swputback{margin-top:var(--s3)}
+  .swfield{display:flex; align-items:center; gap:var(--s2)}
+  .swfield .swq{flex:1 1 auto; min-width:0}
+  /* The clear control's 44 px slot is ALWAYS in the DOM and only the button
+     comes and goes with the query, so the field cannot resize under the
+     caret while he is typing. */
+  .swclrslot{flex:none; width:var(--tap); height:var(--tap); display:flex;
+    align-items:center; justify-content:center; margin-top:var(--s1)}
+  .swclear{width:var(--tap); height:var(--tap); background:transparent; color:var(--bone);
+    border:2px solid var(--line); border-radius:var(--r); font-size:1.125rem; line-height:1}
+  .swkick,.swnote{margin-top:var(--s3)}
+  /* THE LIST'S BOX IS A FIXED HEIGHT, NOT A MAX. Measured at 393 x 852: with
+     a max-height the sheet is bottom-anchored, so a query that narrows 40
+     rows to 3 shrinks the list and drags the SEARCH FIELD 200 px down the
+     screen while his finger is still on it. Fixing the box at 46vh keeps the
+     field, the kicker and `Not now` exactly where they were on the tap that
+     opened the sheet, for every query and for the empty state, and the list
+     scrolls inside it. The empty state gets the same box, so nothing jumps
+     when the last match disappears either. */
+  .swlist{margin-top:var(--s2); min-height:46vh}
+  .swlist.mvlist{height:46vh; max-height:46vh}
+  /* The result row: full width x 64, the WHOLE row is the button, two lines
+     stacked. 40 rows is the display cap; the list scrolls and `Not now`
+     stays below it. */
+  .swrow{min-height:64px; flex-direction:column; align-items:stretch; justify-content:center;
+    gap:2px; padding:10px var(--s3)}
+  .swrow .nm{font-size:1rem; overflow-wrap:anywhere}
+  .swrow .sub{color:var(--dim); font-size:.75rem; overflow-wrap:anywhere}
+  .swempty{margin-top:var(--s2)}
+  .swclrbtn{margin-top:var(--s3)}
+  /* The library's refusal. §2.2's shape WITHOUT the `!` marker: nothing he
+     typed is at risk, so the mark that means "your numbers need you" is not
+     spent here. */
+  .swsheet .swfail{margin-top:var(--s3)}
+  .swsheet .swfail p+p{margin-top:6px}
+  /* A back control in a SHEET's top corner is permitted when it is
+     non-destructive (§18.4). It returns to the list with the query and the
+     scroll position intact. */
+  .swback{width:56px; min-height:var(--tap); margin:-6px 0 0 -6px; background:transparent;
+    color:var(--bone); font-size:1.375rem; line-height:1; text-align:left; padding:0 var(--s3)}
+  /* The permanent-change offer on the Summary (§22.7): inside the swapped
+     block, BELOW its verdict - after the reading, not before it. */
+  .sumperm{margin-top:var(--s3); min-height:var(--key)}
+  .sumro{color:var(--faint); font-size:.75rem; line-height:1.45; margin-top:var(--s3)}
   .sheet .rule p+p{margin-top:6px}
   /* The Plans list's way in (9.9.7): PRIMARY while no plan of his exists,
      the same row as a ghost once one does. Build from empty stays dashed. */
@@ -1481,6 +1559,16 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
             and Settings say so and still work (spec 4.4b.5, 10.6). gymUi: the
             Settings form, IN MEMORY: {open:"add"|index, form:{n,w,u}, init}. */
          gymBad:false, gymUi:null,
+         /* WO-014 W5. THE EXERCISE LIBRARY, IN MEMORY ONLY - never a stored
+            key. `st` is how the fetch went: "off" (never attempted),
+            "loading", "ready", "failed". `index` is PHAT.libraryLoad's
+            validated index; a half-read one is never searched, so a refusal
+            leaves it null and names itself in `reason`. NOTHING ON THE
+            SESSION CARD DEPENDS ON THIS: the Swap control is present from
+            first paint whatever `st` says, and its sheet is where a failure
+            is spoken (UX 22.10). `swap` is the sheet's own state:
+            {exId, q, pick, back} - in memory, dropped on close. */
+         lib:{st:"off",index:null,reason:null}, swap:null,
          /* WO-012 W4. gymKeep: the `unit` / `ex` keys salvaged from a profile
             whose BARS were refused whole (S.gymBad), merged back under the
             next Gym write so a bad bar list never costs the decided unit or
@@ -2619,7 +2707,19 @@ function ovLevel(id){
 /* Merge ONE TAP into the record and commit. `patch` is {au} from the unit
    segment, {bar, bu} or {bar: null} from a bar row - never the whole mode.
    Stamped v:2. */
+/* WO-014 (UX §22.11 #2). THE SHEET ON A SWAPPED CARD WRITES NO OVERRIDE.
+   `prefs.gym.ex[exId]` is keyed by the SLOT id, and after a swap the slot
+   holds a different movement: a unit or bar chosen for a machine stack would
+   be applied, silently, to the barbell row the next time he does that slot,
+   and it would store a wrong kg total for every set of it. So a choice made
+   on a swapped card lives in the draft for this session only. Gated HERE,
+   at the one write, rather than at each of the sheet's call sites - a guard
+   a call site can forget is a guard that is wrong by default. */
+function swappedCard(id){
+  try{ return cardMovement(exAnywhere(id)).swapped===true; }catch(err){ return false; }
+}
 async function writeOverride(id,patch){
+  if(swappedCard(id)) return true;
   const cur=ovRec(id)||{}, rec={};
   ["au","bar","bu"].forEach(k=>{ if(cur[k]!==undefined) rec[k]=cur[k]; });
   if(patch.au!==undefined) rec.au=patch.au==="lb"?"lb":"kg";
@@ -2640,6 +2740,7 @@ async function writeRec(id,rec){
   return overrideCommit(Object.assign(base,{ex:ex}),{ex:{[id]:ex[id]}});
 }
 async function clearOverride(id){
+  if(swappedCard(id)) return true;      /* nothing was written; nothing to clear */
   const base=gymBase(), ex=Object.assign({},base.ex||{});
   if(!Object.prototype.hasOwnProperty.call(ex,id)&&!S.gymBad) return true;
   delete ex[id];
@@ -2739,7 +2840,14 @@ function sessionCtx(){
     if(day&&day.ex.some(e=>e.id===k)) return;
     if(list.some(e=>e.id===k)) return;
     const st=ents[k]; if(!st) return;
-    const kept=PHAT.completedSets(st.sets).length>0||String(st.note==null?"":st.note).trim()!==""
+    /* WO-014 W5. A MOVEMENT HE ADDED IS A SCREEN BEFORE HE HAS TYPED
+       ANYTHING. He tapped ADD and the session navigates straight to it, so
+       the list must hold it with an empty first row - a blank orphan of the
+       D8 kind has nothing to lose, but this one is the card he is standing
+       in front of. PHAT.validateDraft keeps the entry on save for the same
+       reason: a movement is data even before a number is. */
+    const added=typeof st.mv==="string"&&typeof st.n==="string"&&st.n.trim()!=="";
+    const kept=added||PHAT.completedSets(st.sets).length>0||String(st.note==null?"":st.note).trim()!==""
       ||(Array.isArray(st.sets)&&st.sets.some(x=>!blankSet(x)));
     if(kept) list=list.concat([exAnywhere(k)]);
   });
@@ -2757,6 +2865,103 @@ function speedSrcName(exId){
   sDays().forEach(d=>d.ex.forEach(x=>{ if(x.id===src) nm=x.n; }));
   return nm;
 }
+/* ==================================================== WO-014 W5: THE SWAP
+   WHAT THIS CARD IS RIGHT NOW. One read, so the name, the mark, the
+   photograph gate, the load chip and the prior all agree about which
+   movement is on screen. Read from the DRAFT and never from the plan: a
+   swap changes THIS SESSION and nothing else - the plan is
+   setExerciseMovement's, on Summary, after the work, never mid-set.
+     mv       the movement the card is on, the entry's when it has one
+     slotMv   the movement the SLOT references, or null (unmapped is a
+              supported state forever and gets today's behaviour)
+     swapped  the two disagree, on a card that has a slot
+     added    there is no slot at all - Rule AD1, no prescription
+     name     what the header prints
+     was      the slot's own name, for `Swapped · was {original}` */
+function cardMovement(e){
+  const st=(e&&S.draft&&S.draft.entries)?S.draft.entries[e.id]:null;
+  const mv=(st&&typeof st.mv==="string"&&st.mv)?st.mv:null;
+  const slotMv=(e&&typeof e.mv==="string"&&e.mv)?e.mv:null;
+  const added=!!(e&&e.added);
+  const swapped=!added&&!!mv&&mv!==slotMv;
+  const nm=(st&&typeof st.n==="string"&&st.n.trim()!=="")?st.n.trim():null;
+  return {mv:mv, slotMv:slotMv, swapped:swapped, added:added,
+          name:((swapped||added)&&nm)?nm:(e?e.n:""), was:swapped?e.n:null};
+}
+/* The same plan with ONE slot's `mv` replaced - copies only, nothing
+   mutated, nothing stored. It exists so PHAT.priorFor, which reads the
+   movement off the plan slot, can be asked the question a swapped card
+   actually has: what are the last numbers on THE MOVEMENT I AM DOING. */
+function swapShimPlan(plan,exId,mv){
+  try{
+    const days=(plan.days||[]).map(d=>{
+      if(!Array.isArray(d.ex)||!d.ex.some(x=>x&&x.id===exId)) return d;
+      return Object.assign({},d,{ex:d.ex.map(x=>(x&&x.id===exId)?Object.assign({},x,{mv:mv}):x)});
+    });
+    return Object.assign({},plan,{days:days});
+  }catch(err){ return plan; }
+}
+const PRIOR_NONE={entry:null,from:null,exId:null,dayId:null,dayName:null,date:null,
+                  name:null,mv:null,skipped:null,reason:"none"};
+/* THE CARD'S PRIOR, WITH ITS PROVENANCE (Rule MV1). One object answers
+   "what are the last numbers here, and where did they come from", so the
+   screen can never print a number without the sentence that says where it
+   is from (MV1.4: silence is the defect, an undisclosed number is worse).
+
+   On a SWAPPED card the shim above re-points the question at the movement
+   he picked. Both halves of MV1 then fall out: the slot's own entries under
+   the movement he replaced are skipped (MV1.1a) - which is the whole of
+   B-136 - and a prior for the NEW movement under another slot, at the
+   identical prescription, inside 56 days, that the app can name, is found
+   and disclosed (MV1.2). An ADDED movement has no slot, so MV1 does not
+   apply to it at all and there is no prior to find. */
+function priorOf(e,cmv){
+  const m=cmv||cardMovement(e);
+  if(!e||m.added) return PRIOR_NONE;
+  let plan=sp();
+  if(m.swapped&&m.mv) plan=swapShimPlan(plan,e.id,m.mv);
+  try{
+    const r=PHAT.priorFor(S.sessions,plan,e.id,
+      {todayStr:PHAT.localDate(), plans:allPlans(), library:S.lib.index});
+    if(!r) return PRIOR_NONE;
+    /* MV1-C3 reads `Last time you swapped this for {X}` and it is a
+       statement about the SLOT's own read passing something over. On a
+       swapped card what it passed over is the slot's ordinary history,
+       set aside for a movement he chose a minute ago, and that sentence
+       would be flatly false - so it is dropped here rather than reworded
+       into a second meaning. */
+    if(m.swapped) r.skipped=null;
+    return r;
+  }catch(err){ return PRIOR_NONE; }
+}
+/* Rule MV1's disclosure lines, verbatim from coach addendum §22.4's Output
+   copy. Its own line, under the prescription and above the control strip
+   (UX §22.8) - never in the ghost row, which is per set index and whose
+   geometry is pinned at 393 px. The two REFUSALS carry no number because
+   priorFor returns no entry with them: that is the point of them. */
+function mv1Line(p){
+  if(!p) return "";
+  if(p.from==="movement"&&p.name)
+    return p.dayName
+      ? "From "+p.name+" on "+p.dayName+", "+fmt(p.date)+". Not this exercise's own history."
+      : "From "+p.name+" on "+fmt(p.date)+". Not this exercise's own history.";
+  if(p.reason==="prescription"&&p.name)
+    return "First time here. Your other "+p.name+" sets are under a different prescription, "+
+           "so the app does not use them as a target.";
+  if(p.reason==="stale"&&p.name)
+    return "First time here. Your last "+p.name+" was more than eight weeks ago, "+
+           "so the app does not use it as a target.";
+  return "";
+}
+function mv1SkipLine(p){
+  return (p&&p.skipped&&p.skipped.name)
+    ? "Last time you swapped this for "+p.skipped.name+". Not used as this exercise's history." : "";
+}
+/* Rule AD1's Output copy, the coach's sentence, in the verdict slot of a
+   movement that has no prescription. It never says "log more": more logging
+   never resolves it, only adding it to a plan does (C7a's shape). */
+const AD1_VERDICT="Added today. No sets or reps set, so no verdict. Add it to your plan to get one.";
+
 /* C-12 rule 2: `- REMOVE` targets the last BLANK row by preference, not the
    last row. The common case - a row added by mistake - never touches data. */
 const blankSet=s=>String((s&&s.w)==null?"":s.w).trim()===""&&String((s&&s.r)==null?"":s.r).trim()==="";
@@ -2846,11 +3051,33 @@ function modeCopy(m){
 function cardModeFull(id,prev){
   try{
     const en=S.draft&&S.draft.entries[id];
-    const r=PHAT.cardModeFor({exId:id, ex:exAnywhere(id), entry:en||undefined,
-      prefs:engPrefs(), plan:sp(),
-      prev:prev===undefined?PHAT.lastFor(S.sessions,id):prev});
-    return {mode:modeCopy(r.mode), tier:r.tier};
-  }catch(err){ return {mode:{au:"kg"},tier:"kg"}; }
+    const ex=exAnywhere(id);
+    const m=cardMovement(ex);
+    /* WO-014 (UX §22.11). `swapped` and `implement` are HANDED to the engine,
+       never re-derived here: cardModeFor owns the precedence and its swapped
+       branch skips the slot's override AND the slot's history, because both
+       describe a movement he is not doing. The implement is the NEW
+       movement's, read off the library at read time (Rule I3.3) - absent, the
+       engine gives the unit and no bar, which is the conservative answer
+       because a wrong bar silently changes the kg total that is stored.
+       `sessions` rather than a pre-computed prior when the caller has none,
+       so the history tier is wired through Rule MV1 inside the engine. */
+    const args={exId:id, ex:ex, entry:en||undefined, prefs:engPrefs(), plan:sp(),
+                swapped:m.swapped, sessions:S.sessions, prev:prev};
+    if(m.swapped&&m.mv){
+      let im=null; try{ im=PHAT.libraryImplementOf(S.lib.index,m.mv); }catch(err){ im=null; }
+      if(im) args.implement=im;
+    }
+    const r=PHAT.cardModeFor(args);
+    /* `r.swapped` is only set on the engine's OWN swapped branch, which sits
+       below the chip / draft / typed tiers - so a card he has already touched
+       in the sheet comes back without it. The card is swapped or it is not,
+       whatever tier answered, and the chip's second line depends on that
+       fact and not on which tier won. `||` here, never `r.swapped` alone:
+       that reading shipped for ten minutes and read `Set for this exercise`
+       on a swapped card, which is the exact sentence §22.11 forbids. */
+    return {mode:modeCopy(r.mode), tier:r.tier, swapped:r.swapped===true||m.swapped===true};
+  }catch(err){ return {mode:{au:"kg"},tier:"kg",swapped:false}; }
 }
 function cardMode(id,prev){ return cardModeFull(id,prev).mode; }
 /* Level 1 for this card, as the sheet names it (`Use my default · lb +
@@ -2893,6 +3120,17 @@ function chipLevel(id,cm,prev){
       return (Array.isArray(g.bars)&&g.bars.length)?"Your default · first bar in your gym":"Your default · no bars in your gym yet";
     return "Your default";
   };
+  /* WO-014 (UX §22.11 #3). A SWAPPED CARD CAN NEVER READ `Set for this
+     exercise`: that line would be false twice - it is not this exercise's
+     setting, and nothing is being kept. It opens on the default, like a
+     first-time card, and names the session the moment he changes anything
+     in the sheet. */
+  if(cm.swapped){
+    if(unreadable) return "Could not read Settings · kg for now";
+    if(t==="chip"||t==="draft"||t==="typed") return "Set for this session";
+    if(t==="default") return dflt();
+    return "";
+  }
   if(t==="chip"||t==="override") return ol||"Set for this exercise";
   if(t==="draft"||t==="typed"){
     if(ol) return ol;
@@ -2993,7 +3231,16 @@ function paintMode(id){
   if(!card||card.dataset.ex!==id||!S.draft) return;
   const en=S.draft.entries[id]; if(!en) return;
   const C=sessionCtx(); const e=C.list.find(x=>x.id===id)||exAnywhere(id);
-  const prev=PHAT.lastFor(S.sessions,id);
+  /* WO-014: the same Rule MV1 prior and the same apparatus shim vSession
+     painted with, so an in-place repaint can never disagree with the first
+     paint about which movement's numbers these are. */
+  const mvc=cardMovement(e);
+  const prev=priorOf(e,mvc).entry;
+  let impl=e.implement;
+  if(mvc.swapped&&mvc.mv){
+    try{ impl=PHAT.libraryImplementOf(S.lib.index,mvc.mv)||undefined; }catch(err){ impl=undefined; }
+  }
+  const ge=(impl===e.implement)?e:Object.assign({},e,{implement:impl});
   let changed=false;
   try{ const ep=PHAT.prescriptionEpoch({ex:e,prev:prev,plan:sp(),exId:id}); changed=!!(ep&&ep.changed); }catch(err){}
   const cm=cardModeFull(id,prev), mode=cm.mode, kgd=isKgDirect(mode);
@@ -3002,7 +3249,7 @@ function paintMode(id){
   const step=LD_STEP[mode.au], bl=barLabel(mode);
   card.querySelectorAll(".setrow").forEach(row=>{
     const k=+row.dataset.i, st=en.sets[k]; if(!st) return;
-    const at=" "+e.n+" set "+(k+1);
+    const at=" "+mvc.name+" set "+(k+1);
     const cap=row.querySelector(".unit"), inp=row.querySelector("input.w");
     const dn=row.querySelector('button[data-act="-"][data-f="w"]'), up=row.querySelector('button[data-act="+"][data-f="w"]');
     if(cap) cap.textContent=kgd?"kg":((mode.bar!==undefined?"+ ":"")+mode.au);
@@ -3018,10 +3265,10 @@ function paintMode(id){
     if(kgd){ if(tot) tot.remove(); }
     else{
       if(!tot){ tot=document.createElement("span"); tot.className="gtot"; gh.insertBefore(tot,gt); }
-      tot.textContent=totalWord(st,e);
+      tot.textContent=totalWord(st,ge);
     }
     if(gt){
-      const g=ghostText(e,prev,k,changed,mode);
+      const g=ghostText(ge,prev,k,changed,mode);
       gt.dataset.ghost=g;
       if(!row.classList.contains("bad")) gt.textContent=g;   // a refusal keeps the line
     }
@@ -3038,6 +3285,12 @@ function paintTotal(row,st,e){
 function undoLabel(u){
   if(!u) return "";
   if(u.kind==="unit") return "Undo — put the "+u.fromAu+" weights back";
+  /* WO-014: the swap's persistent way back. The toast fades in six seconds
+     and a swap lasts the session, so the control lives in the bottom stack
+     until he uses it or ends the session - and on a slot that declares no
+     movement it is the ONLY way back, because `Put {original} back` has no
+     movement id to hand swapDraftEntry. */
+  if(u.kind==="swap") return "Undo — "+u.label;
   return "Undo — put set "+(u.i+1)+" back";
 }
 function paintUndo(exId){
@@ -3062,13 +3315,23 @@ function vSession(){
   /* The prescription that governs. deloadEx is idempotent and returns `ex`
      itself when no deload is active, so this is the same object on a normal
      week. A deload reduces the PRESCRIPTION, never the log. */
+  /* WO-014. WHICH MOVEMENT IS ON THIS CARD - read once, so the name, the
+     mark, the prior, the photograph gate and the load chip cannot disagree
+     about it. */
+  const mvc=cardMovement(e);
   const rx=PHAT.deloadEx(e,C.deload.active===true);
-  const prev=PHAT.lastFor(S.sessions,e.id);
+  /* Rule MV1: the prior AND WHERE IT CAME FROM, in one object. `prior.entry`
+     is what the ghost and the seed read; the disclosure lines below are not
+     optional beside it (MV1.4). */
+  const prior=priorOf(e,mvc), prev=prior.entry;
   let ep=null;
   try{ ep=PHAT.prescriptionEpoch({ex:e,prev:prev,plan:sp(),exId:e.id}); }catch(err){ ep=null; }
   const changed=!!(ep&&ep.changed);
+  /* Rule AD1 / UX §22.9: with no prescription NOTHING is beyond it, so the
+     EXTRA badge never renders on an added movement and neither does its
+     line. It is not a suppressed flag, it is an absent concept. */
   let xs={flags:[],count:0,line:"",idle:false};
-  try{ const r=PHAT.extraSets(st.sets,rx); if(r) xs=r; }catch(err){}
+  if(!mvc.added){ try{ const r=PHAT.extraSets(st.sets,rx); if(r) xs=r; }catch(err){} }
   /* WO-012 W4: the card's mode is read ONCE per paint and its unit rides
      into every rule that names a load (Rule U1: `52.5 kg (115.5 lb)` on a lb
      card; a kg card is today's bytes). */
@@ -3112,12 +3375,34 @@ function vSession(){
   /* ---- name, target, prescription. §0.1 #9: the target never wraps, never
      truncates, never shrinks - the NAME is what gives way. ` . per DB` is
      required for implement:"db" and the prototype omits it (B-22). */
-  const unit=(e.implement==="db")?" · per DB":"";
+  /* WO-014, Rule I3.3. A SWAPPED CARD'S IMPLEMENT IS THE NEW MOVEMENT'S,
+     derived from the library at read time, never stored - so ` · per DB`
+     follows the apparatus he is actually on. A movement whose upstream
+     `equipment` I3 refuses makes NO claim and the suffix goes silent; it is
+     never guessed onto the nearest thing. `ge` is the exercise as this
+     CARD's apparatus, and it is what the ghost row and the kg-total token
+     read; `e` stays the slot everywhere a rule reads the prescription. */
+  let impl=e.implement;
+  if(mvc.swapped&&mvc.mv){
+    try{ impl=PHAT.libraryImplementOf(S.lib.index,mvc.mv)||undefined; }catch(err){ impl=undefined; }
+  }
+  const ge=(impl===e.implement)?e:Object.assign({},e,{implement:impl});
+  const unit=(impl==="db")?" · per DB":"";
   const tgt=(rx.lo===rx.hi?rx.s+" × "+rx.lo:rx.s+" × "+rx.lo+"–"+rx.hi)+unit;
   /* An exercise no plan on the device carries (D5) has no prescription to
-     print: the name is the coach's sentence and the target slot is empty. */
-  h+=`<div class="exname"><div class="row"><h3>${esc(e.n)}</h3>
-    ${e.gone?"":`<span class="target">${esc(tgt)}</span>`}</div></div>`;
+     print: the name is the coach's sentence and the target slot is empty.
+     Rule AD1: an ADDED movement has none either, and the line says so in
+     words rather than going blank - it keeps its height and never
+     disappears (UX §22.9). */
+  h+=`<div class="exname"><div class="row"><h3>${esc(mvc.name)}</h3>
+    ${e.gone?"":`<span class="target">${esc(mvc.added?"No prescription":tgt)}</span>`}</div></div>`;
+  /* UX §22.6 — THE MARK. Not decoration: it is the screen's statement that
+     this number is not the slot's number, which is the whole of Rule MV1
+     made visible. It renders only on a card that is swapped or added, so no
+     card that exists on `main @ 6a87a3a` gains a line. Words, never a
+     colour and never an icon. */
+  if(mvc.swapped) h+=`<p class="swmark">Swapped &middot; was ${esc(mvc.was)}</p>`;
+  else if(mvc.added) h+=`<p class="swmark">Added today</p>`;
   /* Speed cards print SP1's computed load, never the prototype's static
      "65-70% of your power-day top set" (B-12). Everything else prints the
      provenance line, and ONLY across a prescription change - on an unchanged
@@ -3137,12 +3422,48 @@ function vSession(){
   if(!inSessDay(e.id)) h+=`<p class="rx">Not in the plan any more. It still saves with this session.</p>`;
   if(S.v1added===e.id) h+=`<p class="rx">Back in from this session.</p>`;
 
-  /* ---- movement & cue. Neither figure nor cue -> the disclosure is NOT
-     rendered at all. An empty frame in the gym is worse than no frame. */
-  if(hasFig(e.id)||cueFor(e.id))
-    h+=`<button class="showfig" data-fig="${esc(e.id)}" aria-expanded="false"
-      aria-controls="fig-${esc(e.id)}"><span class="chv" aria-hidden="true">&rsaquo;</span> movement &amp; cue</button>
-      <div class="fig" id="fig-${esc(e.id)}" data-figbox="${esc(e.id)}"></div>`;
+  /* ---- Rule MV1's disclosure (UX §22.8). ITS OWN LINE, directly under the
+     prescription and above the control strip - never in the ghost row,
+     whose geometry is per set index and pinned at 393 px. Rendered exactly
+     when priorFor says the number came from another slot, or refused to
+     give one and owes the reason. The refusals carry NO number, which is
+     the point of them: a number is what he would act on. */
+  { const mvl=mv1Line(prior), mvs=mv1SkipLine(prior);
+    if(mvl) h+=`<p class="mv1">${esc(mvl)}</p>`;
+    if(mvs) h+=`<p class="mv1">${esc(mvs)}</p>`; }
+
+  /* ---- WO-014 (UX §22.1). THE CONTROL STRIP: the `movement & cue`
+     disclosure and `Swap`, sharing the 44 px row the disclosure already
+     occupied. No card that exists on `main @ 6a87a3a` gains a pixel and no
+     set row moves. The strip renders at 44 px even with nothing on its left
+     - its height is an invariant of the session card, not a function of its
+     contents, and a control that appears and disappears is a control whose
+     row reflows. `Swap` is present from first paint on every card, in every
+     state, whatever the library did: a failure is spoken inside the sheet
+     (§22.10), never by a missing button.
+
+     RULE F1L.2 — A SWAPPED CARD SHOWS NEITHER PHOTOGRAPH NOR CUE. The
+     slot's pair is authored for the movement he is not performing: `d1a`'s
+     barbell hinge over a chest-supported machine, under a cue naming a
+     position the apparatus removes. Suppressed, never substituted, never
+     kept "because it is good advice" - it is good advice about a different
+     exercise. F1L.1: a library movement has neither anyway, so an ADDED
+     card shows the strip with nothing on its left.
+
+     >>> THE ONE LINE THAT FLIPS UX'S "NOTHING" TO NAME-IN-LARGE-TYPE is the
+     `figgap` span below. UX ruled the space shows nothing; Chady was asked
+     whether he would rather have the movement's name there in large type
+     and has not answered. Replacing that span with a name element is the
+     whole change - the strip's height, the button and the fold arithmetic
+     are untouched. <<< */
+  const figok=!mvc.swapped&&!mvc.added&&(hasFig(e.id)||cueFor(e.id));
+  h+=`<div class="ctrlstrip">`+(figok
+    ? `<button class="showfig" data-fig="${esc(e.id)}" aria-expanded="false"
+        aria-controls="fig-${esc(e.id)}"><span class="chv" aria-hidden="true">&rsaquo;</span> movement &amp; cue</button>`
+    : `<span class="figgap" aria-hidden="true"></span>`)
+    +`<button class="swapbtn" id="swapbtn" aria-haspopup="dialog"
+        aria-label="Swap ${esc(mvc.name)} for another movement">Swap</button></div>`;
+  if(figok) h+=`<div class="fig" id="fig-${esc(e.id)}" data-figbox="${esc(e.id)}"></div>`;
 
   /* ---- WO-010 W6: THE LOAD CHIP (spec 4.4b.1). Between the disclosure and
      the card, OUTSIDE #excard so the row DOM is untouched (D8). A control
@@ -3159,8 +3480,13 @@ function vSession(){
      advice rule can prevent a set row painting (§0.7). */
   h+=`<div class="card" id="excard" data-ex="${esc(e.id)}"><div class="sets">`;
   for(let k=0;k<st.sets.length;k++){
-    const g=ghostText(e,prev,k,changed,mode);
-    const at=` ${esc(e.n)} set ${k+1}`;
+    /* WO-014: the ghost and the row's accessible names read THIS CARD's
+       movement and apparatus - `ge` and `mvc.name` - so a swapped row never
+       announces the slot's old name over the number he is typing. The kg
+       direct row's DOM is unchanged: `ge` IS `e` whenever the implement did
+       not move, which is every card on `main @ 6a87a3a` (D8). */
+    const g=ghostText(ge,prev,k,changed,mode);
+    const at=` ${esc(mvc.name)} set ${k+1}`;
     /* THE `ld` ROW (spec 4.4a). Same children, same order, same classes as
        the kg row below: the caption reads the unit (`+ LB` on a bar), the
        input binds to `add`, the steppers name their tap in the entry unit,
@@ -3183,7 +3509,7 @@ function vSession(){
         <input class="r" data-f="r" inputmode="numeric" placeholder="&ndash;"
           aria-label="Reps,${at}" value="${esc(st.sets[k].r)}">
         <button data-act="+" data-f="r" aria-label="Reps up 1,${at}">+</button></span></span>
-      <span class="ghost"><span class="gtot">${esc(totalWord(st.sets[k],e))}</span><span class="gtxt" data-ghost="${esc(g)}">${esc(g)}</span>
+      <span class="ghost"><span class="gtot">${esc(totalWord(st.sets[k],ge))}</span><span class="gtxt" data-ghost="${esc(g)}">${esc(g)}</span>
         <span class="xtra" data-xtra="${k}">${xs.flags[k]?"EXTRA":""}</span></span></div>`;
       continue;
     }
@@ -3222,7 +3548,7 @@ function vSession(){
      below it is a control. */
   h+=`<div class="notewrap"><label class="lbl" for="exnote" style="margin-bottom:5px">Note</label>
     <input class="note" id="exnote" placeholder="Note &mdash; RIR, form, pain, anything"
-      aria-label="Note for ${esc(e.n)} &mdash; RIR, form, pain, anything"
+      aria-label="Note for ${esc(mvc.name)} &mdash; RIR, form, pain, anything"
       value="${esc(st.note)}"></div></div>`;
 
   /* ---- THE BOTTOM STACK. Every slot here is BELOW the last input, so nothing
@@ -3261,7 +3587,7 @@ function vSession(){
      is the reviewed path to the one commit in the app. */
   h+=(i===n-1)
     ? `<button class="next" id="tosum">Finish session</button>`
-    : `<button class="next" id="navnext">Next &mdash; ${esc(list[i+1].n)}</button>`;
+    : `<button class="next" id="navnext">Next &mdash; ${esc(cardMovement(list[i+1]).name)}</button>`;
   h+=`</div><div class="pad mt24"><button id="discard">DISCARD SESSION</button></div>`;
   return h;
 }
@@ -3308,11 +3634,22 @@ const fixText=()=>{const n=badRows().length;
 function sumRow(e,st,C){
   const done=PHAT.completedSets(st.sets);
   const note=String(st.note==null?"":st.note).trim();
-  let h=`<div class="sumex"><div class="row"><span class="nm">${esc(e.n)}</span>`;
+  /* WO-014. Which movement this row records - the record is the point of
+     this screen, so the mark is a kicker plus a line, in the shape SKIPPED
+     already uses (UX §22.6). */
+  const mvc=cardMovement(e);
+  let h=`<div class="sumex"><div class="row"><span class="nm">${esc(mvc.name)}</span>`;
   /* spec 5.2: a state, not a verdict. No enclosure, no kicker, no arrow. */
   h+=done.length?"":`<span class="sumskip">Skipped</span>`;
+  h+=(mvc.swapped?`<span class="sumskip">Swapped</span>`
+     :mvc.added?`<span class="sumskip">Added</span>`:"");
   h+=`</div>`;
-  if(!inSessDay(e.id)) h+=`<p class="sumnote">Not in the plan any more. It still saves with this session.</p>`;
+  if(mvc.swapped) h+=`<p class="sumnote">${esc("Was "+mvc.was+".")}</p>`;
+  else if(mvc.added) h+=`<p class="sumnote">Added during the session. No prescription.</p>`;
+  /* An ADDED movement is not in the plan BY DEFINITION, so the D8 sentence -
+     which means "the plan moved under your draft" - would be a false alarm
+     about it. The `ADDED` line above already says what it is. */
+  if(!mvc.added&&!inSessDay(e.id)) h+=`<p class="sumnote">Not in the plan any more. It still saves with this session.</p>`;
   if(done.length){
     /* Rule Z2 holds on this screen too: a rack chin reads `bodyweight × 10`.
        No view in this app prints the string `0 kg` (B-32).
@@ -3335,13 +3672,23 @@ function sumRow(e,st,C){
      nothing else — not the row, not the counters, not Save. An exercise no
      plan carries (D5) gets no verdict block at all: there is no prescription
      for a rule to read, and the role gate's refusal would be noise. */
-  if(done.length&&!e.gone){
+  /* Rule AD1.2 on this screen: `ADDED` and its line, and NO VERDICT ROW. An
+     absent verdict is never rendered as a verdict. */
+  if(done.length&&mvc.added){
+    h+=`<div class="advice"><p class="kick">No prescription</p><p>${esc(AD1_VERDICT)}</p></div>`;
+  }
+  else if(done.length&&!e.gone){
     let v=null, vh=null;
     const dl=C.deload.active===true;
     /* WO-012 W4: the card's unit rides into the verdict (Rule U1). */
     const au=cardMode(e.id).au;
+    /* WO-014, Rule MV1.3: the comparison never crosses a slot, and on a
+       swapped card the slot's own history is the movement he replaced - so
+       there is nothing to compare today against, and the verdict says so
+       rather than grading a machine row against a cable row. */
+    const p=priorOf(e,mvc);
     try{
-      v=PHAT.verdict({ex:e, sets:st.sets, prev:PHAT.lastFor(S.sessions,e.id),
+      v=PHAT.verdict({ex:e, sets:st.sets, prev:(p.from==="slot")?p.entry:null,
         note:st.note, deload:dl, unit:au});
       vh=verdictHtml(v,dl,"");
     }catch(err){ vh=null; }
@@ -3359,6 +3706,23 @@ function sumRow(e,st,C){
         `<p>Nothing to say until all ${rx.s} sets are in.</p></div>`;
     }
   }
+  /* ---- WO-014 (UX §22.7). *MAKE IT PERMANENT* — SUMMARY ONLY, never on a
+     session card and never mid-set. It is the one control in §22 that
+     changes something outside this session, so it sits BELOW the verdict
+     (after the reading, not before it) and its confirmation carries a
+     300 ms arm.
+     NEVER ON AN ADDED MOVEMENT: there is no slot to put it in.
+     ON A READ-ONLY PLAN THE BUTTON IS ABSENT and one line stands in its
+     place. This is Chady's case today - his active plan is the shipped
+     PHAT_PLAN, readOnly - so the line is what he will actually see, and it
+     routes him to the one thing that does work (UX finding §22.16 #1: the
+     correct answer is copy-on-write, which is an order of its own and is
+     not invented here). */
+  if(mvc.swapped){
+    h+=(sp().readOnly===true)
+      ? `<p class="sumro">Today only. The PHAT plan is read-only &mdash; duplicate it in Plans to keep a change.</p>`
+      : `<button class="ghostbtn sumperm" data-perm="${esc(e.id)}">${esc("Put "+mvc.name+" in the plan")}</button>`;
+  }
   return h+`</div>`;
 }
 /* An exercise by id from ANY day of the plan, because a draft can legitimately
@@ -3370,9 +3734,23 @@ function sumRow(e,st,C){
 function exAnywhere(id){
   let out=null;
   try{ out=PHAT.resolveEx([sp()].concat(allPlans()),id); }catch(err){ out=null; }
+  if(out) return out;
+  /* WO-014 W5. THE SEAM FOR A MOVEMENT ADDED MID-SESSION (the WO's own
+     wording: "an added library movement resolves through the entry's own
+     `n`"). It has no slot in any plan - that is what ADD means - so the
+     entry is the only thing that knows what it is: `n` names it and `mv`
+     identifies it. Rule AD1: it carries NO prescription, so s/lo/hi/k are
+     zero and empty exactly as the D5 stub's are, which keeps every verdict,
+     every deload clause and every extra-set flag silent by construction
+     rather than by a gate somebody can forget. `added:true` is how the
+     screens tell it apart from the D5 stub: one renders `No prescription`
+     and AD1's line, the other prints the coach's gone sentence. */
+  const st=S.draft&&S.draft.entries&&S.draft.entries[id];
+  if(st&&typeof st.mv==="string"&&typeof st.n==="string"&&st.n.trim()!=="")
+    return {id:id,n:st.n.trim(),s:0,lo:0,hi:0,k:"",mv:st.mv,added:true};
   /* D5: NEVER the raw id. An id no plan on this device has ever carried
      prints the coach's sentence, and s/lo/hi of 0 keep every rule silent. */
-  return out||{id:id,n:PHAT.EX_GONE,s:0,lo:0,hi:0,k:"",gone:true};
+  return {id:id,n:PHAT.EX_GONE,s:0,lo:0,hi:0,k:"",gone:true};
 }
 /* Is this exercise in the OPEN SESSION's day right now? An entry that is
    not - the plan moved under a draft (D8) - still renders, still saves, and
@@ -4366,8 +4744,14 @@ function vExForm(plan,f){
     <input id="pf-${key}" data-pf="${key}" inputmode="numeric" value="${esc(f[key])}" aria-label="${lbl}">
     <button data-pfstep="${key}" data-dir="+" aria-label="${lbl} up">+</button></span></div>`;
   let lifts=[]; try{ lifts=PHAT.planLifts(plan)||[]; }catch(err){ lifts=[]; }
+  /* WO-014 W5: `#pf-lib` is the library picker, reusing the swap sheet
+     (UX §22.2). It fills the name and, where Rule I3 has an honest mapping,
+     the implement. It does NOT fill sets, reps or type: Rule K3.1 forbids
+     deriving the type from any upstream field, and WO-006 B2 still refuses
+     ADD without it. */
   return `<div class="peform" role="group" aria-labelledby="pf-h">
     <span class="lbl" id="pf-h">New exercise</span>
+    <button class="ghostbtn pflib" id="pf-lib">Pick from the library</button>
     <label class="bklbl" for="pf-n">Name</label>
     <input class="bkin" id="pf-n" data-pf="n" value="${esc(f.n)}" autocomplete="off" spellcheck="false">
     <div class="perange" style="margin-top:var(--s3)">${step("s","Sets")}${step("lo","Reps from")}${step("hi","Reps to")}</div>
@@ -4473,7 +4857,12 @@ function stepInt(cur,dir,lo,hi){
   const v=(isNaN(n)?0:n)+(dir==="+"?1:-1);
   return Math.max(lo,Math.min(hi,v));
 }
-function blankForm(dayId){ return {dayId:dayId,n:"",s:"",lo:"",hi:"",k:"",implement:"",lift:"",cue:"",err:"",warn:null}; }
+/* WO-014: `mv` is the movement the library picker chose and `mvN` the name
+   it came with. The claim is dropped if he renames the exercise away from
+   it - a slot with no `mv` is a supported state forever, and a movement id
+   under a name that no longer matches it is a wrong fact Rule MV1.2 would
+   then read as a prior. */
+function blankForm(dayId){ return {dayId:dayId,n:"",s:"",lo:"",hi:"",k:"",implement:"",lift:"",cue:"",mv:"",mvN:"",err:"",warn:null}; }
 /* Rule K2 warn-once: the two type/reps mismatches that hurt in the harmful
    direction (heavy sets under short rest). Returns the message or "". Power
    never warns. */
@@ -4504,6 +4893,10 @@ function addFromForm(){
   const armed=f.warn&&f.warn.k===f.k&&f.warn.lo===lo&&f.warn.hi===hi;
   if(wmsg&&!armed){ f.warn={k:f.k,lo:lo,hi:hi,msg:wmsg}; render(true); const el=document.querySelector(".peform .refuse"); if(el) el.scrollIntoView({block:"nearest"}); return; }
   const spec={n:String(f.n).trim(),s:s,lo:lo,hi:hi,k:f.k,implement:f.implement};
+  /* WO-014: the movement id rides only while the NAME is still the one the
+     library gave. Renamed, the claim is dropped rather than carried under a
+     name it no longer describes. */
+  if(f.mv&&spec.n===String(f.mvN||"").trim()) spec.mv=f.mv;
   if(f.lift) spec.lift=f.lift;
   if(String(f.cue).trim()) spec.cue=String(f.cue).trim();
   const r=PHAT.addExercise(w,f.dayId,spec);
@@ -4891,6 +5284,8 @@ async function planClick(e){
     if(st){ const k=st.dataset.pfstep; f[k]=String(stepInt(f[k],st.dataset.dir,1,k==="s"?20:100)); f.err=""; if(k!=="s") f.warn=null; render(true); return true; }
     const pk=t.closest("[data-pfk]"); if(pk){ f.k=pk.dataset.pfk; f.err=""; f.warn=null; render(true); return true; }
     const pi=t.closest("[data-pfi]"); if(pi){ f.implement=pi.dataset.pfi; f.err=""; render(true); return true; }
+    /* WO-014: the library picker, reusing the swap sheet (UX §22.2). */
+    if(t.closest("#pf-lib")){ openSwapForm(); return true; }
     if(t.closest("[data-pfadd]")){ addFromForm(); return true; }
     if(t.closest("#pf-cancel")){ S.pe.form=null; render(true); return true; }
   }
@@ -5021,7 +5416,13 @@ function paintAdvice(speak){
   if(!card||!S.draft) return;
   const id=card.dataset.ex;
   const day=sDays().find(d=>d.id===S.dayId); if(!day) return;
-  const e=day.ex.find(x=>x.id===id); if(!e) return;
+  /* WO-014. An ADDED movement is not in the day's plan - that is what ADD
+     means - and it still owns this card's bottom stack. The lookup falls
+     through to exAnywhere so Rule AD1's line can reach the verdict slot;
+     returning here would leave the slot exactly as vSession left it, which
+     is empty, which is the one thing that slot may never be. */
+  const e=day.ex.find(x=>x.id===id)||exAnywhere(id); if(!e) return;
+  const mvc=cardMovement(e);
   const st=S.draft.entries[id]; if(!st) return;
   const today=PHAT.localDate();
   let dl={active:false};
@@ -5055,7 +5456,8 @@ function paintAdvice(speak){
      before touching either. The badge lives on the ghost row, on the same
      line, so a row becoming EXTRA changes no height and moves no input. */
   let xs={flags:[],count:0,line:""};
-  try{ const r=PHAT.extraSets(st.sets,rx); if(r) xs=r; }catch(err){}
+  /* Rule AD1 / UX §22.9: with no prescription nothing is beyond it. */
+  if(!mvc.added){ try{ const r=PHAT.extraSets(st.sets,rx); if(r) xs=r; }catch(err){} }
   card.querySelectorAll("[data-xtra]").forEach(sp=>{
     const t=xs.flags[+sp.dataset.xtra]?"EXTRA":"";
     if(sp.textContent!==t) sp.textContent=t;
@@ -5121,14 +5523,37 @@ function paintAdvice(speak){
      The ABSENT object is TRUTHY and carries empty t/x/x2, so `if (v)` paints
      an empty advice block and `if (v.x)` collapses the slot. It renders as the
      REFUSAL it is - never as advice with an arrow and a rule name (0.1 #6). */
+  /* WO-014, RULE MV1.3 — THE COMPARISON NEVER CROSSES A SLOT. A prior found
+     under ANOTHER slot may drive the ghost, the seed and the card's unit; it
+     may NOT drive H1's tonnage comparison or its baseline test. So the
+     verdict is handed the slot's OWN prior and nothing else - which on a
+     swapped card is nothing, because the slot's own entries are the movement
+     he replaced and comparing today against them is B-136 itself
+     (`Volume down 21%` for putting the cable row back).
+     GAP, REPORTED, NOT PAPERED OVER: coach §22.4.5 wants H1 to print
+     `Swapped to {new}. Not compared to last session.` on a swapped session.
+     That clause belongs in PHAT.verdict and W4 did not land it, so a swapped
+     card takes H1's ordinary no-prior branch. Writing the sentence here
+     instead would put a second phrasing of one fact in the view. */
+  const ownPrev=(function(){ const p=priorOf(e,mvc); return p.from==="slot"?p.entry:null; })();
   let v=null;
-  try{
-    v=PHAT.verdict({ex:e, sets:st.sets, prev:PHAT.lastFor(S.sessions,id),
-      note:st.note, deload:dl.active===true, unit:au});
-  }catch(err){ v=null; }
+  if(!mvc.added){
+    try{
+      v=PHAT.verdict({ex:e, sets:st.sets, prev:ownPrev,
+        note:st.note, deload:dl.active===true, unit:au});
+    }catch(err){ v=null; }
+  }
   let html="", say="";
-  const vh=verdictHtml(v,dl.active===true,"vslot");
-  if(vh){ html=vh.html; say=vh.say; }
+  const vh=mvc.added?null:verdictHtml(v,dl.active===true,"vslot");
+  /* Rule AD1.2 — every verdict is silent on a movement added mid-session,
+     behind ONE named line in C7a's shape: what is missing, and the one
+     thing that switches it on. It never says "log more", because more
+     logging will never resolve it - only adding it to a plan will. */
+  if(mvc.added){
+    html=`<div class="advice vslot"><p class="kick">No prescription</p><p>${esc(AD1_VERDICT)}</p></div>`;
+    say=AD1_VERDICT;
+  }
+  else if(vh){ html=vh.html; say=vh.say; }
   else if(e.k==="speed"){
     /* There is ONE source for what to say on a speed card and it is
        speedLoad(): `text` for the load, `instruction` for how to move it. Both
@@ -5420,11 +5845,23 @@ document.getElementById("view").addEventListener("click",async e=>{
      came from. Neither writes anything (criterion 1). */
   if(e.target.closest("#tosum")){ goSum(); return; }
   if(e.target.closest("#sumback")){ leaveSum(); return; }
+  /* WO-014 (UX §22.7): *make it permanent*, on the Summary only. */
+  const perm=e.target.closest("[data-perm]");
+  if(perm){ askPermanent(perm.dataset.perm); return; }
   if(e.target.closest("#addset")){ addSet(); return; }
   const rm=e.target.closest("#rmset");
   if(rm){ askRemoveSet(+rm.dataset.k); return; }
-  if(e.target.closest("#undoset")){ if(S.undo&&S.undo.kind==="unit") undoUnit(); else undoRemove(); return; }
+  if(e.target.closest("#undoset")){
+    if(S.undo&&S.undo.kind==="unit") undoUnit();
+    else if(S.undo&&S.undo.kind==="swap") undoSwap();
+    else undoRemove();
+    return;
+  }
   if(e.target.closest("#ldchip")){ openLoadSheet(); return; }
+  /* WO-014 (UX §22.1). Tap 1 of 3. Delegated like everything else - the
+     control is rebuilt on every paint of the card and a per-node listener
+     would leak across the re-render. */
+  if(e.target.closest("#swapbtn")){ openSwap(); return; }
   if(e.target.closest("#backsave")){ backToSave(); return; }
   if(e.target.closest("#v1-add")){ await v1Answer(true); return; }
   if(e.target.closest("#v1-no")){ await v1Answer(false); return; }
@@ -5654,6 +6091,10 @@ document.getElementById("modal").addEventListener("click",e=>{
   /* WO-010: the load sheet's segment, bar rows and one-off bar form. */
   const lb=e.target.closest("[data-ld]");
   if(lb&&sheetState&&sheetState.load&&!sheetState.onDanger){ loadSheetTap(lb); return; }
+  /* WO-014: the swap sheet - a result row, the back arrow, the clear, the
+     put-back row, Replace and Add as well. Taps 2 and 3. */
+  const swb=e.target.closest("[data-sw]");
+  if(swb&&S.swap){ swapSheetTap(swb); return; }
   /* WO-007: a day row in the move sheet (9.9.3). */
   const dr=e.target.closest("[data-sheetday]");
   if(dr&&sheetState&&sheetState.move){ moveSheetTap(dr.dataset.sheetday); return; }
@@ -5678,6 +6119,25 @@ document.getElementById("modal").addEventListener("click",e=>{
     }
     if(sheetState.onDanger) sheetState.onDanger();
   }
+});
+/* WO-014. The swap sheet's search field, delegated from #modal. THE FIELD IS
+   NEVER REBUILT ON A KEYSTROKE: paintSwapList replaces the kicker, the clear
+   control and the list, and touches nothing the caret is in. Rebuilding the
+   whole sheet here would discard the query mid-word, which is B-19's rule
+   one screen over. No debounce on the list itself - librarySearch is a pure
+   pass over 876 rows and the ordering is what he is reading - only on the
+   count announcement, so a screen reader is not shouted at per character. */
+document.getElementById("modal").addEventListener("input",e=>{
+  const inp=e.target.closest("#sw-q"); if(!inp||!S.swap) return;
+  S.swap.q=inp.value;
+  paintSwapList();
+});
+/* Enter in the search field must not submit anything - there is no form and
+   nothing to submit to. It closes the keyboard so the list is visible. */
+document.getElementById("modal").addEventListener("keydown",e=>{
+  if(e.key!=="Enter") return;
+  const inp=e.target.closest("#sw-q"); if(!inp) return;
+  e.preventDefault(); inp.blur();
 });
 /* Escape cancels; Tab is trapped inside the dialog. */
 document.addEventListener("keydown",e=>{
@@ -6098,7 +6558,13 @@ function sheetBars(){
 }
 function openLoadSheet(keep){
   const C=sessionCtx(), e=C.list[S.exIx]; if(!e||!S.draft) return;
-  const id=e.id, prev=PHAT.lastFor(S.sessions,id);
+  /* WO-014 (UX §22.11). The prior comes from Rule MV1, not from a bare
+     two-argument lastFor: on a swapped card `Last time:` must render from
+     the MOVEMENT's prior when the fallback found one and be absent
+     otherwise. It must never print the replaced movement's build - that is
+     the same wrong fact the swapped-card branch exists to stop, one screen
+     over. */
+  const id=e.id, prev=priorOf(e).entry;
   const cm=cardModeFull(id,prev), mode=cm.mode;
   /* WO-012 W4 (spec 21.3): `Use my default · {mode}` renders only when the
      card is NOT on the default level - the chip's second line does not read
@@ -6110,7 +6576,10 @@ function openLoadSheet(keep){
   /* WO-012b: a bar-only record reads `Your default · bar set for this
      exercise` and still needs the row - it is the way back to the default's
      bar - so the row follows the RECORD, not the line's first word. */
-  const onDefault=lvl.indexOf("Your default")===0&&!ovRec(id);
+  /* WO-014: on a swapped card the slot's override is NOT in force, so it
+     cannot be what `Use my default` would return him to - the record's
+     presence is irrelevant there. */
+  const onDefault=lvl.indexOf("Your default")===0&&(cm.swapped||!ovRec(id));
   const showDflt=defaultKnown()&&!onDefault;
   const bars=sheetBars();
   const cur=(mode.bar!==undefined)?{w:mode.bar,u:mode.bu}:null;
@@ -6334,6 +6803,448 @@ function useDefault(id,mode){
 function backToSave(){
   S.sum=true; render(true); focusBlocked();
 }
+
+/* ============================================================ WO-014 W5:
+   THE ON-THE-SPOT SWAP (UX §22, coach addendum §22).
+
+   The scene, in his words: the machine is occupied, someone is waiting for
+   the station he is standing at, one thumb, chalky hands, a rest clock
+   running. THREE TAPS from that to the replacement on screen with an empty
+   first set row - `Swap`, a result row, `Replace`. `Add as well` is the same
+   three, on the same third tap. Typing is possible and is never required,
+   which is the whole reason Rule SW-ORDER exists: the ranked list, not the
+   keyboard, is what makes this fast, and auto-focusing the field would put
+   the keyboard over the list that does the work.
+
+   NOTHING HERE WRITES TO phat:v1:log AND NOTHING HERE WRITES TO prefs. The
+   draft is the only store any of it touches, through the debounce it already
+   has. Every commit is one Undo away twice over: the toast for the immediate
+   reach, and - because the toast fades - a persistent Undo in the card's
+   bottom stack for the rest of the session (C-12 rule 5's shape, and the
+   only way back on a slot that declares no movement, where `Put {original}
+   back` has no movement id to put back). */
+const swExOf=id=>{ const C=sessionCtx(); return C.list.find(x=>x.id===id)||exAnywhere(id); };
+/* Rows holding a typed weight or rep - the same test PHAT.swapDraftEntry
+   refuses over, so the sheet can never offer a Replace that the engine would
+   then reject. The contract is safe by construction, not by the view
+   remembering (UX §22.5). */
+function swTyped(id){
+  const en=S.draft&&S.draft.entries[id];
+  if(!en||!Array.isArray(en.sets)) return 0;
+  return en.sets.filter(s=>!blankSet(s)).length;
+}
+const swSentence=(nm,n,tail)=>nm+" holds "+plural(n,"set")+". "+
+  (n===1?"It stays where it is":"They stay where they are")+", so "+tail+".";
+function swRowOf(mv){
+  if(!mv||!S.lib.index) return null;
+  try{ return PHAT.libraryRow(S.lib.index,mv); }catch(err){ return null; }
+}
+const swCase=s=>{ const t=String(s==null?"":s).trim(); return t?t.charAt(0).toUpperCase()+t.slice(1):""; };
+/* `{Equipment} · {primary muscle}`. Rule I3's refusal shape applies to the
+   WORDS as well as to the implement: upstream `null` means IT DID NOT SAY,
+   so the segment is absent rather than filled with a guess. */
+function swMeta(r){
+  const a=swCase(r&&r.eq), b=(r&&r.pm&&r.pm[0])?String(r.pm[0]):"";
+  return (a&&b)?a+" · "+b:(a||b||"");
+}
+function swMetaName(r){
+  const bits=[r.n];
+  if(r.eq) bits.push(swCase(r.eq));
+  if(r.pm&&r.pm[0]) bits.push(String(r.pm[0]));
+  return bits.join(", ");
+}
+/* Rule SW-ORDER, run by logic.js. The view hands it the card's CURRENT
+   movement, so on a swapped card the list is ranked against what he is
+   doing now and that movement is the one excluded - replacing a movement
+   with itself is a no-op and its row is the one a tired thumb mis-taps. */
+function swSearch(){
+  const sw=S.swap; if(!sw||!S.lib.index) return null;
+  const base={sessions:S.sessions, plan:allPlans(), todayStr:PHAT.localDate()};
+  /* The Plan Editor reuses this sheet (UX §22.2) and has no slot to rank
+     against, so it takes the name-ascending order and says so. */
+  if(sw.mode==="form"){
+    try{ return PHAT.librarySearch(S.lib.index,sw.q||"",base); }catch(err){ return null; }
+  }
+  const e=swExOf(sw.exId), mvc=cardMovement(e);
+  try{
+    return PHAT.librarySearch(S.lib.index,sw.q||"",
+      Object.assign({slot:e, mv:mvc.mv||undefined},base));
+  }catch(err){ return null; }
+}
+function swListHtml(res){
+  if(!res||!res.ok||!res.rows.length) return "";
+  return res.rows.map(r=>`<button class="mvrow swrow" data-sw="pick" data-mv="${esc(r.mv)}"
+    aria-label="${esc(swMetaName(r))}"><span class="nm">${esc(r.n)}</span>`+
+    (swMeta(r)?`<span class="sub">${esc(swMeta(r))}</span>`:"")+`</button>`).join("");
+}
+/* The list is NOT a live region: re-ordering 40 names through one on every
+   keystroke is a screen reader shouting into his ear. The COUNT is
+   announced instead, debounced, through the one live region the app has. */
+/* The list kicker. It tells him WHY the order is what it is, which is the
+   only defence against "why is this list not alphabetical". */
+function swKickText(sw,q){
+  if(q) return "Matches";
+  if(sw.mode==="form") return "All movements";
+  return "Closest to "+cardMovement(swExOf(sw.exId)).name;
+}
+/* THE HEAD OF THE LIST - exactly one of a kicker and a notice, never both,
+   and it reads librarySearch's OWN `basis` rather than guessing. UX §22.3.1
+   forbids a notice that says "by name" over a list ordered by anything else;
+   the same objection applies in reverse, and it is why `CLOSEST TO RACK
+   CHIN` is not printed over an unmapped slot's list. Rack chin ships with no
+   `mv` on purpose (coach §22.4.3 - mapping it would seed a load off an
+   inverted row), so its list can only be ranked on the implement, and this
+   is where that is said out loud instead of over-claimed. */
+function swHead(res,sw,q){
+  if(!q&&res&&sw.mode!=="form"){
+    if(res.basis===null) return {note:"Ordered by name. This slot does not name a movement.",kick:""};
+    if(res.basis==="equipment") return {note:"Ordered by equipment. This slot does not name a movement.",kick:""};
+  }
+  return {note:"",kick:swKickText(sw,q)};
+}
+let swSayTimer=null;
+function swSayCount(res){
+  clearTimeout(swSayTimer);
+  swSayTimer=setTimeout(()=>{
+    if(!S.swap||S.swap.pick) return;
+    announce((res&&res.ok&&res.rows.length)?plural(res.rows.length,"movement")+"."
+                                           :"No movement matches.");
+  },400);
+}
+/* Repaint ONLY the parts of the pick state a keystroke changes - the kicker,
+   the clear control and the list. NEVER the whole sheet: the search field is
+   a text input and rebuilding it under the caret is B-19 one screen over.
+   The clear control's 44 px slot is always in the DOM and only its BUTTON
+   comes and goes, so the field never resizes while he is typing. */
+function paintSwapList(){
+  const sw=S.swap; if(!sw||sw.pick) return;
+  const list=document.getElementById("sw-list"); if(!list) return;
+  const q=String(sw.q||"").trim();
+  const res=swSearch();
+  /* Both head nodes are always in the DOM and only their text and `hidden`
+     change, so switching between the kicker and the notice on a keystroke
+     cannot move the field or the list. */
+  const hd=swHead(res,sw,q);
+  const kick=document.getElementById("sw-kick");
+  if(kick){ kick.textContent=hd.kick; kick.hidden=!hd.kick; }
+  const note=document.getElementById("sw-note");
+  if(note){ note.textContent=hd.note; note.hidden=!hd.note; }
+  const clr=document.getElementById("sw-clear");
+  if(clr) clr.innerHTML=q?`<button class="swclear" data-sw="clear" aria-label="Clear the search">&times;</button>`:"";
+  const rows=swListHtml(res);
+  list.innerHTML=rows||`<p class="det swempty">${esc('No movement matches "'+q+'".')}</p>
+    <button class="ghostbtn swclrbtn" data-sw="clear">Clear the search</button>`;
+  list.classList.toggle("mvlist",!!rows);
+  swSayCount(res);
+}
+/* The sheet. Two states, one #modal write each; `keep` is for a repaint that
+   must not steal focus (the library landing while it is open). */
+function openSwapSheet(keep){
+  const sw=S.swap; if(!sw) return;
+  /* THE PLAN EDITOR REUSES THIS SHEET (UX §22.2), with exactly two
+     differences and they are its own: the heading and body name the DAY,
+     and its commit is addExercise's form rather than a draft change. Do not
+     build a second sheet. */
+  const form=sw.mode==="form";
+  if(!form&&!S.draft) return;
+  const e=form?null:swExOf(sw.exId), mvc=form?null:cardMovement(e);
+  const typed=form?0:swTyped(sw.exId);
+  const m=document.getElementById("modal");
+  let body="";
+
+  if(form&&sw.pick){ swFormPick(sw.pick); return; }
+  if(sw.pick){
+    /* ---- CONFIRM. One tap on a result row swaps the sheet IN PLACE: it
+       does not close, does not commit and does not touch the draft. This
+       state exists to catch a mis-tap, which is why the thing he is about
+       to do is named at heading weight. */
+    const r=swRowOf(sw.pick);
+    if(!r){ sw.pick=null; openSwapSheet(keep); return; }
+    const cons=typed
+      ? esc(swSentence(mvc.name,typed,"this one is added"))
+      : esc("Replaces "+mvc.name+" for today.")+`</p><p class="det">`+esc("The plan does not change.");
+    body=`<button class="swback" data-sw="back" aria-label="Back to the list">&lsaquo;</button>
+      <h2 id="dr-confirm-title" tabindex="-1">${esc(r.n)}</h2>
+      ${swMeta(r)?`<p class="det">${esc(swMeta(r))}</p>`:""}
+      <p class="det">${cons}</p>
+      <div id="dr-sheet-err"></div>
+      <div class="btns">
+        ${typed?"":`<button class="primary" data-sw="replace">Replace</button>`}
+        <button class="${typed?"primary":"ghostbtn"}" data-sw="add">Add as well</button>
+        <button class="ghostbtn mvno" data-sheet="safe">Not now</button></div>`;
+  }else{
+    /* ---- PICK. Opens already holding a ranked list. No keyboard, no query
+       typed: that is tap 1 of 3 done and nothing owed. */
+    const putBack=!form&&mvc.swapped&&mvc.slotMv&&!typed;
+    let mid="";
+    if(S.lib.st==="loading"){
+      mid=`<p class="det">Loading the exercise list.</p>`;
+    }else if(S.lib.st!=="ready"||!S.lib.index){
+      /* UX §22.10. The refusal shape WITHOUT the `!` marker - nothing he
+         typed is at risk here - naming the fix and not blaming him. The
+         put-back row above is still offered: it needs no library. */
+      mid=`<div class="refuse swfail"><p>Could not open the exercise list.</p>
+        <p>It is not on this phone yet. Open the app once with a connection and it will be here.</p></div>`;
+    }else{
+      const res=swSearch();
+      const q=String(sw.q||"").trim();
+      const rows=swListHtml(res);
+      mid=`<label class="lbl ldlbl" for="sw-q">Search</label>
+        <div class="swfield"><input type="search" id="sw-q" class="bkin swq"
+          placeholder="Search movements" autocomplete="off" autocapitalize="none"
+          spellcheck="false" aria-controls="sw-list" value="${esc(sw.q||"")}">
+          <span id="sw-clear" class="swclrslot">${q?`<button class="swclear" data-sw="clear" aria-label="Clear the search">&times;</button>`:""}</span></div>`;
+      /* UX §22.3.1's unmapped slot: the order IS by name and the sheet says
+         so, in place of the kicker. A notice that says "by name" over a list
+         ordered by anything else is the silent wrong order that rule exists
+         to forbid, so this reads librarySearch's own `order`, not a guess. */
+      const hd=swHead(res,sw,q);
+      mid+=`<p class="det swnote" id="sw-note"${hd.note?"":" hidden"}>${esc(hd.note)}</p>`+
+           `<p class="lbl swkick" id="sw-kick"${hd.kick?"":" hidden"}>${esc(hd.kick)}</p>`;
+      mid+=`<div id="sw-list" class="${rows?"mvlist ":""}swlist">${rows
+        ||`<p class="det swempty">${esc('No movement matches "'+q+'".')}</p>
+           <button class="ghostbtn swclrbtn" data-sw="clear">Clear the search</button>`}</div>`;
+    }
+    body=`<h2 id="dr-confirm-title" tabindex="-1">${esc(form
+        ? "Add to "+(sw.dayName||"this day")
+        : "Swap "+mvc.name)}</h2>
+      <p class="det">${esc(form
+        ? "Pick a movement. You set the sets, reps and type after this."
+        : (typed?swSentence(mvc.name,typed,"the movement you pick is added")
+                :"Today only. The plan does not change."))}</p>
+      ${putBack?`<button class="ghostbtn swputback" data-sw="putback">${esc("Put "+mvc.was+" back")}</button>`:""}
+      ${mid}
+      <div id="dr-sheet-err"></div>
+      <div class="btns"><button class="ghostbtn mvno" data-sheet="safe">Not now</button></div>`;
+  }
+
+  m.innerHTML=`<div class="scrim" data-sheet="cancel"></div>
+    <section class="sheet swsheet" role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title">
+      ${body}</section>`;
+  /* The heading is focused on open AND AGAIN on the change to confirm - the
+     heading is the name of what he picked, so re-focusing it is the
+     confirmation read aloud. A repaint that is not his tap (the library
+     landing) must not steal the caret out of the search field. */
+  if(!keep){ const head=m.querySelector("#dr-confirm-title"); if(head) head.focus(); }
+}
+/* Focus the first weight `−` on the card. The next thing he does after a
+   swap is enter a number, so that is where his thumb is sent. */
+function swFocusFirst(){
+  const b=document.querySelector('#excard .setrow[data-i="0"] button[data-act="-"][data-f="w"]');
+  if(b) b.focus({preventScroll:true});
+}
+/* Close WITHOUT handing focus back to `Swap`: on a commit the card is about
+   to be re-rendered and the thumb belongs on the first stepper. */
+function swClose(){
+  sheetState=null; S.swap=null;
+  const m=document.getElementById("modal"); if(m) m.innerHTML="";
+}
+/* THE SNAPSHOT AN UNDO PUTS BACK. The pure ops never mutate the draft they
+   are handed - they return a new entries map - so holding the OLD map is a
+   true byte-for-byte snapshot of every card, its sets, its `ld` and its
+   note. Numbers typed AFTER the swap into other cards are in their own entry
+   objects and are untouched by the restore, which is right: Undo undoes the
+   swap, never his typing. */
+function swSnap(){
+  const o={}; Object.keys(S.draft.entries).forEach(k=>{ o[k]=S.draft.entries[k]; });
+  return {entries:o, exIx:S.exIx};
+}
+function swRestore(snap,msg){
+  if(!S.draft||!snap) return;
+  S.draft.entries=snap.entries; S.exIx=snap.exIx;
+  S.undo=null; hideToast();
+  flushDraft(); render();
+  toast(msg);
+}
+/* The persistent way back, in the card's bottom stack, for the rest of the
+   session. It is the ONLY way back on a slot that declares no movement -
+   `Put {original} back` needs a movement id and an unmapped slot has none. */
+function undoSwap(){
+  const u=S.undo; if(!u||u.kind!=="swap") return;
+  swRestore(u.snap,u.back);
+}
+/* Replace. Offered ONLY on a card with no typed weight and no typed rep -
+   the no-loss rule, and it is absolute. Two sets he already did do not get
+   carried under a different movement's name (that is B-131 manufactured by
+   the app) and they do not get discarded (that is a P0), so the sheet never
+   offers the choice and swapDraftEntry's refusal is never reached. */
+function swReplace(){
+  const sw=S.swap; if(!sw||!S.draft) return;
+  const r=swRowOf(sw.pick); if(!r) return;
+  const e=swExOf(sw.exId), was=cardMovement(e).name;
+  const snap=swSnap();
+  const out=PHAT.swapDraftEntry(S.draft,sw.exId,r.mv,r.n);
+  if(!out.ok){ sheetErr("Could not swap. Nothing changed."); return; }
+  S.draft.entries=out.draft.entries;
+  swClose(); flushDraft(); render(); swFocusFirst();
+  S.undo={kind:"swap", exId:sw.exId, snap:snap, back:was+" is back.", label:"put "+was+" back"};
+  paintUndo(sw.exId);
+  toastUndo(r.n+" replaces "+was+".",()=>swRestore(snap,was+" is back."));
+}
+/* Put back. The likeliest tap on a swapped card, so it is the highest thing
+   in the sheet. It is a swap to the slot's own movement, so buildSession
+   derives no `sw` and the card is the slot's card again. */
+function swPutBack(){
+  const sw=S.swap; if(!sw||!S.draft) return;
+  const e=swExOf(sw.exId), mvc=cardMovement(e);
+  if(!mvc.slotMv) return;
+  const snap=swSnap(), back=mvc.was;
+  const out=PHAT.swapDraftEntry(S.draft,sw.exId,mvc.slotMv,e.n);
+  if(!out.ok){ sheetErr("Could not swap. Nothing changed."); return; }
+  S.draft.entries=out.draft.entries;
+  swClose(); flushDraft(); render(); swFocusFirst();
+  S.undo=null;
+  toast(back+" is back."); announce(back+" is back.");
+}
+/* Add as well. A movement the day's plan does not carry: it has no slot,
+   therefore no prescription, and Rule AD1 is the whole of what the screen
+   may say about it.
+
+   IT LANDS AT THE END OF THE SESSION, and the toast says so. UX §22.5 named
+   this fallback and required the toast to match the behaviour: sessionCtx
+   builds the list as the day's plan order FIRST and the draft's plan-less
+   entries appended after it, so an entry cannot be positioned between two
+   plan slots without changing that rule - which is D8's rule and is not this
+   order's to move. `afterExId` is deliberately NOT passed, so the draft's own
+   key order and the screen's order say the same thing. */
+function swAdd(){
+  const sw=S.swap; if(!sw||!S.draft) return;
+  const r=swRowOf(sw.pick); if(!r) return;
+  const snap=swSnap();
+  const out=PHAT.addDraftEntry(S.draft,r.mv,r.n,{plan:sp(),plans:allPlans()});
+  if(!out.ok){ sheetErr("Could not add. Nothing changed."); return; }
+  S.draft.entries=out.draft.entries;
+  swClose(); flushDraft();
+  /* Navigate to it: "on screen with an empty first set row" is what the tap
+     budget is measured against. The list is rebuilt first so the new card
+     exists to navigate to. */
+  const C=sessionCtx(); const ix=C.list.findIndex(x=>x.id===out.exId);
+  if(ix>=0) S.exIx=ix;
+  render(); swFocusFirst();
+  S.undo={kind:"swap", exId:out.exId, snap:snap, back:r.n+" removed.", label:"remove "+r.n};
+  paintUndo(out.exId);
+  toastUndo(r.n+" added at the end of the session.",()=>swRestore(snap,r.n+" removed."));
+}
+function swapSheetTap(b){
+  const a=b.dataset.sw, sw=S.swap; if(!sw) return;
+  if(a==="pick"){ sw.pick=b.dataset.mv; openSwapSheet(); return; }
+  if(a==="back"){ sw.pick=null; openSwapSheet(); return; }
+  if(a==="clear"){
+    sw.q="";
+    const inp=document.getElementById("sw-q");
+    if(inp){ inp.value=""; paintSwapList(); inp.focus(); }
+    else openSwapSheet(true);
+    return;
+  }
+  if(a==="putback"){ swPutBack(); return; }
+  if(a==="replace"){ swReplace(); return; }
+  if(a==="add"){ swAdd(); return; }
+}
+/* ---- *MAKE IT PERMANENT* (UX §22.7, coach addendum §22.4.6). The one
+   control in §22 that changes something outside this session: it re-points
+   the SLOT at the movement he swapped to, from the next session on.
+
+   THE SLOT ID DOES NOT MOVE (WO-007's ruling; setExerciseMovement forbids
+   it), so the slot keeps its position, its s/lo/hi/k and its whole history.
+   What changes is which of that history is its PRIOR - Rule MV1.1 now
+   returns the new movement's entries and stops returning the old one's.
+   Nothing is deleted, nothing is re-keyed, everything stays on the chart.
+   The confirmation carries all three of those facts because next session's
+   card will look different and he must not be surprised by it - the coach is
+   `[Certain]` on the three, whatever the wording. */
+function askPermanent(exId){
+  const e=exAnywhere(exId), mvc=cardMovement(e);
+  if(!mvc.swapped||!mvc.mv) return;
+  const plan=sp(); if(plan.readOnly===true) return;
+  const day=(plan.days||[]).find(d=>Array.isArray(d.ex)&&d.ex.some(x=>x&&x.id===exId));
+  askSheet({
+    headline:"Put "+mvc.name+" in the plan?",
+    body:"It replaces "+mvc.was+" on "+(day?day.name:"this day")+" from your next session. "+
+         "Your "+mvc.was+" sets stay where they are. They stop being this slot's last numbers. "+
+         "The next verdict reads your "+mvc.name+" sets.",
+    danger:"Change the plan", safe:"Not now", back:null,
+    onDanger:()=>doPermanent(exId,mvc,day?day.name:null)});
+}
+async function doPermanent(exId,mvc,dayName){
+  const plan=sp();
+  let r=null;
+  try{ r=PHAT.setExerciseMovement(plan,exId,mvc.mv,mvc.name); }catch(err){ r=null; }
+  if(!r||!r.ok){ sheetErr("Could not change the plan. Nothing changed."); return; }
+  const back=plan;                       /* the document as it stood, for the undo */
+  const ok=await writePlanDoc(r.plan);
+  if(!ok){ sheetErr("Could not change the plan. Nothing changed."); return; }
+  closeSheet(); render(true);
+  const say=(dayName||"The plan")+" now has "+mvc.name+".";
+  toastUndo(say,async()=>{
+    const okb=await writePlanDoc(back);
+    render(true);
+    toast(okb?((dayName||"The plan")+" has "+mvc.was+" again.")
+             :"Could not change the plan. Nothing changed.");
+  });
+}
+/* One plan-document write, used by the offer and by its undo. It is
+   downstream of nothing: the session's sets are in the draft and are not
+   touched here, so a refusal costs the plan change and nothing else. */
+async function writePlanDoc(doc){
+  if(S.blockWrites[PLANS]) return false;
+  if(S.plansMeta.demo===true) return false;
+  let v=null; try{ v=PHAT.validatePlan(doc); }catch(err){ v=null; }
+  if(!v||!v.ok) return false;
+  let up=null; try{ up=PHAT.planStoreUpsert(S.plans,doc); }catch(err){ up=null; }
+  if(!up||!up.ok) return false;
+  const prev=S.plans;
+  S.plans={plans:up.store.plans,activePlanId:up.store.activePlanId};
+  const e0=S.err;
+  /* WO-013 W2: patch {plans} - union by planId with the disk, so a plan
+     another tab saved since this one booted is beside this one, not under
+     it. */
+  const ok=await save(PLANS,{plans:up.store.plans});
+  if(!ok){ S.plans=prev; S.err=e0; return false; }
+  /* D9: the OPEN SESSION runs on its own plan document, so the session's
+     copy is re-pointed at the new one by id. Without this the card would
+     still read the slot's old movement for the rest of the session. */
+  if(S.sessPlan&&S.sessPlan.planId===doc.planId) S.sessPlan=storedPlan(doc.planId)||doc;
+  return true;
+}
+/* ---- the Plan Editor's picker. Same sheet, and it commits on the row tap
+   rather than through a confirm state: there is nothing destructive to catch
+   here and the picked name lands in a Name field he is looking at and can
+   edit. WO-006 B2 STANDS - `Add exercise` still refuses until `k` is
+   answered, and Rule K3.1 forbids deriving it from the library, so nothing
+   here touches it. */
+function swFormPick(mv){
+  const f=S.pe&&S.pe.form, r=swRowOf(mv);
+  if(!f||!r){ closeSheet(); return; }
+  f.n=r.n; f.mv=r.mv; f.mvN=r.n; f.err=""; f.warn=null;
+  /* Rule I3. The implement is DERIVED from upstream `equipment` through the
+     table, and a value the table REFUSES leaves the field empty so B2's
+     existing refusal asks him. Never a nearest, never "machine": 199 of the
+     876 rows have no honest mapping and a wrong implement is a wrong fact
+     printed next to a right load, at library volume. */
+  let im=null; try{ im=PHAT.libraryImplement(r.eq); }catch(err){ im=null; }
+  if(im) f.implement=im;
+  closeSheet(); render(true);
+  const el=document.getElementById("pf-n"); if(el) el.focus();
+}
+function openSwapForm(){
+  const f=S.pe&&S.pe.form; if(!f) return;
+  if(S.lib.st==="off"||S.lib.st==="failed") loadLibrary();
+  const w=workOf();
+  const day=w&&(w.days||[]).find(d=>d&&d.id===f.dayId);
+  S.swap={mode:"form", q:"", pick:null, dayName:day?day.name:null};
+  sheetState={swap:true, back:"pf-lib", armAt:0};
+  openSwapSheet();
+}
+function openSwap(){
+  const C=sessionCtx(), e=C.list[S.exIx]; if(!e||!S.draft) return;
+  /* A failed fetch is allowed to retry here: the one thing that fixes it is
+     opening the app with a connection, which is exactly what the refusal
+     copy asks for, and the retry costs one request nothing is waiting on. */
+  if(S.lib.st==="off"||S.lib.st==="failed") loadLibrary();
+  S.swap={exId:e.id, q:"", pick:null};
+  sheetState={swap:true, back:"swapbtn", armAt:0};
+  openSwapSheet();
+}
 /* Rule V1's answer. Add it adds ONE accessory and stamps the day; Not yet
    stamps the 7-day cooldown and nothing else. IGNORING IT STAMPS NOTHING and
    it is re-offered next session (spec 4.11, train 0.1 #11). Both replace the
@@ -6498,6 +7409,17 @@ async function saveDraft(draft,dayId){
         }),
         note:e.note==null?"":String(e.note)
       };
+      /* WO-014 W5. THE SWAP SURVIVES THE RELOAD. `mv`, `sw` and `n` ride the
+         draft verbatim through the ONE definition of "these three survive"
+         (PHAT.entryMeta), the same function hydrateDraft reads them back
+         with. This line and its twin in hydrateDraft are B-112's exact
+         failure mode one level up: without them the object above rebuilds
+         {sets, note} from scratch and a swapped card comes back as the slot
+         it was swapped away from, with his numbers attached to the wrong
+         movement. Invalid values are simply not carried - entryMeta drops
+         them and PHAT.validateDraft refuses the SAVE over them, so nothing
+         is coerced and nothing rides silently. */
+      Object.assign(entries[k],PHAT.entryMeta(e));
       if(e.mode&&typeof e.mode==="object") entries[k].mode=modeCopy(e.mode);
     });
     /* exIx rides the draft. Coming back on exercise 1 of 9 after a reload has
@@ -6695,6 +7617,11 @@ function askSheet(cfg){
 function closeSheet(){
   const back=sheetState&&sheetState.back;
   sheetState=null;
+  /* WO-014. The swap sheet's own state - the query, the picked row - dies
+     with the sheet. Nothing it held was ever written anywhere, so backing
+     out preserves everything: no draft write, no prefs write, no log write
+     (UX §22.15). */
+  S.swap=null; clearTimeout(swSayTimer);
   document.getElementById("modal").innerHTML="";
   if(back){ const el=document.getElementById(back); if(el) el.focus(); }
 }
@@ -6763,6 +7690,11 @@ function hydrateDraft(stored){
         return o;
       }),
       note:se.note==null?"":String(se.note)};
+    /* WO-014 W5, the read-side half. Same function as saveDraft's, so the
+       round trip is one definition: a card he swapped comes back swapped,
+       with the movement he picked, its name and its `sw` mark, and his sets
+       still attached to it (D3 / D4). */
+    Object.assign(entries[id],PHAT.entryMeta(se));
     if(se.mode&&typeof se.mode==="object") entries[id].mode=modeCopy(se.mode);
   };
   Object.keys(src).forEach(id=>{ if(src[id]&&typeof src[id]==="object") take(id,src[id],d.ex.find(e=>e.id===id)); });
@@ -7354,6 +8286,58 @@ const signedIn=()=>syncOn()&&!!S.sync.user;
    inside sync.js is the same URL every time. Honest copy instead: reopen
    the app. A 20 s timer turns a hung fetch into that same state, so
    "loading" cannot be the last word on a connection that never answers. */
+/* ============================================================ WO-014 W5:
+   THE EXERCISE LIBRARY, FETCHED ONCE, OFFLINE-SAFE.
+
+   assets/exercises.json is in sw.js's REQUIRED shell list, so on a phone
+   with a primed cache this resolves with the radio off and the search is
+   identical online and offline (WO order §3.2, W3). The fetch is fired
+   AFTER the first render, the way sync.js is: nothing on the session card
+   waits for it, the Swap control is at its fixed height from first paint,
+   and a failure can therefore never move a set row or block a number.
+
+   NO PROTOCOL GATE, deliberately, unlike loadSync: a file:// open has no
+   backup to offer but it still has a library worth trying, and when fetch
+   refuses there the named failure state (UX 22.10) is the honest answer
+   rather than a silent dead control.
+
+   Re-entrant: "loading" and "ready" return immediately; "failed" is allowed
+   to retry, because the one thing that fixes it - opening the app once with
+   a connection - is exactly what the refusal copy asks him to do, and the
+   retry costs one request he is not waiting on. */
+function libRepaint(){
+  /* The sheet is the ONLY surface this touches, and only while it is open.
+     Never render(): this can resolve while he is typing a set (B-19). */
+  if(S.swap&&document.querySelector("#modal .swsheet")) openSwapSheet(true);
+}
+function loadLibrary(){
+  if(S.lib.st==="loading"||S.lib.st==="ready") return;
+  if(typeof fetch!=="function"){ S.lib.st="failed"; S.lib.reason="missing"; libRepaint(); return; }
+  S.lib.st="loading"; S.lib.reason=null; libRepaint();
+  /* NO CACHE MODE. The service worker precaches this file and intercepts the
+     request, so cache-first offline behaviour is sw.js's and belongs there -
+     a `force-cache` here would put a SECOND cache between him and a
+     re-generated library, and a stale movement list that no VERSION bump can
+     reach is the v2-v5 lesson in a smaller box. */
+  fetch("./assets/exercises.json")
+    .then(r=>r.ok?r.text():Promise.reject(new Error("HTTP "+r.status)))
+    .then(txt=>{
+      /* PHAT.libraryLoad is the validator and it REFUSES BY NAME - missing,
+         parse, shape, empty. A half-read index is never searched, so a
+         refusal here is a failure state, not a smaller library. */
+      let r=null; try{ r=PHAT.libraryLoad(txt); }catch(err){ r=null; }
+      if(r&&r.ok){ S.lib.st="ready"; S.lib.index=r.index; S.lib.reason=null;
+        if(r.skipped) console.info("[phat] library: "+r.index.count+" movements, "+r.skipped+" rows skipped",r.problems); }
+      else { S.lib.st="failed"; S.lib.index=null; S.lib.reason=(r&&r.reason)||"shape";
+        console.warn("[phat] library refused:",S.lib.reason,r&&r.problems); }
+      libRepaint();
+    })
+    .catch(err=>{
+      S.lib.st="failed"; S.lib.index=null; S.lib.reason="missing";
+      console.info("[phat] exercise library not available (offline and never cached, or file://). Logging is unaffected.",err&&err.message);
+      libRepaint();
+    });
+}
 function loadSync(){
   if(S.sync.mod!=="off") return;
   if(location.protocol!=="https:"&&location.protocol!=="http:") return;   // file:// - never
@@ -8339,7 +9323,28 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   if(pp.note) console.info("[phat] profile pass:",pp.note.msg);
   adoptLog(pp.log); adoptBw(m.bw);
   adoptPlans(rawPlans===undefined?null:(m.plans&&typeof m.plans==="object"?m.plans:rawPlans));
-  if(m.plansChanged) await save(PLANS,plansPayload());
+  /* WO-014 W5, criterion D7. THE KEEP COMES BEFORE THE WRITE. `plansMv` is
+     true exactly when the schema-7 pass stamped `mv` into a plan store that
+     ALREADY HELD PLANS - the one moment this order replaces a document he
+     built rather than creating one. A verbatim copy of the bytes that were
+     on disk goes to phat:v1:recover:plans:<ms> first, following
+     preserveUnreadable's shape (same key grammar, same {key, savedAt, raw}
+     record), so diag.html lists it beside the unreadable-store keeps.
+     A FAILED KEEP DOES NOT BLOCK THE MIGRATION: `mv` is additive and
+     ignorable (D6), the pass moves zero bytes in the log store (D1), and
+     refusing to boot a plan store over a copy that could not be made would
+     cost him the session for a field nothing yet reads. It is logged loudly
+     instead. */
+  if(m.plansChanged){
+    if(m.plansMv&&rpl.raw!=null){
+      const bk=PLANS.replace("phat:v1:","phat:v1:recover:")+":"+Date.now();
+      const kept=await save(bk,{key:PLANS,savedAt:Date.now(),raw:rpl.raw});
+      console[kept?"info":"warn"]("[phat] schema 7 plan pass:",
+        (m.plansMvStamped||[]).length+" slots stamped;",
+        kept?("copy kept at "+bk):"copy FAILED, migration proceeding");
+    }
+    await save(PLANS,plansPayload());
+  }
   /* The working copies. A store that will not parse is treated as none and
      gets no notice: the stored plan is untouched either way, and a third
      claimant on the notice slot would push a real one off it (B-40). */
@@ -8405,6 +9410,9 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      shell for the one bar of signal. loadSync() is a no-op on file:// and
      when navigator.onLine is false. */
   loadSync();
+  /* WO-014 W5, after the first paint for the same reason. The library is
+     what the Swap sheet searches; nothing on the card waits for it. */
+  loadLibrary();
 })();
 })();
 </script>
