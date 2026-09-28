@@ -19,6 +19,13 @@ const PHOTO_PATHS = MANIFEST.files.map(f => "/" + f.path);
 const MAP = JSON.parse(fs.readFileSync(path.join(ROOT, "assets/ex/map.json"), "utf8"));
 const MAPPED = Object.keys(MAP).filter(k => k !== "_");
 
+// WO-014 W3: the exercise library. It is on sw.js's REQUIRED list, not
+// OPTIONAL, because the gym has no signal: a swap he cannot search is a swap
+// he cannot make. Read from disk here so the assertions below are against the
+// real count, never a number typed into this file.
+const LIB_PATH = "/assets/exercises.json";
+const LIB = JSON.parse(fs.readFileSync(path.join(ROOT, "assets/exercises.json"), "utf8"));
+
 // WO-011 P1 (2026-09-13): the origin can change its mind between two
 // navigations. OVERRIDE swaps the bytes served for a path (the "deploy"), HITS
 // counts what the worker actually fetched. Both exist for section 9 - the test
@@ -79,10 +86,12 @@ const hasStamp = (cached[shellCache] || []).includes(STAMP);
 const held = new Set((cached[shellCache] || []).filter(p => p !== STAMP));
 const photosHeld = PHOTO_PATHS.filter(p => held.has(p));
 const photosMissing = PHOTO_PATHS.filter(p => !held.has(p));
+const libPrecached = held.has(LIB_PATH);
 say("2. caches: " + JSON.stringify(cacheNames) + " - " + shellCache + " holds " + held.size + " files" +
     (hasStamp ? " + the refresh stamp" : " and NO refresh stamp"));
 say("   photos precached: " + photosHeld.length + "/" + PHOTO_PATHS.length +
     (photosMissing.length ? " MISSING: " + photosMissing.join(" ") : ""));
+say("   library precached (" + LIB_PATH + ", " + LIB.count + " movements): " + libPrecached);
 
 // dismiss onboarding so the day list is reachable
 await page.evaluate(() => localStorage.setItem("phat:v1:prefs", JSON.stringify({ onboarded: true, restAuto: true })));
@@ -205,6 +214,45 @@ say("7b. photos in slots offline: " + photo.loaded + " loaded of " + photo.imgs 
 const photosOk = photosMissing.length === 0 && decode.length === 0 && photo.broken.length === 0 &&
                  photo.noBox.length === 0 && photo.imgs === photo.expected && photo.loaded === photo.expected && photo.expected > 0;
 
+// 7c. THE LIBRARY, ON A COLD OFFLINE LOAD (WO-014 W3). The scenario this
+// exists for: the machine he wants is taken, he is in a basement with no
+// signal, and he taps to search for a replacement. If this fetch fails he has
+// no swap. The network is OFF at this point, so a 200 here can only have come
+// out of the service worker's cache - that IS the proof, and no HITS counter
+// is needed to establish it.
+// It asserts four things, in the order they would fail:
+//   - the file is fetchable and is JSON (a cached 404 page would be neither);
+//   - its own header `count` matches the rows it actually holds, so a
+//     truncated cache entry is caught here and not by a search that quietly
+//     stops at the letter M;
+//   - the provenance header survived, because the pinned SHA is what makes a
+//     movement id stable (WO-014 W4.2);
+//   - a SEARCH RETURNS RESULTS. The acceptance criterion is not "the bytes are
+//     present", it is that he can find something. "row" is the real query from
+//     the work order's own example - the seated cable row is taken.
+await page.goto(ORIGIN + "/index.html", { waitUntil: "load" });
+await page.waitForTimeout(800);
+const lib = await page.evaluate(async () => {
+  try {
+    const res = await fetch("assets/exercises.json");
+    if (!res.ok) return { err: "HTTP " + res.status };
+    const j = await res.json();
+    if (!j || !Array.isArray(j.exercises)) return { err: "no exercises array" };
+    const q = "row";
+    const hits = j.exercises.filter(r => String(r.n || "").toLowerCase().includes(q));
+    const swappable = hits.filter(r => r.eq === "machine" || r.eq === "cable");
+    return { count: j.count, rows: j.exercises.length, sha: j.sha,
+             header: typeof j._ === "string" && j._.indexOf("GENERATED") === 0,
+             hits: hits.length, swappable: swappable.length,
+             sample: swappable.slice(0, 3).map(r => r.n + " (" + r.eq + ")") };
+  } catch (e) { return { err: String((e && e.message) || e) }; }
+});
+const libOk = !lib.err && lib.header && lib.rows === LIB.count && lib.count === LIB.count &&
+              lib.sha === LIB.sha && lib.hits > 0 && lib.swappable > 0;
+say("7c. the exercise library offline: " + (lib.err ? "FAILED: " + lib.err :
+    lib.rows + "/" + LIB.count + " movements, header " + lib.header + ", sha " + String(lib.sha).slice(0, 7) +
+    ' - search "row" -> ' + lib.hits + " hits, " + lib.swappable + " on a machine or cable: " + lib.sample.join(", ")));
+
 say("8. page errors: " + (errs.length ? errs.join(" | ") : "NONE"));
 
 // 9. THE UPDATE PATH (WO-011 P1, 2026-09-13). The bug this would have caught:
@@ -264,6 +312,13 @@ await page.waitForTimeout(2500);                          // pair gate (<= 4 s) 
 must(p1.html === "one" && p1.js === "one", "9b. N1 served the OLD shell as one pair (html " + p1.html + ", js " + p1.js + ")");
 must((HITS["/index.html"] || 0) === 1 && (HITS["/logic.js"] || 0) === 1,
      "9b. N1 fetched the new pair from the origin exactly once each (index.html " + (HITS["/index.html"] || 0) + ", logic.js " + (HITS["/logic.js"] || 0) + ")");
+// v7: the library is in the same all-or-nothing set as the pair (sw.js ATOMIC),
+// so it is re-fetched on the same refresh - exactly once, like the other two.
+// If this ever reads 0 the library has quietly become gap-filled like the
+// photographs, and a re-generated library would never reach an installed app
+// without a VERSION bump.
+must((HITS[LIB_PATH] || 0) === 1,
+     "9b. N1 re-fetched the library with the pair, exactly once (" + (HITS[LIB_PATH] || 0) + ")");
 must(await cachedHtmlMarked(), "9b. cache now holds the NEW index.html");
 const stampAfter = await readStamp();
 must(stampAfter > 1 && Date.now() - stampAfter < 60000, "9b. stamp rewritten on commit (" + stampAfter + ")");
@@ -274,8 +329,8 @@ await page.goto(ORIGIN + "/index.html", { waitUntil: "load" });
 await page.waitForTimeout(1500);
 const p2 = await pairOf();
 must(p2.html === "two" && p2.js === "two", "9c. N2 served the NEW shell as one pair from cache (html " + p2.html + ", js " + p2.js + ")");
-must((HITS["/index.html"] || 0) === 0 && (HITS["/logic.js"] || 0) === 0,
-     "9c. N2 within five minutes: zero origin hits (index.html " + (HITS["/index.html"] || 0) + ", logic.js " + (HITS["/logic.js"] || 0) + ")");
+must((HITS["/index.html"] || 0) === 0 && (HITS["/logic.js"] || 0) === 0 && (HITS[LIB_PATH] || 0) === 0,
+     "9c. N2 within five minutes: zero origin hits (index.html " + (HITS["/index.html"] || 0) + ", logic.js " + (HITS["/logic.js"] || 0) + ", library " + (HITS[LIB_PATH] || 0) + ")");
 
 // 9d. N3
 resetHits();
@@ -344,8 +399,10 @@ await browser.close();
 server.close();
 
 const core = shell.hasPhat && shell.tabs.length === 5 && logged === "SET IN DRAFT ON DISK" && survived && errs.length === 0;
-const pass = core && photosOk && upd.ok;
+const libraryOk = libPrecached && libOk;
+const pass = core && photosOk && libraryOk && upd.ok;
 console.log("\n=== OFFLINE VERDICT: " + (pass ? "PASS" : "FAIL") +
   (core && !photosOk ? " (shell and logging pass; the photo assertion fails - until WO-009 W5 renders <img> for mapped slots this line is expected red)" : "") +
-  (core && photosOk && !upd.ok ? " (offline passes; the UPDATE PATH fails - a deploy would not reach an installed phone)" : "") + " ===");
+  (core && photosOk && !libraryOk ? " (shell, logging and photos pass; the LIBRARY fails - he cannot search for a replacement in a gym with no signal)" : "") +
+  (core && photosOk && libraryOk && !upd.ok ? " (offline passes; the UPDATE PATH fails - a deploy would not reach an installed phone)" : "") + " ===");
 process.exit(pass ? 0 : 1);

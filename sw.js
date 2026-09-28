@@ -4,8 +4,9 @@
    works only on HTTP-cache luck. With it, the app shell is in Cache Storage and
    opens with the radio off.
 
-   WHAT IT CACHES: the app shell - index.html, logic.js, the manifest, the
-   icons, the inlined typeface, the backup client, and the exercise
+   WHAT IT CACHES: the app shell - index.html, logic.js, the exercise library
+   (assets/exercises.json), the manifest, the icons, the inlined typeface, the
+   backup client, and the exercise
    photographs under assets/ex/. NOTHING ELSE. It never touches localStorage,
    never sees phat:v1:log, phat:v1:bw or phat:v1:draft, and never handles a
    request that is not a same-origin GET for one of the files named in SHELL
@@ -18,7 +19,8 @@
        there. One bar of signal must not cost him a 30 s stare at a blank
        screen.
      - The refresh re-fetches the WHOLE core shell and commits nothing unless
-       EVERY core file came back a real 200. A half-succeeded refresh leaves the
+       EVERY atomic file came back a real 200 - the pair plus REQUIRED (v7: the
+       exercise library). A half-succeeded refresh leaves the
        previous, consistent pair in place. index.html and logic.js are one unit;
        a new index.html over a stale logic.js is the black-screen failure mode.
        The refresh also does not START until the page that triggered it has
@@ -57,7 +59,8 @@
    the PHOTOS comment), so a photo that changes bytes under the SAME path is
    only ever delivered by a VERSION bump. A new photo set = a bump. Always.
    THE CACHE ALSO HOLDS ONE ENTRY THAT IS NOT A FILE: `/__phat-refreshed`, the
-   throttle stamp. Count it when comparing entry totals (2 + 7 + 48 + 1). */
+   throttle stamp. Count it when comparing entry totals (3 + 7 + 48 + 1 = 59
+   as of v7; it was 2 + 7 + 48 + 1 = 58 under v6). */
 
 'use strict';
 
@@ -106,7 +109,41 @@
    transition to v6 on the phone still needs the page closed once (kill the
    in-app view or Safari, reopen): the page on the phone is the old shell,
    which does not post `phat-idle`, and v4 cannot be told to step aside. */
-var VERSION = 'v6';
+/* v7 (2026-09-28, WO-014 W3): the exercise library joins the shell.
+   `assets/exercises.json` - 876 movements, reduced from free-exercise-db at
+   the same pinned SHA the photographs came from - is what a mid-workout swap
+   searches. THE FILE LIST CHANGED, which is the header rule's first trigger,
+   so this bump is mandatory and not a judgement call.
+   IT IS REQUIRED, NOT OPTIONAL. The gym has no signal (CLAUDE.md 3.2). A
+   library that is "best effort at install" is a library that is missing on
+   the one morning the machine is taken, and the failure is silent: search
+   returns nothing and looks like a library with nothing in it. So it sits in
+   REQUIRED, which is concatenated into the all-or-nothing set at install and
+   at every refresh.
+   WHY IT IS ATOMIC WITH THE PAIR, and what that costs. index.html + logic.js
+   are one unit because a new markup over an old engine is a black screen. The
+   library is a third member of that unit for a weaker but real reason: the
+   movement ids in it are the ids logic.js reads out of stored sessions
+   (mv_<upstream id>, WO-014 W4.2), so moving the pinned SHA is a migration,
+   not an upgrade, and a new logic.js over an old library would be a search
+   that cannot find a movement a session names. The price, stated plainly: a
+   library fetch that fails now blocks the shell refresh too. That is bounded -
+   the refresh retries on the next navigation five minutes later, the file is
+   static and same-origin from the same immutable deployment as index.html, so
+   a failure here almost certainly means index.html failed as well - and the
+   alternative (best-effort, like the icons) trades a visible, self-healing
+   delay for an invisible one.
+   WHAT A FAILED INSTALL MEANS, since REQUIRED makes one possible: nothing is
+   removed. A worker that fails to install leaves the PREVIOUS worker active
+   and serving its own complete shell. The only person hurt by a 404 on this
+   file is someone installing for the very first time against a broken deploy,
+   and that is what scripts/verify-deploy.sh (now 61 files, hard failure on
+   each) exists to catch before his phone ever sees it.
+   usable() gains a .json rule in the same breath - B-103's lesson, one file
+   later: without it a 404 page served as 200 text/html would have been cached
+   as the exercise library, and the app would have precached a search index
+   that is an error message. */
+var VERSION = 'v7';
 var PREFIX  = 'phat-shell-';
 var CACHE   = PREFIX + VERSION;
 
@@ -115,8 +152,25 @@ var CACHE   = PREFIX + VERSION;
 function abs(p){ return new URL(p, self.location).href; }
 
 /* CORE: the app does not exist without these. Install fails if either is
-   missing, rather than activating a worker that serves half an app. */
+   missing, rather than activating a worker that serves half an app.
+   EXACTLY TWO ENTRIES, IN THIS ORDER, AND NOTHING MAY BE APPENDED HERE. Both
+   indices are load-bearing further down: CORE[0] is SHELL_HTML (what "/"
+   serves) and CORE[1] is the pair gate's test for logic.js. A third file that
+   must be fetched atomically goes in REQUIRED below, not here. */
 var CORE = [ abs('./index.html'), abs('./logic.js') ];
+
+/* REQUIRED (v7, WO-014): fetched all-or-nothing WITH the pair, at install and
+   at every refresh, but holding no positional meaning. See the v7 note above
+   for why the exercise library is required rather than optional and what the
+   atomicity costs. Add a file here only if the app is WRONG without it, not
+   merely poorer - poorer is OPTIONAL. */
+var REQUIRED = [
+  abs('./assets/exercises.json')   /* WO-014: 876 movements; the mid-workout swap searches it offline */
+];
+
+/* The all-or-nothing set. Install fetches every one of these BEFORE opening
+   the cache, and the refresh commits every one or none. */
+var ATOMIC = CORE.concat(REQUIRED);
 
 /* OPTIONAL: wanted offline, but their absence is not a broken app. A missing
    icon costs a grey launcher tile; a missing typeface costs the fallback
@@ -210,7 +264,7 @@ var PHOTOS = [   /* 48 files, 24 exercises, 740232 bytes, upstream a859101 */
 /* GENERATED by scripts/make-photos.mjs -- end */
 
 var SHELL_HTML = CORE[0];
-var SHELL = CORE.concat(OPTIONAL, PHOTOS);
+var SHELL = ATOMIC.concat(OPTIONAL, PHOTOS);
 
 /* pathname -> cache key. Requests match on pathname so a launch at "/" and a
    launch at "/index.html" hit one cached copy, not two. */
@@ -241,6 +295,7 @@ function usable(res, url){
   if (/\.png$/.test(p))         return ct.indexOf('image/') >= 0;
   if (/\.jpe?g$/.test(p))       return ct.indexOf('image/') >= 0;   /* B-103: a 200 text/html is not a photo */
   if (/\.webmanifest$/.test(p)) return ct.indexOf('json') >= 0 || ct.indexOf('manifest') >= 0;
+  if (/\.json$/.test(p))        return ct.indexOf('json') >= 0;   /* v7: a 200 text/html is not the library */
   return true;
 }
 
@@ -263,9 +318,10 @@ function fetchFresh(url){
 
 self.addEventListener('install', function(e){
   e.waitUntil(
-    /* Fetch every core file BEFORE opening the cache, so a failed install
-       leaves nothing behind and never half-writes a shell. */
-    Promise.all(CORE.map(function(u){
+    /* Fetch every atomic file (the pair, plus REQUIRED) BEFORE opening the
+       cache, so a failed install leaves nothing behind, never half-writes a
+       shell, and leaves the PREVIOUS worker active and serving. */
+    Promise.all(ATOMIC.map(function(u){
       return fetchFresh(u).then(function(r){ return [u, r]; });
     })).then(function(pairs){
       return caches.open(CACHE).then(function(cache){
@@ -385,14 +441,15 @@ function scheduleRefresh(e){
   }).catch(function(){}));
 }
 
-/* The whole core shell, or nothing. One in flight at a time: a second caller
+/* The whole atomic shell - index.html, logic.js and the exercise library -
+   or nothing. One in flight at a time: a second caller
    (PHAT_CHECK_UPDATE during a navigation's refresh) joins the same promise
    rather than fetching the pair twice. */
 var inflight = null;
 
 function refreshShell(){
   if (inflight) return inflight;
-  inflight = Promise.all(CORE.map(function(u){
+  inflight = Promise.all(ATOMIC.map(function(u){
     return fetchFresh(u).then(function(r){ return [u, r]; });
   })).then(function(pairs){
     return caches.open(CACHE).then(function(cache){

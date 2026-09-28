@@ -54,18 +54,33 @@ fi
 command -v curl >/dev/null 2>&1 || { echo "FATAL: curl not found"; exit 2; }
 
 # --------------------------------------------------------------------------
-# THE ELEVEN, PLUS THE PHOTO SET. Every file a released build must serve, in
+# THE THIRTEEN, PLUS THE PHOTO SET. Every file a released build must serve, in
 # the order deploy.md uploads them. Format:
 #   <path>|<substring the content-type MUST contain>
 #
-# Seven core files plus four icons (sync.js since E-3). The icons are NOT optional: manifest.web-
-# manifest names them by path, so a 404 on one is a degraded install (no
-# home-screen icon, and on iOS no icon at all), and sw.js refuses to commit a
-# cache entry for a non-200, which fails the install outright.
+# Nine core files plus four icons (sync.js since E-3; diag.html and
+# assets/exercises.json added 2026-09-28, WO-014 W3). The icons are NOT
+# optional: manifest.webmanifest names them by path, so a 404 on one is a
+# degraded install (no home-screen icon, and on iOS no icon at all), and sw.js
+# refuses to commit a cache entry for a non-200, which fails the install
+# outright.
+#
+# TWO ENTRIES ADDED ON 2026-09-28, ONE OF THEM A HOLE THIS SCRIPT ALREADY HAD:
+#   diag.html              shipped with WO-011 and has been LIVE AND UNVERIFIED
+#                          since. The script said "eleven" while the deploy was
+#                          twelve, so a deploy that dropped diag.html would have
+#                          printed PASS. diag.html is the first thing opened
+#                          when the phone and the server disagree; a 404 on it
+#                          is silent until the morning it is needed.
+#   assets/exercises.json  WO-014: the exercise library. On sw.js's REQUIRED
+#                          list, so the phone precaches it; a 404 is a failed
+#                          service-worker install for a first-time installer,
+#                          and no mid-workout swap for everyone else.
 #
 # Keep this list identical to the file list in docs/deploy.md. If you add a
-# twelfth file to the deploy, add it here in the same commit - a file that is
-# deployed but unverified is the same risk this script was written for.
+# fourteenth file to the deploy, add it here in the same commit - a file that
+# is deployed but unverified is the exact risk this script was written for,
+# and diag.html is the proof that it happens.
 #
 # THE PHOTOGRAPHS (WO-009) ARE NOT IN THIS LIST AND MUST NEVER BE TYPED HERE.
 # They are read from assets/ex/manifest.json below, and before a single byte
@@ -78,7 +93,9 @@ CORE_FILES='
 index.html|text/html
 logic.js|javascript
 tests.html|text/html
+diag.html|text/html
 assets/archivo-inline.css|text/css
+assets/exercises.json|json
 manifest.webmanifest|json
 sw.js|javascript
 sync.js|javascript
@@ -244,10 +261,50 @@ done < "$TMP/man"
 echo "ok    $MAN_N files, one set in all three places, manifest bytes match disk"
 echo
 
+# --------------------------------------------------------------------------
+# THE EXERCISE LIBRARY (WO-014 W3). Same doctrine as the photo set: three
+# places must agree before anything is fetched, and this script refuses to run
+# rather than verify a library nobody agrees on.
+#   (a) assets/exercises.json is on disk and its own header `count` matches the
+#       number of rows in it - a truncated or hand-edited file is caught here,
+#       not on his phone in a gym with no signal;
+#   (b) sw.js names it on the REQUIRED list, so an installed app precaches it.
+#       A library that is in the deploy but not in sw.js is a search that works
+#       at home and finds nothing in the gym - the silent failure CLAUDE.md 3.2
+#       exists to forbid, and nothing else in this repo would catch it;
+#   (c) it is in CORE_FILES above, so the byte comparison below actually runs.
+# No jq: the file writes one exercise row per line on purpose, exactly like
+# assets/ex/manifest.json.
+# --------------------------------------------------------------------------
+LIB="$ROOT/assets/exercises.json"
+[ -f "$LIB" ] || { echo "FATAL: $LIB is missing - run 'node scripts/make-library.mjs', or copy it into TREE."; exit 2; }
+LIB_HDR=$(grep -o '"count": *[0-9]*' "$LIB" | head -1 | grep -o '[0-9]*$')
+LIB_ROWS=$(grep -c '^ *{"id":' "$LIB")
+LIB_BYTES=$(wc -c < "$LIB" | tr -d ' ')
+LIB_IN_SW=$(sed -n '/var REQUIRED *=/,/\]/p' "$ROOT/sw.js" | grep -c "assets/exercises\.json")
+echo "--- the exercise library: header count $LIB_HDR, rows $LIB_ROWS, $LIB_BYTES bytes, named in sw.js REQUIRED $LIB_IN_SW time(s)"
+if [ -z "$LIB_HDR" ] || [ "$LIB_HDR" != "$LIB_ROWS" ]; then
+  echo "FATAL: assets/exercises.json says count=$LIB_HDR but holds $LIB_ROWS rows. It is TRUNCATED or hand-edited."
+  echo "  fix: run \"/c/Program Files/nodejs/node.exe\" scripts/make-library.mjs and commit."
+  exit 2
+fi
+if [ "$LIB_IN_SW" -ne 1 ]; then
+  echo "FATAL: sw.js's REQUIRED list names assets/exercises.json $LIB_IN_SW times (expected exactly 1)."
+  echo "  A library that is deployed but not precached searches fine on wifi and finds"
+  echo "  NOTHING in the gym, where he needs it. Refusing to verify."
+  exit 2
+fi
+case "$CORE_FILES" in
+  *assets/exercises.json*) ;;
+  *) echo "FATAL: assets/exercises.json is not in CORE_FILES, so its bytes would never be fetched. Refusing to verify."; exit 2 ;;
+esac
+echo "ok    library on disk, self-consistent, on sw.js REQUIRED, and in this script's list"
+echo
+
 # A subshell in a pipeline cannot update FAILED, so feed the loop from a file.
 printf '%s\n%s\n' "$CORE_FILES" "$ICON_FILES" | grep '|' > "$TMP/list"
 
-echo "--- the eleven files a release must serve: seven core, plus the four icons the manifest names"
+echo "--- the thirteen files a release must serve: nine core, plus the four icons the manifest names"
 while IFS='|' read -r p c; do
   [ -n "$p" ] || continue
   check_one "$p" "$c"
@@ -285,7 +342,7 @@ done < "$TMP/man"
 
 echo
 if [ "$FAILED" -eq 0 ]; then
-  echo "PASS  $CHECKED/$CHECKED files live and byte-identical to this tree (eleven + $MAN_N photographs)."
+  echo "PASS  $CHECKED/$CHECKED files live and byte-identical to this tree (thirteen + $MAN_N photographs)."
   exit 0
 fi
 echo "FAILED  $FAILED of $CHECKED checks. The live app does not match this tree."
