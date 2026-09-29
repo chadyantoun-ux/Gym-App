@@ -1819,17 +1819,53 @@
     if (isObj(entry) && isMvId(entry.mv)) return entry.mv;
     return isMvId(slotMv) ? slotMv : null;
   }
-  /* mvSkips(entry, mv) -> true when MV1.1 skips this entry. One definition,
-     read by lastFor and by every engine in §22.4.4's table, so a mutant that
-     drops the comparison dies once rather than six times. */
-  function mvSkips(entry, mv) {
+  /* mvSkips(entry, mv, declaredMv) -> true when MV1.1 skips this entry. One
+     definition, read by lastFor and by every engine in §22.4.4's table, so a
+     mutant that drops the comparison dies once rather than six times.
+
+     ---- THE FOURTH STATE IS NOT ON `mv`. It is the FOURTH argument's absence,
+     and it closes B-152 (WO-014 §10, decisions.md 2026-09-29 §4) ----
+
+     THE COMPARISON TAKES TWO MOVEMENTS, NOT ONE, and they are different
+     questions:
+
+       mv           the movement being COMPARED AGAINST — what this read is
+                    asking for. Its three states are unmoved: undefined is the
+                    rule off (c), null is MV1.1(b), a movement id is MV1.1(a).
+       declaredMv   the movement the SLOT DECLARES — the basis an entry with
+                    no `mv` of its own inherits. Absent, and it is `mv`: a
+                    two-argument call answers byte for byte what it answered
+                    on 9d4336b, everywhere, forever.
+
+     They are the same movement on every ordinary read, and the whole of this
+     argument's reason for existing is the ONE place they are not. A swapped
+     card asks the engine "what are my last numbers on the movement I am doing
+     now", and index.html asks it by handing over a COPY of the plan with this
+     one slot's `mv` replaced (`swapShimPlan`). That copy is a lie about what
+     the slot declares, and `effectiveMv`'s inheritance rule — an entry with
+     no `mv` IS the slot's movement — is TRUE of the declared movement and
+     FALSE of a shimmed one. Every session logged before schema 7 carries no
+     `mv` (the v7 pass moves zero bytes, deliberately), so without this the
+     first swap on an existing lift inherited a movement he never performed
+     and printed `Volume up 31% - 2,520 kg against 1,925 kg` across two
+     different movements. That is B-152, and it was live on all four of the
+     sessions he actually has.
+
+     A `declaredMv` that is not a movement id — absent, null, junk — means the
+     basis is UNKNOWN, not that the slot declares none, and an unknown basis
+     may never manufacture a skip: it falls back to `mv`. That is MV1.1(b)'s
+     promise held exactly as it reads (an unmapped slot skips on `sw` alone,
+     never on an inherited movement) and it is why every existing call site
+     cannot tell this argument exists. */
+  function mvSkips(entry, mv, declaredMv) {
     if (mv === undefined) return false;                  /* (c) rule off */
     if (mv === null) return isObj(entry) && entry.sw === 1;   /* (b) */
     if (!isMvId(mv)) return false;                       /* garbage: rule off, never a blanket skip */
-    return effectiveMv(entry, mv) !== mv;                /* (a) */
+    var dec = isMvId(declaredMv) ? declaredMv : mv;      /* absent/unknown basis -> the compared movement */
+    return effectiveMv(entry, dec) !== mv;               /* (a) */
   }
 
-  function lastFor(sessions, exId, mv) {
+  function lastFor(sessions, exId, mv, declaredMv) {
     if (!Array.isArray(sessions)) return null;
     if (typeof exId !== "string" || exId.trim() === "") return null;
     var id = exId.trim();
@@ -1839,7 +1875,7 @@
       if (!Object.prototype.hasOwnProperty.call(s.entries, id)) continue;
       var e = s.entries[id];
       if (!isObj(e) || !Array.isArray(e.sets)) continue;
-      if (mvSkips(e, mv)) continue;
+      if (mvSkips(e, mv, declaredMv)) continue;
       for (var j = 0; j < e.sets.length; j++) {
         if (isDoneSet(e.sets[j])) return e;
       }
@@ -1874,7 +1910,15 @@
      the same slot are two sessions.
 
      Reads nothing, writes nothing, throws on nothing. */
-  function mvExcludedCount(sessions, exId, mv) {
+  /* The fourth argument is `mvSkips`'s fourth argument, and it is here for
+     one reason: the COUNT and the WALK may never disagree. There is one
+     predicate and it has one set of inputs at every entry point; a caller
+     that narrows a read by a declared basis and then counts the narrowing
+     without it would disclose a number that does not describe what it did.
+     No caller passes it today (index.html counts against the slot's own,
+     unshimmed movement) and every existing two-argument and three-argument
+     call answers exactly what it answered on 9d4336b. */
+  function mvExcludedCount(sessions, exId, mv, declaredMv) {
     if (!Array.isArray(sessions)) return 0;
     if (typeof exId !== "string" || exId.trim() === "") return 0;
     if (mv === undefined) return 0;                  /* MV1.1(c): the rule is off */
@@ -1885,7 +1929,7 @@
       if (!Object.prototype.hasOwnProperty.call(s.entries, id)) continue;
       var e = s.entries[id];
       if (!hasDone(e)) continue;
-      if (mvSkips(e, mv)) n++;
+      if (mvSkips(e, mv, declaredMv)) n++;
     }
     return n;
   }
@@ -1945,6 +1989,55 @@
     }
     var ln = libraryName(index, mv);
     return (typeof ln === "string" && ln.trim() !== "") ? ln.trim() : null;
+  }
+  /* declaredMvOf(plans, plan, exId, mv) -> the movement THE STORED SLOT
+     declares, or null for "unknown". B-152's half of the fix: the half that
+     knows which of the two movements is the honest one.
+
+     THE PLAN DOCUMENT HANDED IN IS NOT EVIDENCE ABOUT ITSELF. A card asks
+     priorFor its question through a plan, and a SWAPPED card asks it through
+     a one-slot copy of that plan (index.html's `swapShimPlan`) whose `mv` is
+     the movement he just picked, not the one the slot declares. The copy is
+     indistinguishable from its original by shape — it is an `Object.assign`
+     of it — but not by IDENTITY: `planId` is minted once per stored plan
+     (`copyPlan` re-mints it, and PHAT's is the constant `phat`), so a second
+     document in the chain carrying THE SAME `planId` AND A DIFFERENT OBJECT
+     REFERENCE is that plan's stored self, and its slot is what the slot
+     declares. PHAT_PLAN is always last in priorFor's chain and is frozen
+     code, so the shipped programme always has its stored self to answer with.
+
+     Returns null — "unknown", never a skip of its own — for every other
+     shape: no plan, no planId, no second document, a slot the stored self
+     does not carry, or a stored slot that declares no movement (an unmapped
+     plan is MV1.1(b)'s case and keeps MV1.1(b)'s answer). `mv` not being a
+     movement id at all means there is no slot or the slot is unmapped, and
+     neither has a declared basis to correct.
+
+     Pure; reads the documents, writes nothing, never throws. */
+  function declaredMvOf(plans, plan, exId, mv) {
+    if (!isMvId(mv)) return null;
+    if (!isObj(plan) || !Array.isArray(plans)) return null;
+    var pid = str(plan.planId).trim();
+    if (pid === "") return null;
+    for (var i = 0; i < plans.length; i++) {
+      var q = plans[i];
+      if (q === plan) continue;                        /* the document handed in */
+      if (!isObj(q) || str(q.planId).trim() !== pid) continue;
+      var e = exById(q, exId);
+      if (!isObj(e)) continue;
+      return isMvId(e.mv) ? e.mv : null;
+    }
+    return null;
+  }
+  /* The movement an entry under THIS slot records, resolved on the declared
+     basis when there is one. `entryMvIn` walks the plan chain, whose head on
+     a swapped card is the shim — so an entry with no `mv` would name the
+     movement he swapped TO, which is the same lie B-152 is. Where there is no
+     declared basis this is `entryMvIn` exactly. */
+  function slotEntryMv(entry, exId, plans, declaredMv) {
+    if (isObj(entry) && isMvId(entry.mv)) return entry.mv;
+    if (isMvId(declaredMv)) return declaredMv;
+    return entryMvIn(entry, exId, plans);
   }
   function dayNameOf(plans, dayId) {
     for (var i = 0; i < plans.length; i++) {
@@ -2028,9 +2121,15 @@
        movement). null = the slot exists and declares no movement: MV1.1(b). */
     var mv = slot ? (isMvId(slot.mv) ? slot.mv : null) : undefined;
     out.mv = (mv === undefined || mv === null) ? null : mv;
+    /* B-152. `mv` is the movement being COMPARED AGAINST — on a swapped card
+       that is the one he picked a minute ago, because the plan handed in is
+       the shim. `dec` is what the slot DECLARES, and it is the basis an entry
+       with no `mv` inherits. null on every unswapped read, where the two are
+       the same movement and every answer below is byte-identical to 9d4336b. */
+    var dec = declaredMvOf(plans, p, id, mv);
 
     /* ---- MV1.1: the slot's own history ---- */
-    var own = lastFor(sessions, id, mv);
+    var own = lastFor(sessions, id, mv, dec);
 
     /* The skip that changed the answer, walking the same direction lastFor
        walks. The FIRST skipped entry with a completed set going backwards is
@@ -2043,8 +2142,8 @@
         var e0 = s0.entries[id];
         if (e0 === own) break;                    /* reached the answer: no earlier skip changed it */
         if (!hasDone(e0)) continue;
-        if (!mvSkips(e0, mv)) continue;
-        var m0 = entryMvIn(e0, id, plans);
+        if (!mvSkips(e0, mv, dec)) continue;
+        var m0 = slotEntryMv(e0, id, plans, dec);
         out.skipped = {
           exId: id, date: sessionDate(s0), mv: m0,
           name: mvSourceName(e0, id, plans, index, m0)
@@ -2058,7 +2157,7 @@
       out.date = ses ? sessionDate(ses) : null;
       out.dayId = (ses && typeof ses.dayId === "string") ? ses.dayId : null;
       out.dayName = out.dayId === null ? null : dayNameOf(plans, out.dayId);
-      out.name = mvSourceName(own, id, plans, index, entryMvIn(own, id, plans));
+      out.name = mvSourceName(own, id, plans, index, slotEntryMv(own, id, plans, dec));
       return out;
     }
 
@@ -11773,6 +11872,11 @@
     mvUpstreamId: mvUpstreamId,
     effectiveMv: effectiveMv,
     mvSkips: mvSkips,
+    /* B-152. The movement the STORED slot declares, told apart from a
+       one-slot copy of the same plan by planId-plus-identity. Exported so the
+       half of the fix that decides WHICH movement is honest can be pinned on
+       its own, rather than only through priorFor's answer. */
+    declaredMvOf: declaredMvOf,
     /* mvExcludedCount is the view's ONLY way to ask "how many sessions under
        this slot does MV1.1 pass over" — the disclosure line's number. It keys
        on the movement comparison and never on `sw`, so it goes to zero on the
