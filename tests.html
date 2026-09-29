@@ -2682,7 +2682,26 @@ T("B-30 / TW1 - the Monday grid, future rows and unsorted input", function(a){
     "an unsorted array still counts correctly - it does not silently rely on the caller sorting");
   a.eq(P.trainingWeeks([{ id: 1 }, { id: 2 }, { id: 3 }], "2026-09-09"), 0, "undateable rows buy no week");
   a.ok(P.trainingWeeks(WEEK("2026-08-03", 5, "j"), "junk") >= 0, "a junk todayStr does not throw");
-  a.eq(P.trainingWeeks(WEEK(P.weekStart(P.localDate()), 3, "z")), 1, "todayStr omitted falls back to today");
+  /* The fallback, pinned to a seed that no weekday can make future-dated.
+     It used to seed THIS week - WEEK(weekStart(localDate()), 3) - so on a
+     Monday or a Tuesday two of its three days were in the future, the guard
+     asserted four lines up correctly dropped them, and this went red. Green
+     Wednesday to Sunday, red Monday and Tuesday: every "suite green" release
+     gate from WO-006 to WO-013 was read on a day the clock cooperated.
+
+     LAST week is in the past on every weekday and NEXT week is in the future
+     on every weekday, so the pair is stable Monday to Sunday. It still tests
+     what it always tested, and harder: delete the todayStr default in
+     trainingDays and `today` is undefined, no date is ever > undefined, the
+     next-week rows stop being dropped and this reads 2, not 1. Default it to
+     "" and every date is > it and this reads 0. Neither can pass. */
+  var thisMon = Date.parse(P.weekStart(P.localDate()) + "T12:00:00");
+  var pastNext = WEEK(P.localDate(new Date(thisMon - 7 * 86400000)), 3, "z")
+    .concat(WEEK(P.localDate(new Date(thisMon + 7 * 86400000)), 3, "zz"));
+  a.eq(P.trainingWeeks(pastNext), 1,
+    "todayStr omitted falls back to today: last week counts, next week is still the future");
+  a.eq(P.trainingWeeks(pastNext, P.localDate()), 1,
+    "and the fallback is the same number as today passed explicitly");
 });
 
 T("B-30 - trainingWeeks is NOT weeksIn: a fortnight off the gym buys no weeks", function(a){
