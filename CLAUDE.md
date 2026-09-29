@@ -240,6 +240,16 @@ the wrong branch until the main session repointed it. Nothing was lost, but only
 happened to be identical. The main session sets the branch before dispatch and the brief names it; two
 concurrent lanes are the main session's to serialise or to give separate worktrees.
 
+**Never `git stash` in the shared tree either — and to read a file as it was, use `git cat-file blob
+<ref>:<path>`, never the working copy.** On 2026-09-29 a backend agent stashed to snapshot its own
+pre-edit `logic.js`; that briefly stashed a frontend agent's uncommitted `index.html` and a coach
+agent's `docs/coach-audit-addendum.md` too. It popped cleanly and nothing was lost — the agent
+reported it itself and switched to `git cat-file` — but a `stash` is a whole-tree operation dressed
+as a personal one, and the window between stash and pop is a window in which another lane's
+half-written file does not exist. The same applies to `git checkout -- <path>`, `git clean` and
+`git reset --hard`: **a snapshot never needs the working tree to move.** `docs/deploy.md` §4.1
+already says this for deploys; it holds for every agent.
+
 **Commit named paths.** `git add logic.js docs/decisions.md`, never `-A`, whenever anything else is in
 flight. If you don't know what else is running, name paths anyway — it costs one extra word.
 
