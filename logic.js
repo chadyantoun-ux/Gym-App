@@ -1720,11 +1720,13 @@
     return out;
   }
 
-  /* trainingWeeks(sessions, todayStr) → integer.
+  /* trainingWeeks(sessions, todayStr, plan) → integer.
 
      The number of local Monday-start weeks holding at least
-     TRAINING_WEEK_MIN (3) distinct TRAINING DAYS, up to and including
-     todayStr.
+     trainingWeekMin(plan) distinct TRAINING DAYS, up to and including
+     todayStr. That threshold is TRAINING_WEEK_MIN (3) for every caller that
+     passes no plan and for every plan of three days or more — see Rule TW1b
+     below the rules list.
 
      This is deliberately NOT weeksIn(). weeksIn() measures elapsed time since
      the first session, so a fortnight off the gym still buys two weeks. Every
@@ -1754,8 +1756,47 @@
      a number he cannot reproduce from a calendar, and one that shifts whenever
      history is edited. A gate he cannot audit is a gate he will not trust. */
   var TRAINING_WEEK_MIN = 3;
-  function trainingWeeks(sessions, todayStr) {
+
+  /* ---- Rule TW1b — the threshold FOLLOWS THE PLAN (coach §23.6.2) ----
+
+     `min(3, plan.days.length)`, not the constant 3.
+
+     THE DEFECT IT CLOSES, and it is the most consequential thing in §23. A
+     2-day plan can never hold 3 distinct training days in one Monday-start
+     week, so its `trainingWeeks` is PERMANENTLY 0 — and everything gated on
+     it is permanently inert: ST1's week-6 test never fires, D1 T3's nine-week
+     backstop never fires, V1's block never advances, and `cycleLine` prints
+     the §9.8 zero case for ever. None of it reads as ABSENT either: the plan
+     DECLARES key lifts, so ST1 is PRESENT and simply never reached. The app
+     switches itself off silently, through a door C7a does not watch.
+
+     3 was never a fact about weeks. It was PHAT's number, hard-coded before
+     there was more than one plan. "A training week" means "a week in which he
+     trained the programme", and the programme says how many days that is.
+
+     TW1b.3, and it matters: a plan with NO days, or a plan this code cannot
+     read, keeps the threshold 3. A degenerate plan must not make every week
+     count — that would unlock a stall test, a deload and a reintroduction
+     ramp off a document nobody wrote.
+
+     EVERYTHING ELSE IN TW1 IS UNCHANGED — distinct days, the fixed Monday
+     grid, the §6b straddle ruling, dates after today not counting, all of it.
+     No string changes anywhere.
+
+     THE THIRD ARGUMENT IS OPTIONAL AND OMITTING IT IS THE OLD BEHAVIOUR,
+     BYTE FOR BYTE. Every existing two-argument caller — in this file, in
+     index.html and in the suite — gets 3, which is what it got before. PHAT
+     (5 days) -> 3, `ppl5` (5) -> 3, `ppl3` (3) -> 3, `ul2` (2) -> 2, a 1-day
+     plan -> 1 (correct: one session a week IS that plan's week). */
+  function trainingWeekMin(plan) {
+    if (!isPlanDoc(plan)) return TRAINING_WEEK_MIN;       /* TW1b.3 */
+    var n = plan.days.length;
+    if (!isInt(n, 1, 366)) return TRAINING_WEEK_MIN;      /* zero days: TW1b.3 */
+    return n < TRAINING_WEEK_MIN ? n : TRAINING_WEEK_MIN; /* TW1b.1 */
+  }
+  function trainingWeeks(sessions, todayStr, plan) {
     var days = trainingDays(sessions, todayStr);
+    var min = trainingWeekMin(plan);
     var byWeek = {}, n = 0;
     for (var i = 0; i < days.length; i++) {
       var wk = weekStart(days[i]);
@@ -1763,7 +1804,7 @@
       byWeek[wk] = (byWeek[wk] || 0) + 1;
     }
     Object.keys(byWeek).forEach(function (k) {
-      if (byWeek[k] >= TRAINING_WEEK_MIN) n++;
+      if (byWeek[k] >= min) n++;
     });
     return n;
   }
@@ -2664,8 +2705,101 @@
     "Set a block length in the plan, or they all run from week 1."
   ];
 
+  /* ------------------------------ Rule HD1 — heavy is DERIVED, never stored
+     (strength-coach, addendum §23.2. WO-018 T2a, B-158.)
+
+     HD1.1: A SLOT IS HEAVY IFF `k === "power" && hi <= 8`. A day is heavy iff
+     it holds at least one heavy slot. Derived at read time, never stored,
+     never migrated. "Heavy" is not a field and must not become one.
+
+     THE 8 IS NOT A NEW NUMBER and that is the load-bearing half of the
+     ruling. It is already the app's boundary twice: ST1's own e1RM sample
+     gate is `r <= 8` (`ST1_REPS`), and R1 splits the power rest row at
+     `hi <= 8`. A predicate of `lo <= 5`, or `k === "power"` alone, or a test
+     on the library's `mechanic` would each have been a new number or a K3
+     violation. `HD1_HI` is declared here rather than read off `ST1_REPS`
+     only because `ST1_REPS` is assigned six thousand lines further down and
+     this predicate must answer correctly at any call order; the two are the
+     same number by rule and the suite is asked to pin them equal.
+
+     BOTH CONDITIONS, NOT EITHER. `k` is what routes P1 rather than H1
+     (K3.1); a slot at `k:"hyp", 6–8` is progressing on tonnage and range
+     compliance, not on a top-set load, and its e1RM series means something
+     else.
+
+     HD1.2 / HD1.5: `keyLifts` AND `speedSource` ARE VALIDATED, NOT REWRITTEN.
+     A declared subject counts only while its slot still exists AND is heavy.
+     Otherwise it is INELIGIBLE and is skipped BY THE READER — the stored
+     document is not edited, because a flip he undoes must restore the old
+     behaviour exactly and rewriting on read would make that impossible. That
+     is why the filter lives in these two accessors and nowhere else: every
+     consumer of a plan-level subject goes through them, and no consumer of a
+     SLOT does. Per §23.2.1 HD1 is consumed by ST1, D1 T1/T2, SP1 and the
+     Plans screen, and NOT by P1, H1, R1, Z1–Z3, PE1, MV1, W1 or the diet
+     screen — those read the slot in front of them and follow an edit with no
+     further work. R1 in particular needs nothing (HD1.8): `restTarget`
+     already reads `k` and `hi` per exercise, so a flip moves the rest target
+     by construction. Nobody may "fix" that into a day-level field; that is
+     B-56.
+
+     HD1.3: ZERO ELIGIBLE SUBJECTS IS ABSENT, NEVER PRESENT-THIN. It falls
+     out of the filter: an ineligible lift never enters the list, so
+     `stallAdvice` and `deloadCheck` reach their existing `!lifts.length`
+     branch and speak C7a's ABSENT literal, and a dropped speed pair reaches
+     `speedLoad`'s `no-source-lift` branch and speaks SP1's. `Log it weekly.`
+     is FORBIDDEN on an ineligible lift — he IS logging it weekly and more
+     data will never help. That is B-07's failure mode through a new door.
+
+     HD1.6 / HD1.7: no silent re-nomination — an eligible non-subject may be
+     OFFERED, never adopted, and that is a Plans-screen control (T3), not
+     something this layer does. `reintroOrder` and `reducedWeeks` do not move
+     at all: heaviness is not an input to either, `reintroOrder` is keyed by
+     day and scoped to `cut`, and `planReintroOrder`'s existing reconciliation
+     is the only one there is. */
+  var HD1_HI = 8;
+  function isHeavySlot(ex) {
+    return isObj(ex) && ex.k === "power" && isInt(ex.hi, R_MIN, R_MAX) && ex.hi <= HD1_HI;
+  }
+  function isHeavyDay(day) {
+    var ex = (isObj(day) && Array.isArray(day.ex)) ? day.ex : [];
+    for (var i = 0; i < ex.length; i++) if (isHeavySlot(ex[i])) return true;
+    return false;
+  }
+  /* HD1.4's subject, for the Plans screen (T3): the declared key lifts whose
+     SLOT STILL EXISTS but is no longer heavy, in declared order. A lift the
+     plan no longer contains at all is not here — that is
+     `keyLiftDisclosure`'s case and it has its own sentence. Returns the
+     slot's numbers so the disclosure can be specific about WHAT it now is;
+     this function writes no copy, because the copy §23.2.1 gives hard-codes
+     "3–5" and would misdescribe a 5–8 lift. Flagged for the coach. */
+  function planKeyLiftsDropped(plan) {
+    var out = [];
+    if (!isObj(plan) || !Array.isArray(plan.keyLifts)) return out;
+    var seen = {};
+    for (var i = 0; i < plan.keyLifts.length; i++) {
+      var id = str(plan.keyLifts[i]).trim();
+      if (id === "" || own(seen, id)) continue;
+      seen[id] = true;
+      var e = exById(plan, id);
+      if (!isObj(e) || isHeavySlot(e)) continue;
+      out.push({ id: id, n: (typeof e.n === "string" && e.n.trim() !== "") ? e.n : id,
+                 k: e.k, lo: e.lo, hi: e.hi });
+    }
+    return out;
+  }
+
   /* planSpeedSource(plan) -> { speedExId: sourceExId }.
-     Both ends must still exist in the plan or the pair is dropped. */
+     Both ends must still exist in the plan or the pair is dropped, and the
+     SOURCE end must still be heavy (Rule HD1.5).
+
+     HD1.5 is not a policy choice, it is the only correct behaviour: a
+     speedSource is not a nomination, it is a PAIRING — this speed triple is
+     65–70% of THAT lift. Deriving a new source when the old one goes light
+     would silently re-point a computed kilogram number at a different lift,
+     and computing 65–70% off a lift he no longer performs below 8 reps is a
+     percentage of nothing. No derivation, no nearest lift, no "the heaviest
+     thing on that day": the pair drops, and `speedLoad` prints SP1's ABSENT
+     literal with no number. */
   function planSpeedSource(plan) {
     var out = {};
     if (!isObj(plan) || !isObj(plan.speedSource)) return out;
@@ -2674,7 +2808,8 @@
       var k = str(keys[i]).trim();
       var v = str(plan.speedSource[keys[i]]).trim();
       if (k === "" || v === "") continue;
-      if (!exById(plan, k) || !exById(plan, v)) continue;
+      if (!exById(plan, k)) continue;
+      if (!isHeavySlot(exById(plan, v))) continue;        /* Rule HD1.5 */
       out[k] = v;
     }
     return out;
@@ -2708,15 +2843,25 @@
   }
 
   /* planKeyLiftIds(plan) -> [exId], in declared order, existing slots only,
-     capped at four. planKeyLifts joins them to the slot, so the NAME ST1 says
-     is the name on the card. */
+     HEAVY SLOTS ONLY (Rule HD1.2), capped at four. planKeyLifts joins them to
+     the slot, so the NAME ST1 says is the name on the card.
+
+     The stored `plan.keyLifts` array is NOT edited here or anywhere else: a
+     lift that drops out because he made its day light comes straight back
+     when he undoes the flip, byte for byte. Everything downstream — ST1's
+     subjects, D1 T1/T2's, `keyLiftDisclosure`'s count, `removeExercise`'s
+     notice — reads this function, so the drop is in one place.
+
+     PHAT's four all pass on day one (`d1a` 3–5 power, `d1d` 3–5 power, `d2a`
+     3–5 power, `d2d` 5–8 power), which is §23.2.5 example 1 and the reason
+     this change is invisible on the shipped plan. */
   function planKeyLiftIds(plan) {
     var out = [];
     if (!isObj(plan) || !Array.isArray(plan.keyLifts)) return out;
     for (var i = 0; i < plan.keyLifts.length && out.length < PLAN_KEYLIFT_MAX; i++) {
       var id = str(plan.keyLifts[i]).trim();
       if (id === "" || out.indexOf(id) >= 0) continue;
-      if (!exById(plan, id)) continue;
+      if (!isHeavySlot(exById(plan, id))) continue;       /* Rule HD1.2 */
       out.push(id);
     }
     return out;
@@ -3672,8 +3817,13 @@
      never dropped. The shipped PHAT plan is
      code, never stored, so `activePlanId:"phat"` is legal with an empty
      `plans` array and PHAT can neither be upserted nor removed. */
+  /* WO-018 T2: the refusal now covers ALL FIVE shipped documents, not just
+     `phat`. Same reason, unchanged: a template is code, and a copy of it in
+     `phat:v1:plans` is a second source that can drift — and the stored one
+     would win on a device that has not updated. `copyPlan` re-mints the id,
+     so a copy of a template stores normally. */
   function planStoreUpsert(store, plan) {
-    if (!isObj(plan) || str(plan.planId).trim() === "" || str(plan.planId).trim() === PHAT_PLAN_ID) {
+    if (!isObj(plan) || str(plan.planId).trim() === "" || isShippedPlanId(plan.planId)) {
       return { ok: false, store: store, problems: [{ scope: "plan", id: null, field: "planId", reason: "missing" }] };
     }
     var next = copyObj(isObj(store) ? store : {});
@@ -3693,7 +3843,11 @@
     var id = str(planId).trim();
     var next = copyObj(isObj(store) ? store : {});
     if (!Array.isArray(next.plans)) next.plans = [];
-    var known = id === PHAT_PLAN_ID, i;
+    /* WO-018 T2: any of the five shipped documents is a known plan to make
+       active, not just `phat`. This is what makes a template SELECTABLE; the
+       store still holds no copy of it, and the reader resolves the id through
+       `shippedPlan()`. */
+    var known = isShippedPlanId(id), i;
     for (i = 0; i < next.plans.length && !known; i++) {
       if (isObj(next.plans[i]) && str(next.plans[i].planId).trim() === id) known = true;
     }
@@ -4103,6 +4257,409 @@
     });
     return out;
   }
+
+  /* ------------------------------ the four shipped templates — WO-018 T2
+
+     TRANSCRIBED, not authored. Every field below is `strength-coach`'s, from
+     docs/coach-audit-addendum.md §23.4–§23.7, character for character:
+     `n`, `mv`, `s`, `lo`, `hi`, `k`, `implement`, `lift`, `cut` and `cue` per
+     slot, and `keyLifts` / `reintroOrder` / `reducedWeeks` per plan. Nothing
+     here is derived and nothing here is filled in.
+
+     PHAT DOES NOT MOVE. These are additions beside it, they are `readOnly`
+     and frozen exactly as it is, they are CODE and are never stored, and a
+     device that ignores all four writes zero bytes because of them. No
+     migration; SCHEMA_VERSION stays where it was.
+
+     THE THREE THINGS §23 NAMES AS TRAPS, all three honoured here:
+
+     1. `implement` IS THE COACH'S VALUE, NOT THE LIBRARY'S (§23.8). Rule I3
+        refuses 199 of 876 upstream rows and a refusal is not a default. Two
+        slots carry an implement the library WILL NOT SUPPLY — `p4c`
+        (`mv_Weighted_Pull_Ups`, upstream `eq:"other"`) and `b1e`
+        (`mv_Dips_-_Chest_Version`, also `"other"`) — and both are written
+        `bodyweight` by hand, which is the call PHAT's `d1b` and `d1e` already
+        ship against those same rows. A pass that "derives implement from the
+        library" blanks exactly those two, and they are the two where `w` is
+        the ADDED load (Rule L4) and Z2 must print `bodyweight` at zero. I3.3's
+        read-time derivation is about a SWAPPED ENTRY's `mv`; it has never
+        been about a stored plan field. Every other slot agrees with I3.1's
+        table, value for value, checked against the shipped
+        `assets/exercises.json` at the pinned SHA.
+     2. `k` IS NEVER DERIVED (Rule K3). Every slot states it. `d1h` skull
+        crusher is `isolation` and `power` upstream; `d4b` hack squat is
+        `compound` and `hyp`. There is no honest function from the library to
+        `k` and none is written here.
+     3. `mv` IS A LIBRARY ID AT THE PINNED SHA. All 32 distinct ids used
+        across the four resolve by id in the shipped library. A slot whose
+        `mv` did not would reintroduce B-46 by another door.
+
+     NO `fig` ON ANY SLOT, and that is §23.3.4's decision, not an oversight.
+     Rule F1p forbids approving a frame sight-unseen and the coach has viewed
+     none of these; `figFor()` reads the shipped PHAT plan only, so a `fig`
+     here would be inert anyway. Cue-only, exactly as PHAT's ten cue-only
+     slots ship today. A photograph pass is a separate item.
+
+     WHAT §23 OMITS IS A DECISION, NOT A GAP. `speedSource` is omitted from
+     all four — none of these splits has PHAT's two-power-day shape, so no
+     `k:"speed"` slot exists and SP1 has no subject to be absent about
+     (§23.3.2). `reintroOrder` and `reducedWeeks` are declared on the two
+     five-day plans (83 and 86 working sets a week, both above PHAT) and
+     omitted from the 3-day and the 2-day (49 and 35 sets), where subtracting
+     volume stops being a ramp and starts being a different programme
+     (§23.3.3). Do not "complete" any of those four omissions: C7a's ABSENT
+     line is the correct render and is already built.
+
+     IDS ARE GLOBALLY DISTINCT ACROSS ALL FIVE SHIPPED PLANS, by prefix:
+     PHAT `d*` / `l_*`, `ppl5` `p*` / `l5_*`, `ppl3` `t*` / `l3_*`, `ul2`
+     `u*` / `l2_*`, `bb5` `b*` / `lb_*`. A collision would merge two plans'
+     histories, which is the one thing a template can do that no edit can
+     undo.
+
+     DUPLICATED MOVEMENTS ARE ON PURPOSE, in `ppl5`. Bench, bent-over row,
+     leg press, lying leg curl and standing calf raise each appear twice at
+     two different `k` / rep ranges — the same arrangement as PHAT's `d1h` /
+     `d5i`. The `lift` ids are distinct (`_hyp` / `_pwr`) so Trend does not
+     merge them, and no pair shares a prescription epoch, so `planMvEpochDupes`
+     is empty over all four and MV1.2 is unreachable on them. Anyone
+     de-duplicating this plan is reintroducing B-46. */
+
+  /* Template 1 — §23.4. Push · Pull · Legs · Upper · Lower, 5 days on a
+     7-day cycle; Thursday and Saturday are gaps in the cycle, not documents.
+     28 slots, 83 working sets a week, 68 of them in weeks 1–4.
+     `keyLifts` — row, bench, squat, conventional deadlift: four `power`
+     slots at `hi <= 8`, so all four pass Rule HD1 on day one. */
+  var PPL5_PLAN = deepFreeze({
+    planId: "ppl5",
+    name: "Push Pull Legs Upper Lower",
+    from: "Chady's day order, 2026-09-29. Exercises and prescriptions by strength-coach, WO-018.",
+    readOnly: true,
+    createdAt: null,
+    keyLifts: ["p4a", "p4b", "p5a", "p5b"],
+    /* speedSource: DECLARED ABSENT (§23.3.2) — no `k:"speed"` slot exists. */
+    reintroOrder: { p1: ["p1d", "p1f"], p2: ["p2f", "p2d"], p3: ["p3d"] },
+    reducedWeeks: 4,
+    days: [
+      { id: "p1", name: "Push", wd: "Mon", ex: [
+        { id: "p1a", n: "Barbell bench press", s: 4, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l5_bench_hyp", mv: "mv_Barbell_Bench_Press_-_Medium_Grip",
+          cue: "Touch the same point on the chest every rep." },
+        { id: "p1b", n: "Incline barbell press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l5_incline", mv: "mv_Barbell_Incline_Bench_Press_-_Medium_Grip",
+          cue: "Keep the bar over the collarbone, not the face." },
+        { id: "p1c", n: "DB shoulder press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l5_dbshoulder", mv: "mv_Dumbbell_Shoulder_Press",
+          cue: "Ribs down, do not arch the lower back." },
+        { id: "p1d", n: "Side lateral raise", s: 3, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l5_lateral", mv: "mv_Side_Lateral_Raise", cut: 1,
+          cue: "Lead with the elbow, stop at shoulder height." },
+        { id: "p1e", n: "Triceps pushdown", s: 3, lo: 10, hi: 15, k: "hyp", implement: "cable", lift: "l5_pushdown", mv: "mv_Triceps_Pushdown",
+          cue: "Keep the elbows pinned to the ribs." },
+        /* §23.8 does NOT list this slot: upstream `Dips_-_Triceps_Version` is
+           `body only`, which I3.1 maps to `bodyweight` on its own. The
+           hand-written one on this movement family is `b1e`, the CHEST
+           version, whose row is `other`. */
+        { id: "p1f", n: "Weighted dip", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bodyweight", lift: "l5_dip", mv: "mv_Dips_-_Triceps_Version", cut: 1,
+          cue: "Keep the torso upright and the shoulders down." }
+      ] },
+      { id: "p2", name: "Pull", wd: "Tue", ex: [
+        { id: "p2a", n: "Seated cable row", s: 4, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l5_cablerow", mv: "mv_Seated_Cable_Rows",
+          cue: "Pull to the navel, do not lean back to finish." },
+        { id: "p2b", n: "Wide-grip lat pulldown", s: 3, lo: 10, hi: 12, k: "hyp", implement: "cable", lift: "l5_pulldown", mv: "mv_Wide-Grip_Lat_Pulldown",
+          cue: "Bring the bar to the collarbone, chest up." },
+        { id: "p2c", n: "Bent-over row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l5_bbrow_hyp", mv: "mv_Bent_Over_Barbell_Row",
+          cue: "Keep the torso at the same angle for every rep." },
+        { id: "p2d", n: "Face pull", s: 3, lo: 12, hi: 15, k: "hyp", implement: "cable", lift: "l5_facepull", mv: "mv_Face_Pull", cut: 1,
+          cue: "Pull the rope to the forehead, elbows high." },
+        { id: "p2e", n: "Barbell curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l5_bbcurl", mv: "mv_Barbell_Curl",
+          cue: "Do not rock the torso to start the rep." },
+        /* §23.1's third correction: his line read "a second curl 3×10–12" and
+           the coach named the movement. Flagged there as a choice, not a
+           transcription, and the one slot in this plan he would change
+           without argument. */
+        { id: "p2f", n: "Hammer curl", s: 3, lo: 10, hi: 12, k: "hyp", implement: "db", lift: "l5_hammer", mv: "mv_Hammer_Curls", cut: 1,
+          cue: "Thumbs up the whole way, elbows still." }
+      ] },
+      { id: "p3", name: "Legs", wd: "Wed", ex: [
+        { id: "p3a", n: "Leg press", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l5_legpress_hyp", mv: "mv_Leg_Press",
+          cue: "Stop before the lower back lifts off the pad." },
+        { id: "p3b", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l5_rdl", mv: "mv_Romanian_Deadlift",
+          cue: "Push the hips back; the bar stays on the legs." },
+        { id: "p3c", n: "Lying leg curl", s: 3, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l5_legcurl_hyp", mv: "mv_Lying_Leg_Curls",
+          cue: "Keep the hips down on the pad throughout." },
+        { id: "p3d", n: "Leg extension", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "l5_legext", mv: "mv_Leg_Extensions", cut: 1,
+          cue: "Keep the hips down in the seat, do not swing the pad up." },
+        { id: "p3e", n: "Standing calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l5_calf_hyp", mv: "mv_Standing_Calf_Raises",
+          cue: "Full stretch at the bottom, pause at the top." }
+      ] },
+      { id: "p4", name: "Upper", wd: "Fri", ex: [
+        { id: "p4a", n: "Bent-over row", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l5_bbrow_pwr", mv: "mv_Bent_Over_Barbell_Row",
+          cue: "Keep the torso at the same angle for every rep." },
+        { id: "p4b", n: "Barbell bench press", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l5_bench_pwr", mv: "mv_Barbell_Bench_Press_-_Medium_Grip",
+          cue: "Touch the same point on the chest every rep." },
+        /* §23.8, row 1. Upstream `eq` is `other`, which Rule I3 REFUSES.
+           `bodyweight` is hand-written by the coach — the same call PHAT's
+           `d1b` ships against this exact row. `w` here is the ADDED load
+           (Rule L4) and `bodyweight` is the word Z2 prints at zero. Do not
+           derive this field. */
+        { id: "p4c", n: "Weighted pull-up", s: 2, lo: 6, hi: 8, k: "power", implement: "bodyweight", lift: "l5_pullup", mv: "mv_Weighted_Pull_Ups",
+          cue: "Reach a full dead hang at the bottom of every rep." },
+        { id: "p4d", n: "Standing military press", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l5_ohp", mv: "mv_Standing_Military_Press",
+          cue: "Squeeze the glutes; do not lean back to press." },
+        { id: "p4e", n: "Cambered bar curl", s: 2, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l5_ezcurl", mv: "mv_EZ-Bar_Curl",
+          cue: "Do not rock the torso to start the rep." },
+        { id: "p4f", n: "Skull crusher", s: 2, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l5_skull", mv: "mv_EZ-Bar_Skullcrusher",
+          cue: "Take the bar to the forehead on every rep." }
+      ] },
+      { id: "p5", name: "Lower", wd: "Sun", ex: [
+        { id: "p5a", n: "Squat", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l5_squat", mv: "mv_Barbell_Squat",
+          cue: "Drive the hips and shoulders up together." },
+        /* §23.1 item 2: his line read "Deadlift or Romanian Deadlift", which
+           Rule A1 forbids as one slot. Resolved to the conventional deadlift
+           — the RDL already holds the Legs day's hinge at 8–12, and ST1's
+           week-6 test wants a 3–5 deadlift or it wants no deadlift. */
+        { id: "p5b", n: "Deadlift", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l5_deadlift", mv: "mv_Barbell_Deadlift",
+          cue: "Take the slack out of the bar before you pull." },
+        { id: "p5c", n: "Leg press", s: 2, lo: 8, hi: 10, k: "power", implement: "machine", lift: "l5_legpress_pwr", mv: "mv_Leg_Press",
+          cue: "Stop before the lower back lifts off the pad." },
+        { id: "p5d", n: "Lying leg curl", s: 2, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l5_legcurl_pwr", mv: "mv_Lying_Leg_Curls",
+          cue: "Keep the hips down on the pad throughout." },
+        { id: "p5e", n: "Standing calf raise", s: 3, lo: 6, hi: 10, k: "power", implement: "machine", lift: "l5_calf_pwr", mv: "mv_Standing_Calf_Raises",
+          cue: "Full stretch at the bottom, pause at the top." }
+      ] }
+    ]
+  });
+
+  /* Template 2 — §23.5. Push · Pull · Legs, 3 days. 15 slots, 49 sets.
+     No `cut` tier, so `reintroOrder` and `reducedWeeks` are both DECLARED
+     ABSENT (§23.3.3): cutting a 49-set week to ~40 is not a bulking stimulus
+     for this lifter, and C7a's line on the Plans screen says so.
+     The lead compound on each day is `power` 5–8, not 3–5 (§23.5's closing
+     paragraph): on three days a week each pattern is trained once, and 5–8
+     keeps the slot inside ST1's `r <= 8` window AND inside HD1's eligibility
+     while still driving the hypertrophy this plan is otherwise short of. */
+  var PPL3_PLAN = deepFreeze({
+    planId: "ppl3",
+    name: "Push Pull Legs — 3 days",
+    from: "Written for this app by strength-coach, WO-018.",
+    readOnly: true,
+    createdAt: null,
+    keyLifts: ["t1a", "t2a", "t3a", "t3b"],
+    /* speedSource / reintroOrder / reducedWeeks: DECLARED ABSENT (§23.3.2, §23.3.3). */
+    days: [
+      { id: "t1", name: "Push", wd: "Mon", ex: [
+        { id: "t1a", n: "Barbell bench press", s: 4, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l3_bench", mv: "mv_Barbell_Bench_Press_-_Medium_Grip",
+          cue: "Touch the same point on the chest every rep." },
+        { id: "t1b", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l3_incdb", mv: "mv_Incline_Dumbbell_Press",
+          cue: "Keep each wrist stacked under the dumbbell." },
+        { id: "t1c", n: "DB shoulder press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "l3_dbshoulder", mv: "mv_Dumbbell_Shoulder_Press",
+          cue: "Ribs down, do not arch the lower back." },
+        { id: "t1d", n: "Side lateral raise", s: 3, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "l3_lateral", mv: "mv_Side_Lateral_Raise",
+          cue: "Lead with the elbow, stop at shoulder height." },
+        { id: "t1e", n: "Triceps pushdown", s: 3, lo: 10, hi: 15, k: "hyp", implement: "cable", lift: "l3_pushdown", mv: "mv_Triceps_Pushdown",
+          cue: "Keep the elbows pinned to the ribs." }
+      ] },
+      { id: "t2", name: "Pull", wd: "Wed", ex: [
+        { id: "t2a", n: "Bent-over row", s: 4, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l3_bbrow", mv: "mv_Bent_Over_Barbell_Row",
+          cue: "Keep the torso at the same angle for every rep." },
+        { id: "t2b", n: "Wide-grip lat pulldown", s: 3, lo: 10, hi: 12, k: "hyp", implement: "cable", lift: "l3_pulldown", mv: "mv_Wide-Grip_Lat_Pulldown",
+          cue: "Bring the bar to the collarbone, chest up." },
+        { id: "t2c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l3_cablerow", mv: "mv_Seated_Cable_Rows",
+          cue: "Pull to the navel, do not lean back to finish." },
+        { id: "t2d", n: "Face pull", s: 3, lo: 12, hi: 15, k: "hyp", implement: "cable", lift: "l3_facepull", mv: "mv_Face_Pull",
+          cue: "Pull the rope to the forehead, elbows high." },
+        { id: "t2e", n: "Barbell curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l3_bbcurl", mv: "mv_Barbell_Curl",
+          cue: "Do not rock the torso to start the rep." }
+      ] },
+      { id: "t3", name: "Legs", wd: "Fri", ex: [
+        { id: "t3a", n: "Squat", s: 4, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l3_squat", mv: "mv_Barbell_Squat",
+          cue: "Drive the hips and shoulders up together." },
+        { id: "t3b", n: "Romanian deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l3_rdl", mv: "mv_Romanian_Deadlift",
+          cue: "Push the hips back; the bar stays on the legs." },
+        { id: "t3c", n: "Leg press", s: 3, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l3_legpress", mv: "mv_Leg_Press",
+          cue: "Stop before the lower back lifts off the pad." },
+        { id: "t3d", n: "Lying leg curl", s: 3, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l3_legcurl", mv: "mv_Lying_Leg_Curls",
+          cue: "Keep the hips down on the pad throughout." },
+        { id: "t3e", n: "Standing calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l3_calf", mv: "mv_Standing_Calf_Raises",
+          cue: "Full stretch at the bottom, pause at the top." }
+      ] }
+    ]
+  });
+
+  /* Template 3 — §23.6. Upper / Lower, 2 days. 11 slots, 35 sets.
+     §23.6.1, on the record and deliberately NOT rendered as copy: 35 working
+     sets a week is a maintenance plan, not a bulking plan, for an 85 kg
+     lifter with thirteen years of training. It is the right thing to have in
+     the list and it is not a smaller version of the 5-day.
+     §23.6.2 is why this document cannot be transcribed and forgotten: on a
+     2-day plan Rule TW1's fixed threshold of 3 can never be met, so
+     `trainingWeeks` would be permanently 0 and ST1's week-6 test and D1's
+     nine-week backstop would be silently dead — PRESENT and unreachable,
+     which C7a does not watch. Rule TW1b (trainingWeekMin, above) is the fix
+     and it ships with this document, not after it. */
+  var UL2_PLAN = deepFreeze({
+    planId: "ul2",
+    name: "Upper / Lower — 2 days",
+    from: "Written for this app by strength-coach, WO-018.",
+    readOnly: true,
+    createdAt: null,
+    keyLifts: ["u1a", "u1b", "u2a", "u2b"],
+    /* speedSource / reintroOrder / reducedWeeks: DECLARED ABSENT (§23.3.2, §23.3.3). */
+    days: [
+      { id: "u1", name: "Upper", wd: "Mon", ex: [
+        { id: "u1a", n: "Barbell bench press", s: 4, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l2_bench", mv: "mv_Barbell_Bench_Press_-_Medium_Grip",
+          cue: "Touch the same point on the chest every rep." },
+        { id: "u1b", n: "Bent-over row", s: 4, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l2_bbrow", mv: "mv_Bent_Over_Barbell_Row",
+          cue: "Keep the torso at the same angle for every rep." },
+        { id: "u1c", n: "Standing military press", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "l2_ohp", mv: "mv_Standing_Military_Press",
+          cue: "Squeeze the glutes; do not lean back to press." },
+        { id: "u1d", n: "Wide-grip lat pulldown", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "l2_pulldown", mv: "mv_Wide-Grip_Lat_Pulldown",
+          cue: "Bring the bar to the collarbone, chest up." },
+        { id: "u1e", n: "Barbell curl", s: 2, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "l2_bbcurl", mv: "mv_Barbell_Curl",
+          cue: "Do not rock the torso to start the rep." },
+        { id: "u1f", n: "Triceps pushdown", s: 2, lo: 10, hi: 15, k: "hyp", implement: "cable", lift: "l2_pushdown", mv: "mv_Triceps_Pushdown",
+          cue: "Keep the elbows pinned to the ribs." }
+      ] },
+      { id: "u2", name: "Lower", wd: "Thu", ex: [
+        { id: "u2a", n: "Squat", s: 4, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l2_squat", mv: "mv_Barbell_Squat",
+          cue: "Drive the hips and shoulders up together." },
+        { id: "u2b", n: "Deadlift", s: 3, lo: 5, hi: 8, k: "power", implement: "bb", lift: "l2_deadlift", mv: "mv_Barbell_Deadlift",
+          cue: "Take the slack out of the bar before you pull." },
+        { id: "u2c", n: "Leg press", s: 3, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l2_legpress", mv: "mv_Leg_Press",
+          cue: "Stop before the lower back lifts off the pad." },
+        { id: "u2d", n: "Lying leg curl", s: 3, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l2_legcurl", mv: "mv_Lying_Leg_Curls",
+          cue: "Keep the hips down on the pad throughout." },
+        { id: "u2e", n: "Standing calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "l2_calf", mv: "mv_Standing_Calf_Raises",
+          cue: "Full stretch at the bottom, pause at the top." }
+      ] }
+    ]
+  });
+
+  /* Template 4 — §23.7. The bodybuilder split. 27 slots, 86 sets, 65 of them
+     in weeks 1–4. Day order Chest · Back · Legs · Shoulders · Arms, which is
+     NOT the conventional one: legs-last on a Friday is where a bro split
+     reliably dies, and moving legs to Wednesday costs nothing and spaces the
+     pressing four days apart. `[Opinion]`, and §23.7.1 and §23.11 q1 both
+     say this is the least settled of the four and one line from Chady is
+     worth having before it ships.
+     `keyLifts` names bench, row, squat and military press and NO DEADLIFT,
+     deliberately: this split has no slot a conventional deadlift belongs in,
+     and a key lift the plan does not prescribe is a subject with no evidence.
+     The lead compound on four of five days is `power` 6–8 (§23.7's closing
+     paragraph) — without it no slot passes HD1, `keyLifts` has zero eligible
+     members, and ST1 and D1 T1/T2 are ABSENT from day one on a five-day
+     plan. The arms day has no key lift and needs none. */
+  var BB5_PLAN = deepFreeze({
+    planId: "bb5",
+    name: "Bodybuilder split",
+    from: "Chady's ask, 2026-09-29: \"the normal split like any bodybuilder does\". Day order and exercises by strength-coach, WO-018.",
+    readOnly: true,
+    createdAt: null,
+    keyLifts: ["b1a", "b2a", "b3a", "b4a"],
+    /* speedSource: DECLARED ABSENT (§23.3.2). */
+    reintroOrder: { b1: ["b1d"], b2: ["b2e", "b2d"], b3: ["b3e"], b4: ["b4e"], b5: ["b5e", "b5f"] },
+    reducedWeeks: 4,
+    days: [
+      { id: "b1", name: "Chest", wd: "Mon", ex: [
+        { id: "b1a", n: "Barbell bench press", s: 4, lo: 6, hi: 8, k: "power", implement: "bb", lift: "lb_bench", mv: "mv_Barbell_Bench_Press_-_Medium_Grip",
+          cue: "Touch the same point on the chest every rep." },
+        { id: "b1b", n: "Incline barbell press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "lb_incline", mv: "mv_Barbell_Incline_Bench_Press_-_Medium_Grip",
+          cue: "Keep the bar over the collarbone, not the face." },
+        { id: "b1c", n: "Incline DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "lb_incdb", mv: "mv_Incline_Dumbbell_Press",
+          cue: "Keep each wrist stacked under the dumbbell." },
+        { id: "b1d", n: "Cable crossover", s: 3, lo: 12, hi: 15, k: "hyp", implement: "cable", lift: "lb_crossover", mv: "mv_Cable_Crossover", cut: 1,
+          cue: "Keep a fixed soft bend at the elbow throughout." },
+        /* §23.8, row 2, AND THE TRAP THE WORK ORDER NAMES FIRST. Upstream
+           `Dips_-_Chest_Version` is `eq:"other"`, which Rule I3 REFUSES, so
+           there is no library value to fall back to and a pass that derived
+           this field would blank it. `bodyweight` is the coach's, the same
+           call PHAT's `d1e` ships against this exact row, and it is what
+           makes `w` the ADDED load and Z2's zero word correct. */
+        { id: "b1e", n: "Weighted dip", s: 2, lo: 8, hi: 12, k: "hyp", implement: "bodyweight", lift: "lb_dip", mv: "mv_Dips_-_Chest_Version",
+          cue: "Lean forward and let the chest lead." }
+      ] },
+      { id: "b2", name: "Back", wd: "Tue", ex: [
+        { id: "b2a", n: "Bent-over row", s: 4, lo: 6, hi: 8, k: "power", implement: "bb", lift: "lb_bbrow", mv: "mv_Bent_Over_Barbell_Row",
+          cue: "Keep the torso at the same angle for every rep." },
+        { id: "b2b", n: "Wide-grip lat pulldown", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "lb_pulldown", mv: "mv_Wide-Grip_Lat_Pulldown",
+          cue: "Bring the bar to the collarbone, chest up." },
+        { id: "b2c", n: "Seated cable row", s: 3, lo: 8, hi: 12, k: "hyp", implement: "cable", lift: "lb_cablerow", mv: "mv_Seated_Cable_Rows",
+          cue: "Pull to the navel, do not lean back to finish." },
+        { id: "b2d", n: "One-arm DB row", s: 3, lo: 10, hi: 12, k: "hyp", implement: "db", lift: "lb_dbrow", mv: "mv_One-Arm_Dumbbell_Row", cut: 1,
+          cue: "Keep the shoulders square; do not twist to finish." },
+        { id: "b2e", n: "Barbell shrug", s: 3, lo: 10, hi: 15, k: "hyp", implement: "bb", lift: "lb_shrug", mv: "mv_Barbell_Shrug", cut: 1,
+          cue: "Straight up and down; do not roll the shoulders." }
+      ] },
+      { id: "b3", name: "Legs", wd: "Wed", ex: [
+        { id: "b3a", n: "Squat", s: 4, lo: 6, hi: 8, k: "power", implement: "bb", lift: "lb_squat", mv: "mv_Barbell_Squat",
+          cue: "Drive the hips and shoulders up together." },
+        { id: "b3b", n: "Leg press", s: 3, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "lb_legpress", mv: "mv_Leg_Press",
+          cue: "Stop before the lower back lifts off the pad." },
+        { id: "b3c", n: "Romanian deadlift", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "lb_rdl", mv: "mv_Romanian_Deadlift",
+          cue: "Push the hips back; the bar stays on the legs." },
+        { id: "b3d", n: "Lying leg curl", s: 3, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "lb_legcurl", mv: "mv_Lying_Leg_Curls",
+          cue: "Keep the hips down on the pad throughout." },
+        { id: "b3e", n: "Leg extension", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "lb_legext", mv: "mv_Leg_Extensions", cut: 1,
+          cue: "Keep the hips down in the seat, do not swing the pad up." },
+        { id: "b3f", n: "Standing calf raise", s: 4, lo: 10, hi: 15, k: "hyp", implement: "machine", lift: "lb_calf", mv: "mv_Standing_Calf_Raises",
+          cue: "Full stretch at the bottom, pause at the top." }
+      ] },
+      { id: "b4", name: "Shoulders", wd: "Fri", ex: [
+        { id: "b4a", n: "Standing military press", s: 4, lo: 6, hi: 8, k: "power", implement: "bb", lift: "lb_ohp", mv: "mv_Standing_Military_Press",
+          cue: "Squeeze the glutes; do not lean back to press." },
+        { id: "b4b", n: "Seated DB press", s: 3, lo: 8, hi: 12, k: "hyp", implement: "db", lift: "lb_dbshoulder", mv: "mv_Seated_Dumbbell_Press",
+          cue: "Ribs down, do not arch the lower back." },
+        { id: "b4c", n: "Side lateral raise", s: 4, lo: 12, hi: 15, k: "hyp", implement: "db", lift: "lb_lateral", mv: "mv_Side_Lateral_Raise",
+          cue: "Lead with the elbow, stop at shoulder height." },
+        { id: "b4d", n: "Reverse machine flye", s: 3, lo: 12, hi: 15, k: "hyp", implement: "machine", lift: "lb_revflye", mv: "mv_Reverse_Machine_Flyes",
+          cue: "Keep the arms level with the shoulders." },
+        { id: "b4e", n: "Face pull", s: 3, lo: 12, hi: 15, k: "hyp", implement: "cable", lift: "lb_facepull", mv: "mv_Face_Pull", cut: 1,
+          cue: "Pull the rope to the forehead, elbows high." }
+      ] },
+      { id: "b5", name: "Arms", wd: "Sat", ex: [
+        { id: "b5a", n: "Close-grip bench press", s: 3, lo: 6, hi: 10, k: "power", implement: "bb", lift: "lb_cgbench", mv: "mv_Close-Grip_Barbell_Bench_Press",
+          cue: "Hands shoulder-width; keep the elbows in." },
+        { id: "b5b", n: "Barbell curl", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "lb_bbcurl", mv: "mv_Barbell_Curl",
+          cue: "Do not rock the torso to start the rep." },
+        { id: "b5c", n: "Skull crusher", s: 3, lo: 8, hi: 12, k: "hyp", implement: "bb", lift: "lb_skull", mv: "mv_EZ-Bar_Skullcrusher",
+          cue: "Take the bar to the forehead on every rep." },
+        { id: "b5d", n: "Preacher curl", s: 3, lo: 10, hi: 12, k: "hyp", implement: "bb", lift: "lb_preacher", mv: "mv_Preacher_Curl",
+          cue: "Keep the armpits on the pad at the bottom." },
+        { id: "b5e", n: "Triceps pushdown", s: 3, lo: 12, hi: 15, k: "hyp", implement: "cable", lift: "lb_pushdown", mv: "mv_Triceps_Pushdown", cut: 1,
+          cue: "Keep the elbows pinned to the ribs." },
+        { id: "b5f", n: "Hammer curl", s: 3, lo: 10, hi: 15, k: "hyp", implement: "db", lift: "lb_hammer", mv: "mv_Hammer_Curls", cut: 1,
+          cue: "Thumbs up the whole way, elbows still." }
+      ] }
+    ]
+  });
+
+  /* SHIPPED_PLANS — the five documents that are CODE, in list order, PHAT
+     first because it is the default and stays the default (WO-018 §0).
+
+     They are never stored. `planStoreUpsert` refuses every id in this list
+     for the same reason it has always refused `phat`: a document in the file
+     and a copy of it in `phat:v1:plans` is two sources that can drift, and
+     the stored one wins on a device that has not updated. `copyPlan` is the
+     only route to editing one, unchanged — it re-mints `planId`, clears
+     `readOnly`, PRESERVES every slot id, and carries no `derivedFrom`
+     (none of the four declares one, so C7b's provenance is correctly false
+     and ST1 speaks its generic diagnosis on a copy of a template).
+
+     NOT added to `priorFor`'s resolution chain, deliberately. That chain ends
+     at PHAT_PLAN because a pre-schema-7 session has no `mv` and no slot to
+     borrow one from; adding four more documents to it would change MV1's
+     answer for every existing card on a device that has never picked a
+     template. The active plan reaches priorFor as the card's own plan. */
+  var SHIPPED_PLANS = deepFreeze([PHAT_PLAN, PPL5_PLAN, PPL3_PLAN, UL2_PLAN, BB5_PLAN]);
+
+  /* shippedPlan(planId) -> the frozen document, or null. The Plans list and
+     `activePlanId` resolution both go through this; nothing else may hold a
+     reference to one of the four by name. */
+  function shippedPlan(planId) {
+    var id = str(planId).trim();
+    if (id === "") return null;
+    for (var i = 0; i < SHIPPED_PLANS.length; i++) {
+      if (str(SHIPPED_PLANS[i].planId).trim() === id) return SHIPPED_PLANS[i];
+    }
+    return null;
+  }
+  function isShippedPlanId(planId) { return shippedPlan(planId) !== null; }
 
   /* ------------------------------------------------------ the plan store
 
@@ -8576,6 +9133,15 @@
       id = str(declared[i]).trim();
       if (id === "" || have.indexOf(id) >= 0 || own(seen, id)) continue;
       seen[id] = true;
+      /* Rule HD1.2, WO-018. `have` now excludes a declared lift whose slot is
+         no longer heavy, and THAT LIFT IS STILL IN THE PLAN — so naming it
+         here would print `Squat is not in this plan.` about a squat sitting
+         on the Lower day. The count clause stays true and is still spoken;
+         the naming clause is only for a slot the plan really has lost.
+         The HD1 case has its own subject, `planKeyLiftsDropped`, and its own
+         sentence on the Plans screen (HD1.4). Marked `seen` above, so the
+         PHAT-derived sweep below cannot re-add it either. */
+      if (exById(plan, id)) continue;
       e = exById(PHAT_PLAN, id);
       if (isObj(e) && str(plan.derivedFrom).trim() === PHAT_PLAN_ID) out.missing.push(e.n);
     }
@@ -8732,17 +9298,29 @@
      A lift with fewer than 2 scoring dates in EITHER block is untested: two
      points in the recent block and none in the prior one is not a comparison.
 
+     plan      OPTIONAL, and the ONLY thing it decides is `testable`'s
+               threshold — Rule TW1b (§23.6.2): a training week is
+               `min(3, plan.days.length)` distinct training days, so on a
+               2-day plan ST1 can reach week 6 at all. Omit it and the
+               threshold is 3, which is what every existing caller got.
+               WHICH lifts are tested is still entirely the caller's
+               (`keyLifts`); this argument names no subject.
+               INDEX.HTML'S TWO DIRECT CALLERS DO NOT PASS IT YET, so on a
+               2-day plan they will read `testable:false` while `stallAdvice`
+               reads true. That is a frontend follow-up (WO-018 T3), named
+               here rather than papered over.
+
      NOT IMPLEMENTED HERE, deliberately: addendum S2c appends one factual line
      when a stalled lift also carries a pain note inside the recent block. It
      needs painWindow(), which is W16's, and the coach marked it deferrable and
      "nothing else breaks if it is cut". When W16 lands, this takes the flagged
-     ids as a FIFTH argument - E2's state took the fourth - and W10 renders the
-     extra line. */
-  function stallReport(sessions, todayStr, keyLifts, state) {
+     ids as a SIXTH argument - E2's state took the fourth and Rule TW1b's plan
+     took the fifth - and W10 renders the extra line. */
+  function stallReport(sessions, todayStr, keyLifts, state, plan) {
     var today = safeToday(todayStr);
     var out = { stalled: [], untested: [], testable: false };
 
-    out.testable = trainingWeeks(sessions, today) >= ST1_WEEKS;
+    out.testable = trainingWeeks(sessions, today, plan) >= ST1_WEEKS;
     if (!out.testable) return out;
     if (!Array.isArray(keyLifts)) return out;
 
@@ -8877,7 +9455,7 @@
     var sessions = Array.isArray(c.sessions) ? c.sessions : [];
     var today = safeToday(c.todayStr);
     var lifts = Array.isArray(c.keyLifts) ? c.keyLifts : planKeyLifts(plan);
-    var tw = trainingWeeks(sessions, today);
+    var tw = trainingWeeks(sessions, today, plan);   /* Rule TW1b */
 
     var out = notAbsent({
       state: "quiet", provenance: null, copy: null, week: tw,
@@ -8903,7 +9481,7 @@
 
     var rep = (isObj(c.report) && Array.isArray(c.report.stalled) && Array.isArray(c.report.untested))
       ? c.report
-      : stallReport(sessions, today, lifts, isObj(c.state) ? c.state : null);
+      : stallReport(sessions, today, lifts, isObj(c.state) ? c.state : null, plan);
     out.report = rep;
     out.stalled = rep.stalled.slice(0);
     out.untested = rep.untested.slice(0);
@@ -10119,7 +10697,7 @@
     var state = isObj(c.state) ? c.state : {};
     var dl = deloadStatus((c.deload !== undefined) ? { deload: c.deload } : state, today);
 
-    var tw = trainingWeeks(sessions, today);
+    var tw = trainingWeeks(sessions, today, plan);   /* Rule TW1b */
     var cw = calendarWeeks(sessions, today);
     var rw = planReducedWeeks(plan);
     var tier = planHasCutTier(plan);
@@ -10578,12 +11156,16 @@
     return out;
   }
 
-  /* Weeks of >= 3 training days AFTER `sinceStr` (exclusive), or all of them
-     when it is null. T3's "9 CONSECUTIVE trainingWeeks with no deload taken"
-     is this count: the clock restarts when a deload finishes. TW1 unchanged
-     otherwise (addendum 6d). */
-  function weeksSince(sessions, todayStr, sinceStr) {
+  /* Weeks of >= trainingWeekMin(plan) training days AFTER `sinceStr`
+     (exclusive), or all of them when it is null. T3's "9 CONSECUTIVE
+     trainingWeeks with no deload taken" is this count: the clock restarts
+     when a deload finishes. TW1 unchanged otherwise (addendum 6d), and the
+     threshold is Rule TW1b's, same as `trainingWeeks` — T3's backstop is the
+     other gate that was permanently unreachable on a 2-day plan. The fourth
+     argument is optional and omitting it is 3, exactly as before. */
+  function weeksSince(sessions, todayStr, sinceStr, plan) {
     var days = trainingDays(sessions, todayStr);
+    var min = trainingWeekMin(plan);
     var by = {}, n = 0, i, w;
     for (i = 0; i < days.length; i++) {
       if (sinceStr !== null && days[i] <= sinceStr) continue;
@@ -10591,7 +11173,7 @@
       if (w === null) continue;
       by[w] = (by[w] || 0) + 1;
     }
-    Object.keys(by).forEach(function (k) { if (by[k] >= TRAINING_WEEK_MIN) n++; });
+    Object.keys(by).forEach(function (k) { if (by[k] >= min) n++; });
     return n;
   }
 
@@ -10844,7 +11426,7 @@
       markAbsent(out, D1_ABSENT);
     }
 
-    if (trainingWeeks(sessions, today) < D1_WEEKS) { out.reason = "early"; return out; }
+    if (trainingWeeks(sessions, today, plan) < D1_WEEKS) { out.reason = "early"; return out; }   /* Rule TW1b */
     if (dl.active) { out.reason = "active"; return out; }
 
     /* Declined: the check re-runs after the NEXT session, not on the next
@@ -10920,7 +11502,7 @@
        is unchanged, and the foreign version drops the day structure and
        restates the deload in terms any plan has - same weights, two sets,
        two reps short of the top of the range. */
-    if (weeksSince(sessions, today, since) >= D1_T3_WEEKS) {
+    if (weeksSince(sessions, today, since, plan) >= D1_T3_WEEKS) {   /* Rule TW1b */
       out.trigger = "T3";
       out.text = (out.provenance === "phat")
         ? "Nine weeks straight. Take a deload week before something makes you."
@@ -11095,7 +11677,7 @@
     var program = Array.isArray(c.program) ? c.program : null;
     var plan = isPlanDoc(c.plan) ? c.plan : PHAT_PLAN;
     var dl = deloadStatus((c.deload !== undefined) ? { deload: c.deload } : state, today);
-    var tw = trainingWeeks(sessions, today);
+    var tw = trainingWeeks(sessions, today, plan);   /* Rule TW1b */
     var cw = calendarWeeks(sessions, today);
     var rw = planReducedWeeks(plan);
     var tier = planHasCutTier(plan);
@@ -12247,6 +12829,12 @@
     dayGap: dayGap,
     dayMon: dayMon,
     TRAINING_WEEK_MIN: TRAINING_WEEK_MIN,
+    /* Rule TW1b (coach §23.6.2). The threshold a training week is counted
+       against is min(3, plan.days.length), so a 2-day plan can accumulate
+       one at all and ST1 and D1 T3 are not silently switched off on it.
+       Exported so the number can be pinned on its own, not only through
+       the four engines that read it. */
+    trainingWeekMin: trainingWeekMin,
     trainingDays: trainingDays,
     trainingWeeks: trainingWeeks,
     liftDays: liftDays,
@@ -12324,6 +12912,16 @@
        per-exercise engine still reads history by `id`. */
     PHAT_PLAN_ID: PHAT_PLAN_ID,
     PHAT_PLAN: PHAT_PLAN,
+    /* ---- WO-018 T2: the four templates, beside PHAT and never instead of
+       it. All five are frozen code and none is ever stored. PHAT is first
+       in SHIPPED_PLANS and stays the default. */
+    PPL5_PLAN: PPL5_PLAN,
+    PPL3_PLAN: PPL3_PLAN,
+    UL2_PLAN: UL2_PLAN,
+    BB5_PLAN: BB5_PLAN,
+    SHIPPED_PLANS: SHIPPED_PLANS,
+    shippedPlan: shippedPlan,
+    isShippedPlanId: isShippedPlanId,
     PLAN_KINDS: PLAN_KINDS,
     PLAN_IMPLEMENTS: PLAN_IMPLEMENTS,
     mintId: mintId,
@@ -12383,6 +12981,19 @@
     planReintroOrder: planReintroOrder,
     planKeyLiftIds: planKeyLiftIds,
     planKeyLifts: planKeyLifts,
+    /* ---- Rule HD1 (coach §23.2). Heavy is DERIVED — k==="power" and
+       hi<=8 — never stored and never migrated. planKeyLiftIds and
+       planSpeedSource validate their declared subjects against it at read
+       time and REWRITE NOTHING, so undoing a flip restores the old
+       behaviour exactly. Zero eligible subjects falls through to C7a’s
+       ABSENT state, never to PRESENT-THIN. planKeyLiftsDropped is the
+       Plans screen’s HD1.4 subject: declared, still in the plan, no longer
+       heavy. HD1_HI is the same 8 as ST1_REPS and R1’s power rest split,
+       by rule; pin them equal. */
+    HD1_HI: HD1_HI,
+    isHeavySlot: isHeavySlot,
+    isHeavyDay: isHeavyDay,
+    planKeyLiftsDropped: planKeyLiftsDropped,
     planHasCutTier: planHasCutTier,
     planReducedWeeks: planReducedWeeks,
     /* Rule V1a — W5. `planReducedDeclared` returns NULL when the plan names no
