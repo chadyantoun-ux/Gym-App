@@ -1764,7 +1764,7 @@
      THE DEFECT IT CLOSES, and it is the most consequential thing in §23. A
      2-day plan can never hold 3 distinct training days in one Monday-start
      week, so its `trainingWeeks` is PERMANENTLY 0 — and everything gated on
-     it is permanently inert: ST1's week-6 test never fires, D1 T3's nine-week
+     it is permanently inert: ST1's six-week check never fires, D1 T3's nine-week
      backstop never fires, V1's block never advances, and `cycleLine` prints
      the §9.8 zero case for ever. None of it reads as ABSENT either: the plan
      DECLARES key lifts, so ST1 is PRESENT and simply never reached. The app
@@ -1781,7 +1781,11 @@
 
      EVERYTHING ELSE IN TW1 IS UNCHANGED — distinct days, the fixed Monday
      grid, the §6b straddle ruling, dates after today not counting, all of it.
-     No string changes anywhere.
+     ONE STRING FOLLOWS IT, added by WO-014 after T3: `tierLines`' `explain`
+     sentence STATES the threshold ("A training week is a week with three or
+     more logged sessions."), so on a 2-day plan it was a false sentence on the
+     Train screen. It now interpolates `trainingWeekMin(plan)` through
+     `tierLines`' last argument. No other string moves.
 
      THE THIRD ARGUMENT IS OPTIONAL AND OMITTING IT IS THE OLD BEHAVIOUR,
      BYTE FOR BYTE. Every existing two-argument caller — in this file, in
@@ -4413,7 +4417,7 @@
         /* §23.1 item 2: his line read "Deadlift or Romanian Deadlift", which
            Rule A1 forbids as one slot. Resolved to the conventional deadlift
            — the RDL already holds the Legs day's hinge at 8–12, and ST1's
-           week-6 test wants a 3–5 deadlift or it wants no deadlift. */
+           six-week check wants a 3–5 deadlift or it wants no deadlift. */
         { id: "p5b", n: "Deadlift", s: 3, lo: 3, hi: 5, k: "power", implement: "bb", lift: "l5_deadlift", mv: "mv_Barbell_Deadlift",
           cue: "Take the slack out of the bar before you pull." },
         { id: "p5c", n: "Leg press", s: 2, lo: 8, hi: 10, k: "power", implement: "machine", lift: "l5_legpress_pwr", mv: "mv_Leg_Press",
@@ -4489,7 +4493,7 @@
      the list and it is not a smaller version of the 5-day.
      §23.6.2 is why this document cannot be transcribed and forgotten: on a
      2-day plan Rule TW1's fixed threshold of 3 can never be met, so
-     `trainingWeeks` would be permanently 0 and ST1's week-6 test and D1's
+     `trainingWeeks` would be permanently 0 and ST1's six-week check and D1's
      nine-week backstop would be silently dead — PRESENT and unreachable,
      which C7a does not watch. Rule TW1b (trainingWeekMin, above) is the fix
      and it ships with this document, not after it. */
@@ -9137,11 +9141,32 @@
      test fails, so the generic diagnosis fires), and he should still be told.
 
      The missing lift is named when it can be named: an id the plan still
-     declares but no longer contains, or — on a plan DERIVED FROM PHAT — one of
-     the shipped plan's four that this copy no longer declares. On a plan built
-     from scratch that simply names three lifts there is nothing to name and
-     nothing was lost, so only the count clause is spoken. Nothing here guesses
-     a name from an id. */
+     declares but no longer contains, or — on a plan DERIVED FROM A SHIPPED ONE
+     — one of that document's four that this copy no longer declares. On a plan
+     built from scratch that simply names three lifts there is nothing to name
+     and nothing was lost, so only the count clause is spoken. Nothing here
+     guesses a name from an id.
+
+     WO-014, after T3. THE ANCESTOR IS RESOLVED THROUGH `shippedPlan()`, NOT
+     HARD-CODED TO PHAT. Both sweeps below used to test
+     `derivedFrom === "phat"` and read names out of `PHAT_PLAN`, so HD1.4's
+     case (a) literal — `{name} is not in this plan.` — could only ever fire on
+     PHAT and its copies. A copy of any of the four templates that loses a key
+     lift got `Reading 3 of 4 key lifts.` with no name, which is the anonymous
+     disclosure §23.2.6 refused to sign off. `shippedPlan(plan.derivedFrom)` is
+     a strict superset of the old test: it returns PHAT_PLAN for `"phat"`
+     (so PHAT is byte-identical), and null for an absent, blank or unknown
+     `derivedFrom` (so every plan that was skipped before is still skipped).
+
+     IT IS STILL INERT ON THE FOUR TEMPLATES UNTIL THEIR COPIES CARRY A
+     `derivedFrom`. None of `ppl5`, `ppl3`, `ul2` or `bb5` declares one — only
+     PHAT does — and `copyPlan` carries the field rather than minting it, so
+     `shippedPlan(undefined)` is null and the sweep still has nothing to
+     consult. That is a PROVENANCE decision and not this function's to take:
+     it asks whether a copy of a template records WHICH template it is a copy
+     of, which is a question about `copyPlan` and about the four documents, and
+     it is open. Fixing it here by guessing the ancestor from the ids is
+     exactly the guess the paragraph above forbids. */
   function keyLiftDisclosure(plan) {
     var out = { n: 0, max: PLAN_KEYLIFT_MAX, missing: [], line: "" };
     if (!isPlanDoc(plan)) return out;
@@ -9149,6 +9174,8 @@
     out.n = have.length;
     if (out.n >= PLAN_KEYLIFT_MAX) return out;
 
+    /* The shipped document this plan is a copy of, or null. */
+    var src = shippedPlan(plan.derivedFrom);
     var declared = Array.isArray(plan.keyLifts) ? plan.keyLifts : [];
     var seen = {}, i, id, e;
     for (i = 0; i < declared.length; i++) {
@@ -9162,17 +9189,18 @@
          the naming clause is only for a slot the plan really has lost.
          The HD1 case has its own subject, `planKeyLiftsDropped`, and its own
          sentence on the Plans screen (HD1.4). Marked `seen` above, so the
-         PHAT-derived sweep below cannot re-add it either. */
+         shipped-plan sweep below cannot re-add it either. */
       if (exById(plan, id)) continue;
-      e = exById(PHAT_PLAN, id);
-      if (isObj(e) && str(plan.derivedFrom).trim() === PHAT_PLAN_ID) out.missing.push(e.n);
+      if (src === null) continue;
+      e = exById(src, id);
+      if (isObj(e)) out.missing.push(e.n);
     }
-    if (str(plan.derivedFrom).trim() === PHAT_PLAN_ID) {
-      var want = planKeyLiftIds(PHAT_PLAN);
+    if (src !== null) {
+      var want = planKeyLiftIds(src);
       for (i = 0; i < want.length; i++) {
         if (have.indexOf(want[i]) >= 0 || own(seen, want[i])) continue;
         seen[want[i]] = true;
-        e = exById(PHAT_PLAN, want[i]);
+        e = exById(src, want[i]);
         if (isObj(e)) out.missing.push(e.n);
       }
     }
@@ -10559,14 +10587,24 @@
      `nSess` logged sessions — DISTINCT DATES with a completed set (§9.4), for
              the row that cannot count accessories
      `firstDay` the name of the plan's first day, for the day-one line. "" is
-             a legitimate value and drops the clause; it is the LAST argument
-             so the two call sites read the same up to it */
-  function tierLines(tw, cw, back, cuts, hasSessions, dl, rw, tier, nSess, firstDay) {
+             a legitimate value and drops the clause
+     `twMin` the plan's training-week threshold, `trainingWeekMin(plan)` (Rule
+             TW1b). It is the LAST argument and OMITTING IT IS THE OLD
+             BEHAVIOUR, byte for byte: it falls back to TRAINING_WEEK_MIN, the
+             3 the sentence used to spell. It exists for ONE reason — the
+             `explain` sentence states the threshold, and after TW1b the
+             threshold follows the plan, so a hard-coded "three" is a false
+             sentence on any plan of fewer than three days. The number comes
+             from the same function that decides the behaviour; there is no
+             second copy of the rule here */
+  function tierLines(tw, cw, back, cuts, hasSessions, dl, rw, tier, nSess, firstDay, twMin) {
     var out = { row: "", status: "", divergence: "", explain: "", count: "" };
     rw = (typeof rw === "number" && isFinite(rw) && rw >= 0) ? Math.floor(rw) : PLAN_REDUCED_DEFAULT;
     tier = (tier !== false);
     nSess = (typeof nSess === "number" && isFinite(nSess) && nSess >= 0) ? Math.floor(nSess) : 0;
     firstDay = str(firstDay).trim();
+    twMin = (typeof twMin === "number" && isFinite(twMin) && twMin >= 1)
+      ? Math.floor(twMin) : TRAINING_WEEK_MIN;
     if (isObj(dl) && dl.active) {
       out.row = dl.text;
       return out;
@@ -10613,7 +10651,16 @@
          is dropped; the week arithmetic is plan-agnostic and stays. */
       out.divergence = "Week " + cw + " by the calendar, week " + tw + " of real training." +
                        ((tier && tw <= rw) ? " Reduced volume holds." : "");
-      out.explain = "A training week is a week with three or more logged sessions.";
+      /* Rule TW1b, WO-014. The number is INTERPOLATED here and spelled by
+         numWord, because this sentence STATES THE THRESHOLD and the threshold
+         follows the plan: on `ul2`, a 2-day plan, a training week is two
+         sessions and "three or more" is simply false — on the Train screen of
+         a plan he can now select. The shape does not change at two or at one
+         ("a week with two or more logged sessions" reads as written), so this
+         is a number, not new copy. It reads `trainingWeekMin(plan)` through
+         the caller; nothing here re-derives the rule. */
+      out.explain = "A training week is a week with " + numWord(twMin) +
+                    " or more logged sessions.";
     }
 
     /* ABSENT (Rule C7a): no reduced-volume tier, so no weeks-1-4 block, no
@@ -10727,7 +10774,7 @@
        engine's defaults, but it may not name a session. See dayOneName. */
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
                           rw, runs, loggedSessions(sessions, today),
-                          dayOneName(c.plan));
+                          dayOneName(c.plan), trainingWeekMin(plan));
 
     var order = runs ? orderFor(dayId, exList, declaredOrder(plan, dayId)) : [];
     /* Inside the reduced-volume block: zero, and there is no override anywhere
@@ -11707,7 +11754,8 @@
        where the invented session name would have rendered: top of Home, first
        sentence, day one. */
     var lines = tierLines(tw, cw, tot.back, tot.cuts, sessions.length > 0, dl,
-                          rw, runs, nSess, dayOneName(c.plan));
+                          rw, runs, nSess, dayOneName(c.plan),
+                          trainingWeekMin(plan));   /* Rule TW1b */
     /* PRECEDENCE AT ZERO AND AT ONE TO TWO SESSIONS (§9.12 ruling 3): the
        count line WINS over the reduced-volume line. Both are true, but at
        trainingWeeks 0 the number that looks broken is the week count, and the
