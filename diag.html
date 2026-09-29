@@ -90,6 +90,58 @@
   }catch(e){ line("localStorage: ERROR " + (e&&e.message||e)); line(""); }
   show();
 
+  /* 2b. WO-015 / B-131 — the correction, read three ways so the phone and the
+     server can be compared without opening a console. THROWAWAY: this block
+     goes out with the pass. Synchronous, localStorage only, writes nothing.
+       · the marker      log.repairs
+       · the keep        every phat:v1:recover:log:* key and its timestamp
+       · the numbers     d1d's four loads in both pinned sessions — the entry
+                         whose loads the pass halves. Pre-fix reads
+                         63/77/77/81 and 77.1/81.6/81.6/72.6; post-fix
+                         31.5/38.5/38.5/40.5 and 38.6/40.8/40.8/36.3. d1b is
+                         printed as its mv/n, because that row moves no load. */
+  try{
+    line("B-131 (WO-015):");
+    var lg=null; try{ lg=JSON.parse(localStorage.getItem("phat:v1:log")); }catch(e){}
+    line("  log.repairs = " + (lg ? JSON.stringify(lg.repairs) : "(no readable log store)"));
+    var rk=[];
+    for(var ri=0;ri<localStorage.length;ri++){
+      var rkey=localStorage.key(ri);
+      if(/^phat:v1:recover:log:/.test(rkey)) rk.push(rkey);
+    }
+    rk.sort();
+    line("  recover:log keys (" + rk.length + "):" + (rk.length?"":" none"));
+    rk.forEach(function(k){
+      var j=null; try{ j=JSON.parse(localStorage.getItem(k)); }catch(e){}
+      var at=j&&typeof j.savedAt==="number" ? new Date(j.savedAt).toISOString() : "-";
+      var rawn=j&&typeof j.raw==="string" ? j.raw.length : (j&&j.value?"(value form)":"-");
+      var kept=null; try{ kept = j&&typeof j.raw==="string" ? JSON.parse(j.raw) : (j&&j.value||null); }catch(e){}
+      line("    " + k);
+      line("      savedAt=" + at + " reason=" + (j&&j.reason!==undefined?String(j.reason):"(none - a repair keep)") +
+           " rawBytes=" + rawn + " sessions=" + (kept&&Array.isArray(kept.sessions)?kept.sessions.length:"?") +
+           " repairs=" + (kept?JSON.stringify(kept.repairs):"?"));
+    });
+    ["1789264514484","1790128305395"].forEach(function(sid){
+      var s=null;
+      if(lg&&Array.isArray(lg.sessions)) s=lg.sessions.filter(function(x){ return x&&String(x.id)===sid; })[0]||null;
+      if(!s){ line("  " + sid + ": not on this device"); return; }
+      line("  " + sid + " " + s.date + " " + s.dayId + ":");
+      ["d1d","d1b"].forEach(function(ex){
+        var e=s.entries&&s.entries[ex];
+        if(!e){ line("    " + ex + ": no entry"); return; }
+        var sets=Array.isArray(e.sets)?e.sets:[];
+        line("    " + ex + " w=[" + sets.map(function(x){ return x&&x.w; }).join(", ") + "]" +
+             " r=[" + sets.map(function(x){ return x&&x.r; }).join(", ") + "]" +
+             " add=[" + sets.map(function(x){ return x&&x.ld?String(x.ld.add)+(x.ld.au||""):"-"; }).join(", ") + "]");
+        line("      mv=" + JSON.stringify(e.mv) + " sw=" + JSON.stringify(e.sw) + " n=" + JSON.stringify(e.n));
+      });
+    });
+    var pf=null; try{ pf=JSON.parse(localStorage.getItem("phat:v1:prefs")); }catch(e){}
+    line("  notice dismissed (prefs.b131) = " + (pf?JSON.stringify(pf.b131):"(no readable prefs)"));
+    line("");
+  }catch(e){ line("B-131: ERROR " + (e&&e.message||e)); line(""); }
+  show();
+
   /* 3..7 the awaited sections, one after another, each printed as it lands */
   var chain=Promise.resolve();
   chain=chain.then(function(){

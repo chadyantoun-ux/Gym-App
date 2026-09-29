@@ -534,6 +534,21 @@
   .tcard p{color:var(--dim); font-size:.8125rem; line-height:1.45; margin-top:6px}
   .tcard p.lead{color:var(--bone); font-size:.90625rem; font-weight:800; line-height:1.35}
 
+  /* WO-015 / UX §22.19. THE REPAIR NOTICE, and it is a THROWAWAY: this rule,
+     the block in vHome() and the pass at the two call sites are deleted
+     together (B-151). It borrows .tcard's geometry and left rule - a notice
+     ABOUT the log is the same kind of object as a finding IN it - and its
+     heading carries SKIPPED's kicker shape at --dim. NOT --faint: §22.19
+     forbids .45 in this card by name and §0.5 forbids it anywhere text is
+     read. Body is --bone, not --dim: four sentences he is meant to read
+     once, not a caption. */
+  .rcard{background:var(--surface); border-left:3px solid var(--dim);
+    border-radius:var(--r); padding:14px var(--s4)}
+  .rcard h2{color:var(--dim); font-size:.6875rem; font-weight:800;
+    letter-spacing:.12em; text-transform:uppercase}
+  .rcard p{color:var(--bone); font-size:.8125rem; line-height:1.45; margin-top:8px}
+  .rcard .ghostbtn{margin-top:var(--s4)}
+
   /* THE CHART YIELDS BEFORE THE LABEL DOES. The row is STACKED, so at any
      text size the name owns a full-width line and there is no width for the
      chart to take from it. The head wraps rather than squeezing: at 200%
@@ -2166,11 +2181,72 @@ function vHome(){
   try{ rn=PHAT.rollbackNotice(S.logMeta,S.sessions,PHAT.localDate()); }catch(err){ rn=null; }
   if(rn&&rn.show&&rn.text) h+=`<div class="cycle"><p class="div">${esc(rn.text)}</p></div>`;
 
+  /* WO-015 / UX §22.19. THE REPAIR NOTICE. THROWAWAY (B-151): this block goes
+     out with the pass, and it is not a general "your data was repaired"
+     component - there is no second repair planned and a mechanism costs more
+     than four sentences do.
+
+     WHY IT EXISTS AT ALL: §3 says never lose a number. §22.19 names its
+     sibling - never change a number he cannot see was changed. Without this
+     card his first evidence that his log moved is #48 appearing under a chart
+     he has read many times, and he would be deducing a data rewrite from a
+     chart disclosure. The notice's job is to arrive before the chart makes
+     him ask.
+
+     PLACEMENT is §22.19's "below the day card and the start control", here
+     read as: after every PROGRAMME-STATE line and immediately above the day
+     list. Home has no `Recent sessions` section - that heading is Trend's -
+     so the spec's "above Recent sessions" has no literal anchor on this
+     screen; this is the same relative position, and it keeps two pinned
+     adjacencies intact (§18.2's owner row directly under the next-session
+     block, and C-10's single programme-state block). It costs the day list
+     ~150 px of the no-scroll budget for as long as it stands, which is B-97's
+     territory and is stated in the report.
+
+     THE GATE IS NOT HERE. b131Show is latched once at boot (the stamp in the
+     local log, no dismissal, no draft, no store notice), so nothing this view
+     does can make the card appear under a thumb. THE COUNTS ARE HERE, derived
+     from the log, never typed: two of the table's four entries live in ONE
+     session, so the session count is not the entry count and the literal must
+     not assert a number the pass did not write. At zero a line drops; at both
+     zero the card does not render - no empty card, no `0 sessions`.
+
+     NOT A LIVE REGION, deliberately (§22.19 a11y): it renders on load, not in
+     response to an action, and role="alert" would interrupt a screen-reader
+     user's arrival for a week-old fact. A <section> with aria-labelledby on a
+     real heading instead. */
+  if(b131Show){
+    const bc=b131Counts(logPayload());
+    if(bc.np||bc.nd){
+      const mvn=String(PHAT.B131_N||"Lat pulldown");
+      h+=`<section class="pad mt16" aria-labelledby="b131-h"><div class="rcard">
+        <h2 id="b131-h">Log corrected</h2>`;
+      if(bc.np) h+=`<p>${bc.np} pull-up session${bc.np===1?"":"s"} now
+        read${bc.np===1?"s":""} ${esc(mvn)}.</p>`;
+      if(bc.nd) h+=`<p>${bc.nd} dumbbell session${bc.nd===1?"":"s"} held the pair total.
+        ${bc.nd===1?"It now reads":"They now read"} per hand.</p>`;
+      h+=`<p>Nothing was removed. Every session is still under Recent sessions.</p>`;
+      /* #58 is #48's clause word for word, so the two surfaces are one voice,
+         and it asserts ABSENCE only - Rule CH1 forbids the one reassurance he
+         actually wants, because the pulldown sessions are not on that line
+         and never will be. Dropped with np, per §22.19. */
+      if(bc.np) h+=`<p>The pulldown session${bc.np===1?" is":"s are"} not on the
+        pull-up line — a different movement.</p>`;
+      h+=`<button class="ghostbtn" id="b131-x">Dismiss</button>
+      </div></section>`;
+    }
+  }
+
   /* THE DAY LIST. B-31: `{wd} · {day}`, the weekday from the plan document's
      own `wd`, which is what makes the rest day legible without renumbering a
      single stored id (C-5). This block must be reachable WITHOUT SCROLLING at
      393 × 852 — nothing above it may grow without re-measuring. */
-  h+=`<div class="pad mt16"><span class="lbl secrule">Or pick any day</span>`;
+  /* WO-015: the id and tabindex are the repair notice's focus target on
+     dismiss (§22.19 asks for the heading of `Recent sessions`, which Home does
+     not have - this is the next label below the card, so the reading position
+     is kept and focus never lands on document.body). tabindex="-1" is not
+     reachable by Tab and changes nothing for anyone who does not dismiss. */
+  h+=`<div class="pad mt16"><span class="lbl secrule" id="daylist-h" tabindex="-1">Or pick any day</span>`;
   PROGRAM.forEach(d=>{
     const l=lastDay(d.id), a=l===null?null:ago(l), stale=a!==null&&a>=8;
     h+=`<button class="daybtn${stale?" stale":""}" data-day="${esc(d.id)}">
@@ -6097,6 +6173,22 @@ document.getElementById("view").addEventListener("click",async e=>{
   if(e.target.closest("#dl-start")){ await answerDeload("start"); return; }
   if(e.target.closest("#dl-no")){ await answerDeload("no"); return; }
   if(e.target.closest("#dl-end")){ await answerDeload("end"); return; }
+  /* WO-015 / UX §22.19. DISMISS: one tap, permanent on this device, no
+     confirmation and no undo - the notice is a receipt, not a proposal, and
+     correcting a saved session is B-05 and always was. The latch drops FIRST
+     so the repaint cannot re-render the card even if the prefs write is
+     refused; a dismissal that does not persist costs one more card on the next
+     launch, and a card that will not go away costs him the tap he just made.
+     render(true) keeps the scroll position, then focus moves to the label
+     below where the card was - never document.body. */
+  if(e.target.closest("#b131-x")){
+    b131Show=false;
+    render(true);
+    const t=document.getElementById("daylist-h");
+    if(t) t.focus({preventScroll:true});
+    await save(PREFS,{[B131_PREF]:1});
+    return;
+  }
 
   const fb=e.target.closest("[data-fig]");
   if(fb){
@@ -9044,6 +9136,22 @@ async function mergeOnOpen(reason){
       if(!wr[PLANS]&&D.stores.plans==="ok"&&D.plans&&typeof D.plans==="object"&&SJ(D.plans)!==SJ(plansPayload())){ adoptPlans(D.plans); adopted=true; }
       if(adopted) console.info("[phat] merge: adopted what another document wrote");
     }
+    /* WO-015 / B-131. THE CORRECTION RUNS ON THE MERGED STORE, BEFORE IT IS
+       WRITTEN. A session pulled into a fresh context after boot - his second
+       storage context, a reinstall, a sign-in - would otherwise sit
+       uncorrected on disk until the next launch, and the launch after a merge
+       is the launch he is most likely to read the Trend line on.
+       `D.raw.log` is the verbatim bytes this write is about to replace, so
+       the keep records the state the correction moved away from. The keep is
+       blocking here too: if it fails, `b.log` is the merged store by
+       identity, the merge lands uncorrected (which loses nothing - it only
+       ADDS rows) and boot retries. b131Show is NOT set here; §22.19 says the
+       card is present on a fresh open or it waits for the next one. */
+    for(const w of st.writes){
+      if(w.key!==LOG) continue;
+      const b=await b131Pass(w.value,D.raw.log,"merge");
+      if(b.changed) w.value=b.log;
+    }
     /* The writes, log first. A failed first write stops with nothing
        changed (M-j); a failed later write is reported, never hidden (M-j'). */
     const landed={sessions:0,bodyweight:0,plans:0};
@@ -9527,6 +9635,126 @@ function paintBackup(){
   reserveDock();
 }
 
+/* ==================================================== B-131 / WO-015
+   THE WRITE HALF OF THE ONE-OFF CORRECTION. THROWAWAY (B-151): this block,
+   its two call sites, the card in vHome() and the .rcard rule are deleted
+   together once the correction is observed on both of his storage contexts
+   and on the server row. Nothing else in this file may come to depend on it.
+
+   PHAT.repairB131 decides everything and is pure: it never throws, never
+   mutates, returns THE SAME OBJECT REFERENCE on every no-op, and is
+   fingerprint-gated on the exact stored bytes of four entries - notes
+   included - across two sessions. So there is exactly one rule left for this
+   half, and it is the whole reason this half exists:
+
+   THE KEEP IS BLOCKING. WO-014's schema-7 plan pass let a failed keep
+   proceed (criterion D7) and was right to: `mv` there was additive and
+   ignorable, and refusing to boot over a copy that could not be made would
+   have cost him a session for a field nothing yet read. THIS PASS IS NOT
+   ADDITIVE. It rewrites four stored set arrays in his only real training
+   log. A copy that cannot be made is therefore a correction that DOES NOT
+   HAPPEN - written nowhere, announced nowhere, retried next launch. That
+   difference is the difference between a repair and a data-loss event.
+
+   A store that does not hold those sessions - Diana's phone, a demo store, a
+   fresh install - takes no keep and no write: repairB131 hands back its own
+   argument and this code returns before the first byte. */
+let b131Show=false;               /* latched at boot; never set by a repaint */
+/* The dismissal, §22.19: "a single boolean in `prefs`". It rides in
+   S.prefsMeta - the bag of stored prefs keys this build's prefsPayload() does
+   not name - on purpose: a throwaway card must not add a key to the prefs
+   contract that a later build has to keep reading. The patch write
+   save(PREFS,{b131:1}) lands it, prefsPayload() spreads prefsMeta back over
+   every later write, and deleting the card deletes the only reader. prefs do
+   not back up, so a second device re-shows it once (§22.19, accepted). */
+const B131_PREF="b131";
+
+/* The counts the Home card prints (UX §22.19 dependency 1), DERIVED FROM THE
+   LOG rather than typed. PHAT.B131_TABLE holds one row per corrected ENTRY -
+   four rows across two sessions - so the counts are by DISTINCT SESSION and
+   are never the table's length. The split is the table's own: a row that
+   carries `meta` re-marks the movement (the pull-up rows, whose loads do not
+   move), a row without it halves the load (the dumbbell rows).
+
+   DERIVED, NOT STORED, because the card outlives the boot that applied the
+   pass: on the next launch, and on a second device a restore brings the
+   repaired sessions to, `applied` is empty and the log is the only thing
+   that still knows. A row counts only when its entry is EXACTLY what the
+   table was going to write, which is also why an unrepaired store counts
+   zero of both and renders nothing. */
+function b131Counts(log){
+  const out={np:0,nd:0};
+  try{
+    const T=PHAT.B131_TABLE, SJ=PHAT.stableJson;
+    if(!Array.isArray(T)||!log||!Array.isArray(log.sessions)) return out;
+    const p={}, d={};
+    T.forEach(row=>{
+      const s=log.sessions.filter(x=>x&&String(x.id)===String(row.sid))[0];
+      const e=(s&&s.entries&&typeof s.entries==="object")?s.entries[row.ex]:null;
+      if(!e||typeof e!=="object"||!Array.isArray(e.sets)) return;
+      if(SJ(e.sets)!==SJ(row.to)) return;
+      if(row.meta){ if(e.mv!==row.meta.mv) return; p[String(row.sid)]=1; }
+      else { if(e.mv!==undefined) return; d[String(row.sid)]=1; }
+    });
+    out.np=Object.keys(p).length; out.nd=Object.keys(d).length;
+  }catch(err){}
+  return out;
+}
+
+/* The bytes to keep, when there is no raw string to keep instead. */
+function b131Bytes(store){
+  try{ const s=JSON.stringify(store); return typeof s==="string"?s:null; }catch(err){ return null; }
+}
+
+/* THE KEEP, and then THE READ BACK. `phat:v1:recover:log:<ms>` in
+   preserveUnreadable's grammar - {key, savedAt, raw} - so diag.html lists it
+   beside every other keep on the device, and `raw` is the VERBATIM BYTES the
+   correction is about to replace: the string that was on disk where there is
+   one, never a re-serialisation of the parsed object.
+   save() returning true is a claim about a write. What gates the correction
+   is a fact about a READ, so the record is read back through the same reader
+   boot uses and compared field by field before anything else happens. */
+async function b131KeepLog(raw){
+  const at=Date.now();
+  const key=LOG.replace("phat:v1:","phat:v1:recover:")+":"+at;
+  let ok=false;
+  try{ ok=await save(key,{key:LOG,savedAt:at,raw:raw}); }catch(err){ ok=false; }
+  if(!ok) return {ok:false,key:key,why:"the copy of the log could not be written"};
+  let back=null;
+  try{ back=await readRaw(key); }catch(err){ back=null; }
+  const v=(back&&back.status==="ok")?back.value:null;
+  if(!v||typeof v!=="object"||v.key!==LOG||v.savedAt!==at||v.raw!==raw)
+    return {ok:false,key:key,why:"the copy of the log did not read back as it was written"};
+  return {ok:true,key:key,savedAt:at};
+}
+
+/* b131Pass(store, raw, where) -> {log, changed, note, applied?, keep?}
+   `store` is the log store to correct, `raw` the bytes on disk it will
+   replace (null where there are none). The caller writes `log`; on every
+   branch that is not `changed` it is the SAME REFERENCE that came in, so
+   "byte-identical in and out" is checkable by identity, not by diff. */
+async function b131Pass(store,raw,where){
+  let r=null;
+  try{ r=PHAT.repairB131(store); }catch(err){ r=null; }
+  if(!r||r.changed!==true||r.log===store){
+    if(r&&r.note) console.info("[phat] B-131 ("+where+"):",r.note);
+    else if(!r) console.warn("[phat] B-131 ("+where+"): the pass could not run; nothing changed.");
+    return {log:store,changed:false,note:r?r.note:"B-131 repair: the pass could not run; nothing changed."};
+  }
+  const bytes=(typeof raw==="string"&&raw!=="")?raw:b131Bytes(store);
+  const k=(bytes===null)
+    ? {ok:false,key:"(none)",why:"the log store could not be serialised, so no copy could be made"}
+    : await b131KeepLog(bytes);
+  if(!k.ok){
+    const note="B-131 repair: NOT APPLIED - "+k.why+". Nothing was written; the log is untouched. "+
+               "It will be retried on the next launch.";
+    console.error("[phat] B-131 ("+where+"):",note);
+    return {log:store,changed:false,note:note,keepFailed:true};
+  }
+  console.info("[phat] B-131 ("+where+"):",r.note,"| pre-fix log kept at",k.key);
+  return {log:r.log,changed:true,note:r.note,applied:r.applied,keep:k.key};
+}
+
 /* ============================================================ boot */
 /* An unreadable store is not an empty store. If we treated it as empty the
    first save would overwrite whatever is really there, so keep a verbatim
@@ -9604,7 +9832,15 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
      nothing is invented, and the first save writes S.logMeta's null. */
   const pp=PHAT.profilePass(m.log,{bwCount:(m.bw&&Array.isArray(m.bw.entries))?m.bw.entries.length:0});
   if(pp.note) console.info("[phat] profile pass:",pp.note.msg);
-  adoptLog(pp.log); adoptBw(m.bw);
+  /* WO-015 / B-131. AFTER every schema pass and the profile pass, BEFORE the
+     store is adopted, so memory never holds the uncorrected bytes for a
+     single render. `rl.raw` is the verbatim pre-boot disk copy and it is what
+     the keep holds - the migrations above moved nothing in the log store, and
+     a recovery point should be the bytes he had, not the bytes this boot
+     computed. A failed keep returns `pp.log` by identity and nothing below
+     changes. */
+  const b131=await b131Pass(pp.log,rl.raw,"boot");
+  adoptLog(b131.log); adoptBw(m.bw);
   adoptPlans(rawPlans===undefined?null:(m.plans&&typeof m.plans==="object"?m.plans:rawPlans));
   /* WO-014 W5, criterion D7. THE KEEP COMES BEFORE THE WRITE. `plansMv` is
      true exactly when the schema-7 pass stamped `mv` into a plan store that
@@ -9644,7 +9880,11 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
   /* Only writes when the migration actually marked or added something. An
      empty store boots with zero writes; the version lands on the first real
      save. Sorting alone does not trigger a write — order is not data. */
-  if(m.logChanged||pp.changed) await save(LOG,logPayload());
+  /* WO-015: `b131.changed` joins the same condition and the same single
+     write. The keep already landed and was verified, so this is the only
+     write that can put the corrected bytes on disk; if it is refused, S.err
+     says so, the keep stays, and the pass runs again next launch. */
+  if(m.logChanged||pp.changed||b131.changed) await save(LOG,logPayload());
   if(m.bwChanged) await save(BWK,bwPayload());
   if(m.notes&&m.notes.length) console.info("[phat] migration:",m.notes);
   /* WO-012b. The override pass landed in memory above; this is its one
@@ -9686,6 +9926,27 @@ async function preserveUnreadable(k,r){   // → the notice to show, if any
          app. */
   if(S.stores.log==="absent" && S.stores.bw==="absent" &&
      !notice && !S.prefs.onboarded && !S.offer) S.sub="onboard";
+  /* WO-015 / UX §22.19. THE NOTICE'S GATE, LATCHED HERE AND ONLY HERE, from
+     five facts:
+       the repair stamp is in the LOCAL log — not a global flag and not a
+         date, which is what makes Diana's phone never render it and what
+         makes a restore that brings the repaired sessions to a second device
+         bring the notice with them, once;
+       it has not been dismissed on this device;
+       no draft is open and none is waiting on disk — a notice about last week
+         never stands over an unfinished session;
+       no store notice and no refused write hold the slot (B-40: the worst
+         fact wins, and a log write that was refused means the correction is
+         NOT on disk, so the card would be claiming something untrue);
+       not the first run.
+     LATCHING AT BOOT is what makes "it never appears by repaint" true by
+     construction instead of by a check inside the view: the merge can apply
+     the pass after this point, and when it does the card waits for the next
+     open — §22.19, "present on a fresh open or it waits for the next one".
+     The COUNTS are the view's, re-derived from the log at paint. */
+  b131Show = !!(S.logMeta&&S.logMeta.repairs&&S.logMeta.repairs[PHAT.B131_REPAIR]===1)
+          && !(S.prefsMeta&&S.prefsMeta[B131_PREF]===1)
+          && !S.draft && !S.offer && !S.err && S.sub!=="onboard";
   clearTimeout(slow);
   render();
   /* E-3. After the first paint, never before: the module is an upgrade to
