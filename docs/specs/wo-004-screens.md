@@ -5093,6 +5093,14 @@ un-special-cased, and the repair announces itself once, elsewhere, on Home.** Th
 deliberate exception to §22.18's *anything on Home* — that boundary is §22's, and this is WO-015's
 question, not §22's.
 
+> **AMENDED 2026-09-29 (b), after the build at `d6c1739` and its measurement.** Four changes, all in
+> this section: the notice **loses #58 and renders three body lines** so it can fit above the day list
+> (“The height trade”); the movement name is **`Iso-lateral front lat pulldown`**, interpolated from the
+> repaired entry's own `n`, because there is no library row to defer to (dependency 3, withdrawn and
+> replaced); the **kicker becomes an `<h2>` in sentence case**, `Log corrected` (#54a); and two forced
+> substitutions are **recorded, not re-ruled** — the placement and the dismiss focus target, both because
+> Home has no `Recent sessions` section. Strings in the amended table below.
+
 ### The ruling, and the reason
 
 **Leave #48 alone.** It is true, it is the same sentence any swap produces, and a "we just repaired your
@@ -5129,8 +5137,8 @@ Exit:   Dismiss. One tap, permanent on that device, never shown again.
 | Element | Rule |
 |---|---|
 | Screen | **Home / Train only.** Never on Session, never on Summary, never on Trend, never on Weight |
-| Position | **Below** the day card and the start control, above `Recent sessions`. Train's one question is *what do I do now*; a notice about last week never outranks the answer |
-| Shape | One `--surface` card, full width: kicker #54, body #55 · #56 · #57 · #58 in that order, then #59 |
+| Position | ~~**Below** the day card and the start control, above `Recent sessions`.~~ **AMENDED 2026-09-29 (b), post-build — substitution recorded, not re-ruled.** Home has no `Recent sessions` section; that heading is Trend's, so the original anchor has no referent on this screen. The position is: **after the programme-state block (cycle line · divergence · explain · rollback line), immediately above the `Or pick any day` label.** This is the same relative position, and it is the only one that keeps §18.2's owner row pinned under the next-session block and C-10's single programme-state block unbroken. Train's one question is *what do I do now*; a notice about last week never outranks the answer, and never splits the answer |
+| Shape | One `--surface` card, full width: ~~kicker #54, body #55 · #56 · #57 · #58~~ **heading #54a, body #55a · #56a · #57** in that order, then #59. **AMENDED 2026-09-29 (b)** |
 | Render gate | The repair stamp exists **in the local log** **and** no dismissal flag on this device. Gating on the stamp — not on a global flag or a date — means Diana's phone never renders it, and a restore that brings the repaired sessions to a second device brings the notice with them, once |
 | Never under a thumb | If a draft session is open, the notice **does not render at all** until that session is saved or discarded. It also obeys `mayPaint()`: it never appears by repaint while he is on the screen. It is present on a fresh open or it waits for the next one |
 | Dismissal | A single boolean in `prefs`. `prefs` do not back up, so a second device re-shows it once — accepted, it is one card and the alternative is a new backed-up store for a one-off |
@@ -5139,42 +5147,99 @@ Exit:   Dismiss. One tap, permanent on that device, never shown again.
 
 ### Copy, and what it refuses to say
 
-```
-LOG CORRECTED
+**AMENDED 2026-09-29 (b) — three lines, not four. See “The height trade” below for why.**
 
-2 pull-up sessions now read Lat pulldown.
-2 dumbbell sessions held the pair total. They now read per hand.
+```
+Log corrected
+
+2 pull-up sessions now read Iso-lateral front lat pulldown.
+2 dumbbell sessions now read per hand, not the pair total.
 Nothing was removed. Every session is still under Recent sessions.
-The pulldown sessions are not on the pull-up line — a different movement.
 
 [            Dismiss            ]
 ```
 
-Four sentences, each carrying exactly one fact: **what changed · what changed · what did not · what he
-will see.** The literals are #55–#58.
+~~Four sentences~~ **Three lines**, each carrying exactly one fact: **what changed · what changed ·
+what did not.** The literals are #54a, #55a, #56a, #57. **#58 is deleted** (see below).
 
 - **It does not apologise and does not congratulate.** No actor appears in any sentence. There is no
   `we`, no `sorry`, no `improved`, no `fixed it for you`. The log is the subject throughout.
-- **It does not claim the loads are untouched.** #56's second sentence *is* the disclosure that the
-  dumbbell reading changed, and it is true whether WO-015 rewrote `w` or only re-marked the entry. A
-  blanket `No load changed.` would be a false reassurance on exactly the two entries the pass touched
-  hardest, and a false reassurance here costs more than the whole notice buys.
-- **It does not mention a chart except to say they are off one.** Rule CH1. #58 asserts absence, never
-  presence, and it is #48's clause word for word so the two surfaces are one voice.
+- **It does not claim the loads are untouched.** #56a *is* the disclosure that the dumbbell reading
+  changed, and it is true whether WO-015 rewrote `w` or only re-marked the entry. A blanket
+  `No load changed.` would be a false reassurance on exactly the two entries the pass touched hardest,
+  and a false reassurance here costs more than the whole notice buys. **AMENDED 2026-09-29 (b):** the
+  fact now rides one sentence instead of two, and both write-lines take the same grammar — `{n} … now
+  read {what they now read}`. Same disclosure, one line less, and the parallel makes the pair scannable
+  at arm's length, which four differently-shaped sentences were not.
+- **It does not mention a chart at all.** ~~Rule CH1. #58 asserts absence…~~ **AMENDED 2026-09-29 (b).**
+  Rule CH1 still forbids the reassurance he wants, and the notice still never asserts presence — it now
+  says nothing about any line. See “The height trade”.
 - **`Recent sessions` is the proof, and it is named** because it is a surface he can go look at, and
   §9.1 excludes nothing from it. The one reassurance in the notice is the one he can check in two taps.
+  It is Trend's heading, not Home's, and that is fine: it is a label he can find, which is all the
+  sentence promises.
+- **The `Swapped` mark is not named, deliberately.** The repair sets `sw:1`, so both pull-up sessions
+  will carry `SWAPPED · Was Pull-up` on Summary and in `Recent sessions` — the first live use of that
+  mark on his data. #55a already tells him those sessions now read a different movement; the mark is the
+  same fact in the same direction, on the surface #57 sends him to, so it explains itself. Naming it
+  costs a fourth line and buys a restatement. If the PM wants it named anyway, that is the trade.
+
+### The height trade — ruled 2026-09-29 (b)
+
+**The measurement: the built card is 268 px, and at 393 × 852 it pushes the first day row below the
+fold while it stands.** §13.1 is explicit — *the day list must be reachable without scrolling; nothing
+above it may push it off the first screenful* — and B-97 is already open on that fold.
+
+**Ruling: (b), shorten. Not (c), never move it below the day list. If the shortening still does not
+clear the fold, it is (a) — keep it where it is and accept one open's worth of scroll.**
+
+- **Why not (c).** A disclosure placed where he will not look is an undisclosed rewrite with a clean
+  conscience. He scrolls Home for the macros row, not for news; a one-time card under five day rows is
+  a card he meets for the first time by accident, or never. The notice exists because the rewrite must
+  reach him before the log does — below the day list it does not reliably reach him at all, and the
+  whole item is then theatre. That is a worse outcome than a scroll.
+- **Why (b) is affordable.** The fold cost is paid once, by one tap, on one open; the four-line card
+  was carrying one line that is permanently published elsewhere. **#58 goes.** It is #48's clause word
+  for word, and #48 renders on Trend under the sparkline every time the exclusion is live — forever, at
+  the moment it matters, in that sentence. #55a already tells him those sessions read a different
+  movement, so when he meets #48 it lands as a consequence he can connect, not as a fact he is learning
+  from a chart. Of the four lines it is the only one that is duplicated, permanent, and elsewhere.
+  #55a and #56a are the two writes and cannot go. #57 is the only reassurance and the only one he can
+  check.
+- **Why not shorter than three.** Cutting #57 would leave a card that names two rewrites and offers no
+  way to verify either. Merging #55a and #56a would put two different rewrites on one line and lose the
+  one-fact-per-line rule that makes it readable tired.
+- **Rhythm.** Body renders one sentence per line, paragraph margins collapsed to the card's line rhythm
+  (not a full paragraph gap between each). The engineer may take the vertical padding down to the
+  card's minimum; **`Dismiss` stays full-width × 48 and is not shrunk** — it is the only control, and a
+  control shrunk to win layout is the wrong saving.
+
+**Acceptance measurement — for `frontend-engineer` and `qa-engineer`.** At 393 × 852, Home in its
+ordinary state (no store notice, no draft-restore offer, no deload banner) with `np = nd = 2` and the
+notice standing: **the `Or pick any day` label and the whole of the first day row are visible without
+scrolling.** If it still fails after the shortening, **ship it and file the residue on B-97** — do not
+move the card, do not cut a fourth fact, and do not shrink the button. Report the measured height
+either way.
 
 ### A11y
 
-- The card is a `<section>` with `aria-labelledby` pointing at the kicker; the kicker is a heading in
-  Home's existing level order, not a styled `<div>`.
+- The card is a `<section>` with `aria-labelledby` pointing at its heading; the heading is a real
+  heading in Home's existing level order, not a styled `<div>`. **AMENDED 2026-09-29 (b):** because I
+  required a heading, it takes Home's and Trend's heading convention — `<h2>`, sentence case,
+  `Log corrected` — not the `SKIPPED` / `SWAPPED` / `ADDED` kicker shape, which belongs to marks inside
+  a record, not to a section that owns a screen region. #54 is amended to match the build; see #54a.
 - **Not a live region.** It renders on load, not in response to an action, and `role="alert"` would
   interrupt a screen-reader user's arrival on the screen for a week-old fact (same reasoning as §4.7's
   notice, spec line ~2613).
-- Focus order: day card → start control → **notice → `Dismiss`** → `Recent sessions`. On dismiss, focus
-  moves to the heading of `Recent sessions`, never to `document.body`.
-- Contrast: kicker `--dim` or better, body `--bone`. **`--faint` is forbidden in this card** — `SKIPPED`'s
-  `.45` already failed §0.5 and this is the same kicker shape.
+- Focus order: day card → start control → **notice → `Dismiss`** → ~~`Recent sessions`~~ **the day
+  list**. On dismiss, focus moves to ~~the heading of `Recent sessions`~~ **the `Or pick any day`
+  label** (`#daylist-h`, `tabindex="-1"`), never to `document.body`. **AMENDED 2026-09-29 (b),
+  post-build — substitution recorded, not re-ruled.** Home has no `Recent sessions` heading; the day
+  list label is the next label below the card, so the reading position survives the card's removal,
+  which is the whole requirement. `tabindex="-1"` is correct: it must be programmatically focusable and
+  must not enter the Tab order for anyone who never sees the card.
+- Contrast: heading `--dim` or better, body `--bone`. **`--faint` is forbidden in this card** —
+  `SKIPPED`'s `.45` already failed §0.5.
 - The counts are digits in the sentence, not colour, not an icon. Nothing here relies on colour.
 
 ### Dependencies, stated, because none of them are mine
@@ -5183,11 +5248,39 @@ will see.** The literals are #55–#58.
    and `2`; B-131 names two entries inside one session, so the *session* count may be smaller than the
    entry count and the literal must not assert a number the pass did not write. **Backend owns the
    stamp's shape.**
-2. **Whether the dumbbell repair rewrites `w`** — backend/WO-015. #56 is written to be true either way,
+2. **Whether the dumbbell repair rewrites `w`** — backend/WO-015. #56a is written to be true either way,
    but if it rewrites `w`, QA should pin that no string in this notice says otherwise.
-3. **`Lat pulldown`** must be the library's own `n` for that movement, escaped like every other library
-   name (§22.12's substitution rule). If the library spells it differently, the library wins.
+3. ~~**`Lat pulldown`** must be the library's own `n`…~~ **WITHDRAWN AND REPLACED — AMENDED 2026-09-29
+   (b).** The dependency cannot hold: there is no library row, because the repair mints `x_B131a`
+   deliberately so an 86 kg × 5 prior cannot reach a 2 × 15–20 slot through MV1's cross-slot fallback.
+   **The name is `Iso-lateral front lat pulldown` — the name the pass writes into the entry's `n` — and
+   the rule that makes it true is: the view interpolates the repaired entry's own `n`, escaped, never a
+   literal and never an abbreviation.** That is the whole justification. #57 sends him to
+   `Recent sessions` to check; a short form the notice invents would name a movement that appears on no
+   surface, so the card and the record would disagree on the one sentence he can verify, and the
+   reassurance in #57 would be the thing that breaks. Length is the cheaper cost. **Required change to
+   the build:** `PHAT.B131_N||"Lat pulldown"` — the fallback literal must be the full name, or the line
+   must not render. A fallback that prints a name nothing else prints is the defect this rule exists to
+   prevent.
 4. **B-154 is untouched by this.** The notice does not change what #48 counts.
+
+### Strings — amended 2026-09-29 (b), in §22.12's form
+
+**These rows supersede §22.12 #54–#58. §22.12 is not edited by this pass (scope was §22.19); its rows
+54–58 read as amended here, and the PM may mirror them.** Plural forms are the rendering case; the
+singular is in brackets after it and is the same sentence, never a second sentence.
+
+| # | Where | Case | String |
+|---|---|---|---|
+| 54a | home, repair notice, heading | repair stamp present in the local log **and** not dismissed on this device | `Log corrected` **AMENDED 2026-09-29 (b).** Replaces #54's `LOG CORRECTED`. It is an `<h2>` in sentence case — Home's and Trend's heading convention — because §22.19's a11y required a real heading and a heading is not a kicker. `SKIPPED` / `SWAPPED` / `ADDED` mark a record; this labels a screen region. `--dim` or better, never `--faint` (§0.5) |
+| 55a | home, repair notice, body line 1 | `np >= 1` | `{np} pull-up sessions now read {name}.` (`1 pull-up session now reads {name}.`) **AMENDED 2026-09-29 (b).** Replaces #55. `{name}` is the **repaired entry's own `n`**, interpolated and `esc()`d — on his data, `Iso-lateral front lat pulldown`. Never a literal, never a short form: the card and the record must not disagree on the one sentence #57 sends him to check. `{np}` is the session count the pass wrote, derived from the log, never typed — two of the four repaired entries live in one session, so the session count is not the entry count. **The engineer's singular is adopted verbatim** |
+| 56a | home, repair notice, body line 2 | `nd >= 1` | `{nd} dumbbell sessions now read per hand, not the pair total.` (`1 dumbbell session now reads per hand, not the pair total.`) **AMENDED 2026-09-29 (b).** Replaces #56's two sentences (`{nd} dumbbell sessions held the pair total. They now read per hand.`) and the engineer's singular of it. One sentence, same disclosure, one line shorter, and it takes #55a's grammar so the two write-lines scan as a pair. Still true whether the pass rewrote `w` or only re-marked the entry, and still the reason no string here claims the load did not move |
+| 57 | home, repair notice, body line 3 | always, when the notice renders | `Nothing was removed. Every session is still under Recent sessions.` **UNCHANGED.** The only reassurance in the notice and the only one provable from a surface (§9.1). It deliberately does not say "nothing changed" and does not mention any chart — Rule CH1 |
+| 58 | home, repair notice, body line 4 | — | ~~`The pulldown sessions are not on the pull-up line — a different movement.`~~ **DELETED — AMENDED 2026-09-29 (b).** The engineer's singular (`The pulldown session is not on the pull-up line — a different movement.`) is deleted with it. Reason in “The height trade”: it is #48's clause word for word, and #48 publishes it on Trend, permanently, at the moment it matters. It was the only line in the card that was duplicated, permanent and elsewhere, and the card had to lose 268 px of height somewhere |
+| 59 | home, repair notice, button | always, when the notice renders | `Dismiss` **UNCHANGED.** Full width × 48, `.ghostbtn`. Not shrunk to win the fold |
+
+**Absent counts, restated against the amended set:** `np = 0` drops #55a · `nd = 0` drops #56a · both
+zero and the whole notice does not render. #58's old dependency on `np` is moot.
 
 ### Out of scope, deliberately
 
