@@ -2217,21 +2217,39 @@ function vHome(){
      real heading instead. */
   if(b131Show){
     const bc=b131Counts(logPayload());
-    if(bc.np||bc.nd){
-      const mvn=String(PHAT.B131_N||"Lat pulldown");
+    /* THE NAME IS NOT LITERAL HERE, AND THERE IS NO SHORT FALLBACK. The line
+       sends him to `Recent sessions` to check it, so it must name the movement
+       the record names - `Lat pulldown`, the old fallback, appears on no other
+       surface, and a card naming something the log does not name breaks the one
+       sentence that makes the notice checkable. The fix is the second of the two
+       UX offered: NOT a second copy of the literal (index.html would then be a
+       second source of truth for a movement name and could drift from
+       logic.js on a rename), but the line DROPS when logic.js has no name to
+       give. The repair pass that set the stamp is in that same logic.js, so an
+       empty B131_N is unreachable in practice; if it ever happens the notice
+       degrades to the facts it can still prove rather than printing a name the
+       record does not carry. */
+    const mvn=String((PHAT&&PHAT.B131_N)||"").trim();
+    const showP=!!bc.np&&mvn!=="", showD=!!bc.nd;
+    if(showP||showD){
       h+=`<section class="pad mt16" aria-labelledby="b131-h"><div class="rcard">
         <h2 id="b131-h">Log corrected</h2>`;
-      if(bc.np) h+=`<p>${bc.np} pull-up session${bc.np===1?"":"s"} now
+      if(showP) h+=`<p>${bc.np} pull-up session${bc.np===1?"":"s"} now
         read${bc.np===1?"s":""} ${esc(mvn)}.</p>`;
-      if(bc.nd) h+=`<p>${bc.nd} dumbbell session${bc.nd===1?"":"s"} held the pair total.
-        ${bc.nd===1?"It now reads":"They now read"} per hand.</p>`;
+      /* One sentence, in the pull-up line's grammar, so the two write-lines
+         scan as a pair (UX, §22.19 amended). Same disclosure as the two it
+         replaced. */
+      if(showD) h+=`<p>${bc.nd} dumbbell session${bc.nd===1?"":"s"} now
+        read${bc.nd===1?"s":""} per hand, not the pair total.</p>`;
       h+=`<p>Nothing was removed. Every session is still under Recent sessions.</p>`;
-      /* #58 is #48's clause word for word, so the two surfaces are one voice,
-         and it asserts ABSENCE only - Rule CH1 forbids the one reassurance he
-         actually wants, because the pulldown sessions are not on that line
-         and never will be. Dropped with np, per §22.19. */
-      if(bc.np) h+=`<p>The pulldown session${bc.np===1?" is":"s are"} not on the
-        pull-up line — a different movement.</p>`;
+      /* #58 (`The pulldown sessions are not on the pull-up line`) was dropped
+         here by §22.19 amended, and must not come back: it is #48's clause word
+         for word, and #48 renders on Trend under the sparkline every time the
+         exclusion is live - permanently, at the moment it matters. It was the
+         only one of the four lines that was duplicated, permanent AND
+         elsewhere. The pull-up line above still carries it implicitly: those
+         sessions read a different movement, so #48 lands as a consequence he
+         can connect rather than a fact he learns from a chart. */
       h+=`<button class="ghostbtn" id="b131-x">Dismiss</button>
       </div></section>`;
     }
