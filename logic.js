@@ -5012,6 +5012,381 @@
     }
   }
 
+  /* ==================================================== B-131, the repair
+
+     WO-015. THIS REWRITES NUMBERS IN HIS ONLY REAL TRAINING LOG. It is the
+     P0 class, and every line below exists to make "it did not match, so it
+     did nothing" the default outcome.
+
+     IT IS THROWAWAY CODE AND IS FILED AS SUCH (B-151). It lives until the
+     correction is observed on BOTH of his storage contexts (WO-011 H1) and
+     on the server row, and not one boot earlier - deleting it sooner lets an
+     un-upgraded context re-push the uncorrected bytes with nothing left to
+     repair them. It dies with B-05 (edit a saved session), which makes the
+     whole class unnecessary. It is all in this one section so the deletion is
+     one cut: the section, its names on the exports block, the boot call.
+
+     ------------------------------------------------------------------ what
+
+     Two slots, two sessions, both his, both confirmed from the server's own
+     rows, from his notes in his own words, and from his answer (backlog
+     B-131 / B-150; docs/decisions.md 2026-09-29, Decision 5).
+
+     d1b - Weighted pull-up, implement "bodyweight", so Rules Z1/Z2 read `w`
+     as the ADDED load. He did ISO-LATERAL FRONT LAT PULLDOWNS on it, both
+     days, and wrote so on the entry itself both times ("I have done
+     iso-lateral front lat pull downs- forearm still not recovered", 12 Sep;
+     "I did pull down on this, arm still not recovered", 22 Sep). The numbers
+     are machine stack readings in kg - his cable machines are in kg and a lat
+     pulldown is a cable machine. Read as added load the app believes a 180 kg
+     pull-up and tells him to hang about 88 kg from a belt.
+
+       THE LOADS ARE REAL; THE MOVEMENT IS WRONG. Not one `w` moves here. The
+       repair is WO-014's swap shape written after the fact - `mv` naming the
+       movement, `sw: 1`, `n` the display name - and from there Rule MV1 skips
+       both entries when the d1b card asks for its own history. That is the
+       whole of the fix: the numbers stay, they stop being read as pull-ups.
+
+     d1d - Flat DB press, implement "db", so Rule I1 reads `w` as PER HAND. He
+     entered THE PAIR ADDED TOGETHER, both sessions. Halved they read
+     31.5 / 38.5 / 38.5 / 40.5 then 38.6 / 40.8 / 40.8 / 36.3 kg per hand, a
+     coherent ten-day progression; read per hand it is an 81 kg dumbbell,
+     which no gym stocks.
+
+       THE MOVEMENT IS RIGHT; THE NUMBER MEANS SOMETHING ELSE. Every `w`
+       halves - and on 22 Sep, logged after WO-010, `ld.add` halves with it.
+       HALVING `w` ALONE WOULD BE A DEFECT, not half a fix: the components
+       would no longer compose to the total, which validateSessionDoc refuses
+       by name and the SQL mirror refuses with it, so the session would stop
+       backing up. b131TableProblem below refuses a table row that tries.
+
+     ------------------------------------------------------------------ mint
+
+     The pulldown gets a MINTED movement id, never d3e's
+     `mv_Close-Grip_Front_Lat_Pulldown`: reusing that would inject an
+     86 kg x 5 prior into a 2 x 15-20 slot through MV1.2's cross-slot
+     fallback, which the coach flagged explicitly. `x_B131a` is in the plan
+     namespace (mintId's `x` kind), it is PINNED rather than drawn, and its
+     capital letter is a byte mintId cannot produce, so it can never collide
+     with a minted plan id. The library carries no iso-lateral row at the
+     pinned SHA, and that is the honest answer rather than a defect: the
+     entry's own `n` is its name, and `libraryImplementOf` makes NO implement
+     claim for it instead of a wrong one. That is what "implement follows the
+     movement" amounts to here - the slot's `bodyweight` stops governing these
+     two entries and nothing invents a replacement for it.
+
+     ------------------------------------------------------------------ gate
+
+     THE TABLE IS THE PROGRAM. A later correction is a row, not a second
+     build. Each row pins the session id, the session date, the entry id, the
+     exact stored set array and the note; and the pass:
+
+       1. finds the session BY ID. Absent is not a failure - Diana's device, a
+          demo store and a fresh install hold neither, and are byte-identical
+          in and out. A session absent by id but present by date is reported,
+          read-only, so a wrong id in the table says so instead of silently
+          doing nothing.
+       2. refuses unless the entry matches the row EXACTLY: the sets by stable
+          JSON (so JSONB's {r,w} compares equal to the builder's {w,r}, and an
+          extra key on a set does not), the note byte for byte where the row
+          records one, and NONE of `mv`, `sw`, `n` present - every
+          pre-schema-7 entry carries none, and their absence is what makes the
+          d1b half idempotent, since its sets do not move.
+       3. is ALL OR NOTHING. One row present and matching NEITHER the pre-fix
+          bytes NOR the post-fix bytes, and the whole pass is a no-op with a
+          note. There is no partial write. `b131Done` is the second
+          fingerprint and the reason the clause reads "neither": a row already
+          corrected is finished, not failed.
+       4. checks its own table before it trusts it: reps never move, the set
+          count never moves, an ld is never dropped, a new set carrying an ld
+          must compose to the `w` pinned beside it, and a row that would write
+          back exactly what it read is refused (it could never stop applying).
+       5. validates every rebuilt session against validateSessionDoc - the SQL
+          mirror - and abandons the whole pass if it would not push.
+
+     HIS WORDS ARE NEVER TOUCHED. `note` is carried from the entry that was
+     there, by reference; no branch below writes, trims or moves one, and `rx`
+     rides across the same way.
+
+     IDEMPOTENT BY CONSTRUCTION, PLUS A MARKER. After the pass no row's
+     fingerprint matches, so a second run finds nothing. The marker -
+     `log.repairs = { b131: 1 }` on the LOG STORE's top level, never a new key
+     on a session document, which must stay pushable under the SQL validator -
+     is A RECORD AND NOT A GATE, deliberately: mergeStores' meta union hands a
+     remote-only meta key to a device that lacks it, so a BLOCKING marker
+     would cross from his repaired phone to his unrepaired one and strand the
+     uncorrected bytes there for ever. A flag never outranks the numbers. If a
+     row's bytes match they are wrong, and they are repaired whether the
+     marker is there or not. */
+
+  var B131_REPAIR = "b131";                  /* the key under log.repairs   */
+  var B131_MV = "x_B131a";                   /* minted; NOT a library id    */
+  var B131_N = "Iso-lateral front lat pulldown";
+
+  /* THE CORRECTION TABLE. Pinned bytes in, pinned bytes out.
+       sid   the session's stored id
+       date  the session's stored local date, gated
+       ex    the entry (plan slot) id
+       note  his words, gated byte for byte; null = not on the record, so the
+             row does not gate on it and the pass does not touch it either
+       from  the exact stored set array this row will act on, and nothing else
+       to    the set array that replaces it
+       meta  the three schema-7 keys to add, or null to add none
+     12 Sep is CHADY_EXPORT, the server's own bytes (tests.html). 22 Sep is
+     WO-015's table, transcribed from the server's rows; the repo holds only
+     that session's d1b note (docs/decisions.md, coach addendum 24.4). */
+  var B131_TABLE = [
+    { sid: 1789264514484, date: "2026-09-12", ex: "d1b",
+      why: "iso-lateral front lat pulldown logged on the weighted pull-up slot; loads unchanged",
+      note: "I have done iso-lateral front lat pull downs- forearm still not recovered",
+      from: [{ w: 68, r: 12 }, { w: 77, r: 12 }, { w: 77, r: 11 }, { w: 86, r: 5 }],
+      to:   [{ w: 68, r: 12 }, { w: 77, r: 12 }, { w: 77, r: 11 }, { w: 86, r: 5 }],
+      meta: { mv: B131_MV, sw: 1, n: B131_N } },
+
+    { sid: 1789264514484, date: "2026-09-12", ex: "d1d",
+      why: "the pair added together on a per-hand slot; every load halves",
+      note: "",
+      from: [{ w: 63, r: 12 }, { w: 77, r: 5 }, { w: 77, r: 6 }, { w: 81, r: 3 }],
+      to:   [{ w: 31.5, r: 12 }, { w: 38.5, r: 5 }, { w: 38.5, r: 6 }, { w: 40.5, r: 3 }],
+      meta: null },
+
+    { sid: 1790128305390, date: "2026-09-22", ex: "d1b",
+      why: "iso-lateral front lat pulldown logged on the weighted pull-up slot; loads unchanged",
+      note: "I did pull down on this, arm still not recovered",
+      from: [{ w: 65, r: 12 }, { w: 75, r: 12 }, { w: 85, r: 9 }, { w: 95, r: 3 }],
+      to:   [{ w: 65, r: 12 }, { w: 75, r: 12 }, { w: 85, r: 9 }, { w: 95, r: 3 }],
+      meta: { mv: B131_MV, sw: 1, n: B131_N } },
+
+    /* The only row logged after WO-010, so the only one with components: the
+       lb `add` halves beside `w` or the set stops composing. `note` is null
+       because this repo has never held that entry's note - the 22 Sep d1b
+       note is on the record and this one is not, and a fingerprint that
+       guessed it would refuse the repair on his real bytes. */
+    { sid: 1790128305390, date: "2026-09-22", ex: "d1d",
+      why: "the pair added together on a per-hand slot; every load and every ld.add halves",
+      note: null,
+      from: [{ w: 77.1, r: 8, ld: { add: 170, au: "lb" } },
+             { w: 81.6, r: 5, ld: { add: 180, au: "lb" } },
+             { w: 81.6, r: 4, ld: { add: 180, au: "lb" } },
+             { w: 72.6, r: 8, ld: { add: 160, au: "lb" } }],
+      to:   [{ w: 38.6, r: 8, ld: { add: 85, au: "lb" } },
+             { w: 40.8, r: 5, ld: { add: 90, au: "lb" } },
+             { w: 40.8, r: 4, ld: { add: 90, au: "lb" } },
+             { w: 36.3, r: 8, ld: { add: 80, au: "lb" } }],
+      meta: null }
+  ];
+
+  /* A copy of a table row's `to`, so nothing that lands in a store can be
+     reached through the exported table, in either direction. */
+  function b131Clone(v) { return JSON.parse(JSON.stringify(v)); }
+
+  /* b131TableProblem(row) -> a sentence, or null when the row is coherent.
+     The table's own tripwire, run BEFORE the store is read: a wrong row
+     refuses the pass instead of writing. */
+  function b131TableProblem(row) {
+    if (!isObj(row)) return "the row is not an object";
+    if (!Array.isArray(row.from) || !Array.isArray(row.to)) return "from and to must both be arrays";
+    if (row.from.length !== row.to.length) return "from and to hold a different number of sets";
+    if (!row.from.length) return "the row names no set";
+    if (row.meta !== null && !isObj(row.meta)) return "meta must be an object or null";
+    if (isObj(row.meta) && (!isMvId(row.meta.mv) || row.meta.sw !== 1 || typeof row.meta.n !== "string"))
+      return "meta must be {mv, sw:1, n}";
+    /* A row that adds no key and moves no byte would match its own output for
+       ever - the one shape b131Done cannot tell from b131Mismatch. */
+    if (row.meta === null && stableJson(row.from) === stableJson(row.to)) return "the row changes nothing";
+    for (var i = 0; i < row.to.length; i++) {
+      var a = row.from[i], b = row.to[i], c;
+      if (!isObj(a) || !isObj(b)) return "set " + (i + 1) + " is not an object";
+      if (a.r !== b.r) return "set " + (i + 1) + " moves the reps";
+      if (typeof b.w !== "number" || !isFinite(b.w)) return "set " + (i + 1) + " has no new weight";
+      if (b.ld === undefined && a.ld !== undefined) return "set " + (i + 1) + " drops its ld";
+      if (b.ld !== undefined) {
+        c = composeLoad(b.ld);
+        if (!c.ok) return "set " + (i + 1) + "'s new ld does not compose (" + c.reason + " " + str(c.field) + ")";
+        if (Math.abs(c.w - b.w) > LD_TOL) return "set " + (i + 1) + "'s new w " + b.w + " disagrees with its ld (" + c.w + ")";
+      }
+    }
+    return null;
+  }
+
+  /* b131Mismatch(entry, row) -> a sentence naming why this entry is not the
+     one the row describes, or null when it is exactly it. */
+  function b131Mismatch(entry, row) {
+    var keys = ["mv", "sw", "n"], i;
+    if (entry === undefined) return "the entry is not in this session";
+    if (!isObj(entry)) return "the entry is not an object";
+    for (i = 0; i < keys.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(entry, keys[i]))
+        return "the entry already carries " + keys[i];
+    }
+    if (row.note !== null && entry.note !== row.note) return "the note is not the one on the record";
+    if (!Array.isArray(entry.sets)) return "the entry has no sets array";
+    if (stableJson(entry.sets) !== stableJson(row.from)) return "the sets are not the bytes the table pins";
+    return null;
+  }
+
+  /* b131Done(entry, row) -> true when this entry is EXACTLY what the row was
+     going to write. THE SECOND FINGERPRINT, on the post-fix bytes, and it is
+     what tells "already corrected" apart from "these are not his numbers".
+
+     Without it a re-run over the pass's own output reports a mismatch - true,
+     and unreadable, because the sentence a reader needs is "already applied"
+     and the sentence they get names a key that is there on purpose. It also
+     rules the half-repaired store the honest way: a row that is DONE is not a
+     row that FAILED, so the other three still apply. Refusing to correct d1b
+     because d1d was already correct would leave a wrong number on his disk
+     for ever to protect an abstraction, and the numbers outrank it. */
+  function b131Done(entry, row) {
+    var keys = ["mv", "sw", "n"], i;
+    if (!isObj(entry) || !Array.isArray(entry.sets)) return false;
+    if (row.note !== null && entry.note !== row.note) return false;
+    if (stableJson(entry.sets) !== stableJson(row.to)) return false;
+    if (isObj(row.meta)) return entry.mv === row.meta.mv && entry.sw === row.meta.sw && entry.n === row.meta.n;
+    for (i = 0; i < keys.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(entry, keys[i])) return false;
+    }
+    return true;
+  }
+
+  /* repairB131(log) -> { log, changed, applied, note, absent, near }
+
+     Pure. No storage, no DOM, no network, no clock; never throws; never
+     mutates its argument. Returns the SAME REFERENCE on every no-op, which is
+     the cheapest possible proof of "byte-identical in and out".
+
+       log      the log store object, AFTER migrateStore (schema 7 or later).
+       changed  true only when at least one entry was corrected.
+       applied  one row per corrected entry: { sid, date, ex, why, w, mv }.
+       note     one sentence, always present, saying what happened and why.
+       absent   the session ids the table names that this device does not hold.
+       near     read-only hints: a session dated like a row the table could not
+                find, under a different id.
+
+     The caller owns the write, the `recover:*` keep before it and the push
+     after it. Nothing here touches any of the three. */
+  function repairB131(log) {
+    var out = { log: log, changed: false, applied: [], note: null, absent: [], near: [] };
+    try {
+      var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+      var i, j, k, t, row, key, s, e, why, p;
+
+      if (!isObj(log)) { out.note = "B-131 repair: there is no log store on this device; nothing changed."; return out; }
+      if (log.demo === true) { out.note = "B-131 repair: this device holds demo data; nothing changed."; return out; }
+      if (!Array.isArray(log.sessions)) { out.note = "B-131 repair: this device's log has no sessions array; nothing changed."; return out; }
+
+      /* (4) the table before the store. */
+      for (t = 0; t < B131_TABLE.length; t++) {
+        why = b131TableProblem(B131_TABLE[t]);
+        if (why !== null) {
+          out.note = "B-131 repair: the correction table is wrong for session " + B131_TABLE[t].sid +
+                     " " + B131_TABLE[t].ex + " (" + why + "); nothing changed.";
+          return out;
+        }
+      }
+
+      var sessions = log.sessions, marked = isObj(log.repairs) && log.repairs[B131_REPAIR] === 1;
+      var byId = {};
+      for (i = 0; i < sessions.length; i++) {
+        s = sessions[i];
+        if (isObj(s) && s.id !== undefined && s.id !== null && String(s.id) !== "" && !has(byId, String(s.id)))
+          byId[String(s.id)] = i;
+      }
+
+      /* (1) and (2), read-only: decide the whole pass before writing a byte. */
+      var todo = [], absent = {}, done = 0;
+      for (t = 0; t < B131_TABLE.length; t++) {
+        row = B131_TABLE[t]; key = String(row.sid);
+        if (!has(byId, key)) { absent[key] = row.date; continue; }
+        s = sessions[byId[key]];
+        if (s.date !== row.date) {
+          out.note = "B-131 repair: session " + key + " is dated " + str(s.date) + " and the table pins " +
+                     row.date + "; nothing changed.";
+          return out;
+        }
+        e = isObj(s.entries) ? s.entries[row.ex] : undefined;
+        why = b131Mismatch(e, row);
+        if (why === null) { todo.push({ idx: byId[key], row: row }); continue; }
+        if (b131Done(e, row)) { done++; continue; }            /* already corrected */
+        out.note = "B-131 repair: " + row.ex + " in the session of " + row.date + " (id " + key +
+                   ") does not match the bytes the correction table pins - " + why + "; nothing changed.";
+        return out;                                           /* (3) all or nothing */
+      }
+
+      for (key in absent) if (has(absent, key)) {
+        out.absent.push(key);
+        for (i = 0; i < sessions.length; i++) {
+          s = sessions[i];
+          if (isObj(s) && s.date === absent[key] && String(s.id) !== key) {
+            out.near.push("A session dated " + absent[key] + " is on this device under id " + str(s.id) +
+                          "; the correction table names " + key);
+          }
+        }
+      }
+
+      if (!todo.length) {
+        out.note = (done || marked)
+          ? "B-131 repair: already applied on this device; nothing changed."
+          : (out.absent.length === B131_TABLE.length
+              ? "B-131 repair: neither session is on this device; nothing changed."
+              : "B-131 repair: nothing on this device matches the correction table; nothing changed.");
+        if (out.near.length) out.note += " " + out.near.join("; ") + ".";
+        return out;
+      }
+
+      /* Write into copies. Untouched sessions, entries, notes and rx cross by
+         reference, which is what makes "every other byte is the same byte"
+         true by construction rather than by assertion. */
+      var nsess = sessions.slice(), touchedIdx = {}, src, ns, nents, oe, ne;
+      for (i = 0; i < todo.length; i++) {
+        row = todo[i].row; j = todo[i].idx;
+        src = nsess[j];
+        ns = {}; for (k in src) if (has(src, k)) ns[k] = src[k];
+        nents = {}; for (k in src.entries) if (has(src.entries, k)) nents[k] = src.entries[k];
+        oe = src.entries[row.ex];
+        ne = {}; for (k in oe) if (has(oe, k)) ne[k] = oe[k];   /* note and rx, by reference */
+        ne.sets = b131Clone(row.to);
+        if (isObj(row.meta)) { ne.mv = row.meta.mv; ne.sw = row.meta.sw; ne.n = row.meta.n; }
+        nents[row.ex] = orderKeys(ne, ENTRY_KEYS);              /* schema 7's key order */
+        ns.entries = nents;
+        nsess[j] = ns;
+        touchedIdx[j] = true;
+        out.applied.push({ sid: row.sid, date: row.date, ex: row.ex, why: row.why,
+                           w: row.to.map(function (x) { return x.w; }),
+                           mv: isObj(row.meta) ? row.meta.mv : null });
+      }
+
+      /* (5) it must still push, or it is not written at all. */
+      for (k in touchedIdx) if (has(touchedIdx, k)) {
+        p = validateSessionDoc(nsess[k]);
+        if (!p.ok) {
+          return { log: log, changed: false, applied: [], absent: out.absent, near: out.near,
+                   note: "B-131 repair: the corrected session " + str(nsess[k].id) +
+                         " would not validate (" + p.problems[0] + "); nothing changed." };
+        }
+      }
+
+      var nlog = {}; for (k in log) if (has(log, k)) nlog[k] = log[k];
+      nlog.sessions = nsess;
+      var reps = {};
+      if (isObj(log.repairs)) for (k in log.repairs) if (has(log.repairs, k)) reps[k] = log.repairs[k];
+      reps[B131_REPAIR] = 1;
+      nlog.repairs = reps;
+
+      out.log = nlog;
+      out.changed = true;
+      out.note = "B-131 repair: corrected " + out.applied.length +
+                 (out.applied.length === 1 ? " entry - " : " entries - ") +
+                 out.applied.map(function (a) { return a.date + " " + a.ex; }).join(", ") +
+                 ". No note was touched." +
+                 (done ? " " + done + (done === 1 ? " entry was" : " entries were") + " already correct." : "");
+      if (out.near.length) out.note += " " + out.near.join("; ") + ".";
+      return out;
+    } catch (err) {
+      return { log: log, changed: false, applied: [], absent: [], near: [],
+               note: "B-131 repair failed, store left untouched: " + (err && err.message) };
+    }
+  }
+
   /* ============================================================ backup
      E-3. The pure half of sync.js: serialisation for the push and the
      validation for the restore. No network, no storage, no DOM, so the whole
@@ -12197,6 +12572,17 @@
     PROFILE_PHAT_BRIEF: PROFILE_PHAT_BRIEF,
     isPhatBrief: isPhatBrief,
     profilePass: profilePass,
+    /* WO-015 / B-131 - the one-off correction pass. THROWAWAY (B-151): this
+       block, its section above and the boot call are deleted together, once
+       the correction is observed on both of his storage contexts and on the
+       server row. The table and the two names are exported so QA can pin the
+       fingerprint, the no-op and the movement id without reaching into the
+       closure. */
+    B131_REPAIR: B131_REPAIR,
+    B131_MV: B131_MV,
+    B131_N: B131_N,
+    B131_TABLE: B131_TABLE,
+    repairB131: repairB131,
     W1_ABSENT: W1_ABSENT,
     DIET_ABSENT: DIET_ABSENT,
     /* WO-008 W4 — ownership of a device's stores (B-88). */
