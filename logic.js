@@ -9061,7 +9061,7 @@
      medical copy. painState already hands out a .slice(0); the freeze is the
      same protection at the export boundary. */
   var S1_LINES = Object.freeze([
-    "You logged pain on this. Not something this app can assess.",
+    "This exercise is flagged. Not something this app can assess.",
     "Holding the weight. If it is sharp, or it repeats, stop the exercise and see a physio or a doctor."
   ]);
   /* APPROVED 2026-09-10 by strength-coach (coach-audit-addendum §9.6). It was
@@ -9844,7 +9844,7 @@
        stamped and nothing is rolled back - stamping would double the delay to
        14 days, and a rollback would let a keyword shrink his programme. */
     if (out.blocked === "pain") {
-      out.blockedLine = "No new exercise this week. You logged pain in the last 7 days.";
+      out.blockedLine = "No new exercise this week. An exercise was flagged in the last 7 days.";
     }
     return out;
   }
