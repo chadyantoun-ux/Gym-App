@@ -9149,9 +9149,9 @@
     if (gap !== null) out.days = gap;
     if (gap !== null && gap >= S1A_DAYS) {
       out.stale = true;
-      out.lines = ["You noted pain on this on " + dayMon(out.date) +
-        " and have not logged it since. The app cannot tell you whether it has settled. " +
-        "If it still hurts, see someone qualified to look at it."];
+      out.lines = ["This exercise was flagged on " + dayMon(out.date) +
+        " and you have not logged it since. Still holding the weight. " +
+        "Not something this app can assess. If it has not settled, see a physio or a doctor."];
       out.text = out.lines[0];
     }
     return out;
