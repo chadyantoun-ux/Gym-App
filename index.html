@@ -553,6 +553,11 @@
   .tlfoot{display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--s1) var(--s3);
     color:var(--faint); font-size:.75rem; margin-top:var(--s1)}
   .tlnone{color:var(--faint); font-size:.8125rem; line-height:1.45; margin-top:var(--s2)}
+  /* WO-014 W10 (spec 22.6 (2)): what the line LEAVES OUT, under the line that
+     left it out. --dim, not --faint: it is a fact about the chart's honesty,
+     not a caption. Wraps freely — at 400px it is two lines and the next lift
+     row moves down by them, which is the point. */
+  .tlex{color:var(--dim); font-size:.75rem; line-height:1.45; margin-top:var(--s1)}
 
   /* ==== W11: THE WEIGHT SCREEN ============================================
      ORDER IS NORMATIVE (spec 7.1): average, change, calorie decision, entry,
@@ -2962,6 +2967,39 @@ function mv1Line(p){
      exercise, and a refusal that cannot name it can render neither. */
   return "";
 }
+/* MV1-C4 — the coach's Output copy for Rule MV1 (addendum §22.4), and the
+   one line of it that had no home until now.
+
+   H1 reaches its no-prior branch on a card whose ONLY prior came from
+   another slot: the engine is handed the slot's own prior and there is none
+   (MV1.3), so it prints `First time logged. This becomes your baseline.` at
+   a lifter who can see last Thursday's numbers ghosted on the same card. C4
+   says the same thing and then says where those numbers went.
+
+   NO CHART CLAIM. The coach struck `and on the chart` from this sentence on
+   2026-09-28 under Rule CH1: the fallback's sets sit under a DIFFERENT slot
+   and a sparkline is drawn only for the active plan's key lifts, so in Rule
+   MV1's own worked example they are on no line at all. The log half is
+   unconditional and is the half he is afraid of.
+
+   SCOPED BY RULE ID, never by re-testing the branch's conditions. 3b, 3c and
+   3d each state something C4 does not.
+
+   PRECEDENCE, coach addendum §22.4.5a condition 2, ruled 2026-09-29: ON A
+   SWAPPED CARD H1.3d WINS AND C4 IS SILENT. `First session on this exercise`
+   is false there - the slot has history; the movement is what is new - and
+   the fallback stays disclosed where disclosure belongs, on the ghost line,
+   as MV1-C1. The engine already returns 3d before 3a, so the rule id alone
+   holds the ordering; `!m.swapped` is the second lock, because a swapped
+   draft that somehow carries no name would fall through to 3a and this
+   sentence must not be what he reads when it does. */
+function mvC4(v,p,m){
+  if(m&&(m.swapped||m.added)) return null;
+  return (v&&v.rule==="H1.3a"&&p&&p.from==="movement"&&p.name)
+    ? "First session on this exercise. This becomes your baseline. Your earlier "+
+      p.name+" sets are still in the history."
+    : null;
+}
 function mv1SkipLine(p){
   return (p&&p.skipped&&p.skipped.name)
     ? "Last time you swapped this for "+p.skipped.name+". Not used as this exercise's history." : "";
@@ -3409,9 +3447,15 @@ function vSession(){
      this number is not the slot's number, which is the whole of Rule MV1
      made visible. It renders only on a card that is swapped or added, so no
      card that exists on `main @ 6a87a3a` gains a line. Words, never a
-     colour and never an icon. */
+     colour and never an icon.
+
+     B-149, UX §22.6 as amended 2026-09-28: AN ADDED CARD NO LONGER GETS A
+     MARK. The fact was stated four times; on this screen the VERDICT SLOT
+     owns it, holding Rule AD1's sentence verbatim, and `Added today` here was
+     a second statement of one fact. A swapped card is untouched — its mark
+     names the movement replaced and its verdict names the consequence, two
+     facts, one sentence each. */
   if(mvc.swapped) h+=`<p class="swmark">Swapped &middot; was ${esc(mvc.was)}</p>`;
-  else if(mvc.added) h+=`<p class="swmark">Added today</p>`;
   /* Speed cards print SP1's computed load, never the prototype's static
      "65-70% of your power-day top set" (B-12). Everything else prints the
      provenance line, and ONLY across a prescription change - on an unchanged
@@ -3427,8 +3471,15 @@ function vSession(){
     h+=`<p class="rx">Not in today's volume. It has numbers in it.</p>`;
   /* D8. The plan no longer lists this exercise on this day. Said in words,
      under the name, and nothing else about the card changes: the sets are
-     his, they save, and the rules that need a prescription stay quiet. */
-  if(!inSessDay(e.id)) h+=`<p class="rx">Not in the plan any more. It still saves with this session.</p>`;
+     his, they save, and the rules that need a prescription stay quiet.
+
+     NEVER ON AN ADDED MOVEMENT, and this guard was on Summary and not here —
+     found at W10, reported, not papered over. D8 means "the plan moved under
+     your draft"; a movement he added thirty seconds ago was never in the plan
+     and never left it, so the card was telling him something false about the
+     thing he had just done. §22.9 gives an added card `No prescription` and
+     the AD1 verdict, and no other line. */
+  if(!mvc.added&&!inSessDay(e.id)) h+=`<p class="rx">Not in the plan any more. It still saves with this session.</p>`;
   if(S.v1added===e.id) h+=`<p class="rx">Back in from this session.</p>`;
 
   /* ---- Rule MV1's disclosure (UX §22.8). ITS OWN LINE, directly under the
@@ -3653,8 +3704,11 @@ function sumRow(e,st,C){
   h+=(mvc.swapped?`<span class="sumskip">Swapped</span>`
      :mvc.added?`<span class="sumskip">Added</span>`:"");
   h+=`</div>`;
+  /* B-149, UX §22.6 as amended: the `ADDED` kicker above owns "this movement
+     was added" on Summary — the record is scanned before it is read — and the
+     advice block below owns the rest (`No prescription` + AD1's sentence). The
+     line that used to stand here said both again. */
   if(mvc.swapped) h+=`<p class="sumnote">${esc("Was "+mvc.was+".")}</p>`;
-  else if(mvc.added) h+=`<p class="sumnote">Added during the session. No prescription.</p>`;
   /* An ADDED movement is not in the plan BY DEFINITION, so the D8 sentence -
      which means "the plan moved under your draft" - would be a false alarm
      about it. The `ADDED` line above already says what it is. */
@@ -3698,8 +3752,12 @@ function sumRow(e,st,C){
     const p=priorOf(e,mvc);
     try{
       v=PHAT.verdict({ex:e, sets:st.sets, prev:(p.from==="slot")?p.entry:null,
-        note:st.note, deload:dl, unit:au});
-      vh=verdictHtml(v,dl,"");
+        note:st.note, deload:dl, unit:au,
+        /* W9's H1.3d. The same object the card hands over, so the record and
+           the card cannot phrase one fact two ways. */
+        swapped:mvc.swapped?mvc:undefined});
+      const c4=mvC4(v,p,mvc);          /* MV1-C4, as on the card */
+      vh=verdictHtml(c4?Object.assign({},v,{x:c4}):v,dl,"");
     }catch(err){ vh=null; }
     if(vh) h+=vh.html;
     else if(e.k==="speed"){
@@ -3922,23 +3980,59 @@ function spark(pts){
    and the week-6 card cannot disagree — which is exactly what the old
    weight-only chart did beside the old weight-only stall block. Merged by
    DATE across the group's ids, best wins, because two sessions on one day
-   are one day of evidence (addendum 6c). */
-function liftPoints(l){
+   are one day of evidence (addendum 6c).
+
+   WO-014 W10 — THE SLOTS THIS LINE IS DRAWN FROM ARE ITS OWN FUNCTION, so
+   the disclosure line underneath counts exclusions over EXACTLY the ids the
+   line plotted and the two cannot drift apart. */
+function liftIds(l){
   let ids=[];
   try{ ids=PHAT.exIdsForLift(S.plan,l.lift)||[]; }catch(err){ ids=[]; }
   if(ids.indexOf(l.id)<0) ids=ids.concat([l.id]);
+  return ids.filter(id=>{
+    if(id===l.id) return true;
+    let ex=null;
+    try{ ex=PHAT.exById(S.plan,id); }catch(err){ ex=null; }
+    return !!ex&&ex.k===l.k;
+  });
+}
+/* THE SLOT'S OWN MOVEMENT, or `undefined` meaning "Rule MV1 is off here".
+   NEVER null: null is MV1.1(b), which reads `sw`, and `sw` is precisely the
+   predicate spec 22.6 (1) forbids on this screen — it is stamped at log time
+   and never rewritten, so an `sw` filter would keep his machine-row sessions
+   off this line FOREVER, including after *make it permanent* promised him in
+   writing that they become this exercise's history. A slot with no `mv`
+   excludes nothing, ever. */
+function slotMvOf(id){
+  let ex=null;
+  try{ ex=PHAT.exById(S.plan,id); }catch(err){ ex=null; }
+  return (ex&&typeof ex.mv==="string"&&ex.mv)?ex.mv:undefined;
+}
+/* B-144: the engine has taken the movement argument since W4 and this, the
+   chart, was the one caller that never passed it — so a swap to a lighter
+   machine drew a drop that never happened, on the one screen whose only
+   question is whether this is working. `mv` is e1rmByDate's FIFTH argument;
+   the two date bounds stay unset. */
+function liftPoints(l){
   const by=Object.create(null);
-  ids.forEach(id=>{
-    if(id!==l.id){
-      let ex=null;
-      try{ ex=PHAT.exById(S.plan,id); }catch(err){ ex=null; }
-      if(!ex||ex.k!==l.k) return;
-    }
+  liftIds(l).forEach(id=>{
     let rows=[];
-    try{ rows=PHAT.e1rmByDate(S.sessions,id)||[]; }catch(err){ rows=[]; }
+    try{ rows=PHAT.e1rmByDate(S.sessions,id,undefined,undefined,slotMvOf(id))||[]; }
+    catch(err){ rows=[]; }
     rows.forEach(p=>{ if(by[p.date]===undefined||p.e>by[p.date]) by[p.date]=p.e; });
   });
   return Object.keys(by).sort().map(d=>({date:d,e:by[d]}));
+}
+/* HOW MANY SESSIONS THIS LINE LEAVES OUT. PHAT.mvExcludedCount is the count,
+   from the same predicate the line used — the view does not re-implement it,
+   which is the whole reason W9 exported it. Sessions, not days: two sessions
+   on one date count as two. Zero means no line renders at all. */
+function liftExcluded(l){
+  let n=0;
+  liftIds(l).forEach(id=>{
+    try{ n+=PHAT.mvExcludedCount(S.sessions,id,slotMvOf(id))||0; }catch(err){}
+  });
+  return n;
 }
 
 /* One row: label, signed delta, chart, dated endpoints.
@@ -3987,7 +4081,16 @@ function liftRow(l){
   }else{
     body=`<p class="tlnone">No data yet. This line reads sets at 8 reps or fewer.</p>`;
   }
-  return `<div class="tl"><div class="tlhead">${head}</div>${body}</div>`;
+  /* Spec 22.6 (2), literal 22.12 #48. AT ZERO NOTHING RENDERS — no empty
+     element, no `0 sessions`, so a lift he has never swapped is the row that
+     is on main today, character for character. It renders with an empty body
+     too: a line that is blank BECAUSE of the exclusion is the case where the
+     sentence matters most. */
+  const nx=liftExcluded(l);
+  const disc=nx?`<p class="tlex">${esc(nx===1
+    ? "1 session is not on this line — a different movement."
+    : nx+" sessions are not on this line — a different movement.")}</p>`:"";
+  return `<div class="tl"><div class="tlhead">${head}</div>${body}${disc}</div>`;
 }
 
 /* The week-6 card, and every character of it is PHAT.stallAdvice's.
@@ -5539,19 +5642,38 @@ function paintAdvice(speak){
      swapped card is nothing, because the slot's own entries are the movement
      he replaced and comparing today against them is B-136 itself
      (`Volume down 21%` for putting the cable row back).
-     GAP, REPORTED, NOT PAPERED OVER: coach §22.4.5 wants H1 to print
-     `Swapped to {new}. Not compared to last session.` on a swapped session.
-     That clause belongs in PHAT.verdict and W4 did not land it, so a swapped
-     card takes H1's ordinary no-prior branch. Writing the sentence here
-     instead would put a second phrasing of one fact in the view. */
-  const ownPrev=(function(){ const p=priorOf(e,mvc); return p.from==="slot"?p.entry:null; })();
+     THE GAP W5 REPORTED IS CLOSED BY W9, not by this view: PHAT.verdict now
+     takes `ctx.swapped`, the swapped-to movement's name, and H1.3d prints
+     `Swapped to {new}. Not compared to last session.` where a swapped card
+     used to print `First time logged.` on a lift with months of history. The
+     name is handed over WHOLE — cardMovement's object, which swapName
+     unwraps — so nothing here re-derives a fact the card already holds, and
+     an unswapped card passes nothing and reads main's verdict byte for
+     byte.
+
+     THE INVARIANT H1.3d'S SIGN-OFF IS CONDITIONAL ON (coach §22.4.5a, and it
+     is the CALLER'S to hold because a pure engine cannot check it): `prev` is
+     the own-slot prior read THROUGH the movement on today's card, and nothing
+     else. priorOf's shim asks priorFor the swapped card's real question, so a
+     `slot` prior is movement-matched by MV1.1(a); a cross-slot MV1.2 fallback
+     arrives as from==="movement" and is dropped to null here, never handed
+     over. Break either half and H1 prints `Volume down 31%` across two
+     different movements - correct arithmetic on a wrong fact. */
+  const prior=priorOf(e,mvc);
+  const ownPrev=prior.from==="slot"?prior.entry:null;
   let v=null;
   if(!mvc.added){
     try{
       v=PHAT.verdict({ex:e, sets:st.sets, prev:ownPrev,
-        note:st.note, deload:dl.active===true, unit:au});
+        note:st.note, deload:dl.active===true, unit:au,
+        swapped:mvc.swapped?mvc:undefined});
     }catch(err){ v=null; }
   }
+  /* MV1-C4 replaces H1.3a's sentence — one coach string for another, never a
+     sentence assembled here. The verdict object is COPIED, not mutated: the
+     engine's return value is nobody's to edit. */
+  const c4=mvC4(v,prior,mvc);
+  if(c4) v=Object.assign({},v,{x:c4});
   let html="", say="";
   const vh=mvc.added?null:verdictHtml(v,dl.active===true,"vslot");
   /* Rule AD1.2 — every verdict is silent on a movement added mid-session,
