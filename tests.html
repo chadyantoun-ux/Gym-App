@@ -55,7 +55,20 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 1027 / 1027 / 0 on wo-014-library @ 69923dc + S53 - 1.5 s in Chrome from file://, green on all seven weekdays (the clock was forced to each of Mon 28 Sep - Sun 4 Oct 2026) and again on 31 Dec 2026, 1 Jan 2027, 28 Feb 2027 and 29 Feb 2028, so the runs cross a month, a year and a leap-day boundary.</b>
+<b>Today: 1028 / 1028 / 0 on wo-014-library @ 61e07de + this commit - ~3 s in Chromium from file://, green on all seven weekdays (the clock was forced to each of Mon 28 Sep - Sun 4 Oct 2026) and again on 31 Dec 2026, 1 Jan 2027, 28 Feb 2027 and 29 Feb 2028, so the runs cross a month, a year and a leap-day boundary.</b>
+<b>B-131, re-pinned on the server's own two ids (<code>61e07de</code>, read off <code>public.sessions</code> 2026-09-29).</b> The
+22 Sep id was wrong in its last digit (<code>...390</code> &rarr; <code>...395</code>) and the 12 Sep id
+(<code>1789264514484</code>) came back confirmed, so <b>five places moved</b>: the <code>B131_S22()</code> fixture, which was
+throwing its own guard and redding twelve tests, and the four <code>absent</code> expectations in S52.C4, C5, C10 and C12 -
+each with the old value written out and its reason on its own line. <b>S52.C10&rsquo;s preamble was rewritten</b>: it claimed
+the ids were reconstructed from a truncated screenshot, which is no longer true, and a stale reason is worse than none.
+<b>Added:</b> eight more one-byte mutations in S52.C4 (seventeen &rarr; <b>25</b>, now covering the 22 Sep row field for
+field, including the newly gated <code>note: ""</code>), the absence-vs-mismatch distinction asserted in as many words in
+S52.C10 (a shifted <em>store</em> id is ABSENCE and never stops the other session being corrected; all-or-nothing is
+about mismatched BYTES), and <b>S52.C13</b>, a value pin on both ids and on the empty note. <b>Red-first, three trees:</b>
+on <code>61e07de^</code> all thirteen B-131 tests go red; on the shipping tree with only <code>note: ""</code> reverted to
+<code>note: null</code> three go red (C4&rsquo;s removed-note case, C7, C13), which is the new gate proving itself; and a
+mutant that reports absence as a mismatch is killed by five (C4, C5, C10, C11, C12).
 <b>NO HELD REDS.</b> <b>S53 is the WO-018 T3 / WO-014 deploy gate</b> and adds 16: Rule TW1c.1 under <code>cycleLine</code>
 (the twMin-3 form pinned byte-identical to <code>main</code>, the <code>ul2</code> form, twelve unusable plan shapes falling
 back to <code>three</code>, and the twMin-1 branch proved <em>unreachable</em> rather than asserted to be),
@@ -20760,19 +20773,31 @@ T("S52.B6 - all five shipped plans pass their own declared subjects on day one",
    written out by hand below, against `to`, so the table is never checked
    against itself.
    The two `rx` blocks are the slots' own prescriptions off PHAT_PLAN, which
-   is what buildSession would have stamped. `note` on d1d is "" because the
-   table records none and the pass does not gate on it.               */
+   is what buildSession would have stamped.
+
+   RE-PINNED 2026-09-29 (61e07de), two lines, and the reason for each:
+     id      1790128305390 -> 1790128305395. WAS reconstructed from a
+             truncated results grid; the last digit was wrong. Both ids are
+             now read off `public.sessions` (2026-09-29), thirteen digits
+             each, and 12 Sep's 1789264514484 came back CONFIRMED.
+     d1d     `note: ""` now comes off the table like every other input.
+             WAS hardcoded "" here with the comment "the table records none
+             and the pass does not gate on it" - both halves of that sentence
+             are now false: the table records the empty string, read off the
+             server (blank column, distinguishable from the NULL that
+             `deleted_at` returned in the same grid), and b131Mismatch gates
+             on it. Every field of every row is gated; S52.C13 pins that.  */
 function B131_S22(){
   var T = P.B131_TABLE, d1b = null, d1d = null, i;
   for (i = 0; i < T.length; i++) {
-    if (String(T[i].sid) !== "1790128305390") continue;
+    if (String(T[i].sid) !== "1790128305395") continue;
     if (T[i].ex === "d1b") d1b = T[i];
     if (T[i].ex === "d1d") d1d = T[i];
   }
   if (!d1b || !d1d) throw new Error("fixture: the correction table no longer holds the 22 Sep rows");
-  return { id: 1790128305390, date: "2026-09-22", dayId: "d1", planId: "phat", entries: {
+  return { id: 1790128305395, date: "2026-09-22", dayId: "d1", planId: "phat", entries: {
     d1b: { rx: { k: "power", s: 2, hi: 10, lo: 6 }, note: d1b.note, sets: clone(d1b.from) },
-    d1d: { rx: { k: "power", s: 3, hi: 5,  lo: 3 }, note: "",        sets: clone(d1d.from) }
+    d1d: { rx: { k: "power", s: 3, hi: 5,  lo: 3 }, note: d1d.note, sets: clone(d1d.from) }
   } };
 }
 /* Both of his sessions, on disk, as schema 7. The 12 Sep half is the same
@@ -20925,7 +20950,7 @@ T("S52.C3 / B-131 - idempotent: a second pass is changed:false AND the same obje
   a.eq(again.log, noMark, "and still the same reference");
 });
 
-T("S52.C4 / B-131 - seventeen one-byte mutations: every one a no-op, same reference, named sentence", function(a){
+T("S52.C4 / B-131 - twenty-five one-byte mutations: every one a no-op, same reference, named sentence", function(a){
   /* THE ALL-OR-NOTHING GATE. Each case moves ONE value inside a row the table
      claims to describe. None of them may produce a partial write: this
      rewrites the only real training log he has, and a pass that corrected
@@ -20970,9 +20995,36 @@ T("S52.C4 / B-131 - seventeen one-byte mutations: every one a no-op, same refere
     ["22 Sep d1d: ld.add moves by one pound", function(s){ s.sessions[1].entries.d1d.sets[0].ld.add = 171; },
       /the sets are not the bytes/],
     ["22 Sep d1d: ld.au flips to kg", function(s){ s.sessions[1].entries.d1d.sets[0].ld.au = "kg"; },
-      /the sets are not the bytes/]
+      /the sets are not the bytes/],
+    /* ADDED 2026-09-29 with the id re-pin. The seventeen above leaned on the
+       12 Sep row because it was the one whose bytes this repo held; the
+       22 Sep row is now gated field for field too, so it is mutated the same
+       way. The two note cases are the NEW gate: `note: ""` replaced
+       `note: null`, and a null note was honoured by b131Mismatch whatever
+       the entry said, so before 61e07de neither of these could have failed
+       the store. Removing the note is the one that matters - an absent note
+       and an empty note are different bytes and the server distinguishes
+       them. */
+    ["22 Sep d1b: the top set moves", function(s){ s.sessions[1].entries.d1b.sets[3].w = 94; },
+      /the sets are not the bytes/],
+    ["22 Sep d1b: one rep moves", function(s){ s.sessions[1].entries.d1b.sets[1].r = 11; },
+      /the sets are not the bytes/],
+    ["22 Sep d1b: the entry already carries mv", function(s){ s.sessions[1].entries.d1b.mv = "mv_X"; },
+      /already carries mv/],
+    ["22 Sep d1d: one w moves by 0.1", function(s){ s.sessions[1].entries.d1d.sets[0].w = 77.2; },
+      /the sets are not the bytes/],
+    ["22 Sep d1d: the last rep moves", function(s){ s.sessions[1].entries.d1d.sets[3].r = 7; },
+      /the sets are not the bytes/],
+    ["22 Sep d1d: the entry already carries n", function(s){ s.sessions[1].entries.d1d.n = "Something"; },
+      /already carries n/],
+    ["22 Sep d1d: his EMPTY note is REMOVED - absent is not empty",
+      function(s){ delete s.sessions[1].entries.d1d.note; },
+      /the note is not the one on the record/],
+    ["22 Sep d1d: his empty note gains one space",
+      function(s){ s.sessions[1].entries.d1d.note = " "; },
+      /the note is not the one on the record/]
   ];
-  a.eq(cases.length, 17, "seventeen, one per fingerprinted field the table gates on");
+  a.eq(cases.length, 25, "twenty-five, one per fingerprinted field the table gates on, on BOTH sessions");
   for (var i = 0; i < cases.length; i++) {
     var store = B131_STORE();
     cases[i][1](store);
@@ -21015,7 +21067,11 @@ T("S52.C4 / B-131 - seventeen one-byte mutations: every one a no-op, same refere
      why it was filed rather than fixed by QA. */
   a.eq(er.note, "B-131 repair: neither session is on this device; nothing changed.",
     "a device that never held his two sessions is told they are ABSENT, not that it MISMATCHED");
-  a.deep(er.absent.sort(), ["1789264514484", "1790128305390"],
+  /* RE-PINNED 2026-09-29 (61e07de). WAS ["1789264514484", "1790128305390"].
+     The 22 Sep id's last digit was reconstructed from a truncated results
+     grid; both ids are now read off `public.sessions`. The assertion's POINT
+     is unchanged - two distinct sessions, against a four-ROW table. */
+  a.deep(er.absent.sort(), ["1789264514484", "1790128305395"],
     "two distinct sessions absent, against a four-ROW table - the count that used to be compared wrong");
   /* And a device holding SOMEBODY ELSE'S sessions is the same case: the ids
      decide, never the session count, and the near hints still follow. */
@@ -21041,7 +21097,9 @@ T("S52.C5 / B-131 - CHADY_STORE and CHADY_SESSION_PRE7 are corrected; CHADY_SESS
   var r = P.repairB131(st);
   a.eq(r.changed, true, "a schema-5 store is still his bytes; the pass reads the store, not the version");
   a.eq(r.applied.length, 2, "only the 12 Sep rows - this store holds one session");
-  a.deep(r.absent, ["1790128305390"], "the 22 Sep session is ABSENT, which is not a failure");
+  /* RE-PINNED 2026-09-29 (61e07de): WAS "1790128305390". Read off
+     `public.sessions`; the old value's last digit was reconstructed. */
+  a.deep(r.absent, ["1790128305395"], "the 22 Sep session is ABSENT, which is not a failure");
   a.deep(r.near, [], "and nothing on this device is dated like it");
   a.eq(r.log.sessions[0].entries.d1b.mv, P.B131_MV);
   a.eq(r.log.sessions[0].entries.d1d.sets[0].w, 31.5);
@@ -21196,17 +21254,27 @@ T("S52.C9 / B-131 - mvExcludedCount goes 0 -> 2 on d1b: a LIVE copy change on th
 });
 
 T("S52.C10 / B-131 - a session id the table cannot find is a safe no-op, and it SAYS so", function(a){
-  /* WO-015's own caveat, pinned as behaviour: the ids were reconstructed from
-     a truncated screenshot and the 12 Sep one is the repo's. A wrong id must
-     cost nothing and must not be silent, or a repair that quietly did nothing
-     would read exactly like a repair that worked. */
+  /* REWRITTEN 2026-09-29 (61e07de). THE OLD PREAMBLE SAID:
+
+       "WO-015's own caveat, pinned as behaviour: the ids were reconstructed
+        from a truncated screenshot and the 12 Sep one is the repo's."
+
+     That is no longer true and a stale reason is worse than none: BOTH ids
+     were read off `public.sessions` on 2026-09-29 - 12 Sep's 1789264514484
+     confirmed, 22 Sep's corrected to 1790128305395. The caveat is closed;
+     the BEHAVIOUR it was pinning is not, and is why this test stays. A wrong
+     id must cost nothing and must not be silent, or a repair that quietly
+     did nothing would read exactly like a repair that worked - which is
+     precisely what the wrong last digit would have done on his phone. */
   needFns(a, "repairB131");
   var one = { schemaVersion: 7, sessions: [CHADY_SESSION_PRE7()] };
   one.sessions[0].id = 1789264514485;                    /* one digit out */
   var r = P.repairB131(one);
   a.eq(r.changed, false, "nothing matched, so nothing was written");
   a.eq(r.log, one, "same reference");
-  a.deep(r.absent.sort(), ["1789264514484", "1790128305390"], "both table sessions reported absent");
+  /* RE-PINNED 2026-09-29 (61e07de): WAS "1790128305390". Read off
+     `public.sessions`; the old value's last digit was reconstructed. */
+  a.deep(r.absent.sort(), ["1789264514484", "1790128305395"], "both table sessions reported absent");
   a.eq(r.near.length, 1, "and the date collision is reported, read-only");
   a.eq(r.near[0], "A session dated 2026-09-12 is on this device under id 1789264514485; " +
     "the correction table names 1789264514484");
@@ -21228,6 +21296,39 @@ T("S52.C10 / B-131 - a session id the table cannot find is a safe no-op, and it 
   a.deep(r2.absent, ["1789264514484"]);
   a.eq(r2.log.sessions[0].entries.d1b.mv, undefined, "the unmatched session is untouched");
   a.eq(r2.log.sessions[0], two.sessions[0], "and crosses by reference");
+  /* ADDED 2026-09-29. The distinction above was re-characterised MID-RUN
+     while the corrected table was being checked, so it is asserted here in
+     as many words rather than left to the comment: a shifted STORE id is the
+     ABSENCE branch, and absence never stops the other session being
+     corrected. All-or-nothing is about MISMATCHED BYTES. The proof that
+     these are two different branches is the SENTENCE: absence reports the
+     ids, a mismatch reports the field. */
+  a.deep(r2.applied.map(function(x){ return x.date; }), ["2026-09-22", "2026-09-22"],
+    "the two entries corrected are the OTHER session's, by date");
+  a.ok(!/does not match the bytes the correction table pins/.test(r2.note),
+    "a shifted id is never reported as a mismatch: " + r2.note);
+  a.eq(r2.log.sessions[1].entries.d1d.sets[0].w, 38.6, "and the other session really was written");
+  /* THE MIRROR, so the assertion is about the branch and not about which
+     session happens to be first in the array. */
+  var flip = B131_STORE();
+  flip.sessions[1].id = 1790128305396;                   /* one digit out */
+  var r3 = P.repairB131(flip);
+  a.eq(r3.changed, true, "the 12 Sep session is still his, and is still corrected");
+  a.eq(r3.applied.length, 2);
+  a.deep(r3.absent, ["1790128305395"], "the shifted one is ABSENT");
+  a.deep(r3.applied.map(function(x){ return x.date; }), ["2026-09-12", "2026-09-12"]);
+  a.eq(r3.log.sessions[0].entries.d1d.sets[0].w, 31.5, "12 Sep halved, with 22 Sep absent beside it");
+  a.eq(r3.log.sessions[1], flip.sessions[1], "the absent-by-id session crosses by reference, untouched");
+  a.eq(r3.near.length, 1, "and its date collision is hinted");
+  /* BOTH shifted is the case C10 opened with, and it is still ABSENCE, not a
+     mismatch - which is the whole reason a wrong id cost nothing. */
+  var none = B131_STORE();
+  none.sessions[0].id = 1789264514485; none.sessions[1].id = 1790128305396;
+  var r4 = P.repairB131(none);
+  a.eq(r4.changed, false);
+  a.eq(r4.log, none, "same reference");
+  a.match(r4.note, /^B-131 repair: neither session is on this device; nothing changed\./);
+  a.deep(r4.absent.sort(), ["1789264514484", "1790128305395"]);
 });
 
 T("S52.C11 / B-131 - the GENERIC 'nothing matches' sentence is UNREACHABLE: sixteen device states, zero hits", function(a){
@@ -21320,7 +21421,9 @@ T("S52.C12 / B-131 - the pass over CHADY_EXPORT, his REAL export, byte for byte"
     "his real export IS the shape B-131 describes - false here means the table stopped matching him");
   a.eq(r.applied.length, 2, "the two 12 Sep rows; the 22 Sep session is not in this store");
   a.deep(r.applied.map(function(x){ return x.ex; }), ["d1b", "d1d"]);
-  a.deep(r.absent, ["1790128305390"], "and the 22 Sep session is ABSENT, which is not a failure");
+  /* RE-PINNED 2026-09-29 (61e07de): WAS "1790128305390". Read off
+     `public.sessions`; the old value's last digit was reconstructed. */
+  a.deep(r.absent, ["1790128305395"], "and the 22 Sep session is ABSENT, which is not a failure");
   a.deep(r.near, [], "nothing on this device is dated like it under another id");
   a.eq(JSON.stringify(store), before, "THE ARGUMENT IS NEVER MUTATED - byte for byte in");
   a.eq(store.sessions[0].entries.d1d.sets[0].w, 63, "the pre-fix bytes are still on the object handed in");
@@ -21351,6 +21454,84 @@ T("S52.C12 / B-131 - the pass over CHADY_EXPORT, his REAL export, byte for byte"
   a.eq(third.changed, false, "no marker, same answer");
   a.eq(third.log, onlyFixed, "same reference");
   a.eq(third.note, "B-131 repair: already applied on this device; nothing changed.");
+});
+
+T("S52.C13 / B-131 - the table's two ids and the 22 Sep EMPTY NOTE, read off the server 2026-09-29", function(a){
+  /* ADDED 2026-09-29 with 61e07de. Three facts, each read off
+     `public.sessions` and each previously unpinned or pinned wrong:
+
+       1. 1789264514484 (12 Sep) - CONFIRMED. The repo's value was right and
+          the brief's was not; it is pinned here so a future "correction"
+          back to the brief has to argue with a red test.
+       2. 1790128305395 (22 Sep) - CORRECTED from ...390, whose last digit
+          was reconstructed from a truncated results grid. The fingerprint
+          gate turned that error into a silent no-op rather than a
+          corruption, which is the design working - but a repair that does
+          nothing on his phone is still a repair that does nothing, and the
+          only thing that would have caught it is this assertion.
+       3. The 22 Sep d1d note is the EMPTY STRING, not unknown: the column
+          came back blank where `deleted_at` came back NULL in the same
+          grid. It was `note: null` before, and a null note is honoured by
+          b131Mismatch WHATEVER the entry says - so that field was ungated
+          and any note at all would have passed the fingerprint. It is a
+          gate now, and a gate nobody tests is a gate.
+
+     This is a VALUE pin, deliberately: it asserts the bytes rather than the
+     behaviour, because the behaviour is correct for any id and the whole
+     risk is that the id is the wrong one. */
+  needFns(a, "repairB131");
+  var T = P.B131_TABLE, i, row, sids = [], d1d22 = null;
+  for (i = 0; i < T.length; i++) {
+    if (sids.indexOf(String(T[i].sid)) < 0) sids.push(String(T[i].sid));
+    if (String(T[i].sid) === "1790128305395" && T[i].ex === "d1d") d1d22 = T[i];
+  }
+  a.eq(T.length, 4, "four rows - one per ENTRY, two per session");
+  a.deep(sids.sort(), ["1789264514484", "1790128305395"], "two session ids, off public.sessions");
+  for (i = 0; i < sids.length; i++) {
+    a.eq(sids[i].length, 13, sids[i] + " is thirteen digits");
+    a.ok(/^[0-9]+$/.test(sids[i]), sids[i] + " is digits only");
+  }
+  a.ok(!!d1d22, "the 22 Sep d1d row is found under the corrected id");
+
+  /* --- the note, as a VALUE: empty, present, a string, and not null. ----- */
+  a.ok(Object.prototype.hasOwnProperty.call(d1d22, "note"), "the row declares a note");
+  a.eq(typeof d1d22.note, "string", "a string, so b131Mismatch compares it");
+  a.eq(d1d22.note, "", "and it is the empty string - the server's blank column");
+  a.eq(d1d22.note === null, false,
+    "NOT null - a null note is honoured whatever the entry holds, which is what ungated it");
+  /* Every row's note is gated now, not just this one. */
+  for (i = 0; i < T.length; i++) {
+    a.eq(typeof T[i].note, "string",
+      T[i].date + " " + T[i].ex + ": every field of every row is gated, notes included");
+  }
+
+  /* --- the gate, both sides, on the store. ------------------------------ */
+  var ok = P.repairB131(B131_STORE());
+  a.eq(ok.changed, true, "the empty note as it stands passes the fingerprint");
+  a.eq(ok.log.sessions[1].entries.d1d.note, "",
+    "and the repair hands the EMPTY note back as an empty string - not dropped, not turned into null");
+  a.ok(Object.prototype.hasOwnProperty.call(ok.log.sessions[1].entries.d1d, "note"),
+    "the key itself survives the rewrite");
+
+  /* Removing it is a REFUSAL, naming the note. This is the case that could
+     not fail before 61e07de: under `note: null` an absent note passed. */
+  var gone = B131_STORE();
+  delete gone.sessions[1].entries.d1d.note;
+  var g = P.repairB131(gone);
+  a.eq(g.changed, false, "an ABSENT note is not an EMPTY note; the whole pass refuses");
+  a.eq(g.log, gone, "same reference - nothing partial was written");
+  a.deep(g.applied, [], "and the 12 Sep pair is NOT written either: all or nothing on mismatched bytes");
+  a.match(g.note, /the note is not the one on the record/,
+    "and the refusal names the note: " + g.note);
+  a.ok(g.note.indexOf("2026-09-22") >= 0, "and which session it was: " + g.note);
+
+  /* One space is the same refusal, so this is a byte comparison and not a
+     truthiness test that an empty string would slip through. */
+  var sp = B131_STORE();
+  sp.sessions[1].entries.d1d.note = " ";
+  a.match(P.repairB131(sp).note, /the note is not the one on the record/,
+    "one space is not the empty string");
+  a.eq(P.repairB131(sp).changed, false);
 });
 
 group("S53 WO-018 T3 + WO-014 gate / Rule TW1c.1 / tierLines.explain / copyPlan derivedFrom / HD1.4 / the vocabulary sweep");
