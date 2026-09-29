@@ -7427,3 +7427,218 @@ own, `fig` may move to the movement and the slot map becomes derived data. **Not
 swap he recorded in prose because the app had nowhere to put it. That is the best argument in this
 document for building the feature, and it is also the measure of everything else: the library will
 be right or wrong about 800 movements, and the only ones that matter are the ones he actually does.
+
+---
+
+# 24. WO-017 W1 + W2 — negated recovery, and the instrument — 2026-09-29
+
+Amends **one line of §13.5**: the `Inputs` line of Rule S1b, which becomes the list below. **Nothing
+else in Rule S1 or S1b moves** — not the suppression scope, not the clearing rule (S1a), not the
+per-exercise reach, not `PAIN_DAYS`, not `painWindow`, not S2a/S2b/S2c. One boolean, one regex, one
+definition of the trigger.
+
+## 24.0 Rulings at a glance
+
+| | Ruling |
+|---|---|
+| Both specimen notes | **Fire.** Named and traced in §24.4 |
+| Negated recovery (`not recovered` / `not healed` / `not settled`) | **IN** as literal alternations — the same instrument as the shipped `g(?:ave\|ives\|iving) way`, not a parser |
+| `still not right` | **IN.** Bare `not right` **OUT** |
+| `still bad` | **IN.** Bare `bad` **OUT** |
+| `playing up`, `acting up` | **IN** |
+| `flared up` / `flaring up` / `flare-up` | **IN.** Bare `flare` / `flared` — **exclusion HELD** |
+| `tender` | **IN** |
+| `dodgy` | **IN** |
+| `sore` | **exclusion HELD.** The frequency argument stands, unchanged |
+| `stiff` | **exclusion HELD**, and this program gives a second reason |
+| `not 100` | **OUT** — this app is full of the number 100 and it is a load |
+| `physio` `doctor` `MRI` `cortisone` | **exclusion HELD** |
+| `S1_LINES[0]` | **Changes.** UX owes one replacement literal (W5). §13.5's hold on it is overturned, narrowly |
+| W2, the instrument | **(b)** — keep the list in full, add one persistent per-exercise control. `[Likely]` |
+
+**I was wrong, and it is worth saying once.** §13.5 closed with *"do not extend this into a parser"*
+and I let that sentence do more work than it was written to do: it is a prohibition on negation
+*scope*, proximity and body-part tables, not on multi-word literals. The list I signed off could not
+hear the only injury report the app has ever been given. The over-trigger bias was correct and I
+under-applied it.
+
+## 24.1 The new entries, in §13.5's table shape
+
+Entries 22–29, appended to §13.5's 21. Every one is a **literal alternation** — no negation scope, no
+proximity, no parsing. The one licence taken beyond the shipped precedent is an **optional single-word
+gap**, `(?:\w+\s+)?`, in entry 22 only, so `not yet recovered` and `not fully recovered` match. It is
+capped at one word deliberately: an unbounded gap drifts across clauses and would fire on
+`not sure, the elbow recovered fine`. `[Certain]` on the cap.
+
+Phrase entries use `\s+` rather than the literal space in `g(?:ave|ives|iving) way`. A phone keyboard
+puts newlines and double spaces between clauses; a deviation that can only widen the match is on the
+right side to be wrong on.
+
+| # | Word / phrase | Status | Conf |
+|---|---|---|---|
+| 22 | `not recovered` `not healed` `not settled`, with one optional word in the gap, and the `hasn't` / `haven't` / `hadn't` contraction forms | **new** | `[Certain]` |
+| 23 | `still not right` `still isn't right` | **new** | `[Likely]` |
+| 24 | `still bad` | **new** | `[Likely]` |
+| 25 | `playing up` `plays up` | **new** | `[Certain]` |
+| 26 | `acting up` `acts up` | **new** | `[Certain]` |
+| 27 | `flared up` `flaring up` `flare-up` | **new** | `[Opinion]` — see §24.3 |
+| 28 | `tender` `tenderness` | **new** | `[Likely]` |
+| 29 | `dodgy` | **new** | `[Opinion]` |
+
+**29 table entries, 41 array fragments.** The table groups forms on one row, as it always has. Both
+numbers are right; do not "correct" either to the other.
+
+### Stem hazards for every new entry
+
+`[Certain]` on all of these. Each is the mistake made while tidying the list.
+
+| Tempting | Breaks on | Use instead |
+|---|---|---|
+| bare `recovered` | **`recovered well between sets`** — a *good* report, and the single most likely benign note in the file | only the negated forms of entry 22 |
+| `not\s+[\s\S]*?recovered` (unbounded gap) | `not sure, the elbow recovered fine` — drifts across the clause boundary | the one-word cap `(?:\w+\s+)?` |
+| bare `not right` | `bar path not right`, `seat height not right`, `grip not right` — equipment and form, most of which he narrates | `still\s+(?:not\|is\s?n['’]?t)\s+right` only |
+| bare `bad` | `bad sleep`, `bad day`, `bad form` | `still\s+bad` only |
+| bare `flare` / `flared` | **`elbows flared on the press`** — §13.5's exclusion, still correct | `flar(?:ed\|ing)\s+up` and `flare-up` only |
+| `play\w*` / `act\w*` | `played with the grip`, `active hang`, `activation` | the ` up` particle is mandatory |
+| `tend\w*` | `tendency`, and `tendon` is not a symptom on its own | `tender\|tenderness` |
+| `dodg\w*` | `dodged`, `dodging` | `dodgy` |
+| `settle\w*` | `settled into the groove` — a cue | only under entry 22's negation |
+| `100` in any form | **`not 100 kg`, `not 100 %`, `did not hit 100`** — this is a weight log; 100 is a load | nothing. `not 100` is **out** |
+
+## 24.2 The compiled regex, character-exact
+
+The array stays the single source and `PAIN_RE` stays compiled from it (§13.6). Compiled, the regex is
+exactly this and the suite pins it character-for-character:
+
+```
+/\b(?:pain|painful|painfully|hurt|hurts|hurting|injur\w*|sharp|pinch\w*|tweak\w*|strain\w*|sprain\w*|twinge[sd]?|ach(?:e|es|ed|ing|y|ey)|niggl\w*|numb|numbness|tingl\w*|swollen|swelling|impinge\w*|inflam\w*|stabbing|stabbed|tears?|tore|torn|spasms?|pulled|g(?:ave|ives|iving) way|not\s+(?:\w+\s+)?(?:recovered|healed|settled)|(?:has|have|had)\s?n['’]?t\s+(?:\w+\s+)?(?:recovered|healed|settled)|still\s+(?:not|is\s?n['’]?t)\s+right|still\s+bad|play(?:ing|s)\s+up|act(?:ing|s)\s+up|flar(?:ed|ing)\s+up|flare-up|tender|tenderness|dodgy)\b/i
+```
+
+The eleven fragments appended to `PHAT.PAIN_WORDS`, in order, after `"g(?:ave|ives|iving) way"`:
+
+```js
+"not\\s+(?:\\w+\\s+)?(?:recovered|healed|settled)",
+"(?:has|have|had)\\s?n['’]?t\\s+(?:\\w+\\s+)?(?:recovered|healed|settled)",
+"still\\s+(?:not|is\\s?n['’]?t)\\s+right",
+"still\\s+bad",
+"play(?:ing|s)\\s+up",
+"act(?:ing|s)\\s+up",
+"flar(?:ed|ing)\\s+up",
+"flare-up",
+"tender", "tenderness",
+"dodgy"
+```
+
+Two notes for the engineer, both load-bearing:
+
+- The apostrophe class is `['’]` — a **straight** and a **curly** apostrophe. iOS substitutes the curly
+  one silently. Dropping it makes `hasn’t recovered` deaf again, which is this bug a second time.
+- `tender` before `tenderness` is safe: `tender` fails the trailing `\b` inside `tenderness` and the
+  engine backtracks into the alternation. This mirrors the shipped `numb|numbness`. Do not "fix" the
+  order.
+- **Add no word, no stem and no spelling that is not on this page.** If something seems missing, stop
+  and report it (WO-017 W3 says the same).
+
+## 24.3 The four held exclusions, each ruled explicitly
+
+**`sore` — HOLD. Not overturned.** `[Opinion]`, held for the second and last time: delayed-onset
+soreness is the expected product of a five-day split in a surplus, a trigger that fires most weeks is a
+tax rather than a signal, and its real cost is that he stops writing notes — which blinds all 28 other
+entries and would make *this* bug permanent. Do not ask a third time.
+
+**`stiff` — HOLD**, and this program supplies a second, harder reason than §13.5 had: `d2d` is a
+**stiff-legged deadlift**. `stiff` would fire on the name of a prescribed exercise. `[Certain]`
+
+**`flare` / `flared` — HOLD bare; overturn only with the particle.** `[Opinion]` `elbows flared on the
+press` is form prose and stays silent; `elbow flared up` and `flare-up` are body prose and fire. The
+particle is the whole distinction and it is the reason bare `flare` stays out.
+
+**`physio` `doctor` `MRI` `cortisone` — HOLD.** `[Opinion]` The rule has no second tier, so including
+them means firing the *referral* line at a man already sitting in a physio's waiting room, which is how
+the one piece of near-medical copy in the app stops being read. And if he is under care, whether to
+train around it is his clinician's call, not a regex's. The symptom word almost always travels in the
+same note, and entry 22 now catches the sentence that carries it (`physio says it has not settled`).
+**If W4's over-trigger count comes back near zero, re-raise `physio` alone** — not the other three.
+
+## 24.4 The two specimens, by name
+
+| Note, verbatim | Fires? | On what |
+|---|---|---|
+| `I have done iso-lateral front lat pull downs- forearm still not recovered` (12 Sep) | **true** | entry 22, `not recovered`, no gap word. The hyphen and the spacing are irrelevant — `still` precedes `not` and is outside the match |
+| `I did pull down on this, arm still not recovered` (22 Sep) | **true** | entry 22, `not recovered` |
+| `recovered well between sets` (the control case) | **false** | no negation precedes `recovered`. This is the case that forbids a bare `recovered` |
+| `rep number`, `painting`, `achieve`, `stability`, `teardrop` | **false**, unchanged | §13.5's five hazards do not regress |
+| All five `DEMO_NOTES` | **false**, unchanged | read and checked against the new regex; the standing contract at `logic.js:11155` holds |
+
+**Retroactivity (WO-017 §4): confirmed, not rebutted.** No verdict is stored, `painState` is ordinal,
+and he has not said otherwise since 22 Sep. The notice appearing on `d1b` at the next render is the
+honest behaviour and I will not build a date gate to hide it.
+
+## 24.5 `S1_LINES[0]` — **it changes. UX owes one string.**
+
+`You logged pain on this.` He did not log pain. He logged an arm that has not recovered, twice, in
+plain words, neither of which was `pain`.
+
+§13.5 held this literal for `twinge`, arguing that one word may stand as the category name for a class
+of symptom words. **That argument does not survive entry 22**, and I am overturning my own hold.
+`twinge` is a symptom word and `pain` is a fair category name for it. `not recovered` is not a symptom
+word at all — it is a status report. Telling him *you logged pain* is the app **quoting him saying
+something he did not say**, in the one place it talks about his body, as the first thing he sees on
+that card. An app that misquotes you about your arm is not one you keep writing notes to. `[Certain]`
+
+Constraints on the replacement — **UX writes the words, not me and not the engineer**:
+
+1. **One string, all triggers.** There is no second tier and this ruling does not create one. The same
+   literal must sit correctly over `twinge`, over `not recovered`, and over `dodgy`.
+2. **It must not attribute a word to him**, and must not name the body part, grade severity, or assess
+   anything. §10's prohibition is untouched.
+3. **It must name why the card changed** — the load is being held and he is owed the reason in the same
+   breath. Silence about a hold is its own defect.
+4. **`S1_LINES[1]` does not change.** `[Certain]` The referral sentence is correct copy for every entry
+   on this list; that is the test each entry had to pass to get on it.
+5. **`S2b`'s `You logged pain in the last 7 days.`** is the same misquote in a second place. UX should
+   be given both at once; it is one decision, not two. I am not writing either literal here.
+
+Illustrative only, **not the deliverable and not to be transcribed**: something in the shape of
+*You flagged this exercise. Load is held.* UX's call entirely.
+
+## 24.6 W2 — the instrument: **(b). Keep the list in full, and add one control.** `[Likely]`
+
+Agreed with the PM, and the reasoning is not a preference: **no vocabulary catches the word nobody
+chose in advance.** That is not a defect in this list, it is the defect in *lists*, and it is now
+evidenced rather than theoretical. So the app needs exactly one path to the flag that contains no
+vocabulary at all. `[Certain]` on that half.
+
+The list stays **in full** underneath it, unnarrowed, and W1 ships whether or not the control is ever
+built. A tap can be forgotten; prose cannot be un-written. The list is the safety net and widening it
+was still the right move. **(c) is rejected**, on the frequency argument that killed `sore`: he writes
+prose most sessions, so a prompt on "no recognised word" fires most sessions, trains him to dismiss it,
+and then trains him to stop writing notes. `[Certain]`
+
+If W6 builds it:
+
+- **What the tap asserts**, in substance — *something in my body is not right on this exercise.* The
+  words are UX's (W5). It asserts nothing about what, where, or how badly; the app does not assess.
+- **One boolean, through the existing chokepoint.** The control ORs into the same `painFlag` value that
+  the note produces, at the same place, and every downstream rule (S1's suppression, `S1_LINES`,
+  `painState`, `painWindow`, S2b, S2c) reads it unchanged. **This ruling creates no second definition of
+  the trigger and no second window.** If implementing it requires a new key, a new window or a second
+  boolean, stop and re-scope — that is §13.5's `NO SECOND WINDOW` and it stands.
+- **Per exercise, not per session.** Rule S1's entire reach is per exercise; a session-level flag would
+  hold load on four slots he never complained about.
+- **Persistence: exactly `painState`'s.** Ordinal, not dated. It stands until that exercise is logged
+  again without the control on and without a triggering note. No new clearing rule, no expiry, no
+  separate decay — S1a's 21-day restatement applies to it as written.
+- **Cleared** only by that next clean log of the same exercise, and by nothing else. Not by a tap that
+  toggles it off in a later session on a different slot, not by time.
+
+## 24.7 Verdict
+
+**Sign off with changes:** the eleven fragments in §24.2 verbatim, `S1_LINES[0]` and S2b's line back to
+UX for one replacement each, W2 ruled **(b)**, and four exclusions held with `flare` overturned only in
+its particle form.
+
+**And the thing that is not a product ruling.** He wrote *still not recovered* on 12 September and
+again on 22 September. It is 29 September. Whatever the app does next, someone should ask him how the
+forearm is, and if the answer is still the same, the fifth session should not open on `d1b` at all.
+That is a conversation, not a regex, and this document cannot have it for him.
