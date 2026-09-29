@@ -790,9 +790,16 @@ explains). Copy verbatim from audit §10, two paragraphs, no interpolation, **no
 shortening, no severity word, no substitute, no stretch**:
 
 ```
-You logged pain on this. Not something this app can assess.
+This exercise is flagged. Not something this app can assess.
 Holding the weight. If it is sharp, or it repeats, stop the exercise and see a physio or a doctor.
 ```
+
+**Line 1 (`S1_LINES[0]`) AMENDED 2026-09-29 (coach §24.5, §22.12 #51).** It was
+`You logged pain on this. Not something this app can assess.` He never logged pain; the detector's new
+entry 22 fires on `not recovered`, which is a status report and not a symptom word, so the old opening
+quoted him saying something he did not say. **Line 2 (`S1_LINES[1]`) is untouched** — it is the coach's
+test string and it already carries the hold in its first two words, which is why the replacement does
+not repeat it.
 
 Provenance line, when the source is history rather than the current note (WO-003 §2.3, **NEW**,
 still pending coach review): `From your last session on this.`
@@ -2177,7 +2184,7 @@ PHAT.cycleLine().text · .divergence · .explain
 PHAT.calorieAdvice() — all eleven states, including "Recheck in 7 days."
 PHAT.stallReport()
 PHAT.rollbackLine()
-You logged pain on this. Not something this app can assess.
+This exercise is flagged. Not something this app can assess.          [AMENDED 2026-09-29 — §22.12 #51]
 Holding the weight. If it is sharp, or it repeats, stop the exercise and see a physio or a doctor.
 Add {ex} back to this session? Only if last week left you recovered and no lift went backwards.
 Add it / Not yet / Left out. Asked again next week.
@@ -4856,6 +4863,8 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 48 | trend, under a sparkline | the line excludes ≥ 1 session (`effectiveMv(entry, slot) !== slot.mv`) | `{n} sessions are not on this line — a different movement.` (`1 session is not on this line — a different movement.`) **AMENDED 2026-09-28.** Replaces `{n} swapped sessions are not on this line.` (`1 swapped session is not on this line.`). The count is **sessions this line leaves out**, not swapped sessions; at zero the line does not render |
 | 49 | trend, under a sparkline | — | ~~`{n} swapped sessions are on this line.`~~ **RETIRED — AMENDED 2026-09-28.** It was the fallback for an exclusion that could not land; it has landed (W9/W10), and its count was the wrong count |
 | 50 | chip, line 2 | swapped card, changed in the sheet | `Set for this session` |
+| 51 | session card + summary, pain notice, line 1 (`S1_LINES[0]`) | any pain trigger | `This exercise is flagged. Not something this app can assess.` **AMENDED 2026-09-29 (coach §24.5).** Replaces `You logged pain on this. Not something this app can assess.` The second sentence is §10's prohibition and is carried over unchanged; only the opening moves. **`S1_LINES[1]` does not change** |
+| 52 | train, volume tier (`blockedLine`, Rule S2b) | V1 offer suppressed | `No new exercise this week. An exercise was flagged in the last 7 days.` **AMENDED 2026-09-29 (coach §24.5.5).** Replaces `No new exercise this week. You logged pain in the last 7 days.` The first sentence — the decision — does not move; only the reason does |
 
 Substitutions beyond §0.8: `{original}` the movement the slot carried before the swap, escaped ·
 `{new}` the movement picked, escaped · `{query}` the typed query, escaped · `{Equipment}` the library's
@@ -4865,6 +4874,21 @@ and a name containing `<` must render as text (W5's criterion).
 **Voice check.** No exclamation marks, no emoji. Second person only where he acts (`Open the app once…`,
 `duplicate it in Plans`). Every `Could not …` ends on what is true (`Nothing changed.`). No word
 congratulates him for swapping.
+
+**#51 and #52 are one decision, and the word is `flagged`.** The old copy said *you logged pain*
+about two notes that say an arm has not recovered — that is the app putting a word in his mouth, about
+his body, as the first thing on the card, and it is why the literal could not be kept. `flagged` is
+the only honest word available: it names that something raised the notice without naming what, where,
+how badly, or who said it, so one string sits correctly over `twinge`, over `not recovered`, over
+`dodgy`, and over W6's tap if it is ever built. **It deliberately does not repeat the hold** —
+`S1_LINES[1]` opens `Holding the weight.` and the two lines render as one utterance, so the hold is
+named in the next sentence; saying it twice weakens the sentence that carries the referral. **Tense is
+standing, not eventful** (`is flagged`, not `flagged today`): the notice will now appear retroactively
+on September sessions he has already read, because advice is recomputed at render and nothing is
+stored, and a standing condition reads correctly on an old card where an announcement would read as
+news. #52's past tense is the 7-day window's, not an event's. **Boundary:** #51 renders only where
+`painFlag` is true and #52 only where V1 is suppressed by it; **no string on a card with no pain
+trigger moves, and the notice's position, styling and A11y are unchanged** (§4.8).
 
 **The regression boundary of the 2026-09-28 amendments (#31, #34, #38, #42b, #48, #49).** Every one of
 them renders **only** on a card or a Summary block that is **swapped** or **added**, or under a
