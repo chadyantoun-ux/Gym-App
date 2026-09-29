@@ -9159,15 +9159,22 @@ async function mergeOnOpen(reason){
        storage context, a reinstall, a sign-in - would otherwise sit
        uncorrected on disk until the next launch, and the launch after a merge
        is the launch he is most likely to read the Trend line on.
-       `D.raw.log` is the verbatim bytes this write is about to replace, so
-       the keep records the state the correction moved away from. The keep is
+       THE KEEP IS OF THE MERGED STORE, NOT `D.raw.log`: raw is null here, so
+       b131Pass falls back to b131Bytes of the store it was handed. The
+       pre-merge local bytes are already kept by mergeSteps, and on the device
+       this path exists for - one that LACKS these sessions - they do not
+       contain them: a keep of `D.raw.log` measured 1 session where the write
+       held 3, which would leave the uncorrected bytes in no keep on the
+       device and on no row after the push. What the correction moved away
+       from is the merged store, so that is what is kept. It is also why
+       there are not two keeps of the same bytes 3 ms apart. The keep is
        blocking here too: if it fails, `b.log` is the merged store by
        identity, the merge lands uncorrected (which loses nothing - it only
        ADDS rows) and boot retries. b131Show is NOT set here; §22.19 says the
        card is present on a fresh open or it waits for the next one. */
     for(const w of st.writes){
       if(w.key!==LOG) continue;
-      const b=await b131Pass(w.value,D.raw.log,"merge");
+      const b=await b131Pass(w.value,null,"merge");
       if(b.changed) w.value=b.log;
     }
     /* The writes, log first. A failed first write stops with nothing
@@ -9719,19 +9726,26 @@ function b131Counts(log){
   return out;
 }
 
-/* The bytes to keep, when there is no raw string to keep instead. */
+/* The bytes to keep, when there is no raw string to keep instead: an empty
+   device at boot, and the merge, whose store has no disk bytes yet because
+   the correction runs before the write. */
 function b131Bytes(store){
   try{ const s=JSON.stringify(store); return typeof s==="string"?s:null; }catch(err){ return null; }
 }
 
 /* THE KEEP, and then THE READ BACK. `phat:v1:recover:log:<ms>` in
    preserveUnreadable's grammar - {key, savedAt, raw} - so diag.html lists it
-   beside every other keep on the device, and `raw` is the VERBATIM BYTES the
-   correction is about to replace: the string that was on disk where there is
-   one, never a re-serialisation of the parsed object.
+   beside every other keep on the device, and `raw` is the BYTES THE
+   CORRECTION MOVES AWAY FROM: the verbatim string that was on disk where
+   there is one - never a re-serialisation of a store that has a disk copy -
+   and b131Bytes of the store itself where there is not (the merge).
    save() returning true is a claim about a write. What gates the correction
    is a fact about a READ, so the record is read back through the same reader
-   boot uses and compared field by field before anything else happens. */
+   boot uses and compared field by field before anything else happens.
+   A record that does not read back is not a keep, so the key it went to is
+   DELETED before the refusal returns: the pass is retried on the next
+   launch, and one orphan per launch would otherwise accumulate in diag.html's
+   keep list under the grammar that promises a recovery point. */
 async function b131KeepLog(raw){
   const at=Date.now();
   const key=LOG.replace("phat:v1:","phat:v1:recover:")+":"+at;
@@ -9741,15 +9755,20 @@ async function b131KeepLog(raw){
   let back=null;
   try{ back=await readRaw(key); }catch(err){ back=null; }
   const v=(back&&back.status==="ok")?back.value:null;
-  if(!v||typeof v!=="object"||v.key!==LOG||v.savedAt!==at||v.raw!==raw)
+  if(!v||typeof v!=="object"||v.key!==LOG||v.savedAt!==at||v.raw!==raw){
+    await del(key);
     return {ok:false,key:key,why:"the copy of the log did not read back as it was written"};
+  }
   return {ok:true,key:key,savedAt:at};
 }
 
 /* b131Pass(store, raw, where) -> {log, changed, note, applied?, keep?}
    `store` is the log store to correct, `raw` the bytes on disk it will
-   replace (null where there are none). The caller writes `log`; on every
-   branch that is not `changed` it is the SAME REFERENCE that came in, so
+   replace - null where there are none, and null where the caller wants the
+   keep to hold `store` itself (the merge path: the bytes it replaces are
+   already kept, and they are not the bytes the pass is moving). The caller
+   writes `log`; on every branch that is not `changed` it is the SAME
+   REFERENCE that came in, so
    "byte-identical in and out" is checkable by identity, not by diff. */
 async function b131Pass(store,raw,where){
   let r=null;
