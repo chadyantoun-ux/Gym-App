@@ -7446,8 +7446,7 @@ regression target: **the five shipped plans, unedited, must produce byte-identic
 |---|---|---|---|
 | 1 | What is "heavy", and what follows when he moves it? | **Rule HD1.** Heavy is derived, never stored: a slot is heavy iff `k === "power" && hi <= 8`. `keyLifts` and `speedSource` are **validated, not re-derived** — an entry whose slot no longer passes is dropped at read time and the feature goes ABSENT (C7a), never PRESENT-THIN. A replacement is **offered, never adopted.** `reintroOrder` and `reducedWeeks` do not move at all. | `[Certain]` on the predicate, `[Opinion]` on offer-not-adopt |
 | 1a | The PM's guess — derive `keyLifts` and `speedSource` automatically | **Rejected, and I will hold it.** Reason in §23.2.4. | `[Opinion]` |
-| 2 | Should a slot name sanctioned alternates (B-159)? | **No.** No new field, and not in the cue either. The act is shipped (WO-014 swap), the identity is shipped (MV1), and the thing that actually failed him is WO-017. **Re-tested 2026-09-29 against his new statement and held — §23.13.4.** | `[Opinion]`, held twice |
-| 7 | **New, 2026-09-29 — pronated pulling fails, neutral completes.** How do the templates carry it? | **Neither (a) nor (b): §23.13.** Change the prescription where the grip is incidental to the movement — five pulldown/pull-up slots move to a neutral handle, and every one of them is a prescription I would write for an uninjured lifter. Change nothing where the grip *is* the movement — **the bent-over barbell row does not move.** No cue carries a medical note. The residue is the WO-014 swap's. | `[Opinion]` on the line between the two, `[Certain]` that a prescription he cannot complete is not a prescription |
+| 2 | Should a slot name sanctioned alternates (B-159)? | **No.** No new field, and not in the cue either. The act is shipped (WO-014 swap), the identity is shipped (MV1), and the thing that actually failed him is WO-017. | `[Opinion]`, held |
 | 3 | Day breakdown for the bodybuilder split | **Chest · Back · Legs · Shoulders · Arms.** Not the conventional order; reason in §23.7.1. Needs one line from him. | `[Opinion]` |
 | 4 | **Found while in here — a 2-day plan can never accumulate a training week.** Rule TW1 requires ≥ 3 training days in a week, so on the 2-day template `trainingWeeks` is permanently 0 and ST1, V1, D1 T3 and `cycleLine` are silently inert — no ABSENT line, no explanation, forever. | **Rule TW1b:** the threshold is `min(3, plan.days.length)`. PHAT and the 5-day and 3-day templates are unchanged at 3; the 2-day plan gets 2. **Filed for the PM — it is outside T1's four templates and must not be built inside them.** | `[Certain]` on the defect, `[Likely]` on the fix |
 | 5 | `speed` work in any of the four | **None.** All four omit `speedSource` deliberately. §23.3.2. | `[Opinion]` |
@@ -7738,7 +7737,7 @@ days:         p1 Push (Mon) · p2 Pull (Tue) · p3 Legs (Wed) · p4 Upper (Fri) 
 | id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `p2a` | Seated cable row | `mv_Seated_Cable_Rows` | 4 | 8 | 12 | `hyp` | `cable` | `l5_cablerow` | — | Pull to the navel, do not lean back to finish. |
-| `p2b` | Close-grip pulldown | `mv_Close-Grip_Front_Lat_Pulldown` | 3 | 10 | 12 | `hyp` | `cable` | `l5_pulldown` | — | Palms facing. Pull the handle to the top of the chest. |
+| `p2b` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 10 | 12 | `hyp` | `cable` | `l5_pulldown` | — | Bring the bar to the collarbone, chest up. |
 | `p2c` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 3 | 8 | 12 | `hyp` | `bb` | `l5_bbrow_hyp` | — | Keep the torso at the same angle for every rep. |
 | `p2d` | Face pull | `mv_Face_Pull` | 3 | 12 | 15 | `hyp` | `cable` | `l5_facepull` | `1` | Pull the rope to the forehead, elbows high. |
 | `p2e` | Barbell curl | `mv_Barbell_Curl` | 3 | 8 | 12 | `hyp` | `bb` | `l5_bbcurl` | — | Do not rock the torso to start the rep. |
@@ -7760,7 +7759,7 @@ days:         p1 Push (Mon) · p2 Pull (Tue) · p3 Legs (Wed) · p4 Upper (Fri) 
 |---|---|---|---|---|---|---|---|---|---|---|
 | `p4a` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 3 | 3 | 5 | `power` | `bb` | `l5_bbrow_pwr` | — | Keep the torso at the same angle for every rep. |
 | `p4b` | Barbell bench press | `mv_Barbell_Bench_Press_-_Medium_Grip` | 3 | 3 | 5 | `power` | `bb` | `l5_bench_pwr` | — | Touch the same point on the chest every rep. |
-| `p4c` | V-bar pull-up | `mv_V-Bar_Pullup` | 2 | 6 | 8 | `power` | `bodyweight` | `l5_pullup` | — | Palms facing. Reach a full dead hang at the bottom of every rep. |
+| `p4c` | Weighted pull-up | `mv_Weighted_Pull_Ups` | 2 | 6 | 8 | `power` | `bodyweight` | `l5_pullup` | — | Reach a full dead hang at the bottom of every rep. |
 | `p4d` | Standing military press | `mv_Standing_Military_Press` | 3 | 5 | 8 | `power` | `bb` | `l5_ohp` | — | Squeeze the glutes; do not lean back to press. |
 | `p4e` | Cambered bar curl | `mv_EZ-Bar_Curl` | 2 | 6 | 10 | `power` | `bb` | `l5_ezcurl` | — | Do not rock the torso to start the rep. |
 | `p4f` | Skull crusher | `mv_EZ-Bar_Skullcrusher` | 2 | 6 | 10 | `power` | `bb` | `l5_skull` | — | Take the bar to the forehead on every rep. |
@@ -7813,7 +7812,7 @@ days:         t1 Push (Mon) · t2 Pull (Wed) · t3 Legs (Fri)
 | id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `t2a` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 4 | 5 | 8 | `power` | `bb` | `l3_bbrow` | — | Keep the torso at the same angle for every rep. |
-| `t2b` | Close-grip pulldown | `mv_Close-Grip_Front_Lat_Pulldown` | 3 | 10 | 12 | `hyp` | `cable` | `l3_pulldown` | — | Palms facing. Pull the handle to the top of the chest. |
+| `t2b` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 10 | 12 | `hyp` | `cable` | `l3_pulldown` | — | Bring the bar to the collarbone, chest up. |
 | `t2c` | Seated cable row | `mv_Seated_Cable_Rows` | 3 | 8 | 12 | `hyp` | `cable` | `l3_cablerow` | — | Pull to the navel, do not lean back to finish. |
 | `t2d` | Face pull | `mv_Face_Pull` | 3 | 12 | 15 | `hyp` | `cable` | `l3_facepull` | — | Pull the rope to the forehead, elbows high. |
 | `t2e` | Barbell curl | `mv_Barbell_Curl` | 3 | 8 | 12 | `hyp` | `bb` | `l3_bbcurl` | — | Do not rock the torso to start the rep. |
@@ -7857,7 +7856,7 @@ days:         u1 Upper (Mon) · u2 Lower (Thu)
 | `u1a` | Barbell bench press | `mv_Barbell_Bench_Press_-_Medium_Grip` | 4 | 5 | 8 | `power` | `bb` | `l2_bench` | — | Touch the same point on the chest every rep. |
 | `u1b` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 4 | 5 | 8 | `power` | `bb` | `l2_bbrow` | — | Keep the torso at the same angle for every rep. |
 | `u1c` | Standing military press | `mv_Standing_Military_Press` | 3 | 6 | 10 | `power` | `bb` | `l2_ohp` | — | Squeeze the glutes; do not lean back to press. |
-| `u1d` | Close-grip pulldown | `mv_Close-Grip_Front_Lat_Pulldown` | 3 | 8 | 12 | `hyp` | `cable` | `l2_pulldown` | — | Palms facing. Pull the handle to the top of the chest. |
+| `u1d` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 8 | 12 | `hyp` | `cable` | `l2_pulldown` | — | Bring the bar to the collarbone, chest up. |
 | `u1e` | Barbell curl | `mv_Barbell_Curl` | 2 | 8 | 12 | `hyp` | `bb` | `l2_bbcurl` | — | Do not rock the torso to start the rep. |
 | `u1f` | Triceps pushdown | `mv_Triceps_Pushdown` | 2 | 10 | 15 | `hyp` | `cable` | `l2_pushdown` | — | Keep the elbows pinned to the ribs. |
 
@@ -7985,7 +7984,7 @@ days:         b1 Chest (Mon) · b2 Back (Tue) · b3 Legs (Wed) · b4 Shoulders (
 | id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `b2a` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 4 | 6 | 8 | `power` | `bb` | `lb_bbrow` | — | Keep the torso at the same angle for every rep. |
-| `b2b` | Close-grip pulldown | `mv_Close-Grip_Front_Lat_Pulldown` | 3 | 8 | 12 | `hyp` | `cable` | `lb_pulldown` | — | Palms facing. Pull the handle to the top of the chest. |
+| `b2b` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 8 | 12 | `hyp` | `cable` | `lb_pulldown` | — | Bring the bar to the collarbone, chest up. |
 | `b2c` | Seated cable row | `mv_Seated_Cable_Rows` | 3 | 8 | 12 | `hyp` | `cable` | `lb_cablerow` | — | Pull to the navel, do not lean back to finish. |
 | `b2d` | One-arm DB row | `mv_One-Arm_Dumbbell_Row` | 3 | 10 | 12 | `hyp` | `db` | `lb_dbrow` | `1` | Keep the shoulders square; do not twist to finish. |
 | `b2e` | Barbell shrug | `mv_Barbell_Shrug` | 3 | 10 | 15 | `hyp` | `bb` | `lb_shrug` | `1` | Straight up and down; do not roll the shoulders. |
@@ -8032,13 +8031,12 @@ default. The arms day has no key lift and needs none.
 
 ## 23.8 `implement` — where I wrote the value and where the library and I disagree
 
-Rule I3 refuses 199 of 876 rows, and a refusal is not a default. **One slot** across the four
-templates carries an `implement` the library **will not supply**, and I am writing it — it was two
-until §23.13 replaced `p4c`:
+Rule I3 refuses 199 of 876 rows, and a refusal is not a default. Two slots across the four templates
+carry an `implement` the library **will not supply**, and I am writing it:
 
 | Slot(s) | Movement | Library `eq` | I3 says | I write | Why |
 |---|---|---|---|---|---|
-| ~~`p4c`~~ | ~~`mv_Weighted_Pull_Ups`~~ | ~~`other`~~ | ~~**refused**~~ | **withdrawn by §23.13** | `p4c` is now `mv_V-Bar_Pullup`, whose `eq` is `body only`, which **I3.1 maps** to `bodyweight`. The value is unchanged, the override is no longer needed, and T2 must transcribe `bodyweight` from the table, not from here. `[Certain]` |
+| `p4c` | `mv_Weighted_Pull_Ups` | `other` | **refused** | **`bodyweight`** | Same call PHAT's `d1b` already ships. `w` on this slot is the **added** load (Rule L4), and `bodyweight` is the word Z2 must print at zero. `[Certain]` |
 | `b1e` | `mv_Dips_-_Chest_Version` | `other` | **refused** | **`bodyweight`** | Same reasoning; PHAT's `d1e` ships `bodyweight` against this exact row. `[Certain]` |
 
 **Every other slot in all four templates agrees with I3.1's table**, value for value — I checked each
@@ -8110,8 +8108,6 @@ physiotherapist, not for a template.**
 | **New, PM** | backend | **Rule TW1b** (§23.6.2) — `trainingWeeks`' threshold becomes `min(3, plan.days.length)`. Red-first. Not T1's, not inside the templates. |
 | T3 | frontend | HD1.4's disclosure and HD1.6's offer, **Plans screen only, never the session card**. If the PM would rather ship without the offer, ship without it — HD1.3's ABSENT state is complete on its own and the offer is the optional half. |
 | T4 | qa | Every `mv` resolves by id at the pinned SHA. No slot carries a slash-name. `validatePlan` ok ×4. The four `keyLifts` lists are all HD1-eligible on day one. PHAT's HD1 output is unchanged. |
-| **T2 amendment** | backend | **§23.13.2 — five slots re-prescribed.** `p2b`, `t2b`, `u1d`, `b2b` → `mv_Close-Grip_Front_Lat_Pulldown`; `p4c` → `mv_V-Bar_Pullup`. Ids, `k`, sets, reps, `lift`, `cut` and every plan-level field unchanged. **`p4c`'s `bodyweight` now comes from I3.1, not from §23.8's override table**, which is down to one row. |
-| **T4 amendment** | qa | `mv_Wide-Grip_Lat_Pulldown` and `mv_Weighted_Pull_Ups` appear in **none** of the four templates, and PHAT's `d1b` still does carry `mv_Weighted_Pull_Ups`. Both new ids resolve at the pinned SHA. `p4c` still reports `bodyweight` and still treats `w` as the added load. |
 | — | Chady | §23.11. |
 
 ---
@@ -8126,10 +8122,6 @@ physiotherapist, not for a template.**
    behind it.
 4. **None of the four has speed work. Is that right?** I think it is (§23.3.2), and it is the one
    thing these plans give up relative to PHAT.
-5. **Added 2026-09-29 — does your gym have a neutral pull-up handle** (parallel handles on the frame,
-   or a V-handle you can hang over the bar)? `p4c` is now a V-bar pull-up. If there is no such handle,
-   say so and `p4c` becomes `mv_Close-Grip_Front_Lat_Pulldown` at 2 × 6–8 — the plan then carries the
-   pulldown twice, at two rep ranges, which is legal and is second best. §23.13.2.
 
 ## 23.12 Verdict
 
@@ -8145,140 +8137,10 @@ physiotherapist, not for a template.**
   `cycleLine` are silently dead. **This is the item in §23 most likely to ship as a wrong app**, and
   it is the reason the 2-day template cannot be transcribed and forgotten.
 
-- **Amended the same day, §23.13:** five slots re-prescribed to a neutral grip on his own statement
-  that pronated pulling still fails. Ruling 2 was re-tested against the new fact and **held.**
-
 **The standing item, for the tenth time.** Four logged sessions in seventeen days; the last was seven
 days ago. This section adds four ways to arrange training that is not currently happening, and I have
 written all four properly because he asked for them. **The number that moves is the fifth session.**
 Nothing in this document does that.
-
----
-
-## 23.13 Amendment, same day — pronated pulling fails, neutral completes
-
-New information from Chady, 2026-09-29, seventeen days after the first *still not recovered*:
-
-> *"it's better but can't do pullups comfortably or pull downs with palm facing the machine, my palms
-> need to face each other otherwise cannot complete the full set/reps"*
-
-That is not a vague ache. It is a **mechanical signature**: one grip position terminates the set, an
-adjacent one completes it, reproducibly, across three weeks and at least two sessions. It is also
-**information about the prescription**, which is mine, and not only about his arm, which is not.
-
-### 23.13.1 The ruling — neither (a) nor (b)
-
-**Change the prescription where the grip is incidental to the movement. Change nothing where the grip
-is the movement. Put no medical note in a cue. Add no alternates field.** `[Opinion]` on where that
-line falls; `[Certain]` on the principle that a prescription he cannot complete is not a prescription.
-
-**Why not (a), "build the restriction in".** These are `readOnly` templates he keeps and Diana may
-copy. A plan that only makes sense for an injured forearm is a plan that is wrong for both of them in
-six weeks, and nobody will remember why it was written that way. **Nothing below is an accommodation.**
-Every one of the five changed slots is a prescription I would write for an uninjured lifter, which is
-precisely the test I applied — if the neutral version were worse for a healthy arm, it would not be
-here.
-
-**Why not (b), "ship as written and let the swap handle it".** The app would prescribe, twice a week,
-forever, a movement he has told us in his own words he cannot finish. He has already worked around it
-by hand twice. Shipping a known-wrong prescription and charging him four taps a session to correct it
-is not a design, it is a debt with his time as the interest. The swap exists for the **unforeseen** —
-a busy rack, a shut machine, a bad day. It is not a patch for something I know before he opens the app.
-
-### 23.13.2 The changed slots — five, across three templates
-
-| Plan · slot | Was | Is | `k` | s × lo–hi | `implement` | `lift` |
-|---|---|---|---|---|---|---|
-| `ppl5` `p2b` Pull | `mv_Wide-Grip_Lat_Pulldown` | **`mv_Close-Grip_Front_Lat_Pulldown`** | `hyp` | 3 × 10–12 | `cable` | `l5_pulldown` |
-| `ppl5` `p4c` Upper | `mv_Weighted_Pull_Ups` | **`mv_V-Bar_Pullup`** | `power` | 2 × 6–8 | `bodyweight` | `l5_pullup` |
-| `bb5` `b2b` Back | `mv_Wide-Grip_Lat_Pulldown` | **`mv_Close-Grip_Front_Lat_Pulldown`** | `hyp` | 3 × 8–12 | `cable` | `lb_pulldown` |
-| `ppl3` `t2b` Pull | `mv_Wide-Grip_Lat_Pulldown` | **`mv_Close-Grip_Front_Lat_Pulldown`** | `hyp` | 3 × 10–12 | `cable` | `l3_pulldown` |
-| `ul2` `u1d` Upper | `mv_Wide-Grip_Lat_Pulldown` | **`mv_Close-Grip_Front_Lat_Pulldown`** | `hyp` | 3 × 8–12 | `cable` | `l2_pulldown` |
-
-The last two were **outside the ask and I changed them anyway.** The ask named `ppl5` Pull and Upper
-and `bb5` Back. Leaving `ppl3` and `ul2` prescribing the exact movement I just ruled wrong on the
-other two would have shipped the app disagreeing with itself across its own plan list. Revert those
-two if the PM wants the scope held; the reason they moved is consistency, not his forearm.
-
-**Nothing else moves.** Set counts, day totals, `cut` marks, `reintroOrder`, `reducedWeeks`,
-`keyLifts` and every rep range are byte-for-byte what §23.4–§23.7 already said. `lift` ids are
-deliberately **unchanged** — no set has ever been logged against them, they are still accurate words,
-and renaming an id buys nothing and risks a uniqueness collision.
-
-Three mechanical consequences T2 and T4 must carry:
-
-1. **`p4c`'s `implement` is no longer a §23.8 override.** `V-Bar_Pullup` is `eq: "body only"`, which
-   **I3.1 maps** to `bodyweight`. Same value, different provenance: transcribe it from I3.1's table.
-   §23.8 is amended and now lists **one** written implement, `b1e`. `[Certain]`
-2. **`w` semantics on `p4c` do not change.** It is still the **added** load under Rule L4, still the
-   `bodyweight` word at zero under Z2. A V-bar pull-up and a weighted pull-up are the same arithmetic;
-   only the handle differs. That is the main reason it beat every pulldown as the replacement here.
-3. **No new duplicated movement.** `Close-Grip_Front_Lat_Pulldown` appears once per plan.
-   `mv_Wide-Grip_Lat_Pulldown` and `mv_Weighted_Pull_Ups` now appear in **none** of the four
-   templates. PHAT is untouched — `d1b` is still the weighted pull-up, and `d1b` is his to rule on
-   (B-131), not mine to quietly re-prescribe underneath a logged set.
-
-**One open dependency, and it is why §23.11 gained a fifth question.** A V-bar pull-up needs a neutral
-handle. If his gym has none, `p4c` becomes `mv_Close-Grip_Front_Lat_Pulldown` at 2 × 6–8 and `ppl5`
-carries the pulldown on two days at two rep ranges — legal under the §23.4 note, and second best,
-because the loaded vertical pull is the one thing the plan then has no heavy version of.
-
-### 23.13.3 What deliberately did **not** change, and why each refusal
-
-| Slot(s) | Grip | Ruling | Why |
-|---|---|---|---|
-| `ppl5` `p4a` 3 × 3–5, `p2c`; `bb5` `b2a`; `ppl3` `t2a`; `ul2` `u1b` — **bent-over barbell row** | pronated | **Stands.** | The pronated grip **is** the barbell row; there is no version of it that is the same lift with different hands. It is a `keyLifts` member in all four plans and the subject of ST1's week-6 test, so replacing it changes what the test measures. And **he did not report it failing** — he reported vertical pulling. Substituting a lift on an untested guess is exactly the (a) failure. `[Certain]` on the reasoning, `[Likely]` that a supported row is less provocative than a dead hang because the hang is a sustained grip under a full-bodyweight load and a row is not. |
-| `ppl5` `p5b`, `ul2` `u2b` — **deadlift** | pronated or mixed | **Stands.** | Key lift, week-6 subject, and the heaviest grip demand in any template. `[Likely]` this is the next slot to bite, and the standard answer is straps — **an equipment decision he makes in the gym, not a line of app copy and not a change to the prescription.** |
-| `ppl5` `p3b`, `bb5` `b3c` — **RDL 8–12** | pronated | **Stands.** | Same reasoning, longer sets, lighter bar. Noted here so nobody is surprised if it is the one he mentions next. |
-| `bb5` `b5b` barbell curl, `b5d` preacher curl; `ppl5` `p2e`, `ppl3` `t2e`, `ul2` `u1e` — **curls** | supinated | **Stand. No change to the Arms day.** | Supination is not the position he reported, and a straight-bar curl loads the forearm on a different axis from a pronated hang. Changing them would be accommodating an injury he has **not** reported. **If a straight bar does bite, the swap target is `mv_Close-Grip_EZ_Bar_Curl`** — recorded here so he does not search for it one-handed, and recorded as a candidate, not a prescription. `[Opinion]` |
-| `ppl5` `p3` Legs, `ppl3` `t3`, `bb5` `b3` | — | **Stand.** | No grip-loaded work beyond the RDL above. Correctly nothing to do. |
-
-`p2a` / `b2c` / `t2c` seated cable row, `b2d` one-arm DB row, `p2f` / `b5f` hammer curl and every face
-pull were already neutral or semi-neutral. That is not luck — it is why the pull days needed five
-changes and not fifteen.
-
-### 23.13.4 Does this move Ruling 2 (§23.9, no sanctioned alternates)? **No. Held.**
-
-Asked directly, and answered directly rather than defended.
-
-**One of my four reasons is now spent, and I am saying so.** Reason 3 — *the failure in his data was
-that the app never noticed the forearm* — was true when I wrote it and is no longer available to me:
-WO-017 shipped, the detector fires on *not recovered*, the notice holds the load. **I cannot spend
-that argument twice** and I am not going to pretend it still carries weight.
-
-The ruling survives on the other three, which the new fact does not touch: the swap is shipped and is
-four taps (1); a second movement name on every slot forever, read one-handed with chalk on it, to
-serve one slot in fifty, is still a bad trade in the worst place to make it (2); and `mv` — not a
-sanctioned-alternate list — is what makes a substituted entry's arithmetic safe (4).
-
-**And the new fact adds a fourth reason, which cuts the same way.** A named alternate is the right
-instrument for a **situational** substitution — the rack is busy, the machine is broken, pick the
-other one today. His restriction is not situational. It is **durable and directional**: one grip
-works, one does not, and it has held for three weeks. The correct response to a durable restriction
-is to **change the prescription**, which is what §23.13.2 does, not to print a permanent menu beside a
-prescription that is wrong. An alternates field would have offered him a choice on every slot in the
-app in order to solve three slots I could simply have written correctly. **The new information makes
-the case for alternates weaker, not stronger.**
-
-**What would move it**, stated so this is falsifiable rather than stubborn: a *second* restriction on
-a different axis at the same time, or the same slot substituted for genuinely varying reasons across
-several sessions — i.e. evidence that the substitution is situational after all. That is not the
-evidence in front of me. `[Opinion]`, held twice, and I will hold it a third time.
-
-### 23.13.5 The training judgement, one sentence, tagged
-
-**`[Likely]`: *pronated fails, neutral completes* is a real and useful signature — it says the
-limiting tissue is loaded by forearm position under a sustained grip rather than by the pulling
-pattern itself, so the lats can be trained to full effect this week with a handle change and nothing
-else, and `[Certain]` in programming terms, a grip he can hold for all the prescribed reps is a
-better stimulus than one that ends the set early.**
-
-**The medical half, said once and not again.** Three weeks with a clean mechanical signature is
-outside what this app or this section should reason about. He has already been told the honest
-version — get it looked at by a professional if it is not gone in two more weeks, and **do not test it
-by forcing the pronated grip**, which is what "unsanctioned self-testing" would mean here. Nothing in
-§23.13 is rehabilitation, and none of it should be read as any. It is programming: the app now
-prescribes work he can finish, and that is the whole of what it is entitled to do.
 
 ---
 
