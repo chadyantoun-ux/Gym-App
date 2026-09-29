@@ -55,7 +55,18 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 1028 / 1028 / 0 on wo-014-library @ 61e07de + this commit - ~3 s in Chromium from file://, green on all seven weekdays (the clock was forced to each of Mon 28 Sep - Sun 4 Oct 2026) and again on 31 Dec 2026, 1 Jan 2027, 28 Feb 2027 and 29 Feb 2028, so the runs cross a month, a year and a leap-day boundary.</b>
+<b>Today: 1039 / 1039 / 0 on wo-014-library @ 31a3a37 + this commit - ~2.5 s in Chromium from file://, green on all seven weekdays (the clock was forced to each of Mon 28 Sep - Sun 4 Oct 2026) and again on 31 Dec 2026, 1 Jan 2027, 28 Feb 2027 and 29 Feb 2028, so the runs cross a month, a year and a leap-day boundary.</b>
+<b>WO-015 - the B-131 correction now WRITES, and the write half is not testable from this page.</b> <code>b131Pass</code>, the blocking
+keep, the two call sites and the Home notice all live in <code>index.html</code>. They were DRIVEN in a real browser instead
+(<b>item 44</b> under &ldquo;Already proven&rdquo;, and the extraction ask is under &ldquo;not testable&rdquo;): the happy path field by field, a forced keep
+failure four ways, seven one-byte fingerprint corruptions, Diana&rsquo;s phone, a demo store, a fresh install, idempotence by bytes,
+all four notice branches, the draft gate, and <code>mergeOnOpen</code> end to end against a stub backup module. <b>S54 pins the eleven
+PURE facts that run depends on</b> - the table&rsquo;s shape (which is what makes the notice say 2 and 2, not 4 and 4), the one movement
+name, the deleted fallback&rsquo;s absence, the four count states, the marker&rsquo;s place, and the two ways a later write or a merge could
+un-correct his log. <b>Red-first: eight mutants of <code>logic.js</code> were dropped beside an unmodified copy of this page and every one
+took S54 red</b> - an emptied name (2), a renamed one (2), a table row losing its <code>meta</code> (9), the marker unstamped (4), the marker
+on the session document (4), a mis-typed session id (9), <code>overlayStore</code> dropping a disk-only key (1), and a merge that lets the
+remote copy win a collision (1).
 <b>B-131, re-pinned on the server's own two ids (<code>61e07de</code>, read off <code>public.sessions</code> 2026-09-29).</b> The
 22 Sep id was wrong in its last digit (<code>...390</code> &rarr; <code>...395</code>) and the 12 Sep id
 (<code>1789264514484</code>) came back confirmed, so <b>five places moved</b>: the <code>B131_S22()</code> fixture, which was
@@ -22172,6 +22183,320 @@ T("S53 TRIPWIRE - up to the end of S53 no fixture wrote a phat:* key", function(
     "every fixture in this group builds its plan documents in memory and hands them to the function");
 });
 
+/* =====================================================================
+   S54. WO-015 W3 QA - THE WRITE HALF OF THE B-131 CORRECTION.
+
+   WHAT THIS GROUP IS AND IS NOT. The half WO-015 added lives in
+   `index.html`: `b131Pass`, `b131KeepLog`, `b131Counts`, the two call sites
+   (boot and `mergeOnOpen`) and the Home notice. None of it is reachable from
+   a `file://` page - it reads `S`, it writes `localStorage`, it renders into
+   `#view` - and NOTHING HERE FAKES IT. It was driven in a real browser
+   instead (Playwright Chromium over a Node static server on 127.0.0.1, the
+   seeds below written into `localStorage` before boot); the run is item 44
+   under "Already proven" and the extraction ask is in the untestable list.
+
+   WHAT IS PINNED HERE is every PURE FACT the browser run depended on, so
+   that a later change to `logic.js` cannot silently invalidate the run
+   without going red on this page:
+     A1-A2  the table shape and the ONE movement name, which are what make
+            the card's derived counts read 2 and 2 rather than 4 and 4;
+     A3     the deleted two-word fallback name, in no source this page can
+            read;
+     A4-A6  the count states the card was driven in - 0/0 on an unrepaired
+            store, 2/2 on a repaired one, 1/1 on 22 Sep alone, and np=0/nd=2
+            on the half-matched store - as fingerprint facts, NOT as a second
+            copy of b131Counts;
+     A7     the marker is on the log store and on no session document, so
+            every corrected session still pushes;
+     A8-A9  the two ways the marker and the corrected bytes could be lost
+            after the pass - a later local write, and a merge against a
+            server that still holds the PRE-FIX rows. Both were driven; both
+            are pure underneath;
+     A10    the keep's bytes cannot be mistaken for an applied log, which is
+            what diag.html's section 2b prints per keep.
+   ===================================================================== */
+group("S54 WO-015 W3 QA / the write half / b131 keep + notice preconditions / B-131 B-151");
+
+/* The four rows, split the way the card splits them: a row with `meta`
+   re-marks the movement (the d1b pair), a row without it halves the load
+   (the d1d pair). Distinct SESSION IDS per side - the card counts sessions,
+   and two of the four rows live in one session. */
+function B131_SIDES(){
+  var T = P.B131_TABLE, p = {}, d = {}, i;
+  for (i = 0; i < T.length; i++){
+    if (T[i].meta) p[String(T[i].sid)] = 1; else d[String(T[i].sid)] = 1;
+  }
+  return { p: Object.keys(p).sort(), d: Object.keys(d).sort() };
+}
+/* The pass's own output, taken from the pass - never hand-typed. */
+function B131_APPLIED(){
+  var r = P.repairB131(B131_STORE());
+  if (r.changed !== true) throw new Error("fixture: repairB131 no longer corrects B131_STORE()");
+  return r.log;
+}
+/* How the card's two counts are DECIDED: a row counts when the entry in the
+   session the row names is EXACTLY what the row was going to write - the
+   sets by stable JSON, and `mv` for a row that carries meta. This mirrors
+   index.html's b131Counts on purpose and is the one place in this group that
+   does; every test below uses it so that the browser run's 2/2, 1/1 and 0/2
+   are reproducible from logic.js alone. If the two ever disagree, the
+   browser run is the arbiter, not this helper. */
+function B131_COUNTS(log){
+  var T = P.B131_TABLE, SJ = P.stableJson, out = { np: 0, nd: 0 }, p = {}, d = {}, i, s, e, row;
+  if (!log || !Array.isArray(log.sessions)) return out;
+  for (i = 0; i < T.length; i++){
+    row = T[i];
+    s = log.sessions.filter(function(x){ return x && String(x.id) === String(row.sid); })[0];
+    e = (s && s.entries && typeof s.entries === "object") ? s.entries[row.ex] : null;
+    if (!e || typeof e !== "object" || !Array.isArray(e.sets)) continue;
+    if (SJ(e.sets) !== SJ(row.to)) continue;
+    if (row.meta){ if (e.mv !== row.meta.mv) continue; p[String(row.sid)] = 1; }
+    else { if (e.mv !== undefined) continue; d[String(row.sid)] = 1; }
+  }
+  out.np = Object.keys(p).length; out.nd = Object.keys(d).length;
+  return out;
+}
+
+T("S54.A1 - the table's shape is what makes the notice say 2 and 2, not 4 and 4", function(a){
+  needFns(a, "repairB131", "stableJson");
+  var T = P.B131_TABLE, sids = {}, i, meta = 0, plain = 0;
+  a.eq(T.length, 4, "four rows, one per corrected ENTRY");
+  for (i = 0; i < T.length; i++){ sids[String(T[i].sid)] = 1; if (T[i].meta) meta++; else plain++; }
+  a.deep(Object.keys(sids).sort(), ["1789264514484", "1790128305395"],
+    "across exactly TWO session ids, both read off public.sessions on 2026-09-29");
+  a.eq(meta, 2, "two rows re-mark the movement (the d1b pair)");
+  a.eq(plain, 2, "two rows halve the load (the d1d pair)");
+  var sides = B131_SIDES();
+  a.deep(sides.p, ["1789264514484", "1790128305395"], "the pull-up side spans BOTH sessions - so np is 2");
+  a.deep(sides.d, ["1789264514484", "1790128305395"], "and so does the dumbbell side - so nd is 2");
+  /* The whole point: a count of ROWS would read 4 and the notice would tell
+     him about four sessions he does not have. */
+  a.eq(sides.p.length + sides.d.length, T.length, "two per side, four rows - and only TWO sessions");
+  a.eq(sides.p.length, 2); a.eq(sides.d.length, 2);
+});
+
+T("S54.A2 - ONE movement name: the name the notice prints is the name the log carries", function(a){
+  var T = P.B131_TABLE, i, n = 0;
+  a.eq(typeof P.B131_N, "string", "the notice reads PHAT.B131_N");
+  a.ok(P.B131_N.trim() !== "", "and it must not be empty - the line drops when it is (UX 22.19 amended)");
+  a.eq(P.B131_N, "Iso-lateral front lat pulldown", "his own words for it, from the 12 Sep note");
+  for (i = 0; i < T.length; i++) if (T[i].meta){ a.eq(T[i].meta.n, P.B131_N,
+    "every meta row writes that exact string into the entry's `n`"); n++; }
+  a.eq(n, 2, "both meta rows");
+  /* The notice sends him to Recent sessions to check the name, so the two
+     must be one string. A second literal in index.html would let them drift
+     on a rename; that is why the fallback was deleted rather than length-
+     ened (31a3a37), and why this assertion exists. */
+  var e = B131_APPLIED().sessions[0].entries.d1b;
+  a.eq(e.n, P.B131_N, "and the name ON DISK after the pass is the same string the card prints");
+});
+
+/* THE DELETED FALLBACK. index.html used to print a two-word short name when
+   PHAT.B131_N was empty - a name on no other surface, under a sentence that
+   tells him to go and check it against Recent sessions. 31a3a37 deleted the
+   fallback rather than lengthening it, because a second copy of a movement
+   name in index.html makes that file a second source of truth for it.
+   THE NAME IS ASSEMBLED FROM FRAGMENTS so this page can search its own
+   source for the whole thing and legitimately expect zero. Do not join it.
+   WHAT THIS CANNOT COVER, stated rather than implied: index.html, which a
+   file:// opaque origin cannot fetch. Repo grep run 2026-09-29 on 31a3a37:
+   ONE hit, index.html line 2222, inside the block comment that records the
+   deletion and forbids its return - zero in any string that can render. The
+   rendered DOM was checked in the browser run across all four name/count
+   branches: zero in document.body.innerText and zero in #view. */
+T("S54.A3 tripwire - the deleted two-word fallback name is in no source this page can read", function(a){
+  var BAD = "Lat" + " pulldown";
+  var page = document.documentElement.outerHTML, k, src, hits = [];
+  a.ok(("a " + BAD + " card").indexOf(BAD) >= 0, "the search is live, not vacuous");
+  a.eq(BAD.length, 12, "and the fragments are the whole deleted literal, not a stub");
+  a.eq(page.indexOf(BAD), -1, "this page must not quote it");
+  for (k in P){ if (typeof P[k] !== "function") continue; src = String(P[k]);
+    if (src.indexOf(BAD) >= 0) hits.push(k); }
+  a.deep(hits, [], "no function PHAT exports may contain it: " + hits.join(", "));
+  /* The surviving name is the LONG one, and it is not the deleted one. */
+  a.eq(P.B131_N.indexOf(BAD), -1, "the shipped name is not the deleted short form");
+  a.ok(P.B131_N.length > BAD.length, "it is the full name the record carries");
+});
+
+T("S54.A4 - an UNREPAIRED store counts 0 and 0, so the notice cannot render over uncorrected bytes", function(a){
+  var pre = B131_STORE(), T = P.B131_TABLE, SJ = P.stableJson, i, s, e;
+  a.deep(B131_COUNTS(pre), { np: 0, nd: 0 }, "nothing on a pre-fix store matches a row's POST-fix fingerprint");
+  /* Why, row by row - the fingerprints are disjoint on every row, by two
+     different mechanisms, and a future row must keep one of them. */
+  for (i = 0; i < T.length; i++){
+    s = pre.sessions.filter(function(x){ return String(x.id) === String(T[i].sid); })[0];
+    e = s.entries[T[i].ex];
+    if (T[i].meta) a.eq(e.mv, undefined, "row " + i + ": a pre-fix entry carries no mv, so a meta row cannot count");
+    else a.ne(SJ(e.sets), SJ(T[i].to), "row " + i + ": a pre-fix entry's sets are not the post-fix bytes");
+  }
+  /* And a store with the STAMP hand-written on but the bytes untouched still
+     counts zero: the card is gated on the stamp, but what it PRINTS is
+     derived from the log, so a stamp alone prints nothing. Driven in the
+     browser: no card. */
+  pre.repairs = { b131: 1 };
+  a.deep(B131_COUNTS(pre), { np: 0, nd: 0 }, "a marker is not a number");
+});
+
+T("S54.A5 - the pass's own output counts 2 and 2; the 22 Sep session alone counts 1 and 1", function(a){
+  var log = B131_APPLIED();
+  a.deep(B131_COUNTS(log), { np: 2, nd: 2 },
+    "both sessions corrected on both sides - the notice's plural branch");
+  a.deep(log.repairs, { b131: 1 }, "and the stamp the card is gated on");
+  /* The singular branch, driven in the browser as
+     `1 pull-up session now reads ...` and
+     `1 dumbbell session now reads per hand, not the pair total.` */
+  var one = { schemaVersion: P.SCHEMA_VERSION, includeCut: false, repairs: { b131: 1 },
+              sessions: log.sessions.filter(function(s){ return s.date === "2026-09-22"; }) };
+  a.eq(one.sessions.length, 1, "one session on disk");
+  a.deep(B131_COUNTS(one), { np: 1, nd: 1 }, "one of each - both singulars");
+  /* A device that holds neither: Diana's phone. No stamp, no counts, no
+     card, and repairB131 hands its own argument back. */
+  var none = { schemaVersion: P.SCHEMA_VERSION, includeCut: false, sessions: [] };
+  a.deep(B131_COUNTS(none), { np: 0, nd: 0 }, "and a device without them counts nothing");
+  var r = P.repairB131(none);
+  a.eq(r.log, none, "byte-identical in and out, by identity");
+  a.eq(r.note, "B-131 repair: neither session is on this device; nothing changed.");
+});
+
+T("S54.A6 - a FOREIGN mv on the d1b pair: the pass refuses whole, and the counts read 0 and 2", function(a){
+  /* The precondition for the notice's np=0 branch - the dumbbell line alone,
+     driven in the browser. It is also the all-or-nothing rule seen from the
+     card's side: the pass wrote nothing, and the card prints only what the
+     log can still prove. */
+  var st = JSON.parse(JSON.stringify(B131_APPLIED())), i, s;
+  for (i = 0; i < st.sessions.length; i++){ s = st.sessions[i];
+    if (s.entries.d1b) s.entries.d1b.mv = "mv_Something_Else"; }
+  var r = P.repairB131(st);
+  a.eq(r.changed, false, "one row matching neither fingerprint refuses the WHOLE pass");
+  a.eq(r.log, st, "and returns its argument by identity - not one byte written");
+  a.match(r.note, /already carries mv/, "named, so a reader knows which fact refused it");
+  a.deep(B131_COUNTS(st), { np: 0, nd: 2 },
+    "the d1b pair no longer counts; the d1d pair still does - the dumbbell line alone");
+});
+
+T("S54.A7 - the marker is on the LOG STORE and on no session document, so every corrected session still pushes", function(a){
+  needFns(a, "validateSessionDoc");
+  var log = B131_APPLIED(), i, p;
+  a.deep(log.repairs, { b131: 1 }, "top level of the log store");
+  a.eq(P.B131_REPAIR, "b131");
+  for (i = 0; i < log.sessions.length; i++){
+    a.eq(log.sessions[i].repairs, undefined,
+      "session " + log.sessions[i].id + " must not carry a repairs key - the SQL validator mirrors this");
+    p = P.validateSessionDoc(log.sessions[i]);
+    a.eq(p.ok, true, "session " + log.sessions[i].id + " still validates: " + (p.problems || []).join("; "));
+  }
+});
+
+T("S54.A8 - a later local write cannot drop the marker: the overlay keeps `repairs` in both directions", function(a){
+  needFns(a, "overlayStore");
+  var log = B131_APPLIED();
+  /* The shape of every save after the repair: memory's payload (schema,
+     sessions, includeCut, plus logMeta spread) over the disk. Driven in the
+     browser - a real session saved through Summary after the pass left the
+     four corrected entries and the stamp exactly as they were, three
+     sessions on disk. */
+  var mem = { schemaVersion: P.SCHEMA_VERSION, repairs: log.repairs,
+              sessions: log.sessions, includeCut: false };
+  var o = P.overlayStore("log", log, mem);
+  a.deep(o.value.repairs, { b131: 1 }, "memory carries it, the overlay keeps it");
+  /* And the direction that matters more: a tab whose MEMORY predates the
+     repair writing over a disk that has it. The overlay keeps a disk key the
+     patch does not name - this is what stops B-76's class from un-repairing
+     his log. */
+  var stale = { schemaVersion: P.SCHEMA_VERSION, sessions: log.sessions, includeCut: false };
+  var o2 = P.overlayStore("log", log, stale);
+  a.deep(o2.value.repairs, { b131: 1 }, "a stale tab's write keeps the marker it never knew about");
+  a.ok(o2.kept.keys.indexOf("repairs") >= 0, "and says so in `kept`, by name");
+});
+
+T("S54.A9 - the merge cannot un-correct: the server's PRE-FIX rows lose to the corrected local document", function(a){
+  needFns(a, "mergeStores");
+  var local = B131_APPLIED(), pre = B131_STORE();
+  var rows = { sessions: pre.sessions.map(function(s){ return { doc: JSON.parse(JSON.stringify(s)) }; }),
+               bodyweight: [], plans: [],
+               user_state: { doc: { schemaVersion: P.SCHEMA_VERSION, includeCut: false } } };
+  var mr = P.mergeStores({ log: local, bw: { schemaVersion: P.SCHEMA_VERSION, entries: [] } }, rows);
+  a.eq(mr.ok, true, "the merge runs");
+  a.eq(mr.added.sessions, 0, "both ids are already here, so nothing is added");
+  a.eq(mr.merged.log.sessions.length, 2, "and nothing is removed");
+  var ex = function (log, date, e){
+    return log.sessions.filter(function(s){ return s.date === date; })[0].entries[e]; };
+  a.deep(ex(mr.merged.log, "2026-09-12", "d1d").sets.map(function(s){ return s.w; }), [31.5, 38.5, 38.5, 40.5],
+    "LOCAL WINS BYTE FOR BYTE on a same-id collision (B-121), so the pre-fix row does not come back");
+  a.deep(ex(mr.merged.log, "2026-09-22", "d1d").sets.map(function(s){ return s.ld.add; }), [85, 90, 90, 80],
+    "components included");
+  a.eq(ex(mr.merged.log, "2026-09-22", "d1b").mv, P.B131_MV, "and the movement mark survives the pull");
+  a.deep(mr.merged.log.repairs, { b131: 1 }, "the marker is a local meta key and the union keeps it");
+  a.deep(B131_COUNTS(mr.merged.log), { np: 2, nd: 2 }, "so the notice still counts 2 and 2 after a merge");
+  a.deep(mr.kept.differ.sessions.slice().sort(), ["1789264514484", "1790128305395"],
+    "and the merge SAYS the two server rows differ from what it kept - which is B-151's signal that the server is still pre-fix");
+
+  /* THE SAME COLLISION WHILE THE LOG IS ACTUALLY REBUILT. Above, `addS` is
+     empty and `unionMeta` moves nothing, so mergeStores hands the local
+     store straight back and "local wins" is true because nothing ran. The
+     realistic second-device shape is a THIRD session arriving beside the two
+     pre-fix rows: `sortSessions(lSess.concat(addS))` then runs, and the
+     corrected documents have to survive the rebuild. Without this case a
+     merge that preferred the remote copy on a collision would not go red
+     here. */
+  var third = { id: 1791000000001, date: "2026-09-25", dayId: "d1", planId: "phat",
+    entries: { d1a: { rx: { k: "power", s: 3, hi: 5, lo: 3 }, note: "", sets: [{ w: 40, r: 5 }, { w: 40, r: 5 }, { w: 40, r: 5 }] } } };
+  var rows3 = { sessions: rows.sessions.concat([{ doc: third }]), bodyweight: [], plans: [],
+                user_state: rows.user_state };
+  var m3 = P.mergeStores({ log: B131_APPLIED(), bw: { schemaVersion: P.SCHEMA_VERSION, entries: [] } }, rows3);
+  a.eq(m3.ok, true);
+  a.eq(m3.added.sessions, 1, "one new session arrives");
+  a.eq(m3.merged.log.sessions.length, 3, "three on the merged store, nothing removed");
+  a.deep(ex(m3.merged.log, "2026-09-12", "d1d").sets.map(function(s){ return s.w; }), [31.5, 38.5, 38.5, 40.5],
+    "and the CORRECTED bytes survive the rebuild - the pre-fix row does not win a collision");
+  a.deep(ex(m3.merged.log, "2026-09-22", "d1d").sets.map(function(s){ return s.ld.add; }), [85, 90, 90, 80]);
+  a.eq(ex(m3.merged.log, "2026-09-22", "d1b").mv, P.B131_MV);
+  a.deep(m3.merged.log.repairs, { b131: 1 }, "marker intact through a real rebuild");
+  a.deep(B131_COUNTS(m3.merged.log), { np: 2, nd: 2 }, "counts intact through a real rebuild");
+  /* The other direction - the one the merge call site exists for. A device
+     that does NOT hold them pulls the pre-fix rows, and the merged store is
+     then exactly what repairB131 is gated on, which is why the pass runs on
+     the merged store BEFORE it is written. */
+  var fresh = { schemaVersion: P.SCHEMA_VERSION, includeCut: false, sessions: [] };
+  var m2 = P.mergeStores({ log: fresh, bw: { schemaVersion: P.SCHEMA_VERSION, entries: [] } }, rows);
+  a.eq(m2.added.sessions, 2, "both arrive");
+  a.deep(B131_COUNTS(m2.merged.log), { np: 0, nd: 0 },
+    "the UNcorrected merged store counts nothing - the card cannot precede the write");
+  var r2 = P.repairB131(m2.merged.log);
+  a.eq(r2.changed, true, "and the merged store is correctable, before a byte of it is written");
+  a.eq(r2.applied.length, 4);
+  a.deep(B131_COUNTS(r2.log), { np: 2, nd: 2 }, "after which it counts 2 and 2, as it did at boot");
+});
+
+T("S54.A10 - a `recover:log` keep taken before the pass can never be mistaken for an applied one", function(a){
+  /* What diag.html's section 2b prints per keep: `repairs=undefined`. It is
+     a fact about the pre-fix store, not a coincidence - if a pre-fix store
+     could carry the stamp, a keep and an applied log would read alike on the
+     one screen that exists to tell the phone and the server apart. */
+  var pre = B131_STORE(), raw = JSON.stringify(pre), back = JSON.parse(raw), i, keys = ["mv", "sw", "n"];
+  a.eq(back.repairs, undefined, "no marker on the bytes a keep holds");
+  for (i = 0; i < back.sessions.length; i++){
+    (function(s){
+      ["d1b", "d1d"].forEach(function(e){
+        if (!s.entries[e]) return;
+        keys.forEach(function(k){
+          a.eq(Object.prototype.hasOwnProperty.call(s.entries[e], k), false,
+            s.date + " " + e + " must not carry " + k + " before the pass");
+        });
+      });
+    })(back.sessions[i]);
+  }
+  /* And the round trip is lossless, which is what makes "raw byte-identical
+     to the pre-boot store" a checkable claim rather than a hopeful one. */
+  a.eq(JSON.stringify(back), raw, "JSON round trip is byte-identical on this shape");
+  a.deep(B131_COUNTS(back), { np: 0, nd: 0 }, "and the kept copy counts nothing, as diag prints");
+});
+
+T("S54 TRIPWIRE - up to the end of S54 no fixture wrote a phat:* key", function(a){
+  a.deep(PHAT_KEY_WRITES, [],
+    "every fixture in this group builds its stores in memory; the browser run seeds a SEPARATE origin");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs with no manual input, and in a time that is not pathological (measured, printed, ceiling 60 s)", function(a){
@@ -22838,6 +23163,9 @@ contract("<b>WO-015 W1 &mdash; the repair changes a sentence on the Trend tab th
   "after a repair he did not ask for</b> &mdash; and the write half (recover:* keep, boot wiring, the announcement) is a " +
   "separate frontend item that has not been written yet.");
 
+contract("<b>WO-015 W3 QA, P2 &mdash; on the MERGE call site the keep does not hold the bytes the correction changed, and the block comment says it does.</b> At boot the keep is a true pre-fix snapshot: <code>rl.raw</code> is the log that is about to be rewritten, and that was verified byte for byte (item 44 (2)). In <code>mergeOnOpen</code> the keep is <code>D.raw.log</code> &mdash; this device's log BEFORE the merge &mdash; while the uncorrected entries arrived from the SERVER. On a non-empty device that does not hold his two sessions (a second phone, a reinstall with a session already logged) the keep therefore contains a log <b>without the corrected sessions in it at all</b>, which was measured: keep holds 1 session, the written store holds 3. The merge then pushes the corrected set, which updates the server rows, so at the end of that one open the pre-fix bytes are in <b>no keep on that device and on no row</b>. <b>This is not filed as a data-loss P0 for one reason:</b> the pre-fix bytes are pinned in shipped code &mdash; <code>PHAT.B131_TABLE</code>'s <code>from</code> arrays &mdash; and in <code>docs/decisions.md</code>, so they are recoverable by hand from any build; and on HIS phone boot corrects first, where the keep is honest. <b>The ask is a one-line choice, not a redesign:</b> either keep the merged store's own bytes on that path (<code>b131Bytes(store)</code>, which is already the fallback the empty-device path takes and which DOES hold the uncorrected sessions &mdash; measured), or amend the comment to say what the keep is on that path. The first is better and costs one argument. Backend's call; QA is not guessing at it.");
+contract("<b>WO-015 W3 QA, P3 &mdash; a keep that fails its read-back is left on disk.</b> <code>b131KeepLog</code> writes <code>phat:v1:recover:log:&lt;ms&gt;</code>, reads it back, and returns <code>{ok:false}</code> when the record does not match &mdash; correctly aborting the correction &mdash; but it does not <code>del()</code> the key it just wrote. Reachable only where storage mutates a write rather than refusing it; it was reached by truncating <code>raw</code> by one character in the rig, and the outcome was the correct refusal, the log untouched, and <b>one orphan keep per launch</b>. Nothing reads that key as authority and <code>diag.html</code> lists it with its byte count, so the cost is quota and one confusing line on the diagnostic page, not a number. Worth a <code>del()</code> on the failure branch when the pass is next touched; not worth a commit of its own, and the pass is throwaway (B-151).");
+contract("<b>WO-015 W3 QA, P3 &mdash; the merge path writes TWO <code>recover:log</code> keeps on a non-empty device.</b> <code>mergeSteps</code> already emits its once-per-device keep of the local log, and <code>b131Pass</code> then keeps the same bytes again three milliseconds later under a second key &mdash; measured, both present, both from the same pre-merge store. WO-011's &ldquo;one keep per device&rdquo; rule is about the merge's own keep, so this breaks nothing, and the boot path (the one his phone takes) writes exactly one. It is duplicated bytes in a quota that has already refused a write once in this rig, and it makes <code>diag.html</code>'s keep list read as though two different things were preserved. Fold into the P2 above if that one is taken.");
 contract("<b>Neither commit verified here puts anything new on a screen, so the manual checklist does not move.</b> " +
   "<code>repairB131</code> is pure and is not called from <code>index.html</code> at all; the four templates are frozen " +
   "documents with no Plans-screen control yet (WO-018 T3). The two phone items that were already owed are unchanged: " +
@@ -23202,6 +23530,7 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
      light. Those residues, merged, are the four items here.
      --------------------------------------------------------------------- */
   document.getElementById("untestable").innerHTML +=
+    "<p><b>WO-015 / B-20 &mdash; the whole write half of the B-131 correction is <code>index.html</code>'s, and this page says so rather than faking it.</b> <code>b131Pass</code>, <code>b131KeepLog</code>, <code>b131Counts</code>, the boot call site, the <code>mergeOnOpen</code> call site and the Home notice all read <code>S</code>, write <code>localStorage</code> or render into <code>#view</code>; a <code>file://</code> page can reach none of them. They were driven in a browser (item 44) and S54 pins every PURE fact that run depended on. <b>ONE extraction is worth asking for and it is small:</b> <code>b131Counts(log)</code> is a walk of <code>PHAT.B131_TABLE</code> and <code>PHAT.stableJson</code> with no <code>S</code> and no DOM &mdash; it is already a pure function sitting in the wrong file. Moving it to <code>logic.js</code> as <code>PHAT.b131Counts</code> would let the four count branches the notice renders (2/2, 1/1, 0/2, 0/0) be asserted here instead of mirrored by <code>B131_COUNTS</code> in S54, which is the one helper in this file that duplicates shipped logic. <b>It is NOT asked for as a blocker</b>: the whole pass is throwaway (B-151) and deleting it is the plan, so moving code out of it buys a few weeks of coverage on code that is meant to die. If B-151 slips, make the move. <b>Not extractable and not asked for:</b> the keep's read-back gate is a fact about <code>localStorage</code> and can only be proved by failing a real write (item 44 (3)); the notice's latch is five reads of <code>S</code> at one point in boot, and extracting a boolean would test the extraction; the <code>mergeOnOpen</code> call site is one <code>for</code> loop over <code>st.writes</code> that only means anything with a module, an account and a network. <b>Re-run item 44 whenever <code>b131Pass</code>, <code>b131KeepLog</code>, <code>b131Counts</code>, <code>save()</code>, <code>preserveUnreadable</code>'s boot block or <code>mergeOnOpen</code>'s write loop changes.</b></p>" +
     "<p><b>WO-010 W7 &mdash; three things are <code>index.html</code>&rsquo;s and are observed (item 36), not asserted here.</b> " +
     "<b>(1)</b> <code>hydrateDraft</code> carrying <code>ld</code> and <code>mode</code> across a reload (D3, B-112&rsquo;s read side): the mutant that drops " +
     "the line dies in the browser rig, not in this file. <b>(2)</b> The two confirmations (unit switch, bar switch) and the undo (D9): copy, focus and the " +
@@ -23347,7 +23676,7 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "<b>zero hits in all three</b>. Re-run the grep when a string moves.</p>";
 
   document.getElementById("manual").innerHTML =
-    "<p><b>Sixteen items. Two to three minutes. Everything else on this page is already covered by " +
+    "<p><b>Seventeen items. Two to three minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how. " +
     "If you are short of time, do item 13(b) and stop: it is the only one on the list that can lose a number.</b></p><ol>" +
 
@@ -23568,7 +23897,9 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "only thing that moved was which plan is active.<br><span class=\"skipmsg\">Why a phone: the storage " +
     "write, the refusal mid-session, both sentences and the geometry at 400, 393 and 320 px were all driven " +
     "(item 34), and PHAT was proved byte-identical on four seeds. What a rig cannot answer is (a) &mdash; " +
-    "whether the row tells you enough to choose. If it does not, that is a UX item, not a bug.</span></li></ol>" +
+    "whether the row tells you enough to choose. If it does not, that is a UX item, not a bug.</span></li>" +
+
+    "<li><b>WO-015 &mdash; the repair notice, on YOUR phone, once.</b> Open the app. Under the start control you should see <b>LOG CORRECTED</b> with three lines: <i>2 pull-up sessions now read Iso-lateral front lat pulldown.</i>, <i>2 dumbbell sessions now read per hand, not the pair total.</i>, <i>Nothing was removed. Every session is still under Recent sessions.</i> <b>(a)</b> Scroll nothing &mdash; the first day row must still be visible above the nav. <b>(b)</b> Open <i>Recent sessions</i> and check 22 Sep: the dumbbell row must read about <b>85&ndash;90 lb</b> per hand, not 170&ndash;180, and the pull-up row must name the pulldown. <b>(c)</b> Tap <b>Dismiss</b>. It must not come back on the next launch. <b>(d)</b> If the card is NOT there, open <code>/diag.html</code> and read section <i>B-131 (WO-015)</i>: <code>log.repairs</code> should be <code>{&quot;b131&quot;:1}</code> and there should be exactly one <code>recover:log</code> key. If <code>repairs</code> is <code>undefined</code> and the loads still read 63/77/77/81, the correction did not apply &mdash; <b>say so and change nothing</b>; the pre-fix bytes are still on disk and that is the designed outcome of a failed keep.<br><span class=\"skipmsg\">Why a phone: every branch of this was driven in a desktop browser (item 44) including the forced keep failure. What only your phone can answer is whether the v6 worker has actually carried the new shell to it, and whether the card is legible and reachable one-handed over the day list at your text size.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -24797,6 +25128,8 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "<code>b9a14ec^</code> <b>6</b>, <code>b1e2f52</code> <b>7</b>. " +
     "<b>Found: nothing.</b> No defect, no new backlog item, no moved expectation outside the three renamed strings. " +
     "<b>file:// suite 1027 / 1027 / 0</b>, green on all seven weekdays and on four calendar boundaries.</span></li>" +
+
+    "<li><b>WO-015 &mdash; THE B-131 CORRECTION, DRIVEN AGAINST REAL STORAGE. 2026-09-29, on <code>wo-014-library @ 31a3a37</code>.</b> <span class=\"msg\">Rig: a Node static server on <code>http://127.0.0.1</code> over the real tree, Playwright Chromium at <b>400 &times; 852</b> (and 393 and 320), <code>localStorage</code> seeded from an init script <b>before any app script runs</b>, service workers blocked (the app's own <code>reg.scope</code> line then throws once at boot &mdash; the same rig artefact item 28 filtered). Seeds are built by loading the shipping <code>logic.js</code> in a Node <code>vm</code> and reading <code>PHAT.B131_TABLE</code>, so the pre-fix bytes are the table's own <code>from</code> arrays and nothing is transcribed. Scratchpad <code>rig.mjs</code>, <code>seed.mjs</code>, <code>t1.mjs</code>&ndash;<code>t13.mjs</code>, <code>suite.mjs</code>, <code>red.mjs</code>. <b>(1) THE HAPPY PATH, field by field.</b> His pre-fix store in, and on disk after one boot: 12 Sep <code>d1d</code> <b>63/77/77/81 &rarr; 31.5/38.5/38.5/40.5</b>, 22 Sep <code>d1d</code> <b>77.1/81.6/81.6/72.6 &rarr; 38.6/40.8/40.8/36.3</b> with <code>ld.add</code> <b>170/180/180/160 &rarr; 85/90/90/80 lb</b> beside it; both <code>d1b</code> entries keep every load and gain <code>mv:\"x_B131a\" sw:1 n:\"Iso-lateral front lat pulldown\"</code>. A recursive diff of the whole store reports <b>exactly 24 paths moved</b> and no others: the four set arrays, the three meta keys twice, the two entry key-orders, and <code>repairs</code>. <b>All eight notes byte-identical</b>; every <code>rx</code> unchanged; no rep moves; the top-level key order is unchanged with <code>repairs</code> appended. <b>(2) THE KEEP.</b> One <code>phat:v1:recover:log:&lt;ms&gt;</code>, record <code>{key, savedAt, raw}</code>, <b><code>raw</code> === the pre-boot bytes character for character</b>, and the kept copy's <code>repairs</code> is <code>undefined</code>. <b>(3) THE KEEP IS BLOCKING &mdash; four ways, and this is the half that matters.</b> <b>(a)</b> <code>setItem</code> made to THROW on <code>/^phat:v1:recover:log:/</code>: <i>NOT APPLIED - the copy of the log could not be written</i>, <b>63/77/77/81 still on disk</b>, the log <b>byte-identical</b> to the seed, <b>no <code>recover:*</code> key</b>, no marker, no card. <b>(b)</b> <code>setItem</code> made a silent NO-OP on that key (<code>save()</code> returns true, the read finds nothing): <i>NOT APPLIED - the copy of the log did not read back as it was written</i>, same outcome. <b>This is the case <code>save()</code>'s return value alone would have missed.</b> <b>(c)</b> <code>setItem</code> made to TRUNCATE <code>raw</code> by one character: the same refusal, log untouched &mdash; and the truncated keep is left on disk (see the finding). <b>(d)</b> A real quota fill (8 KB then 256 B chunks until <code>setItem</code> throws): no keep, log byte-identical, no marker, no card, and the generic save-refused notice on Home. <b>Unblock and reload and it applies normally.</b> <b>(4) ALL OR NOTHING, seven one-byte corruptions.</b> A rep moved; one character of a note (<i>arm</i> &rarr; <i>Arm</i>); a trailing space on a note; a planted <code>mv</code> on a <code>d1d</code> entry; a planted <code>sw</code> on a <code>d1b</code> entry; a weight moved 68 &rarr; 68.5; a session dated 09-23 instead of 09-22. <b>Every one: the log byte-identical, zero keeps, no card, and a named sentence</b> (<i>the sets are not the bytes the table pins</i> / <i>the note is not the one on the record</i> / <i>the entry already carries mv</i> / <i>session &hellip; is dated 2026-09-23 and the table pins 2026-09-22</i>). <b>The other three entries are left alone in every case.</b> <b>(5) STORES THAT ARE NOT HIS.</b> A real log without either session (Diana's phone): <b>byte-identical in and out, no keep, no card</b>, <i>neither session is on this device</i>. A <code>demo:true</code> store holding both: refused, <i>this device holds demo data</i>. A fresh install: <b>zero localStorage keys written</b>. <b>(6) IDEMPOTENCE, BY BYTES.</b> Second boot on the pass's own output: <i>already applied on this device</i>, <b>still exactly one <code>recover:log</code> key, the same key</b>, and the log byte-identical across the boot. <b><code>log.repairs</code> hand-deleted with the corrected sets left in place: still a no-op, still no second keep</b> &mdash; the post-fix fingerprint catches it, not the stamp. The card does not render there (the stamp is its gate), which is the designed split. <b>(7) THE NOTICE.</b> <code>&lt;section aria-labelledby=\"b131-h\"&gt;</code> on a real <code>&lt;h2 id=\"b131-h\"&gt;Log corrected&lt;/h2&gt;</code>, <b>no <code>role</code>, no <code>aria-live</code></b> &mdash; not a live region, deliberately. Three body lines after 31a3a37; <b><i>not on the pull-up line</i> appears nowhere on Home</b> and the deleted two-word fallback name has <b>zero occurrences in <code>document.body.innerText</code> and zero in <code>#view</code></b> on every branch. <b>Four gating branches driven:</b> name present + 2/2 (three lines); <code>PHAT.B131_N</code> forced empty with <code>nd&gt;0</code> (the pull-up line drops, no empty name, two lines); name empty with <code>nd===0</code> (<b>no card at all</b>, not an empty one); <code>np=0, nd=2</code> (the dumbbell line only). <b>Both singulars</b> on a 22-Sep-only store: <i>1 pull-up session now reads &hellip;</i> / <i>1 dumbbell session now reads per hand, not the pair total.</i> <b>An unrepaired store with the stamp forced on renders no card</b> (counts 0/0). <b>Dismiss:</b> one tap, card gone, focus on <code>#daylist-h</code> (never <code>document.body</code>), <code>phat:v1:prefs</code> gains <code>&quot;b131&quot;:1</code> beside every other key, and a reboot with those prefs renders nothing and writes nothing. <b>(8) NEVER UNDER A THUMB.</b> With a real draft on disk: <b>no card</b> &mdash; and the repair still applied to disk, which is the right split (the notice waits, the numbers do not). Discarding that draft mid-run does <b>not</b> make the card appear: the latch is set once at boot. Tab away to Trend and back: the card returns <b>at the same y (367 px)</b>, unmoved. <b>(9) GEOMETRY.</b> At <b>393 &times; 852</b> the card is <b>222 px</b> (203 at 400, 241 at 320), <i>Or pick any day</i> at y 605 and the <b>first day row fully visible, bottom 720 against a nav top of 788 &mdash; 68 px of clearance</b>. <code>scrollWidth === innerWidth</code> at 393, 400 and 320; <b>zero interactive elements under 44 px</b> (Dismiss is 326 &times; 48). At 200% text nothing overflows. <b>(10) THE MERGE, JOINED UP.</b> <code>mergeOnOpen</code> needs http(s), a signed-in account and <code>sync.js</code>; the engineer proved its two halves separately and said so. <b>It was driven end to end here</b> by serving a stub <code>/sync.js</code> with the same surface (<code>ready/subscribe/pull/push</code>) over the real <code>index.html</code>, so every line of the merge path is the shipping code and only the wire is faked &mdash; item 28's method. Results: a NON-EMPTY device that lacks both sessions pulls the pre-fix rows and writes them <b>corrected</b> (31.5/38.5/38.5/40.5, marker set), <b>no card on that open and the card on the next one</b> (&sect;22.19's rule, observed); an EMPTY device the same, with the keep holding the uncorrected merged bytes; a device already repaired at boot merges to a byte-identical log and re-pushes the corrected set. A second open after a merge is <i>already applied</i>, adds <b>no</b> keep and moves <b>no</b> byte. <b>(11) AFTER THE PASS.</b> A real session logged and saved through Summary: three sessions on disk, <code>repairs</code> intact, all four corrected entries unchanged, still one keep. <b>(12) <code>diag.html</code> reads and writes nothing</b>: two keys in, the same two keys out, byte-identical, and section <i>B-131 (WO-015)</i> prints the marker, the keep with <code>rawBytes=1603</code> and <code>repairs=undefined</code>, and both sessions' <code>d1b</code> / <code>d1d</code> loads with the lb components. <b>Found: one P2 and two P3, none of which loses a number &mdash; in the report.</b> <b>file:// suite 1039 / 1039 / 0.</b></span></li>" +
     "</ol>";
 })();
 </script>
