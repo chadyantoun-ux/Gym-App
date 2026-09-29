@@ -3420,7 +3420,21 @@
      "ST1: the measurement travels, the diagnosis does not"). A plan built from
      empty has no `derivedFrom` and never acquires one. `from` is the human
      provenance line; `derivedFrom` is the machine one, and they are separate
-     so that renaming a plan can never change which rules it may run. */
+     so that renaming a plan can never change which rules it may run.
+
+     WO-014, approved 2026-09-29: A COPY OF A SHIPPED PLAN THAT CARRIES NONE
+     IS MINTED ONE — its source's `planId`. Only when the source is one of
+     `shippedPlan()`'s five and only when the field is absent or blank; a
+     carried value is never overwritten, and a copy of a USER plan still loses
+     the key rather than gaining one. Without this, `keyLiftDisclosure`'s
+     ancestor lookup is inert on the four WO-018 templates (none declares a
+     `derivedFrom`) and HD1.4 case (a) prints the count line with no name,
+     which is the anonymous disclosure coach §23.2.6 refused to sign off.
+     It is NOT a stored-shape change: the field lands only in plan documents
+     minted after this build, no existing byte moves, and `validatePlan` /
+     `planRowProblems` neither read nor strip it. ST1's gate survives because
+     it tests `derivedFrom === "phat"` EXACTLY — a `ul2` copy carrying `"ul2"`
+     leaves C7b false and ST1 on its generic diagnosis, which is the ruling. */
   function copyPlan(plan, name, todayStr) {
     if (!isObj(plan)) return editFail(plan, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
     var next = clonePlan(plan);
@@ -3432,7 +3446,8 @@
     next.readOnly = false;
     next.createdAt = dateOrNull(todayStr);
     if (typeof next.derivedFrom !== "string" || next.derivedFrom.trim() === "") {
-      delete next.derivedFrom;
+      if (isShippedPlanId(plan.planId)) next.derivedFrom = str(plan.planId).trim();
+      else delete next.derivedFrom;
     }
     return { ok: true, plan: next, problems: [] };
   }
@@ -4641,9 +4656,11 @@
      and a copy of it in `phat:v1:plans` is two sources that can drift, and
      the stored one wins on a device that has not updated. `copyPlan` is the
      only route to editing one, unchanged — it re-mints `planId`, clears
-     `readOnly`, PRESERVES every slot id, and carries no `derivedFrom`
-     (none of the four declares one, so C7b's provenance is correctly false
-     and ST1 speaks its generic diagnosis on a copy of a template).
+     `readOnly` and PRESERVES every slot id. None of the four declares a
+     `derivedFrom`, so since 2026-09-29 `copyPlan` MINTS one from the source's
+     id (`ul2` and so on) to give `keyLiftDisclosure` an ancestor to name. That
+     is not `"phat"`, so C7b's provenance is still correctly false and ST1
+     still speaks its generic diagnosis on a copy of a template.
 
      NOT added to `priorFor`'s resolution chain, deliberately. That chain ends
      at PHAT_PLAN because a pre-schema-7 session has no `mv` and no slot to
@@ -9158,15 +9175,15 @@
      (so PHAT is byte-identical), and null for an absent, blank or unknown
      `derivedFrom` (so every plan that was skipped before is still skipped).
 
-     IT IS STILL INERT ON THE FOUR TEMPLATES UNTIL THEIR COPIES CARRY A
+     IT WAS INERT ON THE FOUR TEMPLATES UNTIL THEIR COPIES CARRIED A
      `derivedFrom`. None of `ppl5`, `ppl3`, `ul2` or `bb5` declares one — only
-     PHAT does — and `copyPlan` carries the field rather than minting it, so
-     `shippedPlan(undefined)` is null and the sweep still has nothing to
-     consult. That is a PROVENANCE decision and not this function's to take:
-     it asks whether a copy of a template records WHICH template it is a copy
-     of, which is a question about `copyPlan` and about the four documents, and
-     it is open. Fixing it here by guessing the ancestor from the ids is
-     exactly the guess the paragraph above forbids. */
+     PHAT does — so `shippedPlan(undefined)` was null and the sweep had nothing
+     to consult. That was a PROVENANCE question, not this function's to answer,
+     and it was answered on 2026-09-29: a copy of a shipped plan records which
+     plan it is a copy of, and `copyPlan` mints the field. The ancestor is
+     therefore READ, never guessed from the ids — that guess is still exactly
+     what the paragraph above forbids, and a plan that carries no
+     `derivedFrom` still names nothing. */
   function keyLiftDisclosure(plan) {
     var out = { n: 0, max: PLAN_KEYLIFT_MAX, missing: [], line: "" };
     if (!isPlanDoc(plan)) return out;
