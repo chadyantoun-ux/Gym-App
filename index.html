@@ -1207,7 +1207,12 @@ let PROGRAM = PHAT.PHAT_PLAN.days;
    fixed by a restore or by hand. `broken` is what the Plans list reads. */
 function activePlanOf(store){
   const id=String(store&&store.activePlanId||PHAT.PHAT_PLAN_ID);
-  if(id===PHAT.PHAT_PLAN_ID) return {plan:PHAT.PHAT_PLAN,broken:false};
+  /* WO-018 T3: a SHIPPED template is code, not a stored document —
+     planStoreUpsert refuses all five, so the store never holds a copy and
+     the pointer is the whole of what a pick writes. Resolved here, ahead of
+     the store, for every one of the five. */
+  const sh=PHAT.shippedPlan(id);
+  if(sh) return {plan:sh,broken:false};
   const hit=(store&&Array.isArray(store.plans)?store.plans:[]).find(p=>p&&p.planId===id);
   if(!hit) return {plan:PHAT.PHAT_PLAN,broken:false};
   let ok=false; try{ ok=PHAT.validatePlan(hit).ok===true; }catch(err){ ok=false; }
@@ -1222,9 +1227,13 @@ function adoptPlans(store){
   S.plan=a.plan; S.planBroken=a.broken;
   PROGRAM=S.plan.days;
 }
-/* The stored plan for an id, or PHAT for "phat", or null. */
+/* The stored plan for an id, or the shipped template for a shipped id, or
+   null. WO-018 T3: all five templates answer here, which is what gives each
+   of them the read-only screen, `Use this plan` and `Duplicate this plan`
+   with no second code path. */
 function storedPlan(id){
-  if(id===PHAT.PHAT_PLAN_ID) return PHAT.PHAT_PLAN;
+  const sh=PHAT.shippedPlan(id);
+  if(sh) return sh;
   return S.plans.plans.find(p=>p&&p.planId===id)||null;
 }
 /* Every plan on the device, in RESOLUTION ORDER: the active one, the stored
@@ -1234,7 +1243,11 @@ function storedPlan(id){
 function allPlans(){
   const out=[S.plan];
   S.plans.plans.forEach(p=>{ if(p&&p!==S.plan) out.push(p); });
-  if(out.indexOf(PHAT.PHAT_PLAN)<0) out.push(PHAT.PHAT_PLAN);
+  /* WO-018 T3: every shipped template, in SHIPPED_PLANS order, so PHAT is
+     still the first one consulted and the resolution order above it does not
+     move. A session logged under a template he has since switched away from
+     still resolves its slot names, which is the whole job of this list. */
+  (PHAT.SHIPPED_PLANS||[PHAT.PHAT_PLAN]).forEach(p=>{ if(p&&out.indexOf(p)<0) out.push(p); });
   return out;
 }
 /* THE SESSION'S PLAN (D9). Everything that renders or saves the open session
@@ -1949,7 +1962,13 @@ function deloadBanner(){
   try{
     const today=PHAT.localDate(), kl=keyLiftRows();
     let sr=null;
-    try{ sr=PHAT.stallReport(S.sessions,today,kl,S.logMeta); }catch(err){ sr=null; }
+    /* WO-018 T3: the PLAN is stallReport's fifth argument and the only thing
+       it decides is `testable`'s threshold (Rule TW1b — a training week is
+       min(3, days) distinct training days). Omitted, this caller read
+       `testable: false` on a 2-day plan while stallAdvice, which does pass
+       it, read true — two engines disagreeing about whether week 6 had
+       arrived. `ul2` is selectable from this build, so it is not theoretical. */
+    try{ sr=PHAT.stallReport(S.sessions,today,kl,S.logMeta,S.plan); }catch(err){ sr=null; }
     d=PHAT.deloadCheck({sessions:S.sessions, todayStr:today, stallReport:sr,
       keyLifts:kl, state:S.logMeta, plan:S.plan});
   }catch(err){ return ""; }
@@ -3784,10 +3803,13 @@ function sumRow(e,st,C){
      PHAT_PLAN, readOnly - so the line is what he will actually see, and it
      routes him to the one thing that does work (UX finding §22.16 #1: the
      correct answer is copy-on-write, which is an order of its own and is
-     not invented here). */
+     not invented here).
+     WO-018 T3: FIVE plans are read-only now, so the line names the plan he
+     is actually on. "The PHAT plan is read-only" was true while PHAT was the
+     only template and is false on the other four. */
   if(mvc.swapped){
     h+=(sp().readOnly===true)
-      ? `<p class="sumro">Today only. The PHAT plan is read-only &mdash; duplicate it in Plans to keep a change.</p>`
+      ? `<p class="sumro">Today only. ${esc(sp().name||"This plan")} is read-only &mdash; duplicate it in Plans to keep a change.</p>`
       : `<button class="ghostbtn sumperm" data-perm="${esc(e.id)}">${esc("Put "+mvc.name+" in the plan")}</button>`;
   }
   return h+`</div>`;
@@ -4093,7 +4115,58 @@ function liftRow(l){
   return `<div class="tl"><div class="tlhead">${head}</div>${body}${disc}</div>`;
 }
 
-/* The week-6 card, and every character of it is PHAT.stallAdvice's.
+/* Rule HD1.4 (coach addendum §23.2.1, corrected by §23.2.6). A declared key
+   lift whose slot the plan STILL HOLDS but no longer prescribes heavy leaves
+   the six-week check at read time, and it must be NAMED on both surfaces it
+   affects: the Trend tab, where ST1's answer appears and where a missing
+   subject changes what that answer means, and the plan screen, where he can
+   put one back. Plans-screen-only was the coach's own error, corrected.
+
+   THE RANGE IS READ FROM THE SLOT AND IS NEVER HARDCODED. The first draft of
+   this literal said "not a 3–5 lift"; three of the five shipped plans have no
+   3–5 lift at all (ppl3 and ul2 lead at 5–8, bb5 at 6–8), so that sentence
+   would have been false the moment it rendered. Hence reason-keyed, checked
+   in the coach's order, stopping at the first reason that holds.
+
+   THE SECOND SENTENCE REPEATS ON EVERY LINE, on purpose. A reason printed on
+   the first dropped lift and not the second leaves the second unexplained and
+   reads as a bug. Do not factor it out.
+
+   Case (a) — a key lift the plan no longer contains AT ALL — is not this
+   subject: planKeyLiftsDropped() skips it and keyLiftDisclosure()'s count
+   line already names it ("… is not in this plan."). That count line renders
+   directly above these, never instead of them.
+
+   ZERO ELIGIBLE KEY LIFTS => NOTHING HERE, EVER (HD1.3). ST1 is then ABSENT,
+   an absent check has no subjects to have dropped, and `Reading 0 of 4 key
+   lifts.` must never render. That is what the `if(!n)` guard is.
+
+   `offer` appends the coach's Plans-screen sentence; the Trend tab gets the
+   line alone. */
+function droppedKeyLiftLines(plan,offer){
+  let drop=[],n=0;
+  try{
+    n=(PHAT.planKeyLifts(plan)||[]).length;
+    drop=PHAT.planKeyLiftsDropped(plan)||[];
+  }catch(err){ return []; }
+  if(!n) return [];                                      /* HD1.3 */
+  const tail=offer?" Pick a replacement in the plan, or leave it out.":"";
+  return drop.map(d=>{
+    /* (b) k !== "power". The coach's literal names hypertrophy; a speed slot
+       nominated as a key lift would make that sentence false, so the word
+       follows the slot's own type. Flagged for UX and the coach. */
+    if(d.k!=="power") return d.n+" is set as "+(d.k==="speed"?"speed":"hypertrophy")
+      +" work on this plan, so it is out of the six-week check."+tail;
+    /* (c) power, hi > 8. A fixed target (lo === hi) prints one number, the
+       same way every other target on the plan screen does. */
+    const rng=(d.lo===d.hi)?String(d.lo):d.lo+"–"+d.hi;
+    return d.n+" is prescribed "+rng+" on this plan. The six-week check reads lifts"
+      +" prescribed to 8 reps or fewer, so it is out of the check."+tail;
+  });
+}
+
+/* The week-6 card, and every character of it is PHAT.stallAdvice's, plus
+   Rule HD1.4's lines above it.
 
    PER-CARD CATCH (spec §0.7): a throw in here costs the card and the
    sparklines still render. `early` and `quiet` render NOTHING — no
@@ -4114,15 +4187,24 @@ function stallCard(){
   /* WO-006 B4: the ABSENT line is the Plans screen's, once. Nothing here. */
   if(a.absent===true) return "";
   const lines=a.lines||[];
-  if(!lines.length&&!a.disclosureLine) return "";
+  /* Rule HD1.4, WO-018 T3. Gated on the check having RUN — the same condition
+     §9.9 attaches its count line to. Before training week 6 (`early`) ST1
+     renders nothing at all, so a narrowed evidence base is not yet a claim
+     about anything; ABSENT returned above, which is HD1.3's half. */
+  const drop=(a.state==="early")?[]:droppedKeyLiftLines(S.plan,false);
+  if(!lines.length&&!a.disclosureLine&&!drop.length) return "";
   /* The red rule is the SECOND channel. The first is the sentence itself:
      the stalled state opens `Week 6 and no progress on …` in the lead. */
   let h=`<div class="pad mt16"><div class="tcard${a.state==="stalled"?" stall":""}">
     <span class="kick">Week 6 test</span>`;
-  lines.forEach((t,i)=>h+=`<p${i?"":' class="lead"'}>${esc(t)}</p>`);
-  /* Addendum §9.9. Its own line, never joined to the finding: it is a
-     disclosure about the CHECK, not a claim about a lift. */
+  /* Addendum §9.9 and Rule HD1.4: the disclosure about the CHECK sits ABOVE
+     the finding (§23.2.1, "the Trend tab, above every ST1 result") and is
+     never joined to it — what the check could not read changes what its
+     answer means, so he reads that before he reads the answer. Count line
+     first, then one self-contained line per dropped lift, in plan order. */
   if(a.disclosureLine) h+=`<p>${esc(a.disclosureLine)}</p>`;
+  drop.forEach(t=>h+=`<p>${esc(t)}</p>`);
+  lines.forEach((t,i)=>h+=`<p${i?"":' class="lead"'}>${esc(t)}</p>`);
   return h+`</div></div>`;
 }
 
@@ -4541,7 +4623,11 @@ const KIND_LBL={power:"Power",hyp:"Hypertrophy",speed:"Speed"};
 const IMPL_LBL={bb:"Barbell",db:"Dumbbell",machine:"Machine",cable:"Cable",bodyweight:"Bodyweight"};
 const HONEST_NOTE="Editing the plan is the easiest thing in this app to do instead of training. PHAT is already a good plan. The number that moves is sessions logged.";
 const COPY_NOTE="The copy keeps this plan's history. Both plans read and write the same exercise history.";
-const READONLY_NOTE="PHAT is read-only. Duplicate it to make changes.";
+/* B6's read-only sentence, verbatim, with the plan's own name in it — WO-018
+   T3 made four more plans read-only, and "PHAT is read-only" on the
+   bodybuilder split is a false sentence. On PHAT it still renders the shipped
+   string character for character. */
+const readonlyNote=p=>((p&&p.name)?p.name:"This plan")+" is read-only. Duplicate it to make changes.";
 const SESSION_OPEN="Finish or discard the session in progress first.";
 /* D7. One sentence for the three writers of phat:v1:plans - SAVE PLAN, USE
    THIS PLAN, DUPLICATE. A demo store must not be the base of anything that
@@ -4659,7 +4745,10 @@ function planRow(o){
 function vPlanList(){
   const act=S.plans.activePlanId;
   const stored=S.plans.plans.filter(p=>p&&typeof p==="object");
-  const n=1+stored.length+Object.keys(S.edits).filter(k=>!storedPlan(k)).length;
+  /* WO-018 T3: five templates now, not one, and the count is of rows he can
+     actually pick, so it counts them. */
+  const ship=PHAT.SHIPPED_PLANS||[PHAT.PHAT_PLAN];
+  const n=ship.length+stored.length+Object.keys(S.edits).filter(k=>!storedPlan(k)).length;
   let h=`<div class="hd"><span class="kick">Plans</span><span class="kick">${esc(plural(n,"plan"))}</span></div>`;
   if(S.err) h+=`<div class="pad mt12"><div class="warn hi" role="alert">
     <p style="color:var(--bone);font-size:.8125rem;line-height:1.5">${esc(S.err)}</p></div></div>`;
@@ -4679,6 +4768,27 @@ function vPlanList(){
   h+=`<button class="planrow dup${stored.length?"":" prim"}" id="plan-dup-phat" aria-labelledby="plan-dup-phat-t" aria-describedby="plan-dup-phat-s">
     <span class="ptxt"><span class="pn" id="plan-dup-phat-t">Duplicate PHAT and rearrange it</span>
     <span class="pm" id="plan-dup-phat-s">Same exercises, same history. Move them between days, rename the days.</span></span></button>`;
+  /* WO-018 T3: the other four shipped templates, in SHIPPED_PLANS order,
+     under PHAT — PHAT is the default and stays first. A template is CODE:
+     planStoreUpsert refuses all five, so nothing here is stored, the row
+     opens it read-only, `Use this plan` writes the active-plan pointer and
+     nothing else, and `Duplicate this plan` is the only route to editing.
+     The meta is what he needs to choose WITHOUT opening anything — the day
+     count and the day names in order, which is what a split is. */
+  const tmpl=ship.filter(p=>p&&p.planId!==PHAT.PHAT_PLAN_ID);
+  if(tmpl.length){
+    h+=`<span class="lbl secrule">More templates</span>
+      <p class="sub" style="margin-bottom:var(--s3)">Read-only. Use one as it is, or duplicate it to change it.</p>`;
+    tmpl.forEach(p=>{
+      const dn=(Array.isArray(p.days)?p.days:[]).map(d=>(d&&typeof d.name==="string")?d.name:"").filter(Boolean);
+      h+=planRow({id:String(p.planId), name:p.name, active:act===p.planId,
+        meta:esc(plural(dn.length,"day")+(dn.length?" · "+dn.join(" · "):""))});
+    });
+  }
+  /* His own, under their own rule once the templates have one — otherwise a
+     plan he built reads as a fifth template. */
+  const ownN=stored.length+Object.keys(S.edits).filter(k=>!storedPlan(k)).length;
+  if(tmpl.length&&ownN) h+=`<span class="lbl secrule">Your plans</span>`;
   stored.forEach(p=>{
     const id=String(p.planId||"");
     const ok=planOk(p);
@@ -4744,9 +4854,30 @@ function vPlanEdit(){
   if(S.pe.refuse&&(S.pe.refuseTop||ro)) h+=`<div class="refuse mt12" role="alert"><p><span aria-hidden="true">! </span>${esc(S.pe.refuse)}</p></div>`;
   h+=`</div>`;
 
+  /* ---- Rule HD1.4's disclosure, the Plans-screen half (coach §23.2.1, as
+     corrected by §23.2.6). ABOVE the days, because it is a statement about
+     this plan, and on this screen because this is the screen where he can
+     put a lift back. §9.9's count line first, then one self-contained line
+     per dropped key lift in plan order, each ending in the coach's offer
+     sentence. Both surfaces render the same subject; only the offer sentence
+     differs, which is what `droppedKeyLiftLines`' second argument is.
+     HD1.3: at ZERO eligible key lifts nothing renders here at all - not the
+     reason lines and not `Reading 0 of 4 key lifts.` - because ST1 is then
+     ABSENT and the Plans LIST speaks C7a's ABSENT literal for the active
+     plan, once, which is WO-006 B4's ruling and is not duplicated here.
+     Renders on the read-only templates too; all five declare four eligible
+     key lifts, so on all five it is empty. */
+  const keyN=(()=>{ try{ return (PHAT.planKeyLifts(plan)||[]).length; }catch(err){ return 0; } })();
+  if(keyN){
+    const kLine=(()=>{ try{ return (PHAT.keyLiftDisclosure(plan)||{}).line||""; }catch(err){ return ""; } })();
+    const kDrop=droppedKeyLiftLines(plan,true);
+    if(kLine||kDrop.length) h+=`<div class="pad mt16"><span class="lbl secrule">The six-week check</span>
+      <div class="advice">${kLine?`<p>${esc(kLine)}</p>`:""}${kDrop.map(t=>`<p>${esc(t)}</p>`).join("")}</div></div>`;
+  }
+
   if(ro){
     /* §9.3: the shipped plan opens read-only. Controls ABSENT, not disabled. */
-    h+=`<div class="pad mt16"><p class="sub">${esc(READONLY_NOTE)}</p>
+    h+=`<div class="pad mt16"><p class="sub">${esc(readonlyNote(plan))}</p>
       <button class="ghostbtn mt12" id="pe-dup">Duplicate this plan</button></div>`;
     h+=`<div class="pad mt16">`;
     days.forEach(d=>{
@@ -8298,7 +8429,8 @@ function deloadTrigger(){
   try{
     const kl=keyLiftRows(), today=PHAT.localDate();
     let sr=null;
-    try{ sr=PHAT.stallReport(S.sessions,today,kl,S.logMeta); }catch(err){}
+    /* WO-018 T3, Rule TW1b: the plan is the fifth argument. See deloadBanner. */
+    try{ sr=PHAT.stallReport(S.sessions,today,kl,S.logMeta,S.plan); }catch(err){}
     const d=PHAT.deloadCheck({sessions:S.sessions, todayStr:today, stallReport:sr,
       keyLifts:kl, state:S.logMeta, plan:S.plan});
     return d&&d.trigger?d.trigger:null;
