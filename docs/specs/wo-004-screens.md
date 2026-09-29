@@ -4587,16 +4587,34 @@ attached to the swapped movement (W4 D4).
 The mark is not decoration. It is the screen's statement that **this number is not the slot's number**,
 which is the whole of Rule MV1 made visible.
 
-**On the session card.** One line directly under the exercise name, `.75rem`, bone `.55` (5.3 : 1 on
-`--bg`), never `--faint`:
+**On the session card.** One line directly under the exercise name, `.75rem`, `--faint` — which **is**
+bone `.55`, §0.5's floor, 5.3 : 1 on `--bg`. Never below it. (The original text of this section read
+"bone `.55` … never `--faint`", which is self-contradictory since `--faint: var(--t55)`; the built CSS
+`.swmark{color:var(--faint)}` is correct and must not be "fixed".)
 
 | Case | String |
 |---|---|
 | Swapped | `Swapped · was {original}` **NEW** |
-| Added mid-session | `Added today` **NEW** |
+| Added mid-session | ~~`Added today`~~ **DELETED 2026-09-28, B-149** — see below |
 
 `· ` is the app's established separator (§4.4b.1, §21.2). The line costs ~18 px and renders **only** on
-a card that is swapped or added — cards that exist on `main @ 6a87a3a` never gain it.
+a card that is **swapped** — cards that exist on `main @ 6a87a3a` never gain it, and an **added** card
+no longer gains it either.
+
+**B-149 — the added-movement fact is stated once per screen.** It was stated four times. The rule for
+resolving it: **a coach sentence is never deleted**; the duplicate mark or kicker around it goes.
+
+| Screen | Element that **owns** "this movement was added" | Element **deleted** |
+|---|---|---|
+| Session card | The **verdict slot**, holding Rule AD1's sentence verbatim: `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` | The mark line `Added today` (§22.12 #31) |
+| Summary | The **kicker `ADDED`**, in the shape `SKIPPED` already uses — the record is scanned before it is read | The line `Added during the session. No prescription.` (§22.12 #38) |
+
+The card keeps `No prescription` in the target slot (§22.9): that slot answers *what am I doing*, the
+verdict slot answers *why is there no reading*, and they are two facts. Summary keeps the advice block's
+`No prescription` kicker above AD1's sentence, because kicker-plus-sentence is the shape every advice
+block on that screen uses; a kicker is a label, not a second statement. **A swapped card is untouched by
+B-149** — its mark (`Swapped · was {original}`) names the movement replaced and its verdict
+(`Swapped to {new}. Not compared to last session.`) names the consequence. Two facts, one sentence each.
 
 **On Summary** (§5.2's per-exercise block). The record is the point of Summary, so the mark is a kicker
 plus a line, in the shape `SKIPPED` already uses:
@@ -4604,27 +4622,58 @@ plus a line, in the shape `SKIPPED` already uses:
 | Case | Kicker | Line under the name |
 |---|---|---|
 | Swapped | `SWAPPED` **NEW** | `Was {original}.` **NEW** |
-| Added | `ADDED` **NEW** | `Added during the session. No prescription.` **NEW** |
+| Added | `ADDED` **NEW** | **none** (deleted, B-149). The advice block below carries AD1 |
 
-Both at `.55` — `SKIPPED`'s `.45` already failed §0.5 and was raised; do not reintroduce it here. The
-count line (`{n} exercises · {n} notes`) counts an added movement like any other exercise with a
-completed set.
+Kickers at `--dim` or better — `SKIPPED`'s `.45` already failed §0.5 and was raised; do not reintroduce
+it here. The count line (`{n} exercises · {n} notes`) counts an added movement like any other exercise
+with a completed set.
 
 **On Trend.** Trend's one question is *is this working*, and a machine-row number plotted on a
 Bent-over row sparkline answers it with a lie in the shape of a chart.
 
-1. **A sparkline excludes every entry marked `sw: 1`.** The line is the slot's lift; a swapped entry is
-   not that lift.
-2. **The exclusion is never silent.** Under the affected sparkline: `{n} swapped sessions are not on
-   this line.` **NEW** (`1 swapped session is not on this line.`), `--dim`.
+1. **A sparkline excludes every entry whose movement is not the slot's movement.** **AMENDED
+   2026-09-28.** The predicate is coach Rule MV1.1(a)'s, character for character, and no other:
+
+   ```
+   exclude(entry, slot)  =  slot.mv is present  AND  effectiveMv(entry, slot) !== slot.mv
+   effectiveMv(entry, slot) = entry.mv if the entry carries one, else slot.mv
+   a slot with no `mv` excludes nothing — ever, on any line
+   ```
+
+   **Why `sw: 1` is the wrong predicate, in one sentence:** `sw` records that the entry differed from
+   the slot *on the day it was logged* and never changes again, so filtering on it would keep the new
+   movement's sessions off the line **forever — including after *make it permanent* has made them this
+   slot's own history**, which is precisely what the confirmation one tap earlier said would happen.
+   The two predicates return the same set today and diverge permanently at the first *make it
+   permanent*; `sw: 1` is not a cheaper spelling of this rule, it is a different rule with a worse
+   answer. Do not re-propose it.
+
+   Two consequences, both intended and both pinnable:
+   - After *make it permanent*, the swapped sessions **join** the line, and any `sw: 1` on them is
+     still in storage and is still ignored. **The count in (2) can read zero while `sw: 1` entries
+     exist.** That is the test that the predicate is the movement comparison and not `sw`.
+   - The **replaced** movement's sessions leave the line at the same moment, if they carry their own
+     `mv` (`buildSession` stamps `mv` on every entry from schema 7, `logic.js:1422–1424`, swapped or
+     not). They are not deleted and nothing about them changes; they are simply not this slot's lift
+     any more. Entries logged before schema 7 carry no `mv`, so they follow the slot wherever it
+     points and are never excluded. See §22.16 #5 — this is why the confirmation in §22.7 does **not**
+     promise the chart.
+2. **The exclusion is never silent, and the count is what the line leaves out.** **AMENDED
+   2026-09-28.** Under the affected sparkline, `--dim`:
+   `{n} sessions are not on this line — a different movement.` **NEW**
+   (`1 session is not on this line — a different movement.`)
+   The number is **the count of sessions this line excludes**, produced by the same predicate the line
+   used, never re-derived in the view and never a count of `sw: 1` entries. **At zero the line does not
+   render at all** — no empty element, no `0 sessions`.
 3. **An added movement is on no sparkline** and no line claims it is. It has no `lift` to group by.
    Where those numbers eventually live is B-141, and B-141 is not this order.
 
 **Dependency, stated:** (1) is a read-side change in an engine this order's W4 scope says it does not
 change signatures of (`e1rmByDate` / `liftPoints`). It is a screen requirement, not an engine design —
-**backend and `strength-coach` own how.** If it cannot land this release, the **minimum** is (2) alone,
-with the line rewritten to the truth: `{n} swapped sessions are on this line.` **NEW**. A chart that
-silently mixes movements is the one outcome that is not acceptable.
+**backend and `strength-coach` own how.** The former fallback line (`{n} swapped sessions are on this
+line.`) is **retired**: it existed only for the case where the engine clause could not land, the clause
+is W9/W10's and it is landing, and a line that counts swapped sessions is the wrong count under this
+predicate. A chart that silently mixes movements is still the one outcome that is not acceptable.
 
 ## 22.7 *Make it permanent* — Summary only
 
@@ -4641,6 +4690,7 @@ Exit:   Change the plan · Not now / scrim / Escape.
 | Confirm heading | `Put {new} in the plan?` **NEW** |
 | Body line 1 | `It replaces {original} on {day} from your next session.` **NEW** |
 | Body line 2 | `Your {original} sets stay where they are. They stop being this slot's last numbers.` **NEW** |
+| Body line 3 | `The next verdict reads your {new} sets.` **NEW, AMENDED 2026-09-28** — adopted verbatim from W5's build, which was right to add it. Coach §22.4.6 is `[Certain]` the confirmation carries three facts; my two carried only the first two |
 | Primary | `Change the plan` **NEW**, full × 52 |
 | Safe, lowest | `Not now` **NEW**, full × 52 |
 | Arm delay | 300 ms on `Change the plan`, WO-001 §1F. It is the one control in §22 that changes something outside this session |
@@ -4648,10 +4698,30 @@ Exit:   Change the plan · Not now / scrim / Escape.
 | Write failed | `Could not change the plan. Nothing changed.` **NEW**, in §2.2's refusal shape. The session and its saved sets are untouched — this control is downstream of the log write |
 | Read-only plan | Button **absent**. In its place, one line: `Today only. The PHAT plan is read-only — duplicate it in Plans to keep a change.` **NEW** |
 
-**Why the consequence is spelled out in two sentences and not one.** The slot keeps its history and
-*stops pointing at it* — those are two different facts and the second is the one that will surprise him
-six weeks later, when the Bent-over row ghost that used to be on that card is gone. Rule MV1 makes it
-true; this sentence is where he is told.
+**Why the consequence is spelled out in three sentences and not one.** Coach §22.4.6 owns *which* facts
+the confirmation carries and is `[Certain]` there are three; I own the words. They map one to one:
+
+| Coach's fact | Sentence |
+|---|---|
+| Nothing is lost | `Your {original} sets stay where they are.` |
+| The prior moves | `They stop being this slot's last numbers.` + `It replaces {original} on {day} from your next session.` |
+| The verdict follows | `The next verdict reads your {new} sets.` |
+
+The slot keeps its history and *stops pointing at it* — two different facts, and the second is the one
+that will surprise him six weeks later, when the Bent-over row ghost that used to be on that card is
+gone. The third is the one that decides whether he taps. Rule MV1 makes all three true; this is where he
+is told.
+
+**Why the words are not the coach's draft words.** §22.4.6's illustrative wording is *"your Seated cable
+row sets stay in the history and on the chart"*. **The chart half of that clause is not true under
+§22.6** and must not be written into a dialog: once the slot's `mv` becomes Machine row, the cable row
+entries — which carry their own `mv` from schema 7 on — stop being this slot's lift and leave this
+slot's sparkline, and there is no movement-grouped chart for them to appear on until B-141. They stay in
+the log, in the export, in the backup, in `Recent sessions`, in tonnage and in the pain window; they
+leave one line on one screen. So the confirmation claims the log, not the chart, and the chart states
+its own truth where it is — §22.6 (2)'s disclosure line, which after this change reads a count that
+includes them. `[Certain]` that a dialog promising "on the chart" one tap before the chart drops the
+line is the same defect class as `Discard`: the app saying one thing and doing another.
 
 ## 22.8 The prior that came from another slot — Rule MV1's disclosure
 
@@ -4680,10 +4750,10 @@ consumes a prescription states its absence instead of going quiet.
 | Prescription line | `Last 100 × 5, 100 × 5.` | absent (there is no prior) — or §22.8's line if a movement prior exists |
 | Set rows | `ex.s` rows | **One row**, and `+ ADD SET {n}` adds more as usual |
 | `EXTRA` flag | Rows beyond `ex.s` | **Never.** With no prescription nothing is beyond it. §4.5's `Set 4 is beyond the prescription.` line does not render |
-| Verdict slot (§4.7) | `WAITING` / a verdict | Present, fixed height, holding `No prescription. Nothing to compare this to.` **`[W1 SLOT — strength-coach]`** — W1 item 3 owns the sentence |
+| Verdict slot (§4.7) | `WAITING` / a verdict | Present, fixed height, holding Rule AD1's sentence, the coach's, verbatim: `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` **AMENDED 2026-09-28** — W1 filled the slot and this table now records what shipped. **This element owns "added" on the card** (B-149); the mark line above it is deleted |
 | Rest band (§4.10) | `restTarget(ex)` from `k` | Rule R1 has no `k` to read. **`[W1 SLOT]`** — the band's absent state, the coach's. My recommendation: the band shows the elapsed clock and no target, and says nothing about how long to rest |
 | Load chip | §21 | Unchanged — the chip reads the card's unit, not the prescription |
-| Summary | verdict verbatim | `ADDED` + `Added during the session. No prescription.` and **no verdict row**. An absent verdict is never rendered as a verdict |
+| Summary | verdict verbatim | **AMENDED 2026-09-28 (B-149):** the kicker `ADDED` — which owns "added" on this screen — then the advice block `No prescription` + AD1's sentence, and **no verdict row**. The line `Added during the session. No prescription.` is deleted. An absent verdict is never rendered as a verdict, and the block's kicker says which it is |
 
 **It still logs.** Sets, reps, notes, the draft, the save, the export and the backup all behave
 identically. The only thing missing is advice, and the screen says which.
@@ -4765,25 +4835,26 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 28 | toast | after Add, appended (fallback) | `{new} added at the end of the session.` + `Undo` |
 | 29 | toast | undo of Add | `{new} removed.` |
 | 30 | card, under the name | swapped | `Swapped · was {original}` |
-| 31 | card, under the name | added | `Added today` |
+| 31 | card, under the name | added | ~~`Added today`~~ **DELETED — AMENDED 2026-09-28 (B-149).** Replaced by: nothing renders. #34 owns the fact on the card |
 | 32 | card, target line | no prescription | `No prescription` |
 | 33 | card, under the prescription | cross-slot prior | `Last numbers are from {day}, {date}.` **[W1 SLOT]** |
-| 34 | card, verdict slot | no prescription | `No prescription. Nothing to compare this to.` **[W1 SLOT]** |
+| 34 | card, verdict slot | added, no prescription | `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` **AMENDED 2026-09-28** — Rule AD1, **the coach's string, recorded not authored.** Replaces the placeholder `No prescription. Nothing to compare this to.` **[W1 SLOT]** |
 | 35 | summary, kicker | swapped | `SWAPPED` |
 | 36 | summary, line | swapped | `Was {original}.` |
 | 37 | summary, kicker | added | `ADDED` |
-| 38 | summary, line | added | `Added during the session. No prescription.` |
+| 38 | summary, line | added | ~~`Added during the session. No prescription.`~~ **DELETED — AMENDED 2026-09-28 (B-149).** Replaced by: nothing renders. #37 owns "added" on Summary; the advice block (`No prescription` kicker + #34's AD1 sentence) owns the rest |
 | 39 | summary, button | swapped, editable plan | `Put {new} in the plan` |
 | 40 | summary, sheet h2 | — | `Put {new} in the plan?` |
 | 41 | summary, sheet body | — | `It replaces {original} on {day} from your next session.` |
 | 42 | summary, sheet body | — | `Your {original} sets stay where they are. They stop being this slot's last numbers.` |
+| 42b | summary, sheet body | — | `The next verdict reads your {new} sets.` **AMENDED 2026-09-28 — NEW third sentence**, adopted verbatim from the build. Replaces: nothing (the body previously ended at #42, carrying two of coach §22.4.6's three facts). The three sentences render as one body, in order #41 · #42 · #42b |
 | 43 | summary, sheet button | destructive | `Change the plan` |
 | 44 | summary, toast | applied | `{day} now has {new}.` + `Undo` |
 | 45 | summary, toast | undone | `{day} has {original} again.` |
 | 46 | summary, refusal | plan write failed | `Could not change the plan. Nothing changed.` |
 | 47 | summary, line | read-only plan | `Today only. The PHAT plan is read-only — duplicate it in Plans to keep a change.` |
-| 48 | trend, under a sparkline | swapped entries excluded | `{n} swapped sessions are not on this line.` (`1 swapped session is not on this line.`) |
-| 49 | trend, under a sparkline | fallback if exclusion does not land | `{n} swapped sessions are on this line.` |
+| 48 | trend, under a sparkline | the line excludes ≥ 1 session (`effectiveMv(entry, slot) !== slot.mv`) | `{n} sessions are not on this line — a different movement.` (`1 session is not on this line — a different movement.`) **AMENDED 2026-09-28.** Replaces `{n} swapped sessions are not on this line.` (`1 swapped session is not on this line.`). The count is **sessions this line leaves out**, not swapped sessions; at zero the line does not render |
+| 49 | trend, under a sparkline | — | ~~`{n} swapped sessions are on this line.`~~ **RETIRED — AMENDED 2026-09-28.** It was the fallback for an exclusion that could not land; it has landed (W9/W10), and its count was the wrong count |
 | 50 | chip, line 2 | swapped card, changed in the sheet | `Set for this session` |
 
 Substitutions beyond §0.8: `{original}` the movement the slot carried before the swap, escaped ·
@@ -4794,6 +4865,13 @@ and a name containing `<` must render as text (W5's criterion).
 **Voice check.** No exclamation marks, no emoji. Second person only where he acts (`Open the app once…`,
 `duplicate it in Plans`). Every `Could not …` ends on what is true (`Nothing changed.`). No word
 congratulates him for swapping.
+
+**The regression boundary of the 2026-09-28 amendments (#31, #34, #38, #42b, #48, #49).** Every one of
+them renders **only** on a card or a Summary block that is **swapped** or **added**, or under a
+sparkline that **excludes at least one session**. **No string on an unswapped, unadded card changes, and
+no sparkline with nothing excluded gains an element.** A store with no `mv` anywhere and no `sw` anywhere
+renders `main @ 6a87a3a`'s screens byte for byte — that is coach §22.4.7's no-op case (7) and it is the
+criterion that says this whole section is additive. Pin it.
 
 ## 22.13 Control inventory — rows added to §0.4.1
 
@@ -4837,6 +4915,10 @@ Every one is ≥ 44 px on **both** axes. None is in a top corner of the screen; 
   #26, #27/#28, #29, #44, #45. The toast node itself stays `aria-hidden` (§2.6).
 - **Marks are text.** `Swapped · was {original}`, `SWAPPED`, `ADDED`, `No prescription` are read by a
   screen reader in the card's normal reading order. Nothing here is conveyed by an icon or a colour.
+  After B-149 an **added card** carries the fact in its verdict slot instead of a mark; that slot is
+  already in the reading order and already announced, so nothing is lost to a screen reader and one
+  repetition is removed from it. The Trend disclosure line (#48) is ordinary text under its sparkline,
+  not a live region — nothing on Trend changes under the user.
 - **Greyscale.** Every state in §22 survives a greyscale render: the mark is words, the list order is
   order, the chosen movement is a heading, the two outcomes are two labelled buttons. No hue carries
   anything.
@@ -4869,12 +4951,27 @@ Every one is ≥ 44 px on **both** axes. None is in a top corner of the screen; 
    silently changes which plan is active, which is a decision and an order of its own. Recommending it;
    not specifying it here.
 2. **Trend needs an engine clause this order's W4 scope does not contain** (§22.6). Filed as a screen
-   requirement with a named fallback so it cannot ship silently either way.
+   requirement; **amended 2026-09-28** — the fallback line is retired, the clause is W9's, and the
+   predicate is MV1.1(a)'s movement comparison, never `sw: 1`.
 3. **`cardModeFor` needs a swapped-card branch** (§22.11), or a swap silently applies one movement's
    unit and bar to another. One clause, wrong by default.
 4. **B-05 is now load-bearing for this flow.** Every safety net in §22 lives in the draft and expires at
    `SAVE SESSION`. A swap mis-tapped and saved is permanent, exactly like a mistyped weight. §22 buys it
    down (confirm state, no Replace once a set is typed, undo on every commit) and cannot close it.
+5. **Coach §22.4.6's draft wording and §22.6's predicate contradict each other, and §22.6 wins.**
+   (Added 2026-09-28.) The coach's illustrative sentence promises the replaced movement's sets stay
+   *"on the chart"*; under the amended predicate they leave that slot's sparkline the moment the plan
+   changes, because from schema 7 every entry carries its own `mv`. The three **facts** the coach owns
+   are all carried (§22.7's table); the chart **clause** is not, and the coach should either strike it
+   from §22.4.6 or B-141 (Trend grouped by movement) becomes the thing that makes it true. **Until one
+   of those happens, no string anywhere may tell him a set is on a chart.** `strength-coach`'s to
+   settle, one line, not this order's.
+6. **W9's acceptance criterion "the exclusion count for `d3c` is 1 before *make it permanent* and 0
+   after" is fixture-dependent and will read 1 after, for the right reason, on a schema-7 fixture.**
+   It is 0 after only when the pre-swap entry carries **no** `mv` (every session Chady has logged so
+   far). With a cable-row entry logged after schema 7 the count is 1 after, because that session is now
+   the excluded one. The behaviour the test must pin is **the swapped entry stops being excluded**, by
+   id, not the total reaching zero. QA's to reword; the rule is unchanged either way.
 
 ## 22.17 What I could not settle
 
