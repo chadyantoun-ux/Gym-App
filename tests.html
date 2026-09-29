@@ -55,7 +55,20 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 1011 / 1011 / 0 on wo-014-library @ 722968f + S52 - 1.4 to 1.9 s in Chrome from file://, green on all seven weekdays (the clock was forced to each of Mon 28 Sep - Sun 4 Oct 2026) and again with the clock on 28 Feb and 31 Dec, so the runs cross a month and a year boundary.</b> <b>NO HELD REDS.</b> The one that was held - <i>W5 / section 9.1 - a key lift prescribed above 8 reps is UNREADABLE, not thin</i> - is <b>RESOLVED by <code>strength-coach</code>, not by QA</b>: coach-audit-addendum section 23.2.6 (<code>6b40d2f</code>) supersedes section 9.1&rsquo;s ST1 literal and orders it out of the build, and <code>722968f</code> deleted it. The test is re-pinned <b>on the ruling</b>, with the ruling quoted and the old expectation written out, and <b>two tripwires replace it</b>: <code>stallAdvice().unreadable</code> must be permanently <code>[]</code> across 36 subject shapes plus the forced <code>keyLifts</code> override, and the deleted sentence must appear in <b>no source this page can read</b> (this file in full, plus every function <code>PHAT</code> exports; <code>index.html</code> is out of a <code>file://</code> page&rsquo;s reach and is covered by a repo grep, run 2026-09-29, two hits, both in this file, both deleted here). <b>The field was KEPT rather than dropped &mdash; QA&rsquo;s call, with the reasons in the block comment above the tripwire.</b> <b>WO-014 also fixed <code>repairB131</code>&rsquo;s fresh-device sentence:</b> a device that never held his two sessions now reads <i>neither session is on this device</i> rather than <i>nothing on this device matches the correction table</i>, which read like a MISMATCH on Diana&rsquo;s phone. <b>Two expectations re-pinned</b> (S52.C4 and S52.C10, both with the old line written out), <b>five tests added</b> (the re-pin, the two tripwires, S52.C11 and S52.C12). <b>Red-first on <code>git cat-file blob 722968f^:logic.js</code>: five go red</b> &mdash; both tripwires, C4, C10 and C11. <b>Two do not, and that is stated rather than hidden:</b> the re-pinned drop test passes on both trees, because HD1.2 already dropped the lift and <code>722968f</code> removed only dead code; and S52.C12 passes on both, because it characterises his REAL export (<code>CHADY_EXPORT</code>, the server&rsquo;s bytes) against a change that was wording only. <b>S52.C11 files a finding:</b> the generic <i>nothing on this device matches the correction table</i> sentence is now <b>unreachable</b> &mdash; sixteen device states, zero hits, with the four-exit argument written out in the test and in the contract list below. <b>WO-017 W5</b> (the third misquote &mdash; S1a&rsquo;s 21-day restatement, QA pass, 2026-09-29). <b>W4 moved two sites of one misquote and this one survived, which is the finding:</b> Rule S1a&rsquo;s stale branch <b>overwrites <code>out.lines</code> wholesale rather than rendering <code>S1_LINES</code></b>, so every assertion aimed at the array and every sweep of the array walked straight past <i>You noted pain on this on {date} &hellip; If it still hurts, see someone qualified to look at it.</i> &mdash; the copy that lands on his card three weeks after he wrote a note, when he is least able to check what he actually typed. <b>One moved expectation, with its reason on its own line:</b> the W5 / S1a 21-day pin, old sentence &rarr; UX &sect;22.12 row <b>#53</b>. <b>Two pins added (S51):</b> <b>S51.1</b> renders the new literal verbatim off <b>his own data</b> &mdash; <code>painState(CHADY_TWO(), &quot;d1b&quot;, &quot;2026-10-20&quot;)</code>, 28 days after his 22 Sep note &mdash; with <code>stale</code>, <code>active</code>, <code>days</code>, <code>date</code> (22 Sep, the later note, by ordinal), <code>lines.length === 1</code>, <code>lines[0] === text</code>, <code>dayMon</code> as the only interpolation at index 29, no ISO date on screen, and the same sentence one day earlier; <b>S51.2</b> extends W4&rsquo;s <code>You logged pain</code> tripwire to the whole retired family &mdash; <code>You logged pain</code>, <code>You noted pain</code>, <code>If it still hurts</code> &mdash; over <b>ten sources, every one of them a string an ENGINE RETURNED</b>, with the stale branch present twice (his real data and a synthetic one) because a fixture can be corrected and a rule cannot, plus a positive control proving the matcher can fail and a re-assertion that the two surviving members of the four-string family (#51 and the untouched referral line) are still in place. <b>Red-first against the named pre-fix tree:</b> <code>git cat-file blob 7cf0008:logic.js</code> dropped beside this page &mdash; <b>S51.1 and S51.2 both go red</b> (S51.2 names nine hits by source, including both new strings on the stale branch through his own data), alongside the three W4 re-pins and the new one, <b>6 red in all</b>. <code>logic.js</code> at <code>9e7b689</code> contains <b>zero</b> occurrences of all three retired strings. Zero <code>phat:*</code> bytes written (the S50 tripwire). Before it: <b>WO-017 W4</b> (the note field was deaf, and to what &mdash; B-155, B-156, B-157, QA pass, 2026-09-29). <b>The defect, because every assertion below hangs off it:</b> his <code>d1b</code> notes of 12 and 22 Sep both say his arm has not recovered. <b>Both returned false from the shipped detector.</b> He reported an injury twice, ten days apart, in the field the app provides for it, and the app said nothing for seventeen days &mdash; no held load on that slot, no referral line, no <code>painWindow</code> entry. <b>It survived 978 tests because the suite pinned the word list against ITSELF</b> and never once ran <code>painFlag</code> over a note he actually wrote; <code>CHADY_EXPORT</code> has carried his prose since WO-011 and no assertion read <code>.note</code>. That is B-157 and it is the reason this section is shaped the way it is. <b>Three moved expectations, one at a time, each with its reason on its own line:</b> <code>PAIN_WORDS</code> 30 &rarr; 41 fragments / 21 &rarr; 29 entries with the &sect;24.2 regex source (and the old 30 re-asserted as a PREFIX, so an append and an edit are two different red lines), and S2b&rsquo;s <code>blockedLine</code> at two sites &mdash; <i>You logged pain in the last 7 days.</i> &rarr; <i>An exercise was flagged in the last 7 days.</i> <b>Ten pins added (S50):</b> both specimens verbatim; the corpus &mdash; every note in <code>CHADY_EXPORT</code> with a stated boolean per note, traced to a &sect;24 line; <b>the B-157 tripwire</b>, which sweeps his export, both builder shapes, his stamped store, his 22 Sep entry and ten seeds of the sample generator and fails BY NAME on any note nobody has ruled; retroactivity; &sect;24.2&rsquo;s four flagged edges; &sect;24.3&rsquo;s held exclusions; the measured over-trigger; the UX copy; and the 47-string behaviour hash. <b>Red-first against the named pre-fix tree, not W3&rsquo;s own run:</b> <code>git cat-file blob 97a8b32:logic.js</code> dropped beside this page &mdash; <b>all nine S50 tests go red, plus the three re-pins</b>, and the 47-string corpus hashes to <b>2457113290</b> there with <b>zero</b> of 47 matching, against <b>912574865</b> and 19 here. <b>The PM&rsquo;s two retroactivity numbers were verified, not assumed, and both hold:</b> <code>painState(sessions,&nbsp;"d1b")</code> is active and dated <b>2026-09-22</b> (ordinal, latest entry wins &mdash; and the 12 Sep session ALONE also fires, so the notice was already owed seventeen days ago), and <code>painWindow(...,&nbsp;"2026-09-29",&nbsp;7)</code> is <b>not</b> active because <code>from</code> is 23 Sep &mdash; asserted from both sides, at 8 days it IS active and on 28 Sep the 7-day window still reached it, so the boundary is the boundary and not blindness. <b>Over-trigger, measured, because it is the P1 risk of a wider list:</b> over the real-data corpus (his six 12 Sep notes, his 22 Sep note, the five <code>DEMO_NOTES</code>) <b>2 of 10 fire and both are his injury notes</b>; over all 63 distinct note-position strings in this file, <b>16 matched on 97a8b32 and 17 here &mdash; one new match, and it is his 12 Sep note</b>; over all 12,402 distinct string literals in <code>tests.html</code> + <code>logic.js</code> + <code>index.html</code>, <b>145 &rarr; 150, five new, every one of them the new list&rsquo;s own fragments quoted in prose, zero lost</b>. The generator&rsquo;s own output over ten seeds fires nothing and suppresses no V1 offer. <b>Zero stored bytes, verified as bytes and not as intent:</b> the four stores seeded with his export, the whole suite run, then re-read &mdash; <code>phat:v1:log</code> 1054, <code>bw</code> 63, <code>plans</code> 30, <code>prefs</code> 33, all four byte-identical, <code>PHAT_KEY_WRITES</code> empty. <b>One finding, pre-existing and not from this order (P3):</b> that same sweep shows the suite leaves three junk keys &mdash; <code>getItem</code>, <code>setItem</code>, <code>removeItem</code> &mdash; in <code>localStorage</code> on the app&rsquo;s origin, because the B-20 storage spy assigns to the <code>localStorage</code> INSTANCE and Chromium turns that into a stored key. Not a <code>phat:*</code> key, so the tripwire cannot see it, and the app never reads those names; the fix is to spy on <code>Storage.prototype</code> as the line-408 spy already does. <b>Manual item 15 added:</b> the notice is about to appear on his real <code>d1b</code> card for a note written on 22 Sep, and no assertion can see a notice arriving retroactively on a card he has already read many times without it. Before it: <b>978 / 978 / 0 on wo-014-library @ 700678d + S49 - 1.3 to 2.1 s in Chrome from file://, green on a Tuesday, a Monday, a Sunday and a Wednesday (the clock forced forward whole days, so the runs also cross a month boundary).</b> <b>WO-014 W6</b> (the library, movement identity and the swap, QA pass, 2026-09-29) did two things. <b>First, it re-pinned 24 moved expectations ONE AT A TIME, each with the reason it moved on its own line</b> &mdash; never in bulk, because bulk is how a real regression hides inside a schema bump. Four classes: the <code>SCHEMA_VERSION</code> 6 &rarr; 7 literals; the migrate-note counts on a v1 / v3 / v4 / v5 / v6 store (the v7 pass takes v5&rsquo;s idiom, so it reports from every store below it); <code>removeExercise</code>&rsquo;s undo key list and <code>buildSession</code>&rsquo;s entry key order <code>sets,note,rx</code> &rarr; <code>sets,note,mv,rx</code>; and every fixture whose EXPECTED side is rebuilt through <code>buildSession</code>. <b>That last class forced a fixture correction worth knowing about:</b> <code>CHADY_SESSION()</code> is BUILT, so since schema 7 it carries six <code>mv</code> keys his stored session does not &mdash; and <code>CHADY_STORE()</code> claimed to be a schema-5 store while holding a schema-7 key. <code>CHADY_SESSION_PRE7()</code> is now the bytes he actually has, used wherever the subject is a migration, a merge against the server&rsquo;s row or a restore; the old fingerprint (<b>588696318</b>) is re-asserted over it, so the pin now reads &ldquo;the builder gained exactly six keys and moved nothing else&rdquo; rather than &ldquo;a number changed&rdquo;. The SERVER hash (<b>1528318698</b> over 950 chars) did not move and must never move. <b>Second, it added S49 (38 pins):</b> D1 / D2 (his 12 Sep bytes as a string comparison, and the two B-131 entries individually, by id), D5 / D6 / D7 on the plan store &mdash; <b>the one store any migration in this repo has ever written CONTENT to</b> &mdash; <code>mvSkips</code>&rsquo; four states, the permanent d1h / d5i separation (B-46), B-136&rsquo;s swap poisoning, MV1.2&rsquo;s disclosed fallback with the 56 / 57-day boundary either side, H1.3d and coach &sect;22.4.5a&rsquo;s gate, the Trend exclusion, <b>three mutants</b>, the save side (<code>sw</code> derived, never asked for; the no-loss refusal; B-112 re-run for the three new keys), and <b>the unswapped differential</b> &mdash; 16,128 verdicts and 169 history reads over all 42 slots hashing to <b>2038377080</b>, which is the number <code>main @ 6a87a3a</code>, <code>feb3f88</code> and <code>9d4336b</code> all produce. Nothing this order added moved an answer on a card he has not swapped, and it is now one assertion rather than one scratchpad run. <b>Three red-first proofs, each run against the named pre-fix tree</b> by swapping <code>logic.js</code> from <code>git cat-file blob</code> under this same <code>tests.html</code>: the swapped verdict goes red on <code>b78439d</code>, B-152 on <code>9d4336b</code>, the Trend exclusion on <code>feb3f88</code>. <b>One honest qualification on the third, and it is a finding rather than a footnote:</b> the ENGINE was already correct at <code>feb3f88</code> &mdash; the four point-and-delta assertions run GREEN there &mdash; because B-144 was never in <code>e1rmByDate</code>. It was in the CALLER, which is <code>index.html</code> and out of this page&rsquo;s reach; what goes red on <code>feb3f88</code> is the COUNT. <code>PHAT.liftSeries(sessions, plan, lift)</code> is the B-20 ask, and until it lands the chart&rsquo;s exclusion is verified by reading and by manual item 13. <b>Two assertions stopped measuring the machine.</b> The S9 harness budget (2000 ms, which failed 4 of 16 runs at 2087&ndash;2359 ms with nothing in the code changed) and S44&rsquo;s 400 ms merge budget now carry ceilings no legitimate run can reach (60 s and 10 s) and PRINT the measured number on every run, pass or fail. &ldquo;Suite green&rdquo; in this repo had partly meant &ldquo;the machine was not busy&rdquo; &mdash; the same class as B-146&rsquo;s day-of-the-week red, found the same way. <b>The four verification runs above measured 1337 / 1861 / 2076 / 1622 ms with nothing in the code changing between them: the Sunday run would have FAILED the old 2000 ms budget.</b> <b>Three things reported and deliberately not fixed:</b> the Trend disclosure can over-count (its predicate is an ENTRY with a completed set, the line&rsquo;s is a SET at &le; 8 reps &mdash; unreachable on his current slots); <code>setExerciseMovement</code> leaves <code>fig</code>, <code>cue</code> and <code>implement</code> behind, so a permanently re-pointed slot renders the replaced movement&rsquo;s photograph for ever; and W10&rsquo;s unbriefed <code>!mvc.added</code> guard on the session card&rsquo;s D8 line, which is the right behaviour arrived at by the wrong route. All three, plus W11&rsquo;s three uncertainties, are in the contract list. <b>Third, it WORKED THE TWO CLICK LISTS</b> &mdash; W5&rsquo;s A&ndash;H and W10&rsquo;s nine &mdash; by driving the real <code>index.html</code> in Playwright at 393 &times; 852 over a local static server, because the swap sheet is DOM and does not belong in a pure assertion. <b>Every item on both lists was worked and the full evidence is &ldquo;Already proven&rdquo; item 42</b>, including the three taps counted, the no-loss refusal with the typed set still on screen, <i>Swapped to &hellip;. Not compared to last session.</i> on the card and on Summary, a SECOND session on the same movement taking 4a&ndash;4d instead, MV1-C4 rendering <b>without</b> &ldquo;on the chart&rdquo;, 3d beating C4 on a swapped card, no <code>.tlex</code> node on an unswapped store, the four library failure modes all landing on one named state with a session still saving, and D7&rsquo;s recover keep written once with <code>raw</code> byte-identical to the pre-boot bytes. <b>Two things the lists asked for could not be run as written and are on the record:</b> <code>d1c</code> is unreachable on any fresh device (<code>cut: 1</code> + Rule V1, and <code>includeCut</code> no longer exists), so <code>d3b</code> is the unmapped slot that is testable; and <code>index.html</code> from <code>file://</code> cannot fetch the library at all, so the swap can only be driven over <code>http</code>. Both are in the contract list. Before it: <b>Today: 940 / 940 / 0 on wo-013-read-before-write @ b81e958 - 1.3 s in Chrome from file://</b> <b>WO-013 W4</b> (the store lock, the QA re-run, 2026-09-13) added <b>nothing</b> to the pure suite: the whole change is <code>index.html</code> &mdash; <code>withStoreLock</code> around <code>save()</code>, the session id minted under the <code>LOG</code> lock in <code>finish()</code>, and <code>mergeOnOpen</code>&rsquo;s paint gate &mdash; none of it reachable from this page. <code>logic.js</code> is untouched, so the count is the same 940 and every test is the same test. <b>The browser half is &ldquo;Already proven&rdquo; item 41</b>: the two-tab race <b>200 / 200 trials twelve on disk</b> (W3&rsquo;s B-135 rig, which lost one in 6&ndash;7 of 10 on <code>a6efde0</code>), the 400 minted ids all distinct (53 pairs adjacent &mdash; the same-millisecond bump firing), the ordering soak (the other tab&rsquo;s <code>storage</code> event ahead of the lock grant 199 / 200 with one tie at the clock&rsquo;s 100 &micro;s, and by dispatch sequence number 60 / 60 with the disk read at grant already fresh 60 / 60), <code>navigator.locks</code> deleted &rarr; every store saves unlocked with no error, a rejecting request &rarr; one warn and the save, a throw under the lock &rarr; propagates and the lock is released, <b>B-134</b> &rarr; the Home count repaints with no navigation and still not over an open draft, the <code>blockWrites</code> and <code>buildSession</code>-null refusals in place with the lock released and the other tab&rsquo;s save proceeding, 16 / 16 single-tab writes byte-identical to <code>a6efde0</code>, <code>offline-check.mjs</code> PASS. <b>Pass for release.</b> <b>One new finding (P3, introduced by W4):</b> a double-tap on Save whose second dispatch lands before the first&rsquo;s lock grant throws <code>TypeError: Cannot read properties of null (reading 'date')</code> from the lock body after the first tap has saved and cleared the draft &mdash; eleven on disk (never a duplicate), Home correct, no error line; the fix is a re-entrancy guard on <code>finish()</code>, not a null check that reaches the loud line. <b>One follow-up to number:</b> session ids are <code>Date.now()</code> and only the lock makes them unique on one device; two devices saving offline in the same millisecond mint one id and the first merge collapses them; string ids with entropy &mdash; <code>buildSession</code>, <code>validateSessionDoc</code>, the overlay, the merge and <code>client_id text</code> already accept them. Before it: <b>940 / 940 / 0 on wo-013-read-before-write @ 4041d68 - 1.3 s in Chrome from file://.</b> <b>WO-013 W3</b> (read before write, the QA pass, 2026-09-13) folded nothing new into the pure suite: <b>W1</b> already added <b>S48</b> (35 pins, 905 &rarr; 940) &mdash; <code>overlayStore</code> per store (sessions union by id, bw by date, plans by planId, prefs key by key with <code>gym</code> deep, <code>backup</code> newest-<code>at</code>, <code>merge.keptAt</code> never un-spent), the shrink guard, <code>writeStep</code> on a <code>readRaw</code> result, <code>metaPatch</code>, single-tab byte-identity for the four stores against <code>main @ 65465c3</code>&rsquo;s builders, and the two-tab shapes as pure calls (B-76 / B-124 / B-128 / B-132). All 35 pass; the unmutated suite is 940 / 940 / 0. <b>Four overlay mutants</b> on copies, four killed by S48: <i>union&rarr;replace</i> (A3 / A4 red), <i>drop ignored</i> (A6 red), <i>shrink guard off</i> (A9 red), <i>replace honoured without the flag</i> (A1 / A2 &times; 27 red). <b>The browser half is &ldquo;Already proven&rdquo; item 40</b>: the two-tab rig (Playwright, two pages on one context, CDN + Supabase blocked, <code>sync.js</code> stubbed to an in-process backup) &mdash; Q1 B-76 (1 over 10, and the ten never pushed &rarr; eleven on disk, push stamps <code>n:11</code>, S44&rsquo;s local hole closed), Q2 B-128 (both orders + a stale unit tap over an override), Q3 B-124 (a held pull, the stamp not regressed, <code>recover:log</code> once, <code>keptAt</code> never backwards), Q4 his exact shape (unit <code>lb</code>, override and both bars survive a merge + a bar save + a finish; <code>diag.html</code> prints <code>unit:&quot;lb&quot;</code>), Q5 single-tab byte-identity (14 / 15 writes identical to <code>main @ 65465c3</code>; the one diff is the WO &sect;0.1 stated exception &mdash; a first unit tap on a device with no <code>gym</code> key writes <code>{unit}</code> without <code>bars:[]</code>), Q6 the draft untouched, Q7 <code>recover:*</code> keeps byte-shape identical to <code>main</code>, Q8 the mid-session unreadable refusal. <b>Two findings, both new:</b> <b>B-134 (P3)</b> a B-123 merge that writes NOTHING (the disk already held what the server had) adopts into memory correctly &mdash; memory, disk and the backup stamp all read eleven &mdash; but the Home count is not repainted until the next navigation, because the final render is gated on <code>total</code> (what this merge wrote) not on <code>adopted</code>; no data lost. <b>B-135 (P1)</b> two tabs finishing DISTINCT sessions in the same tick can lose one (7 / 10 trials: disk held eleven, not twelve &mdash; the WO&rsquo;s attack 3 requires twelve); the shrink guard cannot catch it because <code>save()</code> checks against the writer&rsquo;s STALE read, not the disk at write time, and <code>localStorage</code> has no atomic read-modify-write. Strictly better than <code>main</code> (which clobbers the whole store on any concurrent write); the interim &ldquo;close the other tabs&rdquo; is the mitigation. Before it: <b>905 / 905 / 0 on wo-012b-override @ 1071542 - 1.2 s in Chrome from file://.</b> <b>WO-012b</b> (the override records only what he tapped, QA pass, 2026-09-13) added <b>nothing</b>: the whole change is <code>index.html</code> view code and a boot pass over <code>prefs.gym.ex</code>, none of it reachable from this page (see the B-20 request below the tests: <code>migrateOverrides</code>, <code>recEngine</code>, <code>recCopy</code>, <code>recFrom</code>, <code>gymEngine</code> and <code>writeOverride</code>&rsquo;s merge are pure functions of their arguments and belong in <code>logic.js</code>). <code>logic.js</code> is untouched on the branch, so the count is the same 905 and every test is the same test. <b>The browser half is &ldquo;Already proven&rdquo; item 39</b>: his seeded state migrated once and never again, the eight observations from the order, the D6 diff against <code>main @ db3e0f2</code> over four profiles, Undo, and three findings &mdash; one observation from the order that does not hold as written (after a failed prefs write the chip&rsquo;s line 2 reads <code>Your default &middot; bar set for this exercise</code> until the next repaint, not <code>Set for this exercise</code>: the paint runs before the save resolves; P3), one lifetime the pass does not cover (a kg account&rsquo;s unmarked whole-mode record, the unit changed to lb in Settings, then a bar tap before the next launch stamps <code>v:2</code> with <code>au: kg</code> and the pass never runs on it; P3), and a stated consequence of the PM&rsquo;s rule (a bare <code>{au: kg}</code> on a lb account &mdash; item 38&rsquo;s D3 literal &mdash; is removed by the pass, one chip tap to put back). Before it: <b>905 / 905 / 0 on wo-012-default-unit @ 34f0a68 + S47 - 1.3 s.</b> <b>S47</b> (WO-012 W5, the QA pass, 2026-09-13) added 8: <b>U1&rsquo;s three loads re-derived</b> with QA&rsquo;s own rounding (a floor-and-fraction, not <code>roundGrid</code>: 77 / 86 / 51 &rarr; 170 / 189.5 / 112.5; the coach&rsquo;s instruction figures 175.5 not 175, 115.5, 181, 160, 195, 200.5, 118, 104.5; his own d5a target 55 &rarr; 121.5; every added weight his lb card printed on 2026-09-13 &mdash; 44 / 68.5 / 16.5 / 27.5 / 33 on the bar, 150 / 170 / 139 / 92.5 / 132.5 with none &mdash; and <code>Last 44 lb total &times; 12</code> for the empty bar); <b>the strip-invariant over S41&rsquo;s own builders</b> (BB20 / BB45 / KGB / LBN &times; 7 slots &times; 10 loads &times; 8 rep patterns: a built set is byte-identical on a lb and a kg card, x and x2; a kg-direct set strips its one bracket to the kg string, N by QA&rsquo;s rounding of the K before it, never after an em dash; &sect;18.1 example 1 and L3&rsquo;s SP1 from a built source on a lb card equal S41&rsquo;s pins); <b>SD1&rsquo;s floor-with-tolerance boundary recomposed by hand</b> (125 lb on the 20 kg bar is 76.7, so 76.45 seeds 125 and 76.44 seeds 120; 170 lb is 77.1, so 76.85 / 76.84 &rarr; 170 / 165; 57.5 kg on the bar is 77.5, so 77.25 / 77.24 &rarr; 57.5 / 55; his 40 kg &rarr; 40 lb, 51 kg &rarr; 65 lb, the empty bar &rarr; nothing; a 2,500-prior sweep); <b>a second 0% generator</b> (mulberry32 seed 20260913, 4,000 random hypertrophy sessions over every hyp slot with &plusmn;0.1&ndash;0.3 / 2.5 kg and &plusmn;1 rep perturbations: no <code>up 0%</code> / <code>down 0%</code>, every 4d percentage equals QA&rsquo;s own <code>Math.round</code> and <code>matched</code> iff 0, p = 0 reached 100+ times); <b><code>cardModeFor</code>&rsquo;s every tier as a table under unit lb / kg / ABSENT</b> (chip, draft, typed, override the same either way; <code>default</code> only with a unit set and then a WO-010 ld is not read; <code>history</code> only while absent; <code>pounds</code> reads as absent); <b><code>readGymProfile</code> over 600 random profiles</b> (ok always true, the bars back as numbers in order every time, a bad unit / ex map / override dropped and named, never a bar; the whole gym a string &rarr; ok false, no throw); and <b>D8&rsquo;s pure half</b> (restorePayload&rsquo;s document and mergeStores / mergeSteps carry and write no prefs key). Nine <code>logic.js</code> mutants on copies, nine killed, eight by S47 (LOAD_EQ 0.2, the 0% branch back, history over default, a bad override refusing whole, 1 lb display, nearest instead of floor on the seed, a bracket on a built set, a bad override kept) and the ninth (ties up) by S45. <b>The browser half is &ldquo;Already proven&rdquo; item 38</b>: D1&ndash;D8 observed on his session, the six attacks, the D6 diff against <code>main @ 81fc0b8</code>, and four findings &mdash; two on the row (B-76-class two-tab wipe of the unit and of an override from a stale tab), one P2 (Settings shows neither <code>kg</code> nor <code>lb</code> pressed while the unit is absent; spec 21.1 and the code&rsquo;s own comment say kg), one P3 (at 200 % text the lb ghost row overflows the viewport by 29 px and the chip changes height on a tap). Before it: <b>897 / 897 / 0.</b> <b>S46</b> (WO-012 §21.13, backend, 2026-09-13) added 32: <b>Rule EQ1</b> — <code>LOAD_EQ = 0.25</code> kg beside <code>LD_TOL</code> and not merged with it, at exactly four sites (P1’s <code>backoff</code> and <code>mixed</code>, <code>workingBuild</code>, T1 clause (c)); the coach’s §21.13.3 #1–#11 with every <i>Must not print</i> (<code>Sets not matched: 76.9 / 77 / 77 kg</code> and <code>Repeat</code> gone from #1, <code> or above</code> from #3, <code>130.5</code> from the tie in #4); the boundary on P1 and on T1 (0.25 one load, 0.26 two); <b>T1 example 5 pinned null-then-date</b> — completed 77, failed twice at the seeded 77.1 (170 lb): the pre-EQ1 file returned null (Node, 2026-09-13), now T1 fires; #6 (77.3) still null, #7 (76.9 on the bar) still fires; <b>H1.4d on the printed percentage</b> — #8 <code>Volume down 0%</code> and #9 <code>Volume up 0%</code> both <code>Volume matched.</code>, #10’s real 3% untouched, the −0.5% / +0.5% asymmetry of <code>Math.round</code> pinned as a known fact, and <b>the 0% strings unreachable as a meta-test</b> over 3,200 H1 verdicts with ±0.1 / ±0.2 kg priors (284 <code>up 0%</code> and 388 <code>down 0%</code> on the pre-EQ1 file, 0 here); <b>the kg-direct differential re-run</b> — 580,608 verdicts byte-identical to the pre-EQ1 file in Node (hash 1438967905 on both, 0 diffs), every 13th case pinned in the browser (44,663, hash 2338777240 computed against the PRE-EQ1 file); <b>Rule SD1</b> — <code>seedFor(priorW, mode)</code> and <code>seedInUnit(prevSet, mode)</code>, §21.13.5 #1–#10 (77 → 125 / 170, 78 → 125 <i>not 130</i>, 86 → 145 / 190, 51 → 65 / 110, 21 on the bar → null <i>not 0, not 5</i>, same build 127 verbatim, lb prior on a kg-bar card → 55, kg-direct card 76.9, the seed idempotent under re-snap), the LOAD_EQ boundary on the seed (76.45 → 125, 76.44 → 120), garbage → null never 0, and a 10,000-prior sweep proving every seed is on its grid, within LOAD_EQ above the prior or under it, and one step more is not. The S45 pin <code>Sets not matched: 76.9 / 77 / 77 kg</code> is re-pinned to P1.4 in S45: it was the coach’s open item and the coach closed it. Before it: <b>865 / 865 / 0.</b> <b>S45</b> (WO-012 W3, backend, 2026-09-13) added 23: <code>displayNum</code> / <code>displayLoad</code> at <b>0.5 lb, ties down</b> (coach &sect;21.3: 77 &rarr; 170, 86 &rarr; 189.5, 51 &rarr; 112.5, 79.5 &rarr; 175.5, 52.5 &rarr; 115.5, 62.4 &rarr; 137.5; the kg path r1 byte for byte; the tie on <code>roundGrid</code> where it is exact, the kg-in boundary either side of it); <code>instr</code>, Rule U1&rsquo;s token; <code>defaultMode</code> (level 1, the first profile bar on the 13 <code>bb</code> slots only, listed once for UX &sect;21.12 #5) and <code>overrideMode</code> (level 2); <b><code>cardModeFor</code>&rsquo;s seven tiers</b> (<code>chip &gt; draft &gt; typed &gt; override &gt; default &gt; history &gt; kg</code>, the mode beside the tier, never inside it), the coordinator&rsquo;s <b>D3</b> replay across all 42 slots, and the ruling that <b>history fires only while <code>prefs.gym.unit</code> is absent</b>; <code>validateGymProfile</code>&rsquo;s <b>per-key refusal</b> (D4: <code>unit: pounds</code> and <code>ex.d3c: stone</code> each dropped by name with <code>ok</code> still true, ten malformed overrides named by key / reason / sub-field, the S40 <code>{ok, problems}</code> bytes untouched) and <code>readGymProfile</code>, the profile the boot adopts; <b>the coach&rsquo;s 23 worked examples for U1</b> with every <i>Must not print</i> (<code>Go to 79.5 kg (175.5 lb) next session.</code>, <code>Stay at 77 kg (170 lb) until &hellip;</code>, zero-load <code>Add 2.5 kg (5.5 lb)</code>, <code>Drop to bodyweight</code> with no bracket, SP1 <code>52.5 kg (115.5 lb).</code> and its flag, the I2 line untouched, L1&rsquo;s lb-built form byte-identical on BB20 / BB45 / KGB / LBN / a built SP1 source, the card&rsquo;s default bar never reaching the verdict); <b>THE INVARIANT as a meta-test</b> over 7 slots &times; 14 loads &times; 12 rep patterns &times; 2 prevs (strip the one <code> (N lb)</code> &rarr; the kg string; &le; 1 bracket, exactly 1 iff an instruction load &gt; 0 is named; N recomputes from the K before it; never after an em dash, never <code>(0 lb)</code>); <b>D6 as a differential</b> (unit <code>kg</code> === unit absent === no key, JSON-identical, verdict and <code>speedLoad</code>; <code>speedLoad</code> gained <code>built</code> and a 6th argument, <code>speedFlagText</code> reads the result object); and <code>priorInUnit</code> / <code>priorGhost</code> through <b>his session</b> on a 20 kg bar card (<code>Last 44 lb total &times; 12</code>, then 44 / 68.5 / 88 / 110 lb) and a no-bar card (44 / 88 / 112.5 / 132.5 / 154.5 lb), <b>with the round-trip pinned as it is</b>: a 77 kg prior seeded as 125.5 lb on the 20 kg bar stores <b>76.9</b>, as 170 lb with no bar <b>77.1</b>; 86 and 51 come back exact; worst drift over 0.2..250 kg is 0.2 kg; and P1 reads 76.9 / 77 / 77 as <i>Sets not matched</i> &mdash; the engine is not tolerant to the display rounding, which is the coach&rsquo;s &sect;21.12 #2 and not W3&rsquo;s to fix. One pin caught a defect before it shipped: <code>priorInUnit</code> read an <code>ld</code> that does not recompose to its <code>w</code> as &ldquo;same build&rdquo; and returned its <code>add</code>; it now classifies through <code>buildOf</code> like every rule. Before it: <b>842 / 842 / 0.</b> <b>S44</b> (WO-011 W5, the QA pass on the
+<b>Today: 1026 / 1026 / 0 on wo-014-library @ 69923dc + S53 - 1.5 s in Chrome from file://, green on all seven weekdays (the clock was forced to each of Mon 28 Sep - Sun 4 Oct 2026) and again on 31 Dec 2026, 1 Jan 2027, 28 Feb 2027 and 29 Feb 2028, so the runs cross a month, a year and a leap-day boundary.</b>
+<b>NO HELD REDS.</b> <b>S53 is the WO-018 T3 / WO-014 deploy gate</b> and adds 15: Rule TW1c.1 under <code>cycleLine</code>
+(the twMin-3 form pinned byte-identical to <code>main</code>, the <code>ul2</code> form, twelve unusable plan shapes falling
+back to <code>three</code>, and the twMin-1 branch proved <em>unreachable</em> rather than asserted to be),
+<code>tierLines</code>&rsquo; explain sentence under <b>both</b> of its field names (<code>cycleLine.explain</code> and
+<code>volumeTier.tierNote</code>), <code>copyPlan</code>&rsquo;s <code>derivedFrom</code> three copies deep on all five shipped
+plans, <b>ST1&rsquo;s provenance gate</b> (a copy of <code>ul2</code> is <code>generic</code>, never PHAT&rsquo;s diagnosis - the
+one that had no assertion at all), <code>keyLiftDisclosure</code> naming the lost lift in all twenty cases, HD1.4&rsquo;s
+slot-derived range, HD1.3&rsquo;s zero-eligible silence, and a grep tripwire for the retired name of the six-week check.
+<b>Red-first, each against its own pre-fix blob:</b> <code>69923dc^</code> 1 red (and S53.A1, the regression pin, stays
+<em>green</em> there, which is what it is for), <code>ff4c52e^</code> 2, <code>b9a14ec^</code> 5, <code>b1e2f52</code> 6.
+<b>HOW <code>tierLines.count</code> REACHES A SCREEN</b> - the plumbing that was not obvious from outside - is written out
+in the S53 header comment: <code>cycleLine</code>&rsquo;s <code>text</code>/<code>row</code>, and nothing else;
+<code>volumeTier</code> never carries it, so a test written against <code>volumeTier</code> passes on any string at all. The one that was held - <i>W5 / section 9.1 - a key lift prescribed above 8 reps is UNREADABLE, not thin</i> - is <b>RESOLVED by <code>strength-coach</code>, not by QA</b>: coach-audit-addendum section 23.2.6 (<code>6b40d2f</code>) supersedes section 9.1&rsquo;s ST1 literal and orders it out of the build, and <code>722968f</code> deleted it. The test is re-pinned <b>on the ruling</b>, with the ruling quoted and the old expectation written out, and <b>two tripwires replace it</b>: <code>stallAdvice().unreadable</code> must be permanently <code>[]</code> across 36 subject shapes plus the forced <code>keyLifts</code> override, and the deleted sentence must appear in <b>no source this page can read</b> (this file in full, plus every function <code>PHAT</code> exports; <code>index.html</code> is out of a <code>file://</code> page&rsquo;s reach and is covered by a repo grep, run 2026-09-29, two hits, both in this file, both deleted here). <b>The field was KEPT rather than dropped &mdash; QA&rsquo;s call, with the reasons in the block comment above the tripwire.</b> <b>WO-014 also fixed <code>repairB131</code>&rsquo;s fresh-device sentence:</b> a device that never held his two sessions now reads <i>neither session is on this device</i> rather than <i>nothing on this device matches the correction table</i>, which read like a MISMATCH on Diana&rsquo;s phone. <b>Two expectations re-pinned</b> (S52.C4 and S52.C10, both with the old line written out), <b>five tests added</b> (the re-pin, the two tripwires, S52.C11 and S52.C12). <b>Red-first on <code>git cat-file blob 722968f^:logic.js</code>: five go red</b> &mdash; both tripwires, C4, C10 and C11. <b>Two do not, and that is stated rather than hidden:</b> the re-pinned drop test passes on both trees, because HD1.2 already dropped the lift and <code>722968f</code> removed only dead code; and S52.C12 passes on both, because it characterises his REAL export (<code>CHADY_EXPORT</code>, the server&rsquo;s bytes) against a change that was wording only. <b>S52.C11 files a finding:</b> the generic <i>nothing on this device matches the correction table</i> sentence is now <b>unreachable</b> &mdash; sixteen device states, zero hits, with the four-exit argument written out in the test and in the contract list below. <b>WO-017 W5</b> (the third misquote &mdash; S1a&rsquo;s 21-day restatement, QA pass, 2026-09-29). <b>W4 moved two sites of one misquote and this one survived, which is the finding:</b> Rule S1a&rsquo;s stale branch <b>overwrites <code>out.lines</code> wholesale rather than rendering <code>S1_LINES</code></b>, so every assertion aimed at the array and every sweep of the array walked straight past <i>You noted pain on this on {date} &hellip; If it still hurts, see someone qualified to look at it.</i> &mdash; the copy that lands on his card three weeks after he wrote a note, when he is least able to check what he actually typed. <b>One moved expectation, with its reason on its own line:</b> the W5 / S1a 21-day pin, old sentence &rarr; UX &sect;22.12 row <b>#53</b>. <b>Two pins added (S51):</b> <b>S51.1</b> renders the new literal verbatim off <b>his own data</b> &mdash; <code>painState(CHADY_TWO(), &quot;d1b&quot;, &quot;2026-10-20&quot;)</code>, 28 days after his 22 Sep note &mdash; with <code>stale</code>, <code>active</code>, <code>days</code>, <code>date</code> (22 Sep, the later note, by ordinal), <code>lines.length === 1</code>, <code>lines[0] === text</code>, <code>dayMon</code> as the only interpolation at index 29, no ISO date on screen, and the same sentence one day earlier; <b>S51.2</b> extends W4&rsquo;s <code>You logged pain</code> tripwire to the whole retired family &mdash; <code>You logged pain</code>, <code>You noted pain</code>, <code>If it still hurts</code> &mdash; over <b>ten sources, every one of them a string an ENGINE RETURNED</b>, with the stale branch present twice (his real data and a synthetic one) because a fixture can be corrected and a rule cannot, plus a positive control proving the matcher can fail and a re-assertion that the two surviving members of the four-string family (#51 and the untouched referral line) are still in place. <b>Red-first against the named pre-fix tree:</b> <code>git cat-file blob 7cf0008:logic.js</code> dropped beside this page &mdash; <b>S51.1 and S51.2 both go red</b> (S51.2 names nine hits by source, including both new strings on the stale branch through his own data), alongside the three W4 re-pins and the new one, <b>6 red in all</b>. <code>logic.js</code> at <code>9e7b689</code> contains <b>zero</b> occurrences of all three retired strings. Zero <code>phat:*</code> bytes written (the S50 tripwire). Before it: <b>WO-017 W4</b> (the note field was deaf, and to what &mdash; B-155, B-156, B-157, QA pass, 2026-09-29). <b>The defect, because every assertion below hangs off it:</b> his <code>d1b</code> notes of 12 and 22 Sep both say his arm has not recovered. <b>Both returned false from the shipped detector.</b> He reported an injury twice, ten days apart, in the field the app provides for it, and the app said nothing for seventeen days &mdash; no held load on that slot, no referral line, no <code>painWindow</code> entry. <b>It survived 978 tests because the suite pinned the word list against ITSELF</b> and never once ran <code>painFlag</code> over a note he actually wrote; <code>CHADY_EXPORT</code> has carried his prose since WO-011 and no assertion read <code>.note</code>. That is B-157 and it is the reason this section is shaped the way it is. <b>Three moved expectations, one at a time, each with its reason on its own line:</b> <code>PAIN_WORDS</code> 30 &rarr; 41 fragments / 21 &rarr; 29 entries with the &sect;24.2 regex source (and the old 30 re-asserted as a PREFIX, so an append and an edit are two different red lines), and S2b&rsquo;s <code>blockedLine</code> at two sites &mdash; <i>You logged pain in the last 7 days.</i> &rarr; <i>An exercise was flagged in the last 7 days.</i> <b>Ten pins added (S50):</b> both specimens verbatim; the corpus &mdash; every note in <code>CHADY_EXPORT</code> with a stated boolean per note, traced to a &sect;24 line; <b>the B-157 tripwire</b>, which sweeps his export, both builder shapes, his stamped store, his 22 Sep entry and ten seeds of the sample generator and fails BY NAME on any note nobody has ruled; retroactivity; &sect;24.2&rsquo;s four flagged edges; &sect;24.3&rsquo;s held exclusions; the measured over-trigger; the UX copy; and the 47-string behaviour hash. <b>Red-first against the named pre-fix tree, not W3&rsquo;s own run:</b> <code>git cat-file blob 97a8b32:logic.js</code> dropped beside this page &mdash; <b>all nine S50 tests go red, plus the three re-pins</b>, and the 47-string corpus hashes to <b>2457113290</b> there with <b>zero</b> of 47 matching, against <b>912574865</b> and 19 here. <b>The PM&rsquo;s two retroactivity numbers were verified, not assumed, and both hold:</b> <code>painState(sessions,&nbsp;"d1b")</code> is active and dated <b>2026-09-22</b> (ordinal, latest entry wins &mdash; and the 12 Sep session ALONE also fires, so the notice was already owed seventeen days ago), and <code>painWindow(...,&nbsp;"2026-09-29",&nbsp;7)</code> is <b>not</b> active because <code>from</code> is 23 Sep &mdash; asserted from both sides, at 8 days it IS active and on 28 Sep the 7-day window still reached it, so the boundary is the boundary and not blindness. <b>Over-trigger, measured, because it is the P1 risk of a wider list:</b> over the real-data corpus (his six 12 Sep notes, his 22 Sep note, the five <code>DEMO_NOTES</code>) <b>2 of 10 fire and both are his injury notes</b>; over all 63 distinct note-position strings in this file, <b>16 matched on 97a8b32 and 17 here &mdash; one new match, and it is his 12 Sep note</b>; over all 12,402 distinct string literals in <code>tests.html</code> + <code>logic.js</code> + <code>index.html</code>, <b>145 &rarr; 150, five new, every one of them the new list&rsquo;s own fragments quoted in prose, zero lost</b>. The generator&rsquo;s own output over ten seeds fires nothing and suppresses no V1 offer. <b>Zero stored bytes, verified as bytes and not as intent:</b> the four stores seeded with his export, the whole suite run, then re-read &mdash; <code>phat:v1:log</code> 1054, <code>bw</code> 63, <code>plans</code> 30, <code>prefs</code> 33, all four byte-identical, <code>PHAT_KEY_WRITES</code> empty. <b>One finding, pre-existing and not from this order (P3):</b> that same sweep shows the suite leaves three junk keys &mdash; <code>getItem</code>, <code>setItem</code>, <code>removeItem</code> &mdash; in <code>localStorage</code> on the app&rsquo;s origin, because the B-20 storage spy assigns to the <code>localStorage</code> INSTANCE and Chromium turns that into a stored key. Not a <code>phat:*</code> key, so the tripwire cannot see it, and the app never reads those names; the fix is to spy on <code>Storage.prototype</code> as the line-408 spy already does. <b>Manual item 15 added:</b> the notice is about to appear on his real <code>d1b</code> card for a note written on 22 Sep, and no assertion can see a notice arriving retroactively on a card he has already read many times without it. Before it: <b>978 / 978 / 0 on wo-014-library @ 700678d + S49 - 1.3 to 2.1 s in Chrome from file://, green on a Tuesday, a Monday, a Sunday and a Wednesday (the clock forced forward whole days, so the runs also cross a month boundary).</b> <b>WO-014 W6</b> (the library, movement identity and the swap, QA pass, 2026-09-29) did two things. <b>First, it re-pinned 24 moved expectations ONE AT A TIME, each with the reason it moved on its own line</b> &mdash; never in bulk, because bulk is how a real regression hides inside a schema bump. Four classes: the <code>SCHEMA_VERSION</code> 6 &rarr; 7 literals; the migrate-note counts on a v1 / v3 / v4 / v5 / v6 store (the v7 pass takes v5&rsquo;s idiom, so it reports from every store below it); <code>removeExercise</code>&rsquo;s undo key list and <code>buildSession</code>&rsquo;s entry key order <code>sets,note,rx</code> &rarr; <code>sets,note,mv,rx</code>; and every fixture whose EXPECTED side is rebuilt through <code>buildSession</code>. <b>That last class forced a fixture correction worth knowing about:</b> <code>CHADY_SESSION()</code> is BUILT, so since schema 7 it carries six <code>mv</code> keys his stored session does not &mdash; and <code>CHADY_STORE()</code> claimed to be a schema-5 store while holding a schema-7 key. <code>CHADY_SESSION_PRE7()</code> is now the bytes he actually has, used wherever the subject is a migration, a merge against the server&rsquo;s row or a restore; the old fingerprint (<b>588696318</b>) is re-asserted over it, so the pin now reads &ldquo;the builder gained exactly six keys and moved nothing else&rdquo; rather than &ldquo;a number changed&rdquo;. The SERVER hash (<b>1528318698</b> over 950 chars) did not move and must never move. <b>Second, it added S49 (38 pins):</b> D1 / D2 (his 12 Sep bytes as a string comparison, and the two B-131 entries individually, by id), D5 / D6 / D7 on the plan store &mdash; <b>the one store any migration in this repo has ever written CONTENT to</b> &mdash; <code>mvSkips</code>&rsquo; four states, the permanent d1h / d5i separation (B-46), B-136&rsquo;s swap poisoning, MV1.2&rsquo;s disclosed fallback with the 56 / 57-day boundary either side, H1.3d and coach &sect;22.4.5a&rsquo;s gate, the Trend exclusion, <b>three mutants</b>, the save side (<code>sw</code> derived, never asked for; the no-loss refusal; B-112 re-run for the three new keys), and <b>the unswapped differential</b> &mdash; 16,128 verdicts and 169 history reads over all 42 slots hashing to <b>2038377080</b>, which is the number <code>main @ 6a87a3a</code>, <code>feb3f88</code> and <code>9d4336b</code> all produce. Nothing this order added moved an answer on a card he has not swapped, and it is now one assertion rather than one scratchpad run. <b>Three red-first proofs, each run against the named pre-fix tree</b> by swapping <code>logic.js</code> from <code>git cat-file blob</code> under this same <code>tests.html</code>: the swapped verdict goes red on <code>b78439d</code>, B-152 on <code>9d4336b</code>, the Trend exclusion on <code>feb3f88</code>. <b>One honest qualification on the third, and it is a finding rather than a footnote:</b> the ENGINE was already correct at <code>feb3f88</code> &mdash; the four point-and-delta assertions run GREEN there &mdash; because B-144 was never in <code>e1rmByDate</code>. It was in the CALLER, which is <code>index.html</code> and out of this page&rsquo;s reach; what goes red on <code>feb3f88</code> is the COUNT. <code>PHAT.liftSeries(sessions, plan, lift)</code> is the B-20 ask, and until it lands the chart&rsquo;s exclusion is verified by reading and by manual item 13. <b>Two assertions stopped measuring the machine.</b> The S9 harness budget (2000 ms, which failed 4 of 16 runs at 2087&ndash;2359 ms with nothing in the code changed) and S44&rsquo;s 400 ms merge budget now carry ceilings no legitimate run can reach (60 s and 10 s) and PRINT the measured number on every run, pass or fail. &ldquo;Suite green&rdquo; in this repo had partly meant &ldquo;the machine was not busy&rdquo; &mdash; the same class as B-146&rsquo;s day-of-the-week red, found the same way. <b>The four verification runs above measured 1337 / 1861 / 2076 / 1622 ms with nothing in the code changing between them: the Sunday run would have FAILED the old 2000 ms budget.</b> <b>Three things reported and deliberately not fixed:</b> the Trend disclosure can over-count (its predicate is an ENTRY with a completed set, the line&rsquo;s is a SET at &le; 8 reps &mdash; unreachable on his current slots); <code>setExerciseMovement</code> leaves <code>fig</code>, <code>cue</code> and <code>implement</code> behind, so a permanently re-pointed slot renders the replaced movement&rsquo;s photograph for ever; and W10&rsquo;s unbriefed <code>!mvc.added</code> guard on the session card&rsquo;s D8 line, which is the right behaviour arrived at by the wrong route. All three, plus W11&rsquo;s three uncertainties, are in the contract list. <b>Third, it WORKED THE TWO CLICK LISTS</b> &mdash; W5&rsquo;s A&ndash;H and W10&rsquo;s nine &mdash; by driving the real <code>index.html</code> in Playwright at 393 &times; 852 over a local static server, because the swap sheet is DOM and does not belong in a pure assertion. <b>Every item on both lists was worked and the full evidence is &ldquo;Already proven&rdquo; item 42</b>, including the three taps counted, the no-loss refusal with the typed set still on screen, <i>Swapped to &hellip;. Not compared to last session.</i> on the card and on Summary, a SECOND session on the same movement taking 4a&ndash;4d instead, MV1-C4 rendering <b>without</b> &ldquo;on the chart&rdquo;, 3d beating C4 on a swapped card, no <code>.tlex</code> node on an unswapped store, the four library failure modes all landing on one named state with a session still saving, and D7&rsquo;s recover keep written once with <code>raw</code> byte-identical to the pre-boot bytes. <b>Two things the lists asked for could not be run as written and are on the record:</b> <code>d1c</code> is unreachable on any fresh device (<code>cut: 1</code> + Rule V1, and <code>includeCut</code> no longer exists), so <code>d3b</code> is the unmapped slot that is testable; and <code>index.html</code> from <code>file://</code> cannot fetch the library at all, so the swap can only be driven over <code>http</code>. Both are in the contract list. Before it: <b>Today: 940 / 940 / 0 on wo-013-read-before-write @ b81e958 - 1.3 s in Chrome from file://</b> <b>WO-013 W4</b> (the store lock, the QA re-run, 2026-09-13) added <b>nothing</b> to the pure suite: the whole change is <code>index.html</code> &mdash; <code>withStoreLock</code> around <code>save()</code>, the session id minted under the <code>LOG</code> lock in <code>finish()</code>, and <code>mergeOnOpen</code>&rsquo;s paint gate &mdash; none of it reachable from this page. <code>logic.js</code> is untouched, so the count is the same 940 and every test is the same test. <b>The browser half is &ldquo;Already proven&rdquo; item 41</b>: the two-tab race <b>200 / 200 trials twelve on disk</b> (W3&rsquo;s B-135 rig, which lost one in 6&ndash;7 of 10 on <code>a6efde0</code>), the 400 minted ids all distinct (53 pairs adjacent &mdash; the same-millisecond bump firing), the ordering soak (the other tab&rsquo;s <code>storage</code> event ahead of the lock grant 199 / 200 with one tie at the clock&rsquo;s 100 &micro;s, and by dispatch sequence number 60 / 60 with the disk read at grant already fresh 60 / 60), <code>navigator.locks</code> deleted &rarr; every store saves unlocked with no error, a rejecting request &rarr; one warn and the save, a throw under the lock &rarr; propagates and the lock is released, <b>B-134</b> &rarr; the Home count repaints with no navigation and still not over an open draft, the <code>blockWrites</code> and <code>buildSession</code>-null refusals in place with the lock released and the other tab&rsquo;s save proceeding, 16 / 16 single-tab writes byte-identical to <code>a6efde0</code>, <code>offline-check.mjs</code> PASS. <b>Pass for release.</b> <b>One new finding (P3, introduced by W4):</b> a double-tap on Save whose second dispatch lands before the first&rsquo;s lock grant throws <code>TypeError: Cannot read properties of null (reading 'date')</code> from the lock body after the first tap has saved and cleared the draft &mdash; eleven on disk (never a duplicate), Home correct, no error line; the fix is a re-entrancy guard on <code>finish()</code>, not a null check that reaches the loud line. <b>One follow-up to number:</b> session ids are <code>Date.now()</code> and only the lock makes them unique on one device; two devices saving offline in the same millisecond mint one id and the first merge collapses them; string ids with entropy &mdash; <code>buildSession</code>, <code>validateSessionDoc</code>, the overlay, the merge and <code>client_id text</code> already accept them. Before it: <b>940 / 940 / 0 on wo-013-read-before-write @ 4041d68 - 1.3 s in Chrome from file://.</b> <b>WO-013 W3</b> (read before write, the QA pass, 2026-09-13) folded nothing new into the pure suite: <b>W1</b> already added <b>S48</b> (35 pins, 905 &rarr; 940) &mdash; <code>overlayStore</code> per store (sessions union by id, bw by date, plans by planId, prefs key by key with <code>gym</code> deep, <code>backup</code> newest-<code>at</code>, <code>merge.keptAt</code> never un-spent), the shrink guard, <code>writeStep</code> on a <code>readRaw</code> result, <code>metaPatch</code>, single-tab byte-identity for the four stores against <code>main @ 65465c3</code>&rsquo;s builders, and the two-tab shapes as pure calls (B-76 / B-124 / B-128 / B-132). All 35 pass; the unmutated suite is 940 / 940 / 0. <b>Four overlay mutants</b> on copies, four killed by S48: <i>union&rarr;replace</i> (A3 / A4 red), <i>drop ignored</i> (A6 red), <i>shrink guard off</i> (A9 red), <i>replace honoured without the flag</i> (A1 / A2 &times; 27 red). <b>The browser half is &ldquo;Already proven&rdquo; item 40</b>: the two-tab rig (Playwright, two pages on one context, CDN + Supabase blocked, <code>sync.js</code> stubbed to an in-process backup) &mdash; Q1 B-76 (1 over 10, and the ten never pushed &rarr; eleven on disk, push stamps <code>n:11</code>, S44&rsquo;s local hole closed), Q2 B-128 (both orders + a stale unit tap over an override), Q3 B-124 (a held pull, the stamp not regressed, <code>recover:log</code> once, <code>keptAt</code> never backwards), Q4 his exact shape (unit <code>lb</code>, override and both bars survive a merge + a bar save + a finish; <code>diag.html</code> prints <code>unit:&quot;lb&quot;</code>), Q5 single-tab byte-identity (14 / 15 writes identical to <code>main @ 65465c3</code>; the one diff is the WO &sect;0.1 stated exception &mdash; a first unit tap on a device with no <code>gym</code> key writes <code>{unit}</code> without <code>bars:[]</code>), Q6 the draft untouched, Q7 <code>recover:*</code> keeps byte-shape identical to <code>main</code>, Q8 the mid-session unreadable refusal. <b>Two findings, both new:</b> <b>B-134 (P3)</b> a B-123 merge that writes NOTHING (the disk already held what the server had) adopts into memory correctly &mdash; memory, disk and the backup stamp all read eleven &mdash; but the Home count is not repainted until the next navigation, because the final render is gated on <code>total</code> (what this merge wrote) not on <code>adopted</code>; no data lost. <b>B-135 (P1)</b> two tabs finishing DISTINCT sessions in the same tick can lose one (7 / 10 trials: disk held eleven, not twelve &mdash; the WO&rsquo;s attack 3 requires twelve); the shrink guard cannot catch it because <code>save()</code> checks against the writer&rsquo;s STALE read, not the disk at write time, and <code>localStorage</code> has no atomic read-modify-write. Strictly better than <code>main</code> (which clobbers the whole store on any concurrent write); the interim &ldquo;close the other tabs&rdquo; is the mitigation. Before it: <b>905 / 905 / 0 on wo-012b-override @ 1071542 - 1.2 s in Chrome from file://.</b> <b>WO-012b</b> (the override records only what he tapped, QA pass, 2026-09-13) added <b>nothing</b>: the whole change is <code>index.html</code> view code and a boot pass over <code>prefs.gym.ex</code>, none of it reachable from this page (see the B-20 request below the tests: <code>migrateOverrides</code>, <code>recEngine</code>, <code>recCopy</code>, <code>recFrom</code>, <code>gymEngine</code> and <code>writeOverride</code>&rsquo;s merge are pure functions of their arguments and belong in <code>logic.js</code>). <code>logic.js</code> is untouched on the branch, so the count is the same 905 and every test is the same test. <b>The browser half is &ldquo;Already proven&rdquo; item 39</b>: his seeded state migrated once and never again, the eight observations from the order, the D6 diff against <code>main @ db3e0f2</code> over four profiles, Undo, and three findings &mdash; one observation from the order that does not hold as written (after a failed prefs write the chip&rsquo;s line 2 reads <code>Your default &middot; bar set for this exercise</code> until the next repaint, not <code>Set for this exercise</code>: the paint runs before the save resolves; P3), one lifetime the pass does not cover (a kg account&rsquo;s unmarked whole-mode record, the unit changed to lb in Settings, then a bar tap before the next launch stamps <code>v:2</code> with <code>au: kg</code> and the pass never runs on it; P3), and a stated consequence of the PM&rsquo;s rule (a bare <code>{au: kg}</code> on a lb account &mdash; item 38&rsquo;s D3 literal &mdash; is removed by the pass, one chip tap to put back). Before it: <b>905 / 905 / 0 on wo-012-default-unit @ 34f0a68 + S47 - 1.3 s.</b> <b>S47</b> (WO-012 W5, the QA pass, 2026-09-13) added 8: <b>U1&rsquo;s three loads re-derived</b> with QA&rsquo;s own rounding (a floor-and-fraction, not <code>roundGrid</code>: 77 / 86 / 51 &rarr; 170 / 189.5 / 112.5; the coach&rsquo;s instruction figures 175.5 not 175, 115.5, 181, 160, 195, 200.5, 118, 104.5; his own d5a target 55 &rarr; 121.5; every added weight his lb card printed on 2026-09-13 &mdash; 44 / 68.5 / 16.5 / 27.5 / 33 on the bar, 150 / 170 / 139 / 92.5 / 132.5 with none &mdash; and <code>Last 44 lb total &times; 12</code> for the empty bar); <b>the strip-invariant over S41&rsquo;s own builders</b> (BB20 / BB45 / KGB / LBN &times; 7 slots &times; 10 loads &times; 8 rep patterns: a built set is byte-identical on a lb and a kg card, x and x2; a kg-direct set strips its one bracket to the kg string, N by QA&rsquo;s rounding of the K before it, never after an em dash; &sect;18.1 example 1 and L3&rsquo;s SP1 from a built source on a lb card equal S41&rsquo;s pins); <b>SD1&rsquo;s floor-with-tolerance boundary recomposed by hand</b> (125 lb on the 20 kg bar is 76.7, so 76.45 seeds 125 and 76.44 seeds 120; 170 lb is 77.1, so 76.85 / 76.84 &rarr; 170 / 165; 57.5 kg on the bar is 77.5, so 77.25 / 77.24 &rarr; 57.5 / 55; his 40 kg &rarr; 40 lb, 51 kg &rarr; 65 lb, the empty bar &rarr; nothing; a 2,500-prior sweep); <b>a second 0% generator</b> (mulberry32 seed 20260913, 4,000 random hypertrophy sessions over every hyp slot with &plusmn;0.1&ndash;0.3 / 2.5 kg and &plusmn;1 rep perturbations: no <code>up 0%</code> / <code>down 0%</code>, every 4d percentage equals QA&rsquo;s own <code>Math.round</code> and <code>matched</code> iff 0, p = 0 reached 100+ times); <b><code>cardModeFor</code>&rsquo;s every tier as a table under unit lb / kg / ABSENT</b> (chip, draft, typed, override the same either way; <code>default</code> only with a unit set and then a WO-010 ld is not read; <code>history</code> only while absent; <code>pounds</code> reads as absent); <b><code>readGymProfile</code> over 600 random profiles</b> (ok always true, the bars back as numbers in order every time, a bad unit / ex map / override dropped and named, never a bar; the whole gym a string &rarr; ok false, no throw); and <b>D8&rsquo;s pure half</b> (restorePayload&rsquo;s document and mergeStores / mergeSteps carry and write no prefs key). Nine <code>logic.js</code> mutants on copies, nine killed, eight by S47 (LOAD_EQ 0.2, the 0% branch back, history over default, a bad override refusing whole, 1 lb display, nearest instead of floor on the seed, a bracket on a built set, a bad override kept) and the ninth (ties up) by S45. <b>The browser half is &ldquo;Already proven&rdquo; item 38</b>: D1&ndash;D8 observed on his session, the six attacks, the D6 diff against <code>main @ 81fc0b8</code>, and four findings &mdash; two on the row (B-76-class two-tab wipe of the unit and of an override from a stale tab), one P2 (Settings shows neither <code>kg</code> nor <code>lb</code> pressed while the unit is absent; spec 21.1 and the code&rsquo;s own comment say kg), one P3 (at 200 % text the lb ghost row overflows the viewport by 29 px and the chip changes height on a tap). Before it: <b>897 / 897 / 0.</b> <b>S46</b> (WO-012 §21.13, backend, 2026-09-13) added 32: <b>Rule EQ1</b> — <code>LOAD_EQ = 0.25</code> kg beside <code>LD_TOL</code> and not merged with it, at exactly four sites (P1’s <code>backoff</code> and <code>mixed</code>, <code>workingBuild</code>, T1 clause (c)); the coach’s §21.13.3 #1–#11 with every <i>Must not print</i> (<code>Sets not matched: 76.9 / 77 / 77 kg</code> and <code>Repeat</code> gone from #1, <code> or above</code> from #3, <code>130.5</code> from the tie in #4); the boundary on P1 and on T1 (0.25 one load, 0.26 two); <b>T1 example 5 pinned null-then-date</b> — completed 77, failed twice at the seeded 77.1 (170 lb): the pre-EQ1 file returned null (Node, 2026-09-13), now T1 fires; #6 (77.3) still null, #7 (76.9 on the bar) still fires; <b>H1.4d on the printed percentage</b> — #8 <code>Volume down 0%</code> and #9 <code>Volume up 0%</code> both <code>Volume matched.</code>, #10’s real 3% untouched, the −0.5% / +0.5% asymmetry of <code>Math.round</code> pinned as a known fact, and <b>the 0% strings unreachable as a meta-test</b> over 3,200 H1 verdicts with ±0.1 / ±0.2 kg priors (284 <code>up 0%</code> and 388 <code>down 0%</code> on the pre-EQ1 file, 0 here); <b>the kg-direct differential re-run</b> — 580,608 verdicts byte-identical to the pre-EQ1 file in Node (hash 1438967905 on both, 0 diffs), every 13th case pinned in the browser (44,663, hash 2338777240 computed against the PRE-EQ1 file); <b>Rule SD1</b> — <code>seedFor(priorW, mode)</code> and <code>seedInUnit(prevSet, mode)</code>, §21.13.5 #1–#10 (77 → 125 / 170, 78 → 125 <i>not 130</i>, 86 → 145 / 190, 51 → 65 / 110, 21 on the bar → null <i>not 0, not 5</i>, same build 127 verbatim, lb prior on a kg-bar card → 55, kg-direct card 76.9, the seed idempotent under re-snap), the LOAD_EQ boundary on the seed (76.45 → 125, 76.44 → 120), garbage → null never 0, and a 10,000-prior sweep proving every seed is on its grid, within LOAD_EQ above the prior or under it, and one step more is not. The S45 pin <code>Sets not matched: 76.9 / 77 / 77 kg</code> is re-pinned to P1.4 in S45: it was the coach’s open item and the coach closed it. Before it: <b>865 / 865 / 0.</b> <b>S45</b> (WO-012 W3, backend, 2026-09-13) added 23: <code>displayNum</code> / <code>displayLoad</code> at <b>0.5 lb, ties down</b> (coach &sect;21.3: 77 &rarr; 170, 86 &rarr; 189.5, 51 &rarr; 112.5, 79.5 &rarr; 175.5, 52.5 &rarr; 115.5, 62.4 &rarr; 137.5; the kg path r1 byte for byte; the tie on <code>roundGrid</code> where it is exact, the kg-in boundary either side of it); <code>instr</code>, Rule U1&rsquo;s token; <code>defaultMode</code> (level 1, the first profile bar on the 13 <code>bb</code> slots only, listed once for UX &sect;21.12 #5) and <code>overrideMode</code> (level 2); <b><code>cardModeFor</code>&rsquo;s seven tiers</b> (<code>chip &gt; draft &gt; typed &gt; override &gt; default &gt; history &gt; kg</code>, the mode beside the tier, never inside it), the coordinator&rsquo;s <b>D3</b> replay across all 42 slots, and the ruling that <b>history fires only while <code>prefs.gym.unit</code> is absent</b>; <code>validateGymProfile</code>&rsquo;s <b>per-key refusal</b> (D4: <code>unit: pounds</code> and <code>ex.d3c: stone</code> each dropped by name with <code>ok</code> still true, ten malformed overrides named by key / reason / sub-field, the S40 <code>{ok, problems}</code> bytes untouched) and <code>readGymProfile</code>, the profile the boot adopts; <b>the coach&rsquo;s 23 worked examples for U1</b> with every <i>Must not print</i> (<code>Go to 79.5 kg (175.5 lb) next session.</code>, <code>Stay at 77 kg (170 lb) until &hellip;</code>, zero-load <code>Add 2.5 kg (5.5 lb)</code>, <code>Drop to bodyweight</code> with no bracket, SP1 <code>52.5 kg (115.5 lb).</code> and its flag, the I2 line untouched, L1&rsquo;s lb-built form byte-identical on BB20 / BB45 / KGB / LBN / a built SP1 source, the card&rsquo;s default bar never reaching the verdict); <b>THE INVARIANT as a meta-test</b> over 7 slots &times; 14 loads &times; 12 rep patterns &times; 2 prevs (strip the one <code> (N lb)</code> &rarr; the kg string; &le; 1 bracket, exactly 1 iff an instruction load &gt; 0 is named; N recomputes from the K before it; never after an em dash, never <code>(0 lb)</code>); <b>D6 as a differential</b> (unit <code>kg</code> === unit absent === no key, JSON-identical, verdict and <code>speedLoad</code>; <code>speedLoad</code> gained <code>built</code> and a 6th argument, <code>speedFlagText</code> reads the result object); and <code>priorInUnit</code> / <code>priorGhost</code> through <b>his session</b> on a 20 kg bar card (<code>Last 44 lb total &times; 12</code>, then 44 / 68.5 / 88 / 110 lb) and a no-bar card (44 / 88 / 112.5 / 132.5 / 154.5 lb), <b>with the round-trip pinned as it is</b>: a 77 kg prior seeded as 125.5 lb on the 20 kg bar stores <b>76.9</b>, as 170 lb with no bar <b>77.1</b>; 86 and 51 come back exact; worst drift over 0.2..250 kg is 0.2 kg; and P1 reads 76.9 / 77 / 77 as <i>Sets not matched</i> &mdash; the engine is not tolerant to the display rounding, which is the coach&rsquo;s &sect;21.12 #2 and not W3&rsquo;s to fix. One pin caught a defect before it shipped: <code>priorInUnit</code> read an <code>ld</code> that does not recompose to its <code>w</code> as &ldquo;same build&rdquo; and returned its <code>add</code>; it now classifies through <code>buildOf</code> like every rule. Before it: <b>842 / 842 / 0.</b> <b>S44</b> (WO-011 W5, the QA pass on the
 merge, 2026-09-13) added 11 and re-pinned two lines in S43. The reds: (1) S43&rsquo;s <code>ownerRefusal("merge")</code> and (2) S44&rsquo;s
 <b>R-d</b> shape test both pin UX spec &sect;20.3&rsquo;s sentence verbatim &mdash; <i>This device's log belongs to {owner}. The backup under
 {me} was not read and nothing here changed. Sign in as {owner} to restore what is missing.</i> &mdash; where <code>logic.js</code> still
@@ -5253,12 +5266,33 @@ T("D1 / item 4 - a DELOADED lift in keyLifts is REFUSED by name, not answered of
    differently ("the line as it ships" vs "the line as it was ruled") and the
    next copy amendment will re-open the same gap between them.
 
-   "three" IS SPELLED, NOT INTERPOLATED from TRAINING_WEEK_MIN, in logic.js
-   and here alike. QA asked for that and the coach's sentence settles it: it
-   is one sentence about ONE week, not a parameterised statement of the
-   minimum, and if the minimum ever moves the sentence gets rewritten by the
-   coach rather than re-interpolated. Asserted directly in the §9.13.3 test
-   below, so nobody "tidies" it into TRAINING_WEEK_MIN + " land in one week". */
+   "three" WAS SPELLED, NOT INTERPOLATED, from TRAINING_WEEK_MIN - and that
+   paragraph is SUPERSEDED, 2026-09-29, by Rule TW1c.1 (coach addendum
+   §23.6.3, `69923dc`). Left standing, with its correction attached, because
+   the reason it gave was right for its day and is the reason the new rule had
+   to be a coach ruling rather than a tidy-up.
+
+   WHAT CHANGED. The old argument was: this is one sentence about ONE week,
+   not a parameterised statement of the minimum, so if the minimum ever moves
+   the coach rewrites the sentence. TW1b moved the minimum - a training week
+   became min(3, plan.days.length) - and the coach did exactly that: he
+   rewrote it rather than leave `three` false on `ul2`, where week 1 starts at
+   two. The number is now `numWord(twMin)`, and below two the promise sentence
+   is DROPPED rather than made singular.
+
+   WHY EVERY ASSERTION BELOW STILL STANDS, UNTOUCHED. They test the CLAUSE
+   that states the threshold and they test it for a WORD and for no digit.
+   `numWord(3)` is "three", so at twMin 3 - PHAT, ppl5, ppl3, bb5, and every
+   caller that passes no plan - the sentence is byte-identical to what
+   shipped, which is precisely the regression pin TW1c.1 was written against.
+   Do NOT relax the no-digit checks: they now prove the interpolation goes
+   through numWord and not through String(twMin).
+
+   TW0RULED IS THE twMin-3 FORM and is correct for every caller in this
+   section, all of which pass PHAT or no plan at all. The twMin-2 form has no
+   helper on purpose - it is written out at each of its four sites in S53.A2,
+   because a shared helper for a sentence that exists to differ by plan is how
+   the two forms start agreeing by accident. */
 function TW0RULED(n){
   return n + (n === 1 ? " session" : " sessions") +
     " logged. Week 1 starts when three land in one week.";
@@ -8291,16 +8325,24 @@ T("W5 / section 9.13 ruling 3 - the tw-0 line states CONCENTRATION, not a count"
   a.eq(line(3), "3 sessions logged. Week 1 starts when three land in one week.");
   a.eq(line(5), "5 sessions logged. Week 1 starts when three land in one week.");
 
-  /* "three" IS SPELLED, NOT INTERPOLATED - asserted, not just commented,
-     because the tidy-up that breaks it looks like an improvement:
+  /* "three" IS A WORD, NEVER A DIGIT - asserted, not just commented, because
+     the tidy-up that breaks it looks like an improvement:
      TRAINING_WEEK_MIN + " land in one week" reads as de-duplication and
-     silently makes a coach-signed sentence a function of a constant. The
-     sentence is about ONE week; the constant is a rule parameter. If the
-     minimum ever moves, the coach rewrites the sentence.
+     silently makes a coach-signed sentence a function of a raw constant.
      The check runs on the CLAUSE that states the minimum, not on the whole
      sentence: "3 sessions" and "Week 1" are digits that belong there, and a
      whole-sentence digit test would either fail on them or be relaxed until
-     it proved nothing. */
+     it proved nothing.
+
+     AMENDED 2026-09-29, Rule TW1c.1 (`69923dc`). The minimum DID move - TW1b
+     made a training week min(3, plan.days.length) - and the coach rewrote the
+     sentence rather than leave `three` false on a two-day plan, which is the
+     escape hatch the old comment here named. The number is now interpolated,
+     through `numWord`, so every assertion below still holds character for
+     character at twMin 3 and the last one still holds at any threshold
+     numWord can spell. Nothing was relaxed to accommodate the change; the
+     two-day form is pinned separately in S53.A2 and the interpolation itself
+     in S53.A3. */
   a.eq(P.TRAINING_WEEK_MIN, 3, "the constant still exists and is 3 - this is not a claim that it moved");
   var tail = line(3).split("logged. ")[1];
   a.eq(tail, "Week 1 starts when three land in one week.");
@@ -21311,6 +21353,594 @@ T("S52.C12 / B-131 - the pass over CHADY_EXPORT, his REAL export, byte for byte"
   a.eq(third.note, "B-131 repair: already applied on this device; nothing changed.");
 });
 
+group("S53 WO-018 T3 + WO-014 gate / Rule TW1c.1 / tierLines.explain / copyPlan derivedFrom / HD1.4 / the vocabulary sweep");
+
+/* RED-FIRST EVIDENCE for this whole group, each run against the named pre-fix
+   blob dropped beside an unmodified copy of this page, 2026-09-29:
+
+     Rule TW1c.1           (S53.A*)  `git cat-file blob 69923dc^:logic.js`
+     tierLines.explain     (S53.B*)  `git cat-file blob ff4c52e^:logic.js`
+     copyPlan / derivedFrom (S53.C*) `git cat-file blob b9a14ec^:logic.js`
+
+   What each pre-fix tree printed is written into the test that pins it.
+
+   ------------------------------------------------------------------------
+   HOW `tierLines.count` REACHES A SCREEN - written down because it is not
+   obvious from outside and the last pass could not find the plumbing.
+
+   `tierLines` is NOT exported. It returns five CANDIDATE strings
+   {row, status, divergence, explain, count} and the two callers choose:
+
+     cycleLine   `row = lines.count || lines.row`, and BOTH `text` and `row`
+                 on the returned object are that one string. So the count
+                 line, when there is one, IS cycleLine().text - and cycleLine
+                 is the permanent line at the top of Home. That is the only
+                 door.
+     volumeTier  NEVER exposes `count`. Its `tierLine` is
+                 `divergence || (runs && tw <= rw ? row : "")`, and on a plan
+                 whose tier does not run `runs` is false, so `lines.row`
+                 (which IS the count in that branch) cannot reach it either.
+
+   Consequence for anyone testing this: assert through `cycleLine().text`. A
+   test written against volumeTier will pass on any string whatsoever.
+   Confirmed on the live screen with Playwright on 2026-09-29 at 400 px: a
+   ul2-active device with one logged session renders
+   `1 session logged. Week 1 starts when two land in one week.` on Train.
+
+   WHAT THIS GROUP CANNOT REACH, stated rather than implied (B-20):
+     - the TEN-ARGUMENT `tierLines(...)` fallback. `tierLines` is internal and
+       both call sites pass eleven arguments, so `twMin === undefined` cannot
+       be produced from outside the file. The externally reachable source of
+       that argument is `trainingWeekMin(plan)`, and S53.A3 pins the same
+       default through it for twelve unusable plan shapes - the same branch,
+       one layer out. Exporting `tierLines` would close the gap exactly; QA is
+       not asking for it, because the proxy covers the branch and an extra
+       export is an extra thing to keep honest. If `tierLines` ever gains a
+       caller outside logic.js, that changes.
+     - `droppedKeyLiftLines()` and the `if(keyN)` HD1.3 gate: both live in
+       index.html, out of a file:// page's reach. Their INPUTS
+       (`planKeyLiftsDropped`, `planKeyLifts`, `stallAdvice().disclosureLine`)
+       are pinned in S53.D1 / S53.D2; the rendered literals were read off the
+       screen and are recorded under "Already proven".
+   ------------------------------------------------------------------------ */
+
+/* The sessions a count-line test needs: n distinct training days, one per
+   Monday-start week, so `trainingWeeks` is 0 at any threshold >= 2 while
+   `loggedSessions` is n. Logged on d1f, a lift no rule under test reads. */
+function TWC_SESS(n){
+  var s = [], i;
+  for (i = 0; i < n; i++) s.push(TSESS(P.dateAdd("2026-08-04", i * 7), "twc" + i, "d1f", SETS(60, 8)));
+  return s;
+}
+function TWC_LINE(n, plan){
+  return P.cycleLine({ sessions: TWC_SESS(n), state: STORE(), program: PROG,
+                       todayStr: TODAY, plan: plan }).text;
+}
+/* min(3, days) sessions inside ONE Monday-start week, five weeks back:
+   trainingWeeks 1 against a larger calendar week, so the divergence line and
+   its explain sentence both render. */
+function TWC_DIVERGE(plan){
+  var s = [], i, min = P.trainingWeekMin(plan);
+  for (i = 0; i < min; i++) s.push(TSESS(P.dateAdd("2026-08-03", i), "dv" + i, "d1f", SETS(60, 8)));
+  return s;
+}
+/* w Monday-start weeks of `per` days each, every one of `ids` logged at the
+   SAME load, so ST1 reads a flat block and stalls. `up` ramps instead. */
+function TWC_BLOCK(ids, per, weeks, up){
+  var out = [], w, d, i, e, load;
+  for (w = 0; w < weeks; w++) for (d = 0; d < per; d++) {
+    e = {}; load = up ? 100 + (weeks - w) * 2 : 100;
+    for (i = 0; i < ids.length; i++) e[ids[i]] = { sets: SETS(load, 5, load, 5, load, 5), note: "" };
+    out.push({ id: "blk" + w + "-" + d, date: P.dateAdd(TODAY, -7 * w - d), dayId: "dX", entries: e });
+  }
+  return out;
+}
+
+T("S53.A1 / TW1c.1 - at twMin 3 the count line is BYTE-IDENTICAL to main, on all four plans that carry it", function(a){
+  /* THE REGRESSION PIN. 69923dc interpolated a number into a coach-signed
+     sentence that had spelled it. At three - PHAT, ppl5, ppl3, bb5, and every
+     caller that passes no plan at all - not one byte may move.
+     GREEN ON 69923dc^, by design: this is the test that must NOT go red, and
+     it was run against that blob to confirm it says the same thing there. */
+  needFns(a, "cycleLine", "trainingWeekMin", "shippedPlan");
+  var four = ["phat", "ppl5", "ppl3", "bb5"], counts = [1, 2, 3, 5], i, j, plan;
+  for (i = 0; i < four.length; i++) {
+    plan = P.shippedPlan(four[i]);
+    a.eq(P.trainingWeekMin(plan), 3, four[i] + " is a three-or-more day plan");
+    for (j = 0; j < counts.length; j++) {
+      a.eq(TWC_LINE(counts[j], plan), TW0RULED(counts[j]),
+        four[i] + " at " + counts[j] + " sessions is the shipped sentence");
+    }
+  }
+  /* Spelled out once against literals, not against TW0RULED, so an edit to
+     the helper cannot drag every assertion above it green. */
+  a.eq(TWC_LINE(1, P.PHAT_PLAN), "1 session logged. Week 1 starts when three land in one week.");
+  a.eq(TWC_LINE(2, P.PHAT_PLAN), "2 sessions logged. Week 1 starts when three land in one week.");
+  a.eq(TWC_LINE(3, P.PHAT_PLAN), "3 sessions logged. Week 1 starts when three land in one week.");
+  a.eq(TWC_LINE(5, P.PHAT_PLAN), "5 sessions logged. Week 1 starts when three land in one week.");
+  /* `row` and `text` are one string, and BOTH are read by callers. */
+  var out = P.cycleLine({ sessions: TWC_SESS(3), state: STORE(), program: PROG,
+                          todayStr: TODAY, plan: P.PHAT_PLAN });
+  a.eq(out.row, out.text, "cycleLine's row and text are one string, and the count line IS it");
+  a.eq(out.trainingWeeks, 0, "the branch under test is tw === 0 with sessions logged");
+  a.eq(out.sessions, 3);
+});
+
+T("S53.A2 / TW1c.1 - on a two-day plan the sentence states TWO, and it follows the threshold, not the plan id", function(a){
+  /* RED ON 69923dc^: `3 sessions logged. Week 1 starts when three land in one
+     week.` on ul2 - false, because week 1 on ul2 starts at two. It renders
+     whenever a ul2 user has sessions and no training week yet, which is the
+     first thing he sees after his first logged session on that plan. */
+  var ul2 = P.shippedPlan("ul2");
+  a.eq(P.trainingWeekMin(ul2), 2);
+  a.eq(TWC_LINE(1, ul2), "1 session logged. Week 1 starts when two land in one week.");
+  a.eq(TWC_LINE(2, ul2), "2 sessions logged. Week 1 starts when two land in one week.");
+  a.eq(TWC_LINE(5, ul2), "5 sessions logged. Week 1 starts when two land in one week.");
+  /* NOT keyed on the id "ul2". Any two-day document says two, which is what
+     makes this a rule rather than a special case for one shipped plan. */
+  var mine = { planId: "p_mine", name: "Mine", days: [
+    { id: "a", name: "A", ex: [{ id: "a1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" }] },
+    { id: "b", name: "B", ex: [{ id: "b1", n: "Bench", s: 3, lo: 3, hi: 5, k: "power" }] }] };
+  a.eq(P.trainingWeekMin(mine), 2);
+  a.eq(TWC_LINE(3, mine), "3 sessions logged. Week 1 starts when two land in one week.");
+  /* The threshold is SPELLED at both values - no digit reaches that clause. */
+  a.eq(/[0-9]/.test(TWC_LINE(3, ul2).split("starts ")[1]), false,
+    "the clause that states the threshold carries a word, never a digit");
+  a.eq(TWC_LINE(3, ul2).split("starts ")[1], "when two land in one week.");
+});
+
+T("S53.A3 / TW1c.1 - every unusable plan falls back to THREE, and never to undefined, NaN or zero", function(a){
+  /* The defence, reached the only way it can be reached from outside: the
+     argument is `trainingWeekMin(plan)`, so a plan the resolver cannot read
+     IS the garbage-twMin case one layer out. numWord prints its input
+     verbatim when it cannot spell it, so a clamp coming off would ship
+     `Week 1 starts when undefined land in one week.` or, worse because it
+     reads as real advice, `when 0 land in one week.` */
+  var bad = [undefined, null, "nope", 3, 0, NaN, Infinity, [], {},
+             { planId: "x", name: "x", days: [] },
+             { planId: "x", name: "x", days: "3" },
+             { nonsense: 1 }];
+  var i, line;
+  for (i = 0; i < bad.length; i++) {
+    a.eq(P.trainingWeekMin(bad[i]), 3, "trainingWeekMin falls back to 3 on input " + i);
+    line = TWC_LINE(3, bad[i]);
+    a.eq(line, "3 sessions logged. Week 1 starts when three land in one week.",
+      "and the sentence follows it on input " + i);
+    a.eq(line.indexOf("undefined"), -1, "never the word undefined (input " + i + ")");
+    a.eq(line.indexOf("NaN"), -1, "never NaN (input " + i + ")");
+    a.eq(line.indexOf("when 0 "), -1, "never zero (input " + i + ")");
+    a.eq(line.indexOf("-1"), -1, "never a negative (input " + i + ")");
+  }
+  a.eq(P.TRAINING_WEEK_MIN, 3, "the constant is still 3 - this is not a claim that it moved");
+  /* numWord is never asked for a number it cannot spell, because
+     trainingWeekMin caps at 3. Pinned so a future TW1b that raised the cap
+     would have to look at the sentence too. */
+  var many = { planId: "x", name: "x", days: [] }, k;
+  for (k = 0; k < 12; k++) many.days.push({ id: "d" + k, name: "D" + k,
+    ex: [{ id: "e" + k, n: "X", s: 3, lo: 3, hi: 5, k: "power" }] });
+  a.eq(P.trainingWeekMin(many), 3, "twelve days still caps at three");
+  a.eq(TWC_LINE(3, many), "3 sessions logged. Week 1 starts when three land in one week.");
+});
+
+T("S53.A4 / TW1c.1 - at twMin 1 the promise sentence is DROPPED, and that branch is unreachable by construction", function(a){
+  /* The coach's floor at two. "when one land in one week" is ungrammatical
+     and the fixed-up singular is worse - it contradicts the clause in front
+     of it, which just said he logged a session. The commit asserts the branch
+     is unreachable; this proves it rather than repeating it. At threshold 1
+     any logged day IS a training week, so `tw === 0 && nSess > 0` cannot
+     hold, and what renders is the plain week/session row. The floor is
+     defence against bad data, not a screen anyone should see. */
+  var one = { planId: "p_one", name: "One", days: [
+    { id: "a", name: "Day A", ex: [{ id: "a1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" }] }] };
+  a.eq(P.trainingWeekMin(one), 1);
+  var i, out;
+  for (i = 1; i <= 5; i++) {
+    out = P.cycleLine({ sessions: TWC_SESS(i), state: STORE(), program: PROG,
+                        todayStr: TODAY, plan: one });
+    a.ok(out.trainingWeeks >= 1, "at threshold 1, " + i + " logged days is at least one training week");
+    a.eq(out.text.indexOf("Week 1 starts when"), -1,
+      "so the promise sentence never renders at " + i + " sessions");
+    a.eq(out.text.indexOf("land in one week"), -1, "and neither does its tail");
+  }
+  a.eq(P.cycleLine({ sessions: TWC_SESS(1), state: STORE(), program: PROG,
+                     todayStr: TODAY, plan: one }).text, "Week 1 · 1 session");
+  a.eq(P.cycleLine({ sessions: TWC_SESS(2), state: STORE(), program: PROG,
+                     todayStr: TODAY, plan: one }).text, "Week 2 · 2 sessions");
+});
+
+T("S53.A5 / TW1c.1 - the count line reaches ONE surface: cycleLine. volumeTier never carries it", function(a){
+  /* The plumbing fact, asserted so a refactor that "unifies the two callers"
+     has to argue with a test first. volumeTier's tier slot still has to
+     explain why the cut exercises are hidden; handing it the count line would
+     take that sentence off the day screen. */
+  var sess = TWC_SESS(3), key;
+  var cl = P.cycleLine({ sessions: sess, state: STORE(), program: PROG,
+                         todayStr: TODAY, plan: P.PHAT_PLAN });
+  var vt = P.volumeTier({ dayId: "d1", program: PROG, sessions: sess, state: STORE(),
+                          todayStr: TODAY, plan: P.PHAT_PLAN });
+  a.eq(cl.text, TW0RULED(3), "cycleLine carries it");
+  for (key in vt) {
+    if (!Object.prototype.hasOwnProperty.call(vt, key)) continue;
+    if (typeof vt[key] !== "string") continue;
+    a.eq(vt[key].indexOf("Week 1 starts when"), -1,
+      "volumeTier." + key + " must not carry the count line");
+    a.eq(vt[key].indexOf("land in one week"), -1,
+      "volumeTier." + key + " must not carry its tail either");
+  }
+  a.eq(typeof P.tierLines, "undefined",
+    "tierLines itself is internal - a test that reaches for it is testing the wrong thing");
+});
+
+/* ------------------------------------- tierLines.explain, under BOTH names */
+
+T("S53.B1 / TW1b - the training-week sentence is one string under two field names, and it follows the plan", function(a){
+  /* THE SURFACE THIS ALMOST MISSED. `volumeTier` publishes it as `tierNote`,
+     `cycleLine` as `explain`. A test on one name proves nothing about the
+     other, and the two screens that print them are different screens.
+     RED ON ff4c52e^: `A training week is a week with three or more logged
+     sessions.` on ul2, under BOTH names - false on a plan he can select. */
+  var ids = ["phat", "ppl5", "ppl3", "ul2", "bb5"], i, plan, sess, cl, vt, want;
+  for (i = 0; i < ids.length; i++) {
+    plan = P.shippedPlan(ids[i]);
+    sess = TWC_DIVERGE(plan);
+    cl = P.cycleLine({ sessions: sess, state: STORE(), program: PROG, todayStr: TODAY, plan: plan });
+    vt = P.volumeTier({ dayId: plan.days[0].id, exercises: plan.days[0].ex, sessions: sess,
+                        state: STORE(), todayStr: TODAY, plan: plan });
+    want = "A training week is a week with " +
+           (P.trainingWeekMin(plan) === 2 ? "two" : "three") + " or more logged sessions.";
+    a.eq(cl.trainingWeeks, 1, ids[i] + ": the fixture really does hold one training week");
+    a.ok(cl.calendarWeeks > cl.trainingWeeks, ids[i] + ": and the calendar week is ahead of it");
+    a.eq(cl.explain, want, ids[i] + " / cycleLine.explain");
+    a.eq(vt.tierNote, want, ids[i] + " / volumeTier.tierNote");
+    a.eq(cl.explain, vt.tierNote, ids[i] + ": ONE sentence under two names - they may never drift");
+  }
+  /* The literals, once, so the helper above cannot define the answer. */
+  a.eq(P.cycleLine({ sessions: TWC_DIVERGE(P.PHAT_PLAN), state: STORE(), program: PROG,
+                     todayStr: TODAY, plan: P.PHAT_PLAN }).explain,
+    "A training week is a week with three or more logged sessions.");
+  a.eq(P.cycleLine({ sessions: TWC_DIVERGE(P.UL2_PLAN), state: STORE(), program: PROG,
+                     todayStr: TODAY, plan: P.UL2_PLAN }).explain,
+    "A training week is a week with two or more logged sessions.");
+  /* A one-day plan reads as written, which is why TW1b could interpolate THIS
+     sentence without the coach rewriting it and TW1c.1's had to be branched. */
+  var one = { planId: "p_one", name: "One", days: [
+    { id: "a", name: "Day A", ex: [{ id: "a1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" }] }] };
+  a.eq(P.cycleLine({ sessions: TWC_DIVERGE(one), state: STORE(), program: PROG,
+                     todayStr: TODAY, plan: one }).explain,
+    "A training week is a week with one or more logged sessions.");
+  /* And no plan at all is the old answer, byte for byte. */
+  a.eq(P.cycleLine({ sessions: TWC_DIVERGE(P.PHAT_PLAN), state: STORE(), program: PROG,
+                     todayStr: TODAY }).explain,
+    "A training week is a week with three or more logged sessions.");
+});
+
+/* ------------------------------------ copyPlan / derivedFrom, and ST1's gate */
+
+T("S53.C1 / copyPlan - a copy of each shipped plan records WHICH plan it is a copy of", function(a){
+  /* RED ON b9a14ec^: `derivedFrom` undefined on all five copies, so
+     keyLiftDisclosure had no ancestor to look up and HD1.4 case (a) printed
+     its count line with no name - the anonymous disclosure coach section
+     23.2.6 refused to sign off. Nothing asserted any of this until today. */
+  needFns(a, "copyPlan", "shippedPlan");
+  var ids = ["phat", "ppl5", "ppl3", "ul2", "bb5"], i, src, r, r2;
+  for (i = 0; i < ids.length; i++) {
+    src = P.shippedPlan(ids[i]);
+    r = P.copyPlan(src, "My " + ids[i], TODAY);
+    a.eq(r.ok, true, ids[i] + ": the copy is made");
+    a.eq(r.plan.derivedFrom, ids[i], ids[i] + ": the copy carries its source id");
+    a.eq(r.plan.readOnly, false, ids[i] + ": and it is editable");
+    a.ne(r.plan.planId, ids[i], ids[i] + ": with a minted planId of its own");
+    a.eq(r.plan.createdAt, TODAY);
+    /* COPY OF A COPY. The carried value short-circuits the mint, so the
+       intermediate's minted planId must never land here. The engineer says
+       this works because of the short circuit, not because anything asserts
+       it; this is the assertion. */
+    r2 = P.copyPlan(r.plan, "Copy of my " + ids[i], TODAY);
+    a.eq(r2.plan.derivedFrom, ids[i],
+      ids[i] + ": a copy of a copy still names the SHIPPED source");
+    a.ne(r2.plan.derivedFrom, r.plan.planId,
+      ids[i] + ": specifically NOT the intermediate's minted id");
+    a.ne(r2.plan.planId, r.plan.planId);
+    a.eq(P.copyPlan(r2.plan, "Third", TODAY).plan.derivedFrom, ids[i],
+      ids[i] + ": and three copies deep");
+  }
+  /* A USER plan never gains one. A plan built from empty has no ancestry, and
+     acquiring one would hand it rules it did not earn. */
+  var mine = { planId: "p_mine", name: "Mine", days: [
+    { id: "a", name: "A", ex: [{ id: "a1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" }] }],
+    keyLifts: ["a1"] };
+  var c = P.copyPlan(mine, "Mine copy", TODAY);
+  a.eq(c.plan.derivedFrom, undefined, "a copy of a user plan has no derivedFrom");
+  a.eq(Object.prototype.hasOwnProperty.call(c.plan, "derivedFrom"), false,
+    "and the KEY is absent, not present-and-undefined - it must not serialise");
+  a.eq(P.copyPlan(c.plan, "Again", TODAY).plan.derivedFrom, undefined,
+    "and copying it again does not mint one either");
+  /* A value already on the document is carried, never rewritten - even when
+     it disagrees with the source's own planId. */
+  var faked = clone(P.shippedPlan("bb5"));
+  faked.planId = "p_faked"; faked.readOnly = false; faked.derivedFrom = "ul2";
+  a.eq(P.copyPlan(faked, "Kept", TODAY).plan.derivedFrom, "ul2",
+    "a derivedFrom already present is carried, never overwritten by the source id");
+  /* And the shipped documents are not mutated by being copied. */
+  a.eq(P.shippedPlan("ul2").readOnly, true, "the template is still read-only");
+  a.eq(hash40(JSON.stringify(P.shippedPlan("ul2"))), 3852682120,
+    "and byte-identical after five copies of it were taken");
+});
+
+T("S53.C2 / THE GATE - a copy of a non-PHAT template may NEVER be told PHAT's specific diagnosis", function(a){
+  /* THE PIN THAT MATTERS MOST IN THIS GROUP. ST1's provenance gate is
+     `derivedFrom === "phat"` EXACTLY. Now that four other shipped ids can land
+     in that field, loosening it to "is a shipped id" would start speaking the
+     brief's diagnosis - "The split isn't the problem and neither is the diet"
+     - over an upper/lower split nobody wrote that sentence about, and nothing
+     else in this file would catch it. */
+  needFns(a, "phatProvenanceReport", "stallAdvice");
+  var nonPhat = ["ppl5", "ppl3", "ul2", "bb5"], i, copy, rep;
+  for (i = 0; i < nonPhat.length; i++) {
+    copy = P.copyPlan(P.shippedPlan(nonPhat[i]), "c", TODAY).plan;
+    a.eq(copy.derivedFrom, nonPhat[i], nonPhat[i] + ": the copy does carry its id");
+    rep = P.phatProvenanceReport(copy);
+    a.eq(rep.phat, false, nonPhat[i] + " copy: phatProvenanceReport.phat is FALSE");
+    a.eq(rep.prescription, false, nonPhat[i] + " copy: it claims no PHAT prescription");
+    a.eq(rep.placement, null, nonPhat[i] + " copy: and placement was never even assessed");
+  }
+  /* A copy of PHAT still passes - the gate is not broken the other way. */
+  var phatCopy = P.copyPlan(P.PHAT_PLAN, "My PHAT", TODAY).plan;
+  a.eq(phatCopy.derivedFrom, "phat");
+  a.eq(P.phatProvenanceReport(phatCopy).phat, true, "a copy of PHAT is still PHAT for ST1");
+  /* Through stallAdvice, where the sentence is actually chosen. TWO states,
+     because `provenance` is only populated when the check FIRES: null when
+     nothing is stalled, "generic" when something is. Both mean "not PHAT's
+     diagnosis"; only the second one proves it. */
+  var ul2c = P.copyPlan(P.UL2_PLAN, "My UL", TODAY).plan;
+  var ulIds = ["u1a", "u1b", "u2a", "u2b"];
+  var stalled = P.stallAdvice({ plan: ul2c, sessions: TWC_BLOCK(ulIds, 2, 9, false),
+                                todayStr: TODAY, state: STORE(), profile: PB });
+  a.eq(stalled.state, "stalled", "the fixture really does stall - otherwise this proves nothing");
+  a.eq(stalled.provenance, "generic", "a copy of ul2 is GENERIC, never phat");
+  a.eq(stalled.copy, "generic", "and the sentence chosen is the generic one");
+  a.eq(stalled.lines.join(" ").indexOf("The split isn't the problem"), -1,
+    "PHAT's specific diagnosis must appear nowhere on an upper/lower split");
+  a.eq(stalled.lines.join(" ").indexOf("you aren't eating enough"), -1,
+    "nor the brief's diet claim");
+  var quiet = P.stallAdvice({ plan: ul2c, sessions: TWC_BLOCK(ulIds, 2, 9, true),
+                              todayStr: TODAY, state: STORE(), profile: PB });
+  a.eq(quiet.state, "quiet", "and while it is progressing");
+  a.eq(quiet.provenance, null, "provenance is null - the check never had to choose a sentence");
+  a.deep(quiet.lines, []);
+  /* The same shape under a PHAT copy DOES get the brief's lines, so the
+     assertions above are measuring the gate and not an empty code path. */
+  var pa = P.stallAdvice({ plan: phatCopy, sessions: TWC_BLOCK(["d1a", "d1d", "d2a", "d2d"], 3, 9, false),
+                           todayStr: TODAY, state: STORE(), profile: PB });
+  a.eq(pa.state, "stalled");
+  a.eq(pa.provenance, "phat", "a copy of PHAT keeps the brief's diagnosis");
+  a.ok(pa.lines.join(" ").indexOf("The split isn't the problem") >= 0,
+    "and it really is the brief's sentence, so the ul2 assertion above is not vacuous");
+});
+
+T("S53.C3 / HD1.4 case (a) - a copy of any shipped plan NAMES the key lift it lost, all twenty cases", function(a){
+  /* RED ON b9a14ec^: every one of these read `Reading 3 of 4 key lifts.` with
+     no name. The count was true and the sentence was useless - he is told a
+     lift is missing and not which one, on the screen where he could put it
+     back. */
+  needFns(a, "keyLiftDisclosure", "removeExercise", "copyPlan");
+  var ids = ["phat", "ppl5", "ppl3", "ul2", "bb5"], i, j, src, copy, r, d, want, n = 0;
+  for (i = 0; i < ids.length; i++) {
+    src = P.shippedPlan(ids[i]);
+    for (j = 0; j < src.keyLifts.length; j++) {
+      copy = P.copyPlan(src, "c", TODAY).plan;
+      r = P.removeExercise(copy, src.keyLifts[j]);
+      a.eq(r.ok, true, ids[i] + "/" + src.keyLifts[j] + ": the slot comes out");
+      d = P.keyLiftDisclosure(r.plan);
+      want = P.exById(src, src.keyLifts[j]).n;
+      a.eq(d.n, 3, ids[i] + "/" + src.keyLifts[j] + ": three left");
+      a.deep(d.missing, [want], ids[i] + "/" + src.keyLifts[j] + ": and the missing one is NAMED");
+      a.eq(d.line, "Reading 3 of 4 key lifts. " + want + " is not in this plan.",
+        ids[i] + "/" + src.keyLifts[j] + ": the whole sentence");
+      /* removeExercise's own editor notice names it too, and uses the same
+         word for the feature - one name, coach section 23.2.6. */
+      a.deep(r.notices, [want + " is one of the lifts the six-week check reads. Removing it leaves 3."],
+        ids[i] + "/" + src.keyLifts[j] + ": the editor notice");
+      n++;
+    }
+  }
+  a.eq(n, 20, "five plans, four key lifts each - every case, not a sample");
+  /* THE MUTANT THIS KILLS. Strip derivedFrom and the disclosure goes
+     anonymous again: the naming comes from the ancestor lookup and from
+     nothing else, which is exactly what b9a14ec closed. */
+  var bare = clone(P.shippedPlan("ul2"));
+  bare.planId = "p_bare"; bare.readOnly = false; delete bare.derivedFrom;
+  var br = P.removeExercise(bare, "u1a");
+  a.eq(P.keyLiftDisclosure(br.plan).line, "Reading 3 of 4 key lifts.",
+    "no ancestor, no name - and that WAS the shipped behaviour on all four templates");
+  a.deep(P.keyLiftDisclosure(br.plan).missing, []);
+  /* Four declared and eligible is the normal case and says nothing at all. */
+  for (i = 0; i < ids.length; i++) {
+    a.eq(P.keyLiftDisclosure(P.copyPlan(P.shippedPlan(ids[i]), "c", TODAY).plan).line, "",
+      ids[i] + ": an untouched copy is silent");
+  }
+});
+
+/* ------------------------------------------------- HD1.4's engine-side half */
+
+T("S53.D1 / HD1.4 - the dropped-lift subject carries the SLOT's real numbers, so the sentence can never hard-code a range", function(a){
+  /* The first draft of the literal said "not a 3-5 lift"; three of the five
+     shipped plans have no 3-5 lift at all, so that sentence would have been
+     false the moment it rendered. The literal lives in index.html
+     (droppedKeyLiftLines) and is out of this page's reach; its INPUT is here,
+     and this pins that the input really does carry lo, hi and k per slot.
+     The rendered sentences were read off the screen with Playwright on
+     2026-09-29 and are recorded under "Already proven". */
+  needFns(a, "planKeyLiftsDropped", "planKeyLifts");
+  /* (c) power, hi > 8: a RANGE, taken from the slot. */
+  var c = P.copyPlan(P.UL2_PLAN, "c", TODAY).plan;
+  var e = P.exById(c, "u1a"); e.k = "power"; e.lo = 10; e.hi = 12;
+  a.deep(P.planKeyLiftsDropped(c),
+    [{ id: "u1a", n: "Barbell bench press", k: "power", lo: 10, hi: 12 }]);
+  a.eq(P.planKeyLifts(c).length, 3, "and the check reads three");
+  a.eq(P.keyLiftDisclosure(c).line, "Reading 3 of 4 key lifts.",
+    "case (a) does NOT claim it - the slot is still in the plan");
+  a.deep(P.keyLiftDisclosure(c).missing, [], "so nothing is named as missing");
+  /* (c) with a FIXED target, lo === hi: one number, never "10-10". */
+  var c3 = P.copyPlan(P.BB5_PLAN, "c", TODAY).plan;
+  var e3 = P.exById(c3, "b1a"); e3.k = "power"; e3.lo = 10; e3.hi = 10;
+  a.deep(P.planKeyLiftsDropped(c3),
+    [{ id: "b1a", n: "Barbell bench press", k: "power", lo: 10, hi: 10 }]);
+  /* (b) not power: the word follows the slot's own type. */
+  var c2 = P.copyPlan(P.PPL3_PLAN, "c", TODAY).plan;
+  P.exById(c2, "t1a").k = "hyp";
+  a.deep(P.planKeyLiftsDropped(c2),
+    [{ id: "t1a", n: "Barbell bench press", k: "hyp", lo: 5, hi: 8 }]);
+  var c4 = P.copyPlan(P.PPL3_PLAN, "c", TODAY).plan;
+  P.exById(c4, "t1a").k = "speed";
+  a.eq(P.planKeyLiftsDropped(c4)[0].k, "speed", "a speed slot reports speed, not hypertrophy");
+  /* Three of the five shipped plans lead at 5-8 or 6-8. That is the fact a
+     hard-coded "3-5" would have lied about, and it is worth its own pin. */
+  var leads = {}, ids = ["phat", "ppl5", "ppl3", "ul2", "bb5"], i, p, k;
+  for (i = 0; i < ids.length; i++) {
+    p = P.shippedPlan(ids[i]); k = P.exById(p, p.keyLifts[0]);
+    leads[ids[i]] = k.lo + "-" + k.hi;
+  }
+  a.deep(leads, { phat: "3-5", ppl5: "3-5", ppl3: "5-8", ul2: "5-8", bb5: "6-8" },
+    "not every plan has a 3-5 lift - the range MUST come from the slot");
+  /* And on day one every shipped plan drops nothing. */
+  for (i = 0; i < ids.length; i++) {
+    a.deep(P.planKeyLiftsDropped(P.shippedPlan(ids[i])), [],
+      ids[i] + ": nothing dropped on an unedited template");
+  }
+});
+
+T("S53.D2 / HD1.3 - at zero eligible key lifts ST1 is ABSENT and publishes NO disclosure line", function(a){
+  /* `Reading 0 of 4 key lifts.` must render nowhere. The engine still BUILDS
+     it - keyLiftDisclosure answers its own question honestly, and that is not
+     the defect - and the gate is two-layered: stallAdvice returns ABSENT
+     before it ever copies the line into `disclosureLine`, and the two screens
+     read `disclosureLine` and `planKeyLifts().length`. Both layers are pinned
+     here. The screen half was driven with Playwright on 2026-09-29 against a
+     ul2 copy and a PHAT copy with all four key lifts flipped to hyp: zero
+     occurrences of the string on Trend or on the plan screen. */
+  var ids = ["phat", "ppl5", "ppl3", "ul2", "bb5"], i, j, copy, adv;
+  for (i = 0; i < ids.length; i++) {
+    copy = P.copyPlan(P.shippedPlan(ids[i]), "c", TODAY).plan;
+    for (j = 0; j < copy.keyLifts.length; j++) P.exById(copy, copy.keyLifts[j]).k = "hyp";
+    a.eq(P.planKeyLifts(copy).length, 0, ids[i] + ": zero eligible subjects");
+    a.eq(P.keyLiftDisclosure(copy).line, "Reading 0 of 4 key lifts.",
+      ids[i] + ": the engine still answers honestly - that is not the defect");
+    adv = P.stallAdvice({ plan: copy, sessions: TWC_BLOCK(copy.keyLifts, 3, 9, false),
+                          todayStr: TODAY, state: STORE(), profile: PB });
+    a.eq(adv.state, "absent", ids[i] + ": ST1 is ABSENT, never present-thin");
+    a.eq(adv.absent, true);
+    a.eq(adv.disclosureLine, "", ids[i] + ": and it publishes NO disclosure line");
+    a.deep(adv.lines, ["This plan names no key lifts, so the six-week check cannot run."],
+      ids[i] + ": one sentence");
+    a.eq(adv.lines.join(" ").indexOf("Reading 0 of 4"), -1,
+      ids[i] + ": the string cannot reach a screen through stallAdvice");
+    a.eq(adv.lines.join(" ").indexOf("Log it weekly"), -1,
+      ids[i] + ": B-07's failure mode through HD1's door stays shut");
+  }
+  /* And before the check has RUN at all the line is withheld even when the
+     plan does have subjects - the `early` gate, which is the condition
+     section 9.9 attaches the disclosure to. */
+  var c = P.removeExercise(P.copyPlan(P.UL2_PLAN, "c", TODAY).plan, "u1a").plan;
+  var early = P.stallAdvice({ plan: c, sessions: [TSESS(MON, "e1", "u1b", SETS(100, 5))],
+                              todayStr: TODAY, state: STORE(), profile: PB });
+  a.eq(early.state, "early");
+  a.eq(early.disclosureLine, "", "nothing is disclosed about a check that has not run");
+  a.eq(early.disclosure.line, "Reading 3 of 4 key lifts. Barbell bench press is not in this plan.",
+    "though the engine has the answer ready for the plan screen, which is not gated on the check");
+});
+
+/* ------------------------------------------------------ the vocabulary sweep */
+
+/* A GREP-STYLE TRIPWIRE, built the same way as section 23.2.6's above.
+   Coach section 23.2.6: the feature has ONE name, "the six-week check", in
+   every string on every screen. daeb8e2 moved the last three, all in
+   index.html - the Trend card kicker and two Trend notes.
+
+   THE RETIRED NAME IS NEVER WRITTEN OUT HERE. It is assembled at run time
+   from fragments, so this page can search its own source for the whole thing
+   and legitimately expect zero. Do not "tidy" the concatenation away; it is
+   the mechanism, and joining it would make this test fail on itself.
+
+   WHAT THIS COVERS: this file in full, through its own serialised source, and
+   every function PHAT exports, through Function.prototype.toString - the only
+   reach a file:// page has into logic.js.
+   WHAT IT CANNOT COVER, stated rather than implied: index.html, which a
+   file:// opaque origin cannot fetch. Covered by a repo grep run 2026-09-29
+   across index.html, logic.js and this file: ZERO hits in all three. Re-run
+   it when a string moves. */
+T("S53.E1 / section 23.2.6 tripwire - the retired name for the six-week check exists in no source this page can read", function(a){
+  var BAD = "Week 6" + " test";
+  var page = document.documentElement.outerHTML, k, src, hits = [];
+  a.ok(("the " + BAD + " card").indexOf(BAD) >= 0, "the search is live, not vacuous");
+  a.eq(BAD.length, 11, "and the fragments are the whole retired name, not a stub");
+  a.eq(page.indexOf(BAD), -1, "this page must not quote the retired name");
+  for (k in P) {
+    if (typeof P[k] !== "function") continue;
+    src = String(P[k]);
+    if (src.indexOf(BAD) >= 0) hits.push(k);
+  }
+  a.deep(hits, [], "no function PHAT exports may contain it: " + hits.join(", "));
+  /* The surviving name, in the two places logic.js can be asked about it. */
+  var r = P.removeExercise(P.copyPlan(P.PHAT_PLAN, "c", TODAY).plan, "d1a");
+  a.eq(r.notices[0], "Bent-over row is one of the lifts the six-week check reads. Removing it leaves 3.");
+  a.eq(P.stallAdvice({ plan: { planId: "p_x", name: "X", days: [
+      { id: "a", name: "A", ex: [{ id: "a1", n: "Squat", s: 3, lo: 3, hi: 5, k: "power" }] }] },
+    sessions: [], todayStr: TODAY, state: STORE() }).lines[0],
+    "This plan names no key lifts, so the six-week check cannot run.");
+});
+
+T("S53.E2 / THE INTENTIONAL MISMATCH - the card is named `Six-week check` and its lead still counts WEEKS", function(a){
+  /* PINNED ON THE FRONTEND AGENT'S REQUEST so that nobody "fixes" it into
+     agreement. The kicker is the FEATURE'S NAME; the lead sentence carries a
+     WEEK NUMBER, and that number is trainingWeeks, not the constant 6 - at
+     twelve training weeks it says twelve. Making the two agree would either
+     put a false week number on the card or delete a true one from the
+     sentence.
+     The kicker is index.html's (`<span class="kick">Six-week check</span>`,
+     uppercased in CSS to SIX-WEEK CHECK) and was read off the screen with
+     Playwright on 2026-09-29 sitting directly above this lead; it is recorded
+     under "Already proven". The lead is logic.js's and is pinned here. */
+  var flat = TWC_BLOCK(["d1a", "d1d", "d2a", "d2d"], 3, 12, false);
+  var out = P.stallAdvice({ plan: P.PHAT_PLAN, sessions: flat, todayStr: TODAY,
+                            state: STORE(), profile: PB });
+  a.eq(out.state, "stalled");
+  a.eq(out.week, 12, "the lead's number is trainingWeeks");
+  a.eq(out.lines[0],
+    "Week 12 and no progress on Bent-over row, Flat DB press, Squat, Stiff-leg deadlift.",
+    "and it is a WEEK NUMBER, not the feature's name - twelve, not six");
+  a.eq(out.lines[0].indexOf("Six-week"), -1, "the lead does not carry the feature's name");
+  a.eq(out.lines[0].indexOf("six-week"), -1);
+  /* At six training weeks the two numbers coincide. That coincidence is what
+     makes the mismatch look like a bug, and it is why this is pinned. */
+  var six = P.stallAdvice({ plan: P.PHAT_PLAN, sessions: TWC_BLOCK(["d1a", "d1d", "d2a", "d2d"], 3, 6, false),
+                            todayStr: TODAY, state: STORE(), profile: PB });
+  a.eq(six.week, 6);
+  a.eq(six.lines[0].indexOf("Week 6 and no progress on "), 0,
+    "at six training weeks they coincide - a coincidence, not agreement");
+});
+
+T("S53.F1 - PHAT is untouched by all of it: the five shipped documents are byte-identical to b1e2f52", function(a){
+  /* The boundary for the whole work order. Nothing in these five commits was
+     allowed to move a shipped plan document, and a hash is the cheapest way
+     to say so. Measured on `git cat-file blob b1e2f52:logic.js` on 2026-09-29
+     and identical on the branch head. A number here moving means a plan
+     document changed - read the diff before re-pinning it. */
+  var ids = ["phat", "ppl5", "ppl3", "ul2", "bb5"], i, h = {};
+  for (i = 0; i < ids.length; i++) h[ids[i]] = hash40(JSON.stringify(P.shippedPlan(ids[i])));
+  a.deep(h, { phat: 1150281160, ppl5: 13584360, ppl3: 1425034893,
+              ul2: 3852682120, bb5: 1740019184 },
+    "a shipped plan document moved - that is a stored-shape question, not a copy question");
+  a.deep(P.SHIPPED_PLANS.map(function(x){ return x.planId; }),
+    ["phat", "ppl5", "ppl3", "ul2", "bb5"], "PHAT is first and stays the default");
+  a.eq(P.SCHEMA_VERSION, 7, "and no migration rode along with a copy change");
+});
+
+T("S53 TRIPWIRE - up to the end of S53 no fixture wrote a phat:* key", function(a){
+  a.deep(PHAT_KEY_WRITES, [],
+    "every fixture in this group builds its plan documents in memory and hands them to the function");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs with no manual input, and in a time that is not pathological (measured, printed, ceiling 60 s)", function(a){
@@ -22456,8 +23086,37 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "renders normally and <b>no set row is lost or blocked</b> &mdash; is manual item 13 and cannot be anything else from " +
     "<code>file://</code>.</p>";
 
+  /* WO-018 T3 / the WO-014 deploy gate, 2026-09-29. Three things this page
+     cannot reach, and what covers each instead. None of them is a request
+     for new product code; two are B-20-class extraction ASKS, stated so the
+     next pass does not re-discover them. */
+  document.getElementById("untestable").innerHTML +=
+    "<p><b>WO-018 T3 &mdash; three surfaces this page cannot reach, and the ASK for each.</b> " +
+    "<b>(1) <code>tierLines</code> is internal, so its TEN-ARGUMENT fallback cannot be exercised.</b> Both call sites in " +
+    "<code>logic.js</code> pass eleven arguments, and the eleventh is always <code>trainingWeekMin(plan)</code>, which is an " +
+    "integer &ge; 1 by construction &mdash; so <code>twMin === undefined</code>, <code>NaN</code>, <code>0</code>, <code>-1</code>, " +
+    "<code>\"3\"</code> and <code>Infinity</code> are unreachable from outside the file. S53.A3 pins the SAME default one layer " +
+    "out, through <code>trainingWeekMin</code>, for twelve unusable plan shapes; that covers the branch but not the literal " +
+    "argument. <b>ASK (B-20, low):</b> export <code>tierLines</code>, or leave it internal and accept the proxy &mdash; QA&rsquo;s " +
+    "recommendation is <b>leave it</b>, because the proxy exercises the same line and one more export is one more thing to keep " +
+    "honest. This changes the day <code>tierLines</code> gains a caller outside <code>logic.js</code>. " +
+    "<b>(2) <code>droppedKeyLiftLines()</code> and the HD1.3 <code>if(keyN)</code> gate are in <code>index.html</code>.</b> " +
+    "Rule HD1.4&rsquo;s three reason-keyed literals, the appended offer sentence on the plan screen, and the guard that stops " +
+    "<i>Reading 0 of 4 key lifts.</i> reaching either screen are all view code. Their INPUTS are pinned " +
+    "(<code>planKeyLiftsDropped</code> carrying <code>k</code>/<code>lo</code>/<code>hi</code> per slot in S53.D1, " +
+    "<code>stallAdvice().disclosureLine</code> and <code>planKeyLifts().length</code> in S53.D2); the rendered sentences were " +
+    "driven and are item 34 under &ldquo;Already proven&rdquo;. <b>ASK (B-20, worth doing):</b> <code>droppedKeyLiftLines</code> is " +
+    "a pure function of a plan document and would move to <code>logic.js</code> unchanged. It writes coach-signed copy and it is " +
+    "the one string in this batch whose range is computed, which is exactly the shape that should not live behind the DOM. " +
+    "<b>(3) The <code>SIX-WEEK CHECK</code> kicker is a CSS uppercase of an <code>index.html</code> literal</b> and cannot be read " +
+    "from here. The deliberate mismatch it forms with <code>Week {n} and no progress on &hellip;</code> is pinned from the " +
+    "<code>logic.js</code> side in S53.E2, and the two strings were read off one screen, one above the other, in item 34. " +
+    "The retired name is covered by S53.E1 for this file and every exported function, and by a repo grep for " +
+    "<code>index.html</code> &mdash; run 2026-09-29 across <code>index.html</code>, <code>logic.js</code> and this file: " +
+    "<b>zero hits in all three</b>. Re-run the grep when a string moves.</p>";
+
   document.getElementById("manual").innerHTML =
-    "<p><b>Fifteen items. Two minutes. Everything else on this page is already covered by " +
+    "<p><b>Sixteen items. Two to three minutes. Everything else on this page is already covered by " +
     "automation - see the section under this one for what was measured and how. " +
     "If you are short of time, do item 13(b) and stop: it is the only one on the list that can lose a number.</b></p><ol>" +
 
@@ -22665,7 +23324,20 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "the detector was deaf to your two notes for seventeen days. What no assertion can see is a notice arriving " +
     "RETROACTIVELY on a card you have already read many times without it. If it reads as the app telling you " +
     "something about your body rather than about its own behaviour, say so &mdash; the wording is one line in " +
-    "<code>logic.js</code> and it has now been changed once already for exactly that reason.</span></li></ol>" +
+    "<code>logic.js</code> and it has now been changed once already for exactly that reason.</span></li>" +
+
+    "<li><b>Open <i>Plan</i> and read the four new rows under <code>More templates</code> (WO-018 T3). " +
+    "Thirty seconds, and nothing on this item can lose a number.</b> <b>(a)</b> Each row says the day count " +
+    "and the day names. Can you tell the four splits apart <i>without opening one</i>? That is the whole " +
+    "purpose of the row. <b>(b)</b> Tap <i>Upper / Lower &mdash; 2 days</i>, then <i>Use this plan</i>. The " +
+    "row should now read <i>Active plan. Sessions log against it.</i> <b>(c)</b> Go back to <i>Train</i>. The " +
+    "line under the session card must read <b>&hellip; when TWO land in one week</b>, not three &mdash; on a " +
+    "two-day plan a training week is two. <b>(d)</b> Go back to <i>Plan</i>, open <b>PHAT</b> and tap " +
+    "<i>Use this plan</i> to put yourself back where you were. Your sessions are untouched either way; the " +
+    "only thing that moved was which plan is active.<br><span class=\"skipmsg\">Why a phone: the storage " +
+    "write, the refusal mid-session, both sentences and the geometry at 400, 393 and 320 px were all driven " +
+    "(item 34), and PHAT was proved byte-identical on four seeds. What a rig cannot answer is (a) &mdash; " +
+    "whether the row tells you enough to choose. If it does not, that is a UX item, not a bug.</span></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -23849,6 +24521,51 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "<b>(c) Not observable from a rig:</b> the 300 ms arm on <code>Change the plan</code> is not an HTML <code>disabled</code>, so a fast double-tap is a phone check, not this one. " +
     "<b>(d) Confirmed on the live screen:</b> after <i>make it permanent</i> the slot keeps the replaced movement&rsquo;s <code>fig</code>, <code>cue</code> and <code>implement</code> &mdash; the P2 in the contract list above. " +
     "<b>file:// suite 977 / 977 / 0.</b></span></li>" +
+    "<li><b>WO-018 T3 &mdash; THE FOUR TEMPLATES ON THE SCREEN, AND PHAT PROVED UNMOVED. 2026-09-29, on " +
+    "<code>wo-014-library @ 69923dc</code>.</b> <span class=\"msg\">" +
+    "Rig: a Node static server on <code>http://127.0.0.1</code> over the real tree, Playwright Chromium at <b>400 &times; 852</b> " +
+    "(and 393 and 320), <code>localStorage</code> seeded before boot, the service worker suppressed. The differential ran the " +
+    "SAME seed against a <code>git archive</code> of <code>b1e2f52</code> in a second directory on a second port, comparing " +
+    "<code>#view</code>&rsquo;s <code>innerHTML</code> character for character. Scratchpad <code>t1.mjs</code>&ndash;<code>t8.mjs</code>, " +
+    "<code>diff.mjs</code>, <code>red.mjs</code>. " +
+    "<b>(1) PHAT IS BYTE-IDENTICAL, which is the boundary for the whole work order.</b> Four seeds &mdash; an empty log, his real " +
+    "12 Sep session, ten weeks of progressing PHAT, and twelve weeks of FLAT PHAT so the stalled card renders &mdash; across six " +
+    "screens. <b>Train, Weight, Diet and the PHAT plan screen: IDENTICAL on all four seeds.</b> Trend differs by exactly the " +
+    "renamed strings and nothing else (+3 characters where one renders, +6 where the kicker and the Key-lifts note both do); " +
+    "the Plans list differs by the four new template rows, which is the feature. Zero page errors on any run. " +
+    "<b>(2) The engine differential</b>: 571 outputs &mdash; <code>cycleLine</code>, <code>volumeTier</code> on all five days, " +
+    "<code>stallAdvice</code>, <code>stallReport</code>, <code>lastFor</code>, <code>e1rmByDate</code>, <code>liftDays</code> and " +
+    "<code>speedLoad</code> per slot, and <code>verdict</code> on every PHAT slot across five set shapes &mdash; hashed " +
+    "<b>156254581 on the branch head and 156254581 on <code>b1e2f52</code></b>. " +
+    "<b>(3) <code>Use this plan</code> on <code>ul2</code>.</b> One key written, " +
+    "<code>phat:v1:plans</code> &rarr; <code>{\"schemaVersion\":7,\"plans\":[],\"activePlanId\":\"ul2\"}</code>; " +
+    "<code>phat:v1:log</code> and <code>phat:v1:bw</code> <b>byte-identical</b>, no other key touched, the row repaints to " +
+    "<i>Active plan. Sessions log against it.</i> <b>(4) With a draft on disk the same tap REFUSES</b> &mdash; " +
+    "<i>! Finish or discard the session in progress first.</i> &mdash; and <code>phat:v1:plans</code> is <b>not created at all</b>; " +
+    "log and draft byte-identical. <b>(5) Rule HD1.4 case (c) reads the SLOT&rsquo;s range.</b> A <code>ul2</code> copy with " +
+    "<code>u1a</code> at power 10&ndash;12: <i>Barbell bench press is prescribed 10&ndash;12 on this plan. The six-week check reads " +
+    "lifts prescribed to 8 reps or fewer, so it is out of the check.</i> on Trend, and the same sentence plus " +
+    "<i>Pick a replacement in the plan, or leave it out.</i> on the plan screen. A FIXED target (<code>bb5</code> copy, " +
+    "<code>b1a</code> power 10&ndash;10) prints <b><i>prescribed 10</i></b>, one number. Case (b) (<code>ppl3</code> copy, " +
+    "<code>t1a</code> &rarr; hyp) prints <i>is set as hypertrophy work on this plan</i>. " +
+    "<b>(6) HD1.3.</b> A <code>ul2</code> copy and a PHAT copy with all four key lifts flipped to hyp: " +
+    "<b><code>Reading 0 of 4</code> appears NOWHERE</b> &mdash; zero occurrences in the Trend document and zero in the plan " +
+    "screen document, on both plans, and no reason line either. " +
+    "<b>(7) The intentional mismatch, seen on one screen.</b> The card kicker renders <code>SIX-WEEK CHECK</code> directly above " +
+    "<i>Week 9 and no progress on Barbell bench press, Bent-over row, Squat, Deadlift.</i> &mdash; the feature&rsquo;s name over a " +
+    "week number. Correct, and pinned in S53.E2 so nobody reconciles them. " +
+    "<b>(8) TW1c.1 on the live screen.</b> A <code>ul2</code>-active device with one logged session reads " +
+    "<i>1 session logged. Week 1 starts when two land in one week.</i> on Train; on PHAT with one session it reads " +
+    "<i>&hellip; when three land in one week.</i> With nine weeks of two sessions each on <code>ul2</code>, Train reads " +
+    "<i>A training week is a week with two or more logged sessions.</i> and ST1 RUNS &mdash; which is TW1b end to end and the " +
+    "point of the two fixed <code>stallReport</code> call sites. " +
+    "<b>(9) Geometry.</b> The Plans list at 400, 393 and 320 px: <code>scrollWidth === innerWidth</code> at all three, " +
+    "<b>nothing overflows</b>, and <b>zero interactive elements under 44 px</b>. " +
+    "<b>(10) Red-first.</b> Each pre-fix blob dropped beside an unmodified copy of this page: <code>69923dc^</code> <b>1 red</b> " +
+    "(S53.A2 only &mdash; S53.A1, the byte-identity pin, is GREEN there, which is what it is for), <code>ff4c52e^</code> <b>2</b>, " +
+    "<code>b9a14ec^</code> <b>5</b>, <code>b1e2f52</code> <b>6</b>. " +
+    "<b>Found: nothing.</b> No defect, no new backlog item, no moved expectation outside the three renamed strings. " +
+    "<b>file:// suite 1026 / 1026 / 0</b>, green on all seven weekdays and on four calendar boundaries.</span></li>" +
     "</ol>";
 })();
 </script>
