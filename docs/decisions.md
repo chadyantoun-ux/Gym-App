@@ -3988,3 +3988,165 @@ count that does not move.** Decision 12 is why.
 
 **And the standing diagnosis at its tenth asking.** Four logged sessions. This order is the one that removes a
 reason not to log the fifth. Ship it.
+
+---
+
+## 2026-09-29, fourth pass — the pain detector never heard him, and Track B is unblocked
+
+Two items in one planning pass, ruled by the `project-manager`. WO-014 is live and verified
+(`PASS 61/61`, `sw.js` v7, `SCHEMA_VERSION 7`, `migrate-007-mv.sql` applied and probed). Orders written:
+**WO-017** (`docs/work-orders/WO-017-note-deaf.md`) and **WO-018** (`docs/work-orders/WO-018-splits.md`).
+Items filed: **B-155**, **B-156**, **B-157**, **B-158**, **B-159**.
+
+### Decision 1 — B-155 outranks B-150 and the B-131 repair, and it is not close
+
+His `d1b` notes of 12 and 22 Sep both say the forearm is `still not recovered`. Both return **`false`**
+from the shipped `PAIN_RE` (re-run by the PM against `PHAT.PAIN_WORDS`, `logic.js:6463`). Rules S1 / S1b
+stayed silent across two sessions ten days apart, on the slot he was substituting *because of the arm*.
+
+The ordering argument that was offered — *this is the only one of the three where the app can actively
+tell him to load an injured joint* — is true and is not the strongest form of it. **The stronger form:
+the note field is the only recovery input the app has**, §13.5 says exactly that, and it has been dead
+for seventeen days while he used it correctly and in the field provided. B-150 produces wrong *numbers*,
+which are on the screen where he can see them and argue with them. This produces **silence on the one
+channel that is about his body**, and silence is not visible to him, to QA, or to the coach who read the
+same note in §21 and did not notice the detector had not fired on it.
+
+Cost confirms the order rather than driving it: the vocabulary half is one frozen array plus its tests,
+writes **zero stored bytes**, needs no migration, and collides with no other order. WO-016 is a
+data-entry redesign across two slot types. **Deploy order: WO-017 → WO-015 → WO-016**, with WO-018's
+document work in parallel and its app work on its own deploy.
+
+### Decision 2 — the vocabulary and the instrument are two questions, and both belong to the coach
+
+**Vocabulary (W1).** Negated recovery is absent from the list in every form. The coach rules each
+candidate individually — `not recovered`, `not healed`, `still not right`, `still bad`, `playing up`,
+`acting up`, `flared`, and the four judgement calls `sore` / `stiff` / `tender` / `dodgy`. Three of
+those are already on §13.5's CONSIDERED AND EXCLUDED list (`flare/flared`, `stiff`) or were rejected
+outright in writing (`sore`, on **frequency, not physiology**), and that list says *do not add back
+without a coach ruling*. This is the ruling. **The PM explicitly declines to make the `sore` trade-off**:
+a detector that fires on every DOMS note is ignored within a week, and that argument is the coach's own.
+
+**One observation that decides how cheap this is, recorded so it is not re-derived.** §13.5 closes with
+*"do not extend this into a parser"* — and a **prohibition on a parser is not a prohibition on phrases.**
+`g(?:ave|ives|iving) way` is already a multi-word alternation in the shipped list. `not recovered` as a
+literal alternation is the *same* instrument, not a new one. A bare `recovered` is the thing that cannot
+ship: `recovered well between sets` is a **good** report and would be read as an injury.
+
+**Instrument (W2).** A keyword list just failed on the first real note it was ever shown. **PM
+recommendation, recorded so it is not re-litigated: keep the list and add one path that is not
+vocabulary — a persistent one-tap control `[Likely]`.** No list catches the unchosen word, which is the
+defect restated; and a tap can be forgotten, which is why the list stays as the safety net rather than
+being replaced. **Rejected: prompting when a note contains no recognised word** — he writes prose most
+sessions, so it would fire most sessions, which is the exact frequency argument that rejected `sore`.
+Whatever ships goes through the one existing `painFlag` chokepoint: §13.5's *NO SECOND WINDOW* means one
+definition of the trigger in the file, and a tap must not become a second one.
+
+**And a copy question nobody would have asked and an engineer would have invented an answer to:**
+`S1_LINES[0]` reads `You logged pain on this.` He did not log pain. He logged an arm that has not
+recovered. The coach rules whether the literal stands; if it does not, **UX writes the replacement and
+nobody else.**
+
+### Decision 3 — his two notes DO start firing S1 retroactively, and that is correct
+
+The question was asked as though a stored verdict existed. It does not. **No verdict is stored anywhere
+in this app** — advice is recomputed at render time from the note and the sets — so *"it would change
+advice he has already been given"* is a category error. What changes is what the card says the **next**
+time he opens it. The mechanism, precisely:
+
+- **`painState` is ordinal, not dated, deliberately** (`logic.js:9060` and the comment above it): it
+  reads the most recent logged entry for that exercise. `d1b`'s most recent is 22 Sep, so the notice
+  appears the next time that card renders and persists until he logs `d1b` again **without** such a
+  note. He said *still not recovered* seven days ago and has not said otherwise. That is the honest
+  reading and the app's own designed behaviour.
+- **`painWindow` has already expired.** `from = today − (days − 1)` = 23 Sep on the 7-day window, so
+  22 Sep falls outside it: V1's accessory offer is **not** retroactively suppressed.
+- **The stall-report clause (21 days) is inside its window** and would gain one factual line until
+  ~13 Oct. Conservative direction, on a report he has not triggered. Accepted.
+- **S1a's 21-day restatement fires on its own** if he never logs `d1b` again, changing the copy once to
+  name the date. Designed.
+
+**Suppressing the retroactive firing would require a date gate that does not exist and that the coach
+explicitly refused.** Building one, to avoid showing a notice about an arm he twice said was not right,
+would be the wrong side to be wrong on — and §13.5 already states which side that is.
+
+### Decision 4 — B-116 is not answered by the notes, and it was proposed as answered
+
+**Disagreement, on the record.** B-116 is *warm-up sets: logged, marked, or omitted?* The two notes are
+him narrating a **substitution**, which is B-111 / B-136 — a question answered on 2026-09-28 by his
+behaviour and already closed into WO-014 as `sw` on the entry. Closing B-116 on this evidence would shut
+a question nobody has answered by pointing at a question that is already shut.
+
+**What the notes genuinely establish, and it is worth more than either item:** he uses the note field as
+a **session narrative**, writing what he did instead and why, in prose, because there was nowhere else;
+and **he substitutes for injury, not convenience**, twice, for the same forearm. The first fact is why
+WO-014's swap matters and is now confirmed rather than inferred. The second is a constraint on what a
+plan must tolerate and it is why **B-159** exists. Toward B-116 it is evidence, `[Likely]`, and not a
+ruling: the five-set 20 → 70 kg ramp on `d1a` is still read by every engine as prescribed work, and
+*logged, marked, or omitted* is a design choice nobody has made. **Fourth asking.**
+
+### Decision 5 — three amendments to WO-015, folded in before it is written
+
+1. **`d1b`'s reading is closed by his own prose.** It was held on one more sentence because
+   *"pull-ups, nothing added"* contradicted the stored bytes. **Two notes ten days apart both say
+   pulldown**, and the 22 Sep ramp 65 / 75 / 85 / 95 is a stack, not a belt. Outstanding from him is now
+   only **the stack's unit — kg or lb** (his cable machines are in kg, and a lat pulldown is a cable
+   machine, so 95 reads as 95 kg `[Likely]`).
+2. **The repair must not touch `note`, byte for byte, and the fingerprint gate should include it.** It
+   is the most distinctive run of bytes in either entry; including it strengthens the gate at zero cost.
+3. **Are those two entries swaps?** Schema 7 has the field (`mv` / `sw`) that did not exist when they
+   were written, and he has told us in prose that they were. Coach §21 ruled *"no rule in this section
+   reads a note to infer a swap"* — **that ruling is about code inferring silently, not about a
+   human-ruled, Chady-confirmed, fingerprint-gated one-off.** The distinction is the difference between
+   a store rewrite driven by prose and a correction driven by a person. The PM does not rule it here;
+   WO-015 specifies it and the coach sanctions it.
+
+### Decision 6 — the load-bearing half of Track B is not the day order, it is B-158
+
+He chose Push · Pull · Legs · Upper · Lower, Upper and Lower heavy, *"but I also get to change that as
+needed."* **The second clause is not a UI requirement and treating it as one is how it gets dropped.**
+
+`keyLifts`, `speedSource` and `reintroOrder` are **plan-level fields naming slot ids**. The Plan Editor
+already lets him change `k`, `lo` and `hi` per slot — so "heavy" is already editable today. What is not
+handled is that **the subjects do not follow**: make Legs heavy and Upper light, and ST1's week-6 test,
+D1's deload triggers and SP1's speed loads keep pointing at the day he just made light, silently,
+running the whole advice layer off the wrong four lifts. Filed as **B-158**.
+
+So the requirement is stated as a behaviour, not as a control, and it cannot be satisfied by a toggle
+that only edits `k`:
+
+> After he changes which days are heavy, every subject of the advice layer follows — or returns its
+> named C7a absent state and says so. **No engine returns a number computed off the old heavy day.**
+
+Whether that is derivation, invalidation, or a prompt is the coach's (T1 Ruling 1). What is not
+negotiable: **no template bakes "heavy" in as a fact only its author can change.**
+
+Also settled for the templates, from rules that already exist: slots carry **library `mv` ids**, never
+hand-typed names (or every new split reintroduces B-46 and ships slots with no movement identity);
+`k` is stated per slot and never derived (**K3**); `implement` is **written by the coach** where Rule I3
+refuses, which is 199 of 876 library rows — a refusal is not a default, and that is why this is a
+coaching document and not a script. **PHAT stays read-only and stays the default.**
+
+### Decision 7 — sequencing, and it is about rollback, not about stores
+
+The instinct offered was right; the stated reason was not the load-bearing one. T2–T4 write the
+**plans** store and are forbidden from touching the log at all — that is already an acceptance
+criterion. The real hazards are:
+
+- **One working tree, three lanes, one file.** WO-017 W3, WO-015's repair pass and WO-018 T2 all write
+  `logic.js`. CLAUDE.md §4b: the main session serialises them or gives them separate worktrees, and
+  every commit names paths.
+- **Rollback scope. WO-015 ships alone.** A one-off, fingerprint-gated pass that rewrites his only real
+  training data must be rollback-scopable by itself. Bundled with four plan documents and a picker,
+  neither can be reverted without taking the other.
+
+**T1 starts now**, in parallel with WO-017's coach items — §23 and §24 of the same document, no
+collision. **T2 onward waits for WO-017's `logic.js` to merge.**
+
+### The standing diagnosis, at its eleventh asking
+
+Four logged sessions. Last one **seven days ago**. The app has now spent seventeen days silently not
+noticing an injury he reported twice, and the plan on the table is four more splits. **WO-017 is the
+one of these that is about him rather than about the app.** Everything else here is tooling, and the
+tooling is not the bottleneck — and the first thing anybody should do with the two notes is not route
+them, it is **ask him how the forearm is.**
