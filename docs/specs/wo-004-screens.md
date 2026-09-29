@@ -4875,6 +4875,12 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 51 | session card + summary, pain notice, line 1 (`S1_LINES[0]`) | any pain trigger | `This exercise is flagged. Not something this app can assess.` **AMENDED 2026-09-29 (coach §24.5).** Replaces `You logged pain on this. Not something this app can assess.` The second sentence is §10's prohibition and is carried over unchanged; only the opening moves. **`S1_LINES[1]` does not change** |
 | 52 | train, volume tier (`blockedLine`, Rule S2b) | V1 offer suppressed | `No new exercise this week. An exercise was flagged in the last 7 days.` **AMENDED 2026-09-29 (coach §24.5.5).** Replaces `No new exercise this week. You logged pain in the last 7 days.` The first sentence — the decision — does not move; only the reason does |
 | 53 | session card + summary, pain notice, **the whole notice** (Rule S1a, the 21-day restatement — it replaces *both* `S1_LINES`, `logic.js` `painState`) | `gap >= S1A_DAYS` | `This exercise was flagged on {date} and you have not logged it since. Still holding the weight. Not something this app can assess. If it has not settled, see a physio or a doctor.` **AMENDED 2026-09-29 (coach §24.5, §22.12 #51).** Replaces `You noted pain on this on {date} and have not logged it since. The app cannot tell you whether it has settled. If it still hurts, see someone qualified to look at it.` `{date}` is `dayMon(out.date)`, the **only** interpolation, unchanged (§10 forbids a second) |
+| 54 | home, repair notice, kicker | WO-015's repair stamp is present in the local log **and** the notice has not been dismissed on this device | `LOG CORRECTED` **NEW 2026-09-29 (§22.19).** Kicker shape is `SKIPPED` / `SWAPPED` / `ADDED`'s, at `--dim` or better — never `--faint` (§0.5) |
+| 55 | home, repair notice, body line 1 | `np >= 1` | `{np} pull-up sessions now read Lat pulldown.` (`1 pull-up session now reads Lat pulldown.`) **NEW 2026-09-29.** `{np}` is the session count the pass actually wrote, read from the repair stamp, never a literal in the view |
+| 56 | home, repair notice, body line 2 | `nd >= 1` | `{nd} dumbbell sessions held the pair total. They now read per hand.` (`1 dumbbell session held the pair total. It now reads per hand.`) **NEW 2026-09-29.** The second sentence **is** the disclosure that the reading changed; it is correct whether the pass rewrote `w` or only re-marked the entry, and it is why no string in this notice claims the load did not move |
+| 57 | home, repair notice, body line 3 | always, when the notice renders | `Nothing was removed. Every session is still under Recent sessions.` **NEW 2026-09-29.** The only reassurance in the notice, and the only one provable from a surface: `Recent sessions` excludes nothing (§9.1). **It deliberately does not say "nothing changed" and does not mention any chart** — Rule CH1 |
+| 58 | home, repair notice, body line 4 | `np >= 1` | `The pulldown sessions are not on the pull-up line — a different movement.` **NEW 2026-09-29.** Word for word #48's clause, on purpose: the Trend line and this line are one voice saying one thing twice, not two explanations. CH1-safe — it asserts absence, never presence |
+| 59 | home, repair notice, button | always, when the notice renders | `Dismiss` **NEW 2026-09-29.** Full width × 48, `.ghostbtn` |
 
 Substitutions beyond §0.8: `{original}` the movement the slot carried before the swap, escaped ·
 `{new}` the movement picked, escaped · `{query}` the typed query, escaped · `{Equipment}` the library's
@@ -5075,3 +5081,118 @@ renders no disclosure at all, §4.13 already handles it) · editing or deleting 
 free-text movement names (rejected in the order, §1.4) · plate math (B-10) · any change to the set rows,
 the ghost row, the `ld` row or the load chip's own sheet beyond §22.11's one branch — WO-010 D8 still
 requires the kg-direct row to be `main`'s DOM byte for byte · a rest timer (B-09) · anything on Home.
+
+---
+
+## 22.19 The WO-015 repair — the Trend line stays, and the repair is announced once on Home
+
+**Ruled 2026-09-29 by `ux-designer`, one question, asked by the PM: is `{n} sessions are not on this
+line — a different movement.` the right sentence to meet him with the morning after a repair he did not
+ask for.** The answer is (b): **the sentence stays exactly as #48 writes it, unchanged and
+un-special-cased, and the repair announces itself once, elsewhere, on Home.** This section is a
+deliberate exception to §22.18's *anything on Home* — that boundary is §22's, and this is WO-015's
+question, not §22's.
+
+### The ruling, and the reason
+
+**Leave #48 alone.** It is true, it is the same sentence any swap produces, and a "we just repaired your
+data" variant of it would be a second voice on a screen whose whole job is one question — *is this
+working*. Worse, a variant would have to reassure, and every reassurance available on that screen is
+either false or forbidden: Rule CH1 blocks the only reassurance he actually wants (*they are on the
+chart*), because they are not and never will be. **A screen that cannot say the true comforting thing
+must not say a comforting thing.** Trend reports; it does not apologise for the log.
+
+**But silence about the write is not available either, and this is the part that decides the frontend
+item.** The repaired sessions are the app changing numbers in his log while he was not looking. §3's
+*never lose a number* has a sibling this repo has not written down: **never change a number he cannot
+see was changed.** MV1.4's whole logic is that an undisclosed narrowing is the defect; an undisclosed
+**rewrite** is strictly the worse case of the same thing. And the order of discovery is the real damage:
+without a notice, his first evidence that his log moved is a line he has never seen appearing under a
+chart he has read many times — he deduces a data change from a chart disclosure, decides the app edits
+his history quietly, and the next number he doubts is one that is right. **The notice's job is to arrive
+before the chart makes him ask.**
+
+**So: yes, the repair needs an announcement. The frontend item that writes it must exist.** It is one
+dismissible card on Home, built for this pass and deleted from the code when it is dismissed — not a
+general "your data was repaired" component. There is no second repair planned and a mechanism costs more
+than the four sentences do.
+
+### Flow
+
+```
+Flow:   The repair notice
+Entry:  Opening Home on the device whose log WO-015 wrote. No other entry point. It is never
+        reachable from a link, a tab, or a control — it is there or it is not.
+Exit:   Dismiss. One tap, permanent on that device, never shown again.
+```
+
+| Element | Rule |
+|---|---|
+| Screen | **Home / Train only.** Never on Session, never on Summary, never on Trend, never on Weight |
+| Position | **Below** the day card and the start control, above `Recent sessions`. Train's one question is *what do I do now*; a notice about last week never outranks the answer |
+| Shape | One `--surface` card, full width: kicker #54, body #55 · #56 · #57 · #58 in that order, then #59 |
+| Render gate | The repair stamp exists **in the local log** **and** no dismissal flag on this device. Gating on the stamp — not on a global flag or a date — means Diana's phone never renders it, and a restore that brings the repaired sessions to a second device brings the notice with them, once |
+| Never under a thumb | If a draft session is open, the notice **does not render at all** until that session is saved or discarded. It also obeys `mayPaint()`: it never appears by repaint while he is on the screen. It is present on a fresh open or it waits for the next one |
+| Dismissal | A single boolean in `prefs`. `prefs` do not back up, so a second device re-shows it once — accepted, it is one card and the alternative is a new backed-up store for a one-off |
+| Absent counts | `np` or `nd` at zero: that line does not render. `np` at zero also removes #58. Both at zero: **the whole notice does not render** — no empty card, no `0 sessions` |
+| No undo | The notice offers none. He confirmed both facts; the repair is not a proposal. Correcting a saved session is **B-05** and always was |
+
+### Copy, and what it refuses to say
+
+```
+LOG CORRECTED
+
+2 pull-up sessions now read Lat pulldown.
+2 dumbbell sessions held the pair total. They now read per hand.
+Nothing was removed. Every session is still under Recent sessions.
+The pulldown sessions are not on the pull-up line — a different movement.
+
+[            Dismiss            ]
+```
+
+Four sentences, each carrying exactly one fact: **what changed · what changed · what did not · what he
+will see.** The literals are #55–#58.
+
+- **It does not apologise and does not congratulate.** No actor appears in any sentence. There is no
+  `we`, no `sorry`, no `improved`, no `fixed it for you`. The log is the subject throughout.
+- **It does not claim the loads are untouched.** #56's second sentence *is* the disclosure that the
+  dumbbell reading changed, and it is true whether WO-015 rewrote `w` or only re-marked the entry. A
+  blanket `No load changed.` would be a false reassurance on exactly the two entries the pass touched
+  hardest, and a false reassurance here costs more than the whole notice buys.
+- **It does not mention a chart except to say they are off one.** Rule CH1. #58 asserts absence, never
+  presence, and it is #48's clause word for word so the two surfaces are one voice.
+- **`Recent sessions` is the proof, and it is named** because it is a surface he can go look at, and
+  §9.1 excludes nothing from it. The one reassurance in the notice is the one he can check in two taps.
+
+### A11y
+
+- The card is a `<section>` with `aria-labelledby` pointing at the kicker; the kicker is a heading in
+  Home's existing level order, not a styled `<div>`.
+- **Not a live region.** It renders on load, not in response to an action, and `role="alert"` would
+  interrupt a screen-reader user's arrival on the screen for a week-old fact (same reasoning as §4.7's
+  notice, spec line ~2613).
+- Focus order: day card → start control → **notice → `Dismiss`** → `Recent sessions`. On dismiss, focus
+  moves to the heading of `Recent sessions`, never to `document.body`.
+- Contrast: kicker `--dim` or better, body `--bone`. **`--faint` is forbidden in this card** — `SKIPPED`'s
+  `.45` already failed §0.5 and this is the same kicker shape.
+- The counts are digits in the sentence, not colour, not an icon. Nothing here relies on colour.
+
+### Dependencies, stated, because none of them are mine
+
+1. **`np` and `nd` are WO-015's counts**, read from the repair stamp. The view must not hard-code `2`
+   and `2`; B-131 names two entries inside one session, so the *session* count may be smaller than the
+   entry count and the literal must not assert a number the pass did not write. **Backend owns the
+   stamp's shape.**
+2. **Whether the dumbbell repair rewrites `w`** — backend/WO-015. #56 is written to be true either way,
+   but if it rewrites `w`, QA should pin that no string in this notice says otherwise.
+3. **`Lat pulldown`** must be the library's own `n` for that movement, escaped like every other library
+   name (§22.12's substitution rule). If the library spells it differently, the library wins.
+4. **B-154 is untouched by this.** The notice does not change what #48 counts.
+
+### Out of scope, deliberately
+
+Any change to #48 or to the exclusion predicate · a Trend-side variant of #48 for repaired sessions
+(ruled against above) · a general data-repair notice component · undo of the repair (B-05) · a link or
+deep-link from the notice to either session · a notice on Summary (it is a post-session screen; the
+repair is not about the session he just trained) · announcing the repair in the toast queue (a toast is
+for something he just did) · anything about the pull-up line's numbers themselves (B-141).
