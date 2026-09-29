@@ -6471,6 +6471,7 @@ important thing not to build here.
 | e | Photographs and cues for a library movement | **Confirmed: cue-only, and no cue, so the disclosure does not render at all.** F1p's *"Not enough data: the whole of this section"* binds at 800 movements exactly as it bound at 31. **New clause: a swapped card shows no photograph and no cue at all** — the slot's pair is authored for the movement he is not doing. Rule **F1L**, 22.5. |
 | f | Does `fig` move to the movement? | **No. It stays on the slot, this release and until B-142 is done.** `fig` is not a description of a movement, it is the **record of a check performed on a slot** against a criterion written for that slot (§17.2). Moving it converts a 32-row whitelist into a lookup over an unchecked namespace. Rule **F1L.3**, 22.6. |
 | — | The `Swapped` mark (B-111) | **Better than what I recommended in §18.3 and it supersedes it.** I asked for a tap he could forget; `sw` is derived from the movement he picked, so it cannot be forgotten. §18.3's ST1 and H1 clauses carry over, with the movement's name now available to the copy. 22.4.5. |
+| — | The gate on `Swapped to {new}. Not compared to last session.` (W12) | **Signed off as built — H1.3d fires only when there is no prior of the movement on the card.** A substitution resets the comparison for exactly one session; a second session on the same swapped movement is a real week-over-week comparison and takes 4a–4d. Two conditions: `prev` is always movement-matched and never a cross-slot fallback (B-152's permanent form), and 3d beats MV1-C4. **No literal owed.** 22.4.5a. |
 
 ---
 
@@ -7018,6 +7019,74 @@ H1 cases 1 and 2 (range compliance) still run on the swapped session — they re
 P1 runs unchanged for the same reason: it is history-free (§9.1's table). **So a swapped session
 still gets a verdict about today's work; only the comparison to last week goes quiet.** That is the
 correct split and it is the same one §18.3 drew.
+
+### 22.4.5a The gate on that sentence — **signed off as built (H1.3d), with two conditions**
+
+Ruled 2026-09-29, at W12's request. §22.4.5 gave the sentence and not the condition; this fills the
+hole. **`[Certain]`.**
+
+**A second session on a swapped movement IS a legitimate week-over-week comparison. A substitution
+resets the comparison for exactly one session — the one with no prior of that movement — and not a
+day longer.** W9's gate (`swapped` named AND `!Cprev || Cprev.length === 0`) is therefore correct as
+built. Sign off, no rebuild.
+
+The reason is one sentence: **what invalidates a comparison is comparing two different movements,
+not the word "swapped".** Machine row at 3 × 8–12 against machine row at 3 × 8–12 is the same
+measurement taken twice, on the same apparatus, under the same leverage — which is the whole of what
+H1 case 4 needs. Suppressing it would print `Not compared to last session.` beside a comparison that
+exists and is true, and would cost him a week of feedback for nothing. I considered the argument for
+a longer reset — the second session on a new machine gains tonnage from learning the path, not from
+adaptation — and **reject it**: H1 case 4 prints a tonnage percentage, which is a fact and not a
+causal claim, and its only actionable half (4d's load step) is gated on reps inside the range, which
+is the right gate on a novel movement as much as a familiar one. `[Likely]` on the size of the
+skill effect; `[Certain]` that it does not make the printed number false.
+
+**Condition 1 — the prior handed to H1 must be movement-matched, or this sign-off lapses.** The gate
+is only safe because `Cprev` on a swapped card is MV1.1's own-slot prior read **through the movement
+on the card today**. Two things must hold, permanently, and they are the caller's to hold because a
+pure engine cannot check them:
+
+- an entry of a *different* movement never arrives as `prev` (MV1.1(a) — this is B-152 in its
+  permanent form: an invariant, not a bug that was fixed once);
+- a **cross-slot fallback** prior (MV1.2) never arrives as `prev` either — MV1.3 already forbids it
+  driving H1 cases 3 and 4, and the gate depends on that ban being enforced at the caller.
+
+If either is ever broken, the branch must go back to firing on the swap alone, because the
+alternative is `Volume down 31%` across two different movements. Pre-schema-7 entries satisfy
+Condition 1 by `effectiveMv` — they are the slot's movement by definition — so his four logged
+sessions find no machine-row prior and take 3d. That is right for the rule's reason, not by accident
+of the schema.
+
+**Condition 2 — precedence when the only prior is a cross-slot fallback: 3d wins, over MV1-C4.**
+MV1-C4 opens `First session on this exercise`, which on a swapped card is **false** — the slot has
+history; the movement is what is new. The fallback stays disclosed where disclosure belongs, on the
+ghost line, as MV1-C1. This is an ordering, not a new string.
+
+**What this ruling does not change.** ST1's two-session unswapped minimum and its own literal
+(§22.4.5, above) are a different engine over a different window and are untouched — do not
+"harmonise" H1's gate to ST1's minimum; a week-over-week comparison of one movement and a stall test
+over a block are not the same question. H1 cases 1 and 2 and Rule P1 still run on the swapped
+session. **No age bound is added to an own-slot prior**: H1 on `main` compares to a same-slot prior
+of any age, and a swapped card must not be held to a stricter rule than the barbell it replaced. If
+that bound is wanted it is wanted uniformly, for every exercise, and it is not this order.
+
+Worked examples:
+
+1. First ever machine row on the cable-row slot, 3 sets logged. No machine-row prior → **3d**,
+   `Swapped to Machine row. Not compared to last session.`
+2. Machine row last week and again today, 3 full sets both times, prescription unchanged. The prior
+   **is** a machine row → **4a–4d run normally** (`Volume up 12% — …`). 3d must **not** fire here;
+   `Not compared to last session.` would be flatly false. This is the case the gate exists for.
+3. Boundary. Machine row last week, **chest-supported row** today. Strict `mv` equality fails, no
+   prior → **3d**, naming Chest-supported row. Two different substitutions are not a series.
+4. The failing one. A caller passes the slot's own **barbell** row prior on a machine-row card and
+   H1 prints `Volume down 31% — 1,925 kg against 2,520 kg`. Correct arithmetic, wrong fact, and it
+   would read as a regression he did not have. That is Condition 1 breaking, and it is the defect
+   this sign-off is conditional on never recurring.
+
+**Nothing is owed.** No literal is added by this ruling and none is amended. The copy set for the
+swap path is closed at §22.4.5's two strings plus MV1-C1 / C1b / C2a / C2b / C2c (no line) / C3 /
+C4. QA may treat §22.12 as complete for this path.
 
 ### 22.4.6 "Make it permanent" — the consequence the copy must state
 
