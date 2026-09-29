@@ -1847,6 +1847,49 @@
     return null;
   }
 
+  /* mvExcludedCount(sessions, exId, mv) -> Number
+
+     HOW MANY LOGGED SESSIONS UNDER THIS SLOT RULE MV1.1 PASSES OVER. A pure
+     count, so the view can disclose the narrowing (MV1.4: an undisclosed
+     narrowing is the defect) WITHOUT re-implementing the predicate. There is
+     one predicate, `mvSkips`, and the third argument means here exactly what
+     it means on lastFor, e1rmByDate, liftDays and the rest — undefined is the
+     rule OFF and answers 0, a movement id is MV1.1(a), null is MV1.1(b).
+
+     THE PREDICATE IS THE MOVEMENT COMPARISON, NEVER `sw`, and this is the
+     whole reason the function exists rather than a `filter(e => e.sw === 1)`
+     in the view. `sw` is stamped at LOG time and is never rewritten; the
+     slot's `mv` moves when he taps "make it permanent". An `sw`-keyed count
+     would pass every test that can be written the day it ships and would then
+     keep excluding his machine-row sessions forever, after the confirmation
+     promised him in writing that they become this exercise's history. Under
+     MV1.1(a) an entry whose movement now MATCHES the slot counts again, `sw`
+     and all, and the count for it goes to zero. MV1.1(b) is the one case that
+     reads `sw`, because a plan with no movement anywhere has nothing else to
+     read, and that is MV1.1(b)'s own rule rather than this function's.
+
+     Counts SESSIONS, not sets and not dates: an entry with no completed set is
+     not a training record (Decision 7, TW1) and is not counted, exactly as
+     lastFor and priorFor's skip walk refuse it. Two sessions on one date under
+     the same slot are two sessions.
+
+     Reads nothing, writes nothing, throws on nothing. */
+  function mvExcludedCount(sessions, exId, mv) {
+    if (!Array.isArray(sessions)) return 0;
+    if (typeof exId !== "string" || exId.trim() === "") return 0;
+    if (mv === undefined) return 0;                  /* MV1.1(c): the rule is off */
+    var id = exId.trim(), n = 0;
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i];
+      if (!isObj(s) || !isObj(s.entries)) continue;
+      if (!Object.prototype.hasOwnProperty.call(s.entries, id)) continue;
+      var e = s.entries[id];
+      if (!hasDone(e)) continue;
+      if (mvSkips(e, mv)) n++;
+    }
+    return n;
+  }
+
   /* ---- Rule MV1.2, the cross-slot fallback (coach addendum §22.4) ----
 
      FIVE GATES, ALL REQUIRED, and the asymmetry with MV1.1 is deliberate:
@@ -7080,9 +7123,26 @@
 
   /* -------------------------------------------------------------- H1 */
 
+  /* swapName(v) -> the swapped-to movement's display name, or null.
+     Accepts the bare string or the card's movement object ({name} / {n}), so
+     a caller holding one does not have to unwrap it and cannot unwrap it
+     wrongly. `true`, 1, {} and "   " all answer null: a swap the app cannot
+     NAME has no copy in §22.4.5, and a nameless stand-in would be a sentence
+     the coach never wrote. Never trims away a name into "". */
+  function swapName(v) {
+    if (typeof v === "string") return v.trim() === "" ? null : v.trim();
+    if (isObj(v)) {
+      if (typeof v.name === "string" && v.name.trim() !== "") return v.name.trim();
+      if (typeof v.n === "string" && v.n.trim() !== "") return v.n.trim();
+    }
+    return null;
+  }
+
   /* Rule H1 — hypertrophy verdict (audit §9), with Z1/Z2/Z3/G1/I2/S1.
-     Cprev is the previous entry's first ex.s completed sets, or null. */
-  function verdictHyp(ex, C, Cprev, pain, epochChanged, b, unit) {
+     Cprev is the previous entry's first ex.s completed sets, or null.
+     `swapped` is the swapped-to movement's display NAME, or null — coach
+     addendum §22.4.5, case 3d below. */
+  function verdictHyp(ex, C, Cprev, pain, epochChanged, b, unit, swapped) {
     var im = ex.implement;
     var lo = ex.lo, hi = ex.hi, s = ex.s;
     var range = lo + "–" + hi + " range";
@@ -7143,17 +7203,65 @@
        prescription, so there is nothing here to compare against: cases 4a–4d
        would be measuring a plan edit and calling it training. It takes case 3
        with the epoch copy, and the copy says out loud that nothing was lost —
-       because nothing was: the sets are still in the history and still on the
-       chart, and ST1 still reads every one of them at r <= 8.
+       because nothing was: the sets are still in the history, and ST1 still
+       reads every one of them at r <= 8.
+
+       `and on the chart` WAS IN THIS SENTENCE UNTIL 2026-09-28 AND WAS FALSE
+       (coach addendum §22.4.6, Rule CH1). H1.3c fires on any hypertrophy slot;
+       a sparkline is drawn only for the ACTIVE plan's key lifts (KEY_LIFTS =
+       planKeyLifts(PHAT_PLAN)), so on d3c — or on any of the thirty-odd slots
+       that are not one of the four — there is no chart for those sets to be
+       on. CH1.3: a conditional claim is STRUCK, not qualified, because "on the
+       chart, if this is a key lift" is not copy anyone reads between sets. The
+       log half is unconditional and is the fact he is actually afraid of
+       losing, so it stays and it stops there. Predates MV1; not collateral.
 
        Ordered AFTER cases 1 and 2, which read this session only and are
        unaffected by an epoch change, and BEFORE 3a/3b, which are about a
        missing comparison rather than an invalid one. With no completed set on
        the previous side there is no epoch claim worth making, so it falls
        through to 3a/3b, which describe that case correctly already. */
+    /* 3d — Rule MV1 / coach addendum §22.4.5. THE EXACT STRUCTURAL SIBLING OF
+       3c: "the comparison to last week is unavailable, and here is why". 3c's
+       why is a prescription change; 3d's is that he swapped the apparatus, so
+       the slot's own history is a different movement and MV1.1 skipped it.
+
+       Without this branch a swapped card falls to 3a and prints `First time
+       logged. This becomes your baseline.` on a lift with months of history —
+       false, and the falsehood he would notice first.
+
+       `swapped` IS A FACT ABOUT TODAY THAT ONLY THE CALLER KNOWS, threaded in
+       like `pain`, `b` and `unit`. It is NEVER re-derived here: the engine
+       does not read storage, does not hold the plan, and must not learn to.
+       Absent — which is every existing call site — this branch cannot fire and
+       every verdict is main's, byte for byte.
+
+       GATED ON THERE BEING NOTHING TO COMPARE, and that gate is the rule, not
+       a formality. The caller hands over the slot's own prior read THROUGH the
+       swapped movement (MV1.1(a)): when he swapped to the machine row last
+       week too, that prior IS a machine row session, the comparison is real
+       and valuable, and `Not compared to last session.` would be flatly false.
+       So 3d answers only the case the coach describes — the first session on
+       the new movement — and a second one runs 4a–4d normally.
+
+       Ordered ABOVE 3c so that if the gate is ever loosened the swap wins: it
+       is the thing he did a minute ago and can see on the card, and K3.2 says
+       a swap inherits the prescription, so the two cannot both be true today.
+       Below 1 and 2, which read this session only.
+
+       No arrow, no increment line — nothing new is named, exactly as 3a–3c.
+       NO CHART CLAIM, checked against Rule CH1 (§22.4.6) before it was
+       written: the sentence names the movement and the missing comparison and
+       nothing else. The swapped sets go on no line unless the slot is one of
+       the plan's key lifts, so there is no claim here that could be made. */
+    if (swapped !== null && swapped !== undefined && swapped !== "" &&
+        (!Cprev || Cprev.length === 0)) {
+      return mk("", "Swapped to " + swapped + ". Not compared to last session.", "", "H1.3d");
+    }
+
     if (epochChanged === true && Cprev && Cprev.length > 0) {
       return mk("", "Prescription changed to " + s + " × " + lo + "–" + hi +
-        ". This is the new baseline. Your earlier sets are still in the history and on the chart.",
+        ". This is the new baseline. Your earlier sets are still in the history.",
         "", "H1.3c");
     }
 
@@ -7252,6 +7360,14 @@
                  is the same mechanism for the same reason: a fact about today
                  that only the caller can know, passed in rather than read out
                  of storage by a pure function (Rule DL1)
+       swapped   optional; the swapped-to movement's display NAME (a string,
+                 or the card's movement object — {name} or {n}) when this
+                 session's entry is a mid-session swap. Rule MV1, coach
+                 addendum §22.4.5. Read by k:"hyp" only, and only when there
+                 is no comparable prior: it turns H1's `First time logged`
+                 into `Swapped to {new}. Not compared to last session.`
+                 Omitted, H1 is main's byte for byte. The engine never derives
+                 it — there is no storage read and no plan in here
 
      THE DELOADED PRESCRIPTION IS DERIVED HERE, NOT TRUSTED FROM THE CALLER.
      With `deload:true` this applies deloadEx() to ctx.ex itself, so the gate
@@ -7414,10 +7530,20 @@
       ? ctx.epochChanged
       : !sameEpoch(entryRx(ctx.prev), rxOf(ctx.ex));
 
+    /* Rule MV1 / coach §22.4.5 — the swapped-to movement's NAME, threaded
+       exactly like `pain`, `b` and `unit`: a fact about today's card that only
+       the caller can know, handed in rather than read out of storage by a pure
+       function. A string, or `{name}` / `{n}` for a caller that already holds
+       the cardMovement object. Anything else — absent, `true` with no name,
+       whitespace — is NO FACT, and H1.3d cannot fire without one, because the
+       coach's only copy for this case names the movement and inventing a
+       nameless variant of it is inventing training copy. */
+    var swapped = swapName(ctx.swapped);
+
     var praw = ctx.prev;
     if (isObj(praw) && Array.isArray(praw.sets)) praw = praw.sets;
     var Cprev = Array.isArray(praw) ? completedSets(praw).slice(0, s) : null;
-    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch, b, unit));
+    return notAbsent(verdictHyp(ex, C, Cprev, pain, epoch, b, unit, swapped));
   }
 
   /* ==================================================== Rule W1 - W7
@@ -8154,6 +8280,54 @@
     return out;
   }
 
+  /* st1SkipEmptied(sessions, lift, todayStr, state) -> Boolean
+
+     WAS RULE MV1.1's SKIP WHAT EMPTIED THE BLOCK? Coach addendum §22.4.5's
+     first literal: when a swap is the reason ST1 cannot score a lift, the
+     copy says `unswapped`, because `Not enough sessions on Row` is false to a
+     man who trained the row every week and swapped the machine in.
+
+     ONE QUESTION, ASKED TWICE — the same two blocks stallReport built, once
+     with the rule on (the lift's own `mv`, MV1.1(a), or `null`, MV1.1(b),
+     exactly as stallReport derives it) and once with it OFF (the omitted
+     third argument, MV1.1(c)). True only when the rule-on read is short and
+     the rule-off read is not. That is the definition of "the skip is what
+     emptied it" and it is not a second predicate: `mvSkips` is still the only
+     one, inside e1rmByDate, read here with the argument that switches it.
+
+     WHY THIS IS NOT A FIELD ON stallReport, which is what the work order
+     offered. stallReport's returned shape is pinned by a caller — the suite
+     asserts `Object.keys(r).sort()` is exactly `["stalled","testable",
+     "untested"]` — so a fourth key is a shape change a caller reads, which is
+     the one thing that was ruled out. Everything this needs is already in
+     stallAdvice's own arguments, so it is computed there and stallReport is
+     not touched at all. Called only for lifts already reported untested, so
+     it costs two extra block reads on a lift the app has nothing to say about.
+
+     E2 is honoured on both reads (deload dates are not evidence either way),
+     or the "rule off" side could fill from deload rows and claim a swap it
+     cannot see. Pure: no storage, no DOM, and it never throws. */
+  function st1SkipEmptied(sessions, lift, todayStr, state) {
+    if (!Array.isArray(sessions) || !isObj(lift)) return false;
+    var id = str(lift.id).trim();
+    if (id === "") return false;
+    var today = safeToday(todayStr);
+    var rFrom = dateAdd(today, -ST1_RECENT);
+    var pFrom = dateAdd(today, -ST1_PRIOR_FROM);
+    var pTo = dateAdd(today, -ST1_PRIOR_TO);
+    if (rFrom === null || pFrom === null || pTo === null) return false;
+    var wins = deloadWindows(state);
+    var mv = isMvId(lift.mv) ? lift.mv : null;          /* stallReport's own derivation */
+    /* The rule ON: what stallReport actually read. If it filled, the skip is
+       not the reason for anything and there is nothing to disclose. */
+    if (dropDeloadRows(e1rmByDate(sessions, id, rFrom, today, mv), wins).length >= ST1_DATES &&
+        dropDeloadRows(e1rmByDate(sessions, id, pFrom, pTo, mv), wins).length >= ST1_DATES) return false;
+    /* The rule OFF — MV1.1(c), the omitted argument, main's read byte for
+       byte. Both blocks must fill, because both are required for a verdict. */
+    return dropDeloadRows(e1rmByDate(sessions, id, rFrom, today), wins).length >= ST1_DATES &&
+           dropDeloadRows(e1rmByDate(sessions, id, pFrom, pTo), wins).length >= ST1_DATES;
+  }
+
   /* stallAdvice(ctx) -> { state, provenance, copy, week, stalled, untested,
                            lines, text, absent, absentLines, absentLine, report }
 
@@ -8269,31 +8443,50 @@
                        he could log it every day and the check still could not
                        read it. It names the reps it needs instead.
            THIN        genuinely not enough sessions. Unchanged copy.
+           SWAPPED     thin ONLY because Rule MV1.1 skipped the sessions in
+                       which he swapped the movement. Coach §22.4.5: the word
+                       `unswapped` is the whole difference, and without it the
+                       app tells a man who trained the row every week that he
+                       did not log it. Detected by st1SkipEmptied, never by
+                       reading `sw` — see mvExcludedCount for why that matters
+                       permanently.
 
          When EVERY declared lift is merely thin, one sentence NAMES them all
          (never counts them). Any other mix falls to the per-lift lines, which
-         are true at any count. */
-      var lo = {}, i2, l2, nm2;
+         are true at any count — and a swapped lift ALWAYS falls there, because
+         the all-thin sentence has one clause for every lift and cannot carry a
+         different reason for one of them. */
+      var lo = {}, byId = {}, i2, l2, nm2;
       for (i2 = 0; i2 < lifts.length; i2++) {
         l2 = lifts[i2];
         if (!isObj(l2)) continue;
         nm2 = (typeof l2.n === "string" && l2.n.trim() !== "") ? l2.n : str(l2.id).trim();
-        if (nm2 !== "" && typeof l2.lo === "number" && isFinite(l2.lo)) lo[nm2] = l2.lo;
+        if (nm2 === "") continue;
+        if (typeof l2.lo === "number" && isFinite(l2.lo)) lo[nm2] = l2.lo;
+        byId[nm2] = l2;
       }
-      var thin = [], unreadable = [];
+      var thin = [], unreadable = [], swapped = [];
       for (i2 = 0; i2 < rep.untested.length; i2++) {
         nm2 = rep.untested[i2];
         if (own(lo, nm2) && lo[nm2] > ST1_REPS) unreadable.push(nm2);
-        else thin.push(nm2);
+        else {
+          thin.push(nm2);
+          if (own(byId, nm2) &&
+              st1SkipEmptied(sessions, byId[nm2], today, isObj(c.state) ? c.state : null)) {
+            swapped.push(nm2);
+          }
+        }
       }
       out.unreadable = unreadable.slice(0);
-      if (thin.length && thin.length === lifts.length) {
+      if (thin.length && thin.length === lifts.length && swapped.length === 0) {
         out.lines = [st1ThinAll(thin)];
       } else {
         out.lines = rep.untested.map(function (n) {
-          return (unreadable.indexOf(n) >= 0)
-            ? st1Unreadable(n)
-            : "Not enough sessions on " + n + " to judge. Log it weekly.";
+          if (unreadable.indexOf(n) >= 0) return st1Unreadable(n);
+          if (swapped.indexOf(n) >= 0) {
+            return "Not enough unswapped sessions on " + n + " to judge. Log it weekly.";
+          }
+          return "Not enough sessions on " + n + " to judge. Log it weekly.";
         });
       }
       out.text = out.lines.join(" ");
@@ -11580,6 +11773,11 @@
     mvUpstreamId: mvUpstreamId,
     effectiveMv: effectiveMv,
     mvSkips: mvSkips,
+    /* mvExcludedCount is the view's ONLY way to ask "how many sessions under
+       this slot does MV1.1 pass over" — the disclosure line's number. It keys
+       on the movement comparison and never on `sw`, so it goes to zero on the
+       entries "make it permanent" promised would count again. */
+    mvExcludedCount: mvExcludedCount,
     priorFor: priorFor,
     entryMeta: entryMeta,
     entryMetaProblems: entryMetaProblems,
