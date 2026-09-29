@@ -963,3 +963,77 @@ much as the first one's.
   **WO-016**, and it **outranks the repair**. It must not change `w`'s stored meaning, or WO-015's repair table is
   invalidated mid-flight.
 - **Track B.** Still T1a only.
+
+---
+
+## 11. Third amendment — 2026-09-29. W6 passes; three findings ruled; **Track A is released to W7**
+
+W6 landed as `3057e9e`: **977 / 977 / 0**, green on a Tuesday, a Monday, a Sunday and a Wednesday, zero skips,
+three meta-tripwires intact, `git diff --stat` naming `tests.html` alone. It is the first count in this repo that
+is not a function of the day of the week. The W5/W10 click lists — a criterion this order failed to write — are
+being closed separately by QA and are **not** a condition of W7; nothing in them can change a pinned string or a
+stored byte.
+
+### 11.1 The evidence W6 rests on, and the one thing it does not cover
+
+Three red-first proofs, each run against its own named pre-fix tree by swapping `logic.js` from
+`git cat-file blob` under the same harness: the swapped verdict **red on `b78439d`** (11 fail), B-152 **red on
+`9d4336b`** (3 fail), the Trend exclusion **red on `feb3f88`** (11 fail).
+
+**The third carries a qualification that goes in the record and is not to be smoothed over.** The engine was
+already correct at `feb3f88`; B-144 lived in the **caller** (`liftPoints` / `slotMvOf` in `index.html`), outside
+the harness. The red on `feb3f88` is **the count**, and the chart was verified by reading plus one manual item.
+**The suite does not cover the Trend screen.** That is structural — `index.html` has no harness — and it is why
+`PHAT.liftSeries(sessions, plan, lift)` (the B-20 ask) stays open.
+
+The stronger half: the unswapped differential — 16,128 verdicts and 169 history reads over all 42 slots — hashes to
+**2038377080** on `main @ 6a87a3a`, `feb3f88`, `9d4336b` and the branch alike. Four movement-identity commits and
+not one byte of advice moved on an unswapped card.
+
+### 11.2 The fixture defect, and what W7 must expect because of it
+
+`CHADY_STORE()` declared `schemaVersion: 5` while holding a schema-7 key — a shape no device can produce — and
+`CHADY_SESSION()` is *built*, so it carried six `mv` keys his stored session does not. **Several migration and
+merge tests would have passed on a migration that stamped `mv` onto his September entries**, which is precisely
+what the zero-bytes criterion exists to prevent. `CHADY_SESSION_PRE7()` is now his real bytes with the old
+fingerprint `588696318` re-asserted over it.
+
+**Consequence, pinned and expected, and W7's brief must carry it:** a device that has just migrated 6 → 7 signs
+differently from a server row still stamped 6, **so the first boot after the deploy pushes once.** One push per
+device per store, on first boot. **The server row *count* must not move.** A second push, or a changed count, is a
+defect and is not this.
+
+### 11.3 The three findings, ruled
+
+| Finding | Ruling | Where |
+|---|---|---|
+| `make it permanent` leaves `fig`, `cue` and `implement` behind | **B-153, P2. Does not block.** `implement` is the half with teeth (I1/I2/Z2); `fig`/`cue` are already suppressed on the shipped path by `shippedName()`, but incidentally — via the rename — not by rule. Coach rules the fix (derive / refuse / ask); PM recommends **derive** from `PHAT.libraryImplement` | `docs/decisions.md` Decision 15 |
+| The Trend disclosure can over-count (entry vs scoring set) | **B-154, P3. Does not block.** QA is right that making them agree is a decision, not a bug fix. PM's sharpening: **the count is true, the reason clause is what can be wrong** — the fix may be a sentence, not a predicate. PM recommends counting only what the line could have plotted; the coach rules it under MV1.4 | `docs/decisions.md` Decision 16 |
+| W10's unbriefed `!mvc.added` guard on the card's D8 line | **Accepted.** The identical guard with the identical justification was already on Summary; the card was the outlier, so W10 removed a B-66 shape rather than creating one, and the suppressed sentence is false in that state. Lands under the **truth-condition rule**: an engineer may delete a rendering of a sentence that is provably false and must report it; an engineer may not write, reword or choose among phrasings of a sentence that could be true. **Residue:** UX §22.9's table gains a D8 row — documentation, owed, not blocking | `docs/decisions.md` Decision 14 |
+
+Two wall-clock budgets were **raised, not deleted** (S9 2000 → 60000 ms, S44 400 → 10000 ms) and now print the
+measured number every run — a green tree measured 2076 ms and would have failed the old S9 budget. Ruled correct,
+with the general rule, in Decision 13.
+
+### 11.4 The release ruling
+
+**Track A is ready for `release-engineer`. P2 does not hold it.** B-153 and B-154 are each reachable only past
+behaviour Chady has never performed, each is a one-release exposure, and each is gated on a coaching answer nobody
+has been asked for. B-152 blocked because it fired on his existing data on the first swap with no extra taps; that
+is the line, and these are on the other side of it. Holding the deploy also means landing an unpinned change to
+`setExerciseMovement`'s contract and a plan-store write path on the day 977 pins went green — §9's governing
+principle has a corollary: **nothing moves after the pin either.**
+
+**W7 ships as scoped in §3**, with the one addition in §11.2: 61 files or nothing, `sw.js` **v7**,
+`migrate-007-mv.sql` as its own submission *before* the client deploy, his four real `sessions` rows pulled by REST
+before WO-015 is dispatched, and **exactly one push per device per store on first boot with an unchanged server row
+count.**
+
+### 11.5 What this amendment does not do
+
+- It does not plan Track B. Still **T1a only** until Chady answers Q1.
+- It does not fold B-153 or B-154 into W7. Both are filed; neither is in scope for a release item.
+- It does not close B-147 (nothing where the photograph was on a swapped card) — still ships as built, still
+  Chady's one line.
+- It does not amend UX §22.9. The D8 row is owed to `ux-designer` and is the only documentation debt this pass
+  created.

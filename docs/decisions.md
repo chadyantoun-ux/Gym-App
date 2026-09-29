@@ -3813,3 +3813,178 @@ editor, with the prescription and the rest row following it — `k` is what rout
 Recorded here because it is the answer to WO-014 Q1 and T1 is written against it. **Track B is not planned in this
 pass and nothing in this entry authorises starting it** beyond T1a, the keep/lose table, which was already ruled
 dispatchable. The templates still wait.
+
+---
+
+## 2026-09-29 — WO-014 W6 passes at `3057e9e`: the red-first evidence and its one honest qualification, a fixture that described a session nobody has, two budgets that stopped measuring the machine, and three QA findings ruled
+
+W6 is a pass. **977 / 977 / 0**, green on four weekdays, zero skips, three meta-tripwires intact. This entry records
+what the pass rests on, what it does not cover, and the PM's rulings on the three things QA reported and correctly
+declined to rule on. Nothing here is product code and nothing here changes a shipped string.
+
+### Decision 11 — the red-first evidence, and the qualification that belongs in the record. `[Certain]`
+
+Every rule change since WO-005 has been pinned by running the new tests against the *pre-fix* tree and confirming
+they go red. W6 did it three times, each against its own named tree, by swapping `logic.js` from
+`git cat-file blob` under the same harness:
+
+| Proof | Tree | Result |
+|---|---|---|
+| The swapped-card verdict (`Swapped to {new}. Not compared to last session.`) | `b78439d` | **red**, 11 fail |
+| B-152 (a pre-schema-7 entry inheriting a shimmed movement) | `9d4336b` | **red**, 3 fail |
+| The Trend exclusion (B-144) | `feb3f88` | **red**, 11 fail |
+
+**The third one carries a qualification and it is QA's, not mine, and it must not be written up as more than it
+is.** The *engine* was already correct at `feb3f88` — the four point-and-delta assertions run green there — because
+B-144 was never in `e1rmByDate`. B-144 lived in the **caller**: `liftPoints` and `slotMvOf` in `index.html`, which
+is outside the harness's reach. The red on `feb3f88` is **the count**, not the chart. The chart itself was verified
+by reading the code plus a manual item on the checklist. **Do not describe the suite as covering the Trend screen.**
+It does not, and the reason it does not is structural: `index.html` has no test harness, which is why
+`PHAT.liftSeries(sessions, plan, lift)` — the pure series the view would then only draw — is the B-20 ask and is
+still open. Writing that qualification down is worth more than the proof it qualifies.
+
+**The unswapped differential is the other half of the evidence and it is stronger:** 16,128 verdicts and 169 history
+reads over all 42 slots hash to **2038377080**, and that number is identical on `main @ 6a87a3a`, `feb3f88`,
+`9d4336b` and the branch. Four movement-identity commits, and not one byte of advice moved on a card that was not
+swapped. That is the criterion WO-014 was most likely to fail and it is the one that is hardest to fake.
+
+### Decision 12 — a fixture that could not exist had been measuring a session nobody has. `[Certain]`
+
+`CHADY_SESSION()` is built through `buildSession`, so since schema 7 it carried six `mv` keys his stored session does
+not — and `CHADY_STORE()` declared **`schemaVersion: 5` while holding a schema-7 key**, a shape no device can
+produce. Every migration and merge test standing on it was asserting against a document that does not exist, and
+**several of them would have passed on a migration that stamped `mv` onto his September entries** — the exact
+outcome the "moves zero bytes in the log store" criterion exists to prevent. QA added `CHADY_SESSION_PRE7()` (his
+actual bytes) and re-asserted the old fingerprint `588696318` over it, so the pin now reads *"the builder gained
+exactly six keys and moved nothing else"*. The server hash `1528318698` over 950 characters did not move and must
+never move.
+
+**Read this as evidence about process, because that is what it is.** A fixture built through the same code it is
+used to test is not a fixture, it is a tautology that drifts silently with the builder — and this one drifted into
+a state that is not merely unrealistic but *impossible*, and nothing caught it for three schema versions. **The
+rule: a fixture standing in for stored bytes is written as bytes, not built.** `CHADY_EXPORT` was right all along
+for exactly this reason; `CHADY_STORE` was not, and the two lived beside each other.
+
+**One real behavioural consequence, now pinned and expected.** A device that has just migrated 6 → 7 signs
+differently from a server row still stamped 6, **so the first boot after the deploy pushes once.** That is correct,
+it is the only push schema 7 causes, and **W7 must expect it**: one push per device, per store, on first boot, with
+the server row *count* unchanged. A second push, or a row count that moves, is a defect and not this.
+
+### Decision 13 — a budget is raised when it stops measuring the thing it was written to measure. `[Certain]`
+
+QA raised two wall-clock budgets rather than deleting them: the S9 harness budget **2000 → 60000 ms** and S44's
+merge budget **400 → 10000 ms**, and both now **print the measured number every run**. The evidence: S9 failed 4 of
+16 runs at 2087–2359 ms with nothing changed, and one *green* tree measured **2076 ms** on the Sunday — it would
+have failed the old budget while being correct in every way that matters.
+
+This is the same lesson as B-146 one layer out. A test whose colour is a function of the machine, the browser's
+mood or the day of the week is not a test — it is a coin flip that teaches the reader to discount reds, and a
+discounted red is how a real one ships. **The rule: a performance assertion either has a ceiling no legitimate run
+can reach, or it is not an assertion. Print the number either way** — the number is the useful artefact; the
+threshold was only ever a way of looking at it. Deleting the budgets would have been the other defensible answer
+and is worse: a 60-second ceiling still catches an infinite loop, and the printed number still catches a tenfold
+regression by eye.
+
+### Decision 14 — W10's `!mvc.added` guard is accepted. The rule it lands under is the truth condition. `[Certain]`
+
+W10 added a `!mvc.added` guard to the session card's D8 line, so a movement added thirty seconds ago no longer
+reads `Not in the plan any more. It still saves with this session.` It was not in W10's brief, QA verified the
+behaviour is correct and explicitly declined to bless the route, and the route **is** wrong: a copy decision taken
+inside a chart-and-strings item, and one fact phrased in two places is how B-66 happened. **I accept it anyway, and
+the reason is not "it's already done".**
+
+The fact was **already phrased on Summary, with the identical guard and the identical justification comment.**
+The card was the outlier. So W10 did not create a second phrasing of one fact — it removed a state where one fact
+was phrased twice and guarded once, which is B-66's shape already sitting in the tree. And the guarded sentence is
+**false** in the state it was rendering: D8 means *the plan moved under your draft*; a movement he added during this
+session was never in the plan and therefore cannot have left it.
+
+**The rule, so this is not read as licence.** WO-014 §9.3 settled that *the coach owns which facts, UX owns the
+words.* This is neither — it is a **truth condition**, and truth conditions are the engineer's:
+
+> An engineer may **delete a rendering** of a sentence that is provably false in the state being rendered, and must
+> report it in the commit that does so. An engineer may **not** write, reword, or choose between phrasings of a
+> sentence that could be true. If the sentence could be true in some state and the argument is about which state,
+> that is a spec question and it stops.
+
+W10 is on the right side of that line and reported it in its own commit message, which is the half that makes the
+rule workable. **The residue is documentation, not code:** UX §22.9's table enumerates the slots an added card
+changes and does not list the D8 line, so the spec and the build now say different things about one element. That
+is a one-row amendment, it is owed, and it does not hold a deploy.
+
+### Decision 15 — B-153 (`make it permanent` leaves `fig`, `cue` and `implement`) does not block. `[Certain]` on the reachability, `[Likely]` on the severity ordering
+
+`setExerciseMovement` writes `mv` and `n` and nothing else. A permanently re-pointed slot therefore keeps the
+replaced movement's photograph key, its cue and — the half with teeth — its **`implement`**, which Rules I1, I2 and
+Z2 read for the load word and the increment line.
+
+**What I verified rather than assumed,** by calling the shipped functions on a copy of PHAT: after
+`setExerciseMovement(plan, "d3c", <new mv>, "Machine row")` the slot reads
+`{n:"Machine row", mv:<new>, implement:"cable", cue:"Keep the torso still…"}` and `figFor("d3c")` still answers
+`Seated_Cable_Rows`. **The three keys survive.** But `shippedName()` gates both the photograph and the cue on the
+slot still carrying its shipped name, and `doPermanent` always renames (the draft entry always carries `n`, so
+`cardMovement().name` is the library name) — so on the shipped path **`shippedName` is false and both are
+suppressed on screen.** Called in its documented **two-argument** form, with no rename, `shippedName` is true and
+the replaced movement's photograph and cue both render. No caller does that today.
+
+So the cosmetic half is already closed, **incidentally rather than by rule**, and the load-bearing half is open:
+`implement` is ungated and is read by the engines. Cable and machine produce the identical increment line — which
+is why nothing failed — and the pairs that do not agree are `db` (`per DB`), `bb` (no increment line at all, plus a
+bar seeded through `cardModeFor`) and `bodyweight`, where `loadWord` says `bodyweight` instead of `zero load` **and
+`w` changes meaning** from a total to an *added* load. A re-point across that boundary is **B-150 arriving by a
+fourth route**, and B-150 is already P1 with its own order.
+
+**It does not block, and the line I am drawing is the same one I drew at §9.6 and the opposite of the one I drew
+for B-152.** B-152 fired on his existing data, on the first swap, with no extra taps — that is why it held the
+deploy. B-153 needs four deliberate taps into a confirmation he has never opened, on a feature that ships today, in
+a one-release window. **And it is not a fix I would take today even if it were free:** it changes
+`setExerciseMovement`'s contract and a write path into the plan store, after 977 pins are green, on the day of a
+deploy. §9's governing principle has a corollary this repo had not written down: **nothing pins a string or a
+series that is about to move — and nothing moves after the pin either.**
+
+**It is a coaching decision before it is an engineering one,** which is the second reason it is not a same-day fix.
+Three answers, and the choice among them is I1/I2/Z2's owner's: derive `implement` from the picked library row
+(`PHAT.libraryImplement` exists and the Plan Editor already uses it through `swFormPick`); refuse the re-point when
+the two implements disagree; or ask him on Summary. **My recommendation is derive `[Likely]`** — `libraryImplement`
+already refuses 199 of 876 rows rather than guessing, so the honest-or-empty behaviour is already built and a
+refused derivation lands on the same B2 refusal the add-exercise form uses. Filed as **B-153**, P2.
+
+### Decision 16 — B-154 (the Trend disclosure can over-count) is a decision, not a bug fix, and it is not this order's. `[Certain]`
+
+`mvExcludedCount` counts an **entry** with any completed set; the sparkline plots a **set**, and only one at
+`≤ 8` reps with `w > 0`. A swapped session logged entirely at 12 reps, or entirely at zero load, gives **count 1,
+points removed 0**.
+
+**QA's caution is upheld and it is the right caution:** counting only scoring sets makes the disclosure silent
+about a swapped session he *did* train, which is MV1.4's own defect in mirror image — an undisclosed narrowing.
+Backend owns the predicate and UX owns the literal, but **neither owns the question**, which is what the sentence is
+true *of*.
+
+**One sharpening the PM adds, because it may make this cheaper than it looks.** The literal is
+`1 session is not on this line — a different movement.` The session genuinely **is not** on the line, and the
+section header already tells him the line reads sets at 8 reps or fewer. **The count is true; it is the reason
+clause that can be wrong.** So the fix may be a sentence rather than a predicate, and that possibility should be on
+the table before anyone changes `mvExcludedCount`.
+
+**PM recommendation, recorded so it is not re-litigated: count only what the line could have plotted `[Likely]`.**
+This line's subject is the line; `Recent sessions` is explicitly not excluded (§9.1) and already shows him the
+session he trained, so the fear of silencing a real session is answered by a surface that already speaks. But
+MV1.4 is the coach's rule and the coach rules it. Filed as **B-154**, P3. Not reachable on the four key lifts as
+prescribed (3–5 and 5–8, none bodyweight); reachable the moment he logs above the range on one.
+
+### The ruling that matters: Track A is ready for release-engineer
+
+**Yes. P2 does not hold it.** W6 is a pass on an unconditionally green suite — the first in this repo — with the
+byte-identity of every unswapped verdict proved by a hash that four commits agree on, and with the two defects that
+*did* block (B-144, B-152) closed and each pinned red-first on its own pre-fix tree. B-153 and B-154 are both
+reachable only past behaviour he has never performed, both are one-release exposures, and both are gated on a
+coaching answer nobody has been asked for. Holding the deploy for them costs him another week of the thing that
+costs him a session every week, and buys a fix that would land unpinned on the day the pins went green.
+
+**Dispatch W7 as scoped** — 61 files, `sw.js` **v7**, `migrate-007-mv.sql` as its own submission *before* the client
+deploy, and his four real `sessions` rows pulled by REST before WO-015 is dispatched — **plus the one thing this
+entry adds to it: expect exactly one push per device per store on the first boot after the deploy, and a server row
+count that does not move.** Decision 12 is why.
+
+**And the standing diagnosis at its tenth asking.** Four logged sessions. This order is the one that removes a
+reason not to log the fifth. Ship it.
