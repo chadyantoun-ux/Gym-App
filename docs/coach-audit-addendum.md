@@ -7447,9 +7447,10 @@ regression target: **the five shipped plans, unedited, must produce byte-identic
 | 1 | What is "heavy", and what follows when he moves it? | **Rule HD1.** Heavy is derived, never stored: a slot is heavy iff `k === "power" && hi <= 8`. `keyLifts` and `speedSource` are **validated, not re-derived** — an entry whose slot no longer passes is dropped at read time and the feature goes ABSENT (C7a), never PRESENT-THIN. A replacement is **offered, never adopted.** `reintroOrder` and `reducedWeeks` do not move at all. | `[Certain]` on the predicate, `[Opinion]` on offer-not-adopt |
 | 1a | The PM's guess — derive `keyLifts` and `speedSource` automatically | **Rejected, and I will hold it.** Reason in §23.2.4. | `[Opinion]` |
 | 2 | Should a slot name sanctioned alternates (B-159)? | **No.** No new field, and not in the cue either. The act is shipped (WO-014 swap), the identity is shipped (MV1), and the thing that actually failed him is WO-017. | `[Opinion]`, held |
-| 3 | Day breakdown for the bodybuilder split | **Chest · Back · Legs · Shoulders · Arms.** Not the conventional order; reason in §23.7.1. Needs one line from him. | `[Opinion]` |
+| 3 | Day breakdown for the bodybuilder split | **Chest · Back · Legs · Shoulders · Arms.** Not the conventional order; reason in §23.7.1. **Confirmed by Chady 2026-09-29 — settled (§23.11).** | `[Opinion]`, now settled |
 | 4 | **Found while in here — a 2-day plan can never accumulate a training week.** Rule TW1 requires ≥ 3 training days in a week, so on the 2-day template `trainingWeeks` is permanently 0 and ST1, V1, D1 T3 and `cycleLine` are silently inert — no ABSENT line, no explanation, forever. | **Rule TW1b:** the threshold is `min(3, plan.days.length)`. PHAT and the 5-day and 3-day templates are unchanged at 3; the 2-day plan gets 2. **Filed for the PM — it is outside T1's four templates and must not be built inside them.** | `[Certain]` on the defect, `[Likely]` on the fix |
-| 5 | `speed` work in any of the four | **None.** All four omit `speedSource` deliberately. §23.3.2. | `[Opinion]` |
+| 5 | `speed` work in any of the four | **None.** All four omit `speedSource` deliberately. §23.3.2. **Confirmed by Chady 2026-09-29 — settled (§23.11).** | `[Opinion]`, now settled |
+| 7 | **Correction to Ruling 1's copy, after T2.** HD1.4's first literal said `not a 3–5 lift`, which is false on `ppl3`, `ul2` and `bb5` — none has a 3–5 key lift. And HD1.4 disclosed on the Plans screen only, which left a dropped lift **unnamed on Trend**, less disclosure than §9.1 gave before the change. | **Copy rewritten, reason-keyed, printing the slot's own range from `planKeyLiftsDropped()`; disclosure now renders on Trend as well. §9.1's ST1 `lo > 8` literal is superseded — HD1 excludes at `hi > 8`.** §23.2.6. | `[Certain]` on the falsity, `[Opinion]` on excluding the partially readable case |
 | 6 | `fig` (photographs) on the new slots | **Omitted from all four.** F1p forbids approving a frame sight-unseen and I have viewed none of these. Follow-up item, not a gap. | `[Certain]` |
 
 ---
@@ -7465,13 +7466,13 @@ slot each. Neither is a disagreement about training; both are Rule A1 (§8.2), w
 2. **Lower: "Deadlift or Romanian Deadlift"** is a slash-name. **Resolved to the conventional
    deadlift** (`mv_Barbell_Deadlift`), because the Romanian deadlift already occupies the Legs day's
    hinge slot at 8–12, and because ST1's week-6 test wants a 3–5 deadlift or it wants no deadlift.
-   `[Certain]` on the A1 half, `[Opinion]` on which one wins — if he would rather keep the RDL on
-   Lower, the trade is that `keyLifts` drops to three lifts, which is a valid plan (§9.9) and simply
-   means the week-6 test covers row, bench and squat.
+   `[Certain]` on the A1 half, `[Opinion]` on which one wins. **Chady confirmed the conventional
+   deadlift on 2026-09-29 (§23.11), so this is settled** and the RDL alternative — which would have
+   dropped `keyLifts` to three lifts — is void.
 
 A third, smaller one: his Pull day says "a second curl 3×10–12". I have named it
-`mv_Hammer_Curls`. That is a choice, not a transcription, and it is the one slot in the 5-day I would
-change without argument.
+`mv_Hammer_Curls`. That was a choice, not a transcription, and it was the one slot in the 5-day I
+said I would change without argument. **Chady kept it on 2026-09-29 (§23.11). Settled.**
 
 ---
 
@@ -7503,8 +7504,13 @@ Logic:        HD1.1  "HEAVY" IS NOT A FIELD AND MUST NOT BECOME ONE. A slot is h
                      state with C7a's existing literals. They must NEVER reach
                      PRESENT-THIN. `Log it weekly.` is forbidden on an ineligible lift: he
                      IS logging it weekly and more data will never help.
-              HD1.4  SOME ELIGIBLE => run on those, and disclose the dropped ones once, on
-                     the Plans screen only, naming each dropped lift.
+              HD1.4  SOME ELIGIBLE => run on those, and NAME EVERY DROPPED LIFT, on BOTH
+                     surfaces: the Plans screen at the edit, and the Trend tab above every
+                     ST1 result for as long as it is dropped. A subject never leaves the
+                     check silently on either screen. The literal is keyed to WHY it was
+                     dropped and prints the slot's OWN prescription, read from
+                     planKeyLiftsDropped(). It must never name a range it has not read -
+                     see §23.2.6, which corrects this clause's first draft.
               HD1.5  SPEEDSOURCE IS VALIDATED THE SAME WAY. A mapping speedSlot -> sourceSlot
                      counts only while the source slot exists and is heavy by HD1.1.
                      Otherwise SP1 is ABSENT for that speed slot, with C7a's existing SP1
@@ -7519,13 +7525,38 @@ Logic:        HD1.1  "HEAVY" IS NOT A FIELD AND MUST NOT BECOME ONE. A slot is h
               HD1.8  R1 NEEDS NOTHING. restTarget already reads k and hi per exercise (§8.5),
                      so a flip moves the rest target by construction. Listed only so that
                      nobody "fixes" it into a day-level field and reintroduces B-56.
-Output copy:  Dropped subject (HD1.4), Plans screen only, once per plan, one line per lift:
-                Bench press is not a 3–5 lift on this plan any more, so it is out of the
-                week 6 test.
+Output copy:  Dropped subject (HD1.4). One line per dropped lift, keyed to the reason, with
+              the name and the range taken from planKeyLiftsDropped(). Precedence, checked
+              in this order and stopping at the first that holds:
+                (a) the slot no longer exists in the plan
+                (b) k !== "power"
+                (c) k === "power" and hi > 8
+              (a) - §9.9's shipped literal, unchanged:
+                Bent-over row is not in this plan.
+              (b):
+                Bench press is set as hypertrophy work on this plan, so it is out of the
+                six-week check.
+              (c):
+                Bench press is prescribed 8–12 on this plan. The six-week check reads lifts
+                prescribed to 8 reps or fewer, so it is out of the check.
+
+              Plans screen: the line above, then, appended to (b) and (c) only:
                 Pick a replacement in the plan, or leave it out.
 
+              Trend tab, above ST1's result: §9.9's count line first, then one line per
+              dropped lift, in plan order:
+                Reading 3 of 4 key lifts.
+                Bench press is prescribed 8–12 on this plan. The six-week check reads lifts
+                prescribed to 8 reps or fewer, so it is out of the check.
+              Each line is self-contained and REPEATS its second sentence when two lifts are
+              dropped for the same reason. Do not factor the shared sentence out - a reason
+              that appears on the first lift and not the second reads as a bug and leaves the
+              second lift unexplained.
+              At ZERO eligible, every line above is FORBIDDEN: HD1.3's ABSENT literal fires
+              instead and `Reading 0 of 4 key lifts.` must never render.
+
               Offer (HD1.6), Plans screen only, at most one per plan per edit:
-                Squat is your heaviest lift on Lower and is not in the week 6 test.
+                Squat is your heaviest lift on Lower and is not in the six-week check.
                 Buttons: Add it / Leave it
 
               Speed source lost (HD1.5): C7a's existing SP1 ABSENT literal, unchanged:
@@ -7577,7 +7608,7 @@ gets and what he gives up relative to PHAT today.
 | **ST1** week-6 test | row, bench, squat, SLDL | row, bench, squat, **conventional deadlift** — all `power`, `hi ≤ 8` | **Keep, and it is stronger** | four true 3–5 lifts instead of three plus a 5–8 |
 | **D1 T1 / T2** deload triggers | on the four key lifts | on the four key lifts | **Keep** | HD1.2 passes all four |
 | **D1 T3** calendar backstop | runs | runs | **Keep** | dates only |
-| **V1** reduced-volume tier | 9 `cut` accessories, `reducedWeeks: 4` | 5 `cut` accessories on the three hypertrophy days, `reducedWeeks: 4` | **Keep, narrower** | the heavy days carry no `cut` slot on purpose — §23.3.3 |
+| **V1** reduced-volume tier | 9 `cut` accessories, `reducedWeeks: 4` | 5 `cut` accessories on the three hypertrophy days, `reducedWeeks: 4` | **Keep, narrower** | no `cut` flag sits on a heavy *slot*, on any template; on this one the two heavy days carry no `cut` slot at all — §23.3.3 |
 | **SP1** speed work | 3 speed slots, sourced from d1a/d2a/d1d | **absent** — no `k:"speed"` slot exists | **Lose, deliberately** | §23.3.2 |
 | **`cycleLine`** | week + phase + accessories | same shape | **Keep** | `trainingWeeks` ≥ 3 days/week holds |
 | **W1 / diet** | his bodyweight | his bodyweight | **Keep** | plan-agnostic (§16.1) |
@@ -7640,6 +7671,79 @@ not an input to the reintroduction ramp at any point. `reintroOrder` is keyed by
    no longer performs below 8 reps, and prints a kilogram number. With HD1.5, `d3a` shows SP1's
    ABSENT literal and no number. **A percentage of nothing is not a load.**
 
+### 23.2.6 Correction — HD1.4's first literal was false, and §9.1 now reconciled. `[Certain]`
+
+**What was wrong.** HD1.4's first draft read `Bench press is not a 3–5 lift on this plan any more, so
+it is out of the week 6 test.` **HD1's predicate is `hi <= 8`, not 3–5.** On `ppl3` and `ul2` the lead
+compounds are 5–8 and on `bb5` they are 6–8, so on three of the four templates in this very section
+**no key lift is a 3–5 lift to begin with** and that sentence would be false the moment it rendered.
+It also hardcoded a range it had not read. `planKeyLiftsDropped()` returns each dropped lift's `id`,
+`n`, `k`, `lo` and `hi` — **print what the slot says**, never a remembered number. T2's engineer
+refused to transcribe the sentence rather than quietly adjusting it. That was the correct call and it
+is why this subsection exists.
+
+**The reconciliation, which is the bigger half.** §9.1 gives an ST1 literal for a key lift the check
+cannot read:
+
+> `Squat is prescribed above 8 reps, so the six-week check cannot read it. It needs sets at 8 reps or
+> fewer.`
+
+and HD1.2 drops an ineligible lift from the subject set at read time. With T2a landed and T3 not
+built, the two together produce **less disclosure than before the change**: a key lift moved above 8
+reps now leaves the check with nothing on Trend but `Reading 3 of 4 key lifts.` — no name, no reason.
+That is a regression and I will not sign it off.
+
+**Ruling, three parts.**
+
+1. **HD1.2 is right about membership and stays.** A key lift the plan no longer prescribes heavy is
+   **out of the check** — not "unreadable-but-still-a-subject", and never PRESENT-THIN. Dropping is
+   the behaviour; §9.1's literal was never a competing rule, it was the *disclosure* for exactly this
+   case, written before HD1 existed.
+2. **The disclosure moves with the subject.** HD1.4 now renders on **Trend as well as the Plans
+   screen**, because Trend is where ST1's answer appears and where a missing subject changes what the
+   answer means. Plans-screen-only was my error: it discloses at the moment of the edit and then goes
+   quiet for every week afterwards, and he reads Trend far more often than he edits a plan.
+3. **The predicate in the copy is `hi > 8`, not `lo > 8`.** §9.1's literal fires on `lo` above 8 —
+   nothing readable at all. HD1 excludes at `hi` above 8, which also catches the partially readable
+   case (`power` 6–10: sets of 6, 7 and 8 would enter the e1RM series, sets of 9 and 10 would not).
+   **Exclude it.** A series assembled only from the sessions where he happened to stay at the bottom
+   of a 6–10 range is self-selected — it reads high on the weeks he went heavy and vanishes on the
+   weeks he did not, and ST1 then prints `[Certain]`-flavoured `No progress on Squat` off a sample
+   with holes in it. That is B-07's failure mode with a new cause. `[Opinion]`, conservative: a
+   partial sample is worse than a named absence, because a named absence he can fix in one edit.
+
+**§9.1's ST1 literal is superseded** by HD1.4 case (c). Delete it from the build; it has never
+shipped. Everything else in §9.1 (PE1, the ghost rows, the prefill ruling, the SP1 literal) stands
+untouched. **§9.9's two literals also stand untouched** — `Bent-over row is one of the lifts the
+six-week check reads. Removing it leaves 3.` in the editor, and the `Reading 3 of 4 key lifts.` count
+line on Trend, which HD1.4's reason lines now sit under rather than replace.
+
+**One vocabulary ruling while I am here.** The feature is **the six-week check**, in every string, on
+every screen. §9.1 and §9.9 already say it; my HD1.4 draft said `week 6 test` and `cycleLine` talks
+about weeks elsewhere. One name, and it is the shipped one.
+
+**Worked examples.**
+
+1. **All four templates as shipped, and PHAT.** Every declared key lift is `power` with `hi <= 8` —
+   `ppl5` 3–5, `ppl3` 5–8, `ul2` 5–8, `bb5` 6–8. `planKeyLiftsDropped()` returns empty on all five.
+   **Zero lines on both screens, ST1 unchanged, byte-identical output.** This is the regression case,
+   and it is the reason the copy must never hardcode a range: three of these five plans have no 3–5
+   lift and are entirely correct.
+2. **He moves `bb5`'s bench to 8–12.** `b1a` becomes `hyp` 8–12 — two reasons hold at once, so
+   precedence applies: **(b) wins**, and the line is `Bench press is set as hypertrophy work on this
+   plan, so it is out of the six-week check.` Trend shows `Reading 3 of 4 key lifts.` above it. If
+   instead he leaves `k: "power"` and sets 8–12, **(c)** fires and the line names the range he typed.
+3. **Boundary — `hi` exactly 8.** `ppl3`'s bench at `power` 5–8 is eligible; at `power` 5–9 it is
+   dropped and prints `prescribed 5–9`. Inclusive at 8 because ST1's sample gate is `r <= 8`
+   inclusive. This is the pair T4 should pin red-first.
+4. **Boundary — partially readable.** `ul2`'s squat moved to `power` 6–10. Sets of 6–8 would be
+   admitted by ST1's gate, so the old §9.1 literal (`cannot read it`) would be **false**. It is
+   dropped anyway under part 3 above, and prints case (c), which is true: the check reads lifts
+   prescribed to 8 reps or fewer.
+5. **Failing case — what happens with no fix.** He moves `ppl5`'s squat to `hyp` 10–15 in week 5.
+   Trend prints `Reading 3 of 4 key lifts.` and stops. He has no way to learn which lift, or why, or
+   that one edit restores it. **Silence is the defect**; the count line alone is not disclosure.
+
 ---
 
 ## 23.3 Four decisions that apply to all four templates
@@ -7683,16 +7787,40 @@ currently carrying. It is subtraction, and subtraction from a small number is ho
 working.
 
 - **5-day PPLUL (83 working sets/week) and the bodybuilder split (86)** — both are above PHAT's
-  volume and both declare `cut`, `reintroOrder` and `reducedWeeks: 4`. Weeks 1–4 run at 67 and 65
-  sets respectively.
+  volume and both declare `cut`, `reintroOrder` and `reducedWeeks: 4`. Weeks 1–4 run at **68** and 65
+  sets respectively. (`ppl5`: 83 − 5 `cut` accessories × 3 sets = 68, and the per-day headers in
+  §23.4 read 13 + 13 + 14 + 15 + 13 = 68. An earlier draft said 67; prose slip, no field moved.
+  `bb5`: 86 − 7 `cut` accessories × 3 = 65, headers 12 + 10 + 17 + 14 + 12 = 65.)
 - **3-day (49) and 2-day (35)** — both **omit all three, deliberately.** Cutting a 3-day plan to
   ~40 sets, or a 2-day plan to under 30, produces a programme that is not a bulking stimulus for a
   85 kg lifter with thirteen years of training. The C7a ABSENT line renders on the Plans screen and
   is correct: `This plan has no reduced-volume tier. Every exercise runs from week 1.`
 
-**No `cut` slot sits on a heavy day, on any template.** A `cut` slot is hidden for weeks 1–4, and
-hiding a 3–5 compound is not reduced volume — it is a different programme. Every `cut` slot in all
-four templates is an accessory at `hi >= 10`.
+**The invariant, restated — the first version was wrong and the plans are right.** I wrote *"no `cut`
+slot sits on a heavy day, on any template"*, and that is **false on my own `bb5`**: under HD1.1's own
+definition a day is heavy iff it holds one heavy slot, and `b1`, `b2`, `b3` and `b4` each lead with a
+`power` 6–8 compound, so all four are heavy days — and all four carry a `cut` accessory (`b1d`,
+`b2d`/`b2e`, `b3e`, `b4e`). **Do not move a `cut` flag to rescue that sentence.** The flags are
+correct; the sentence was.
+
+The true invariant, and the one that carries the reasoning:
+
+> **No `cut` flag sits on a heavy *slot*, on any template. Every `cut` slot in all four templates is
+> `k: "hyp"` with `hi >= 10`.**
+
+Checkable, and it holds: `ppl5` — `p1d` 12–15, `p1f` 8–12, `p2d` 12–15, `p2f` 10–12, `p3d` 12–15;
+`bb5` — `b1d` 12–15, `b2d` 10–12, `b2e` 10–15, `b3e` 12–15, `b4e` 12–15, `b5e` 12–15, `b5f` 10–15.
+All twelve `hyp`, all `hi >= 12`. The reason is unchanged: a `cut` slot is hidden for weeks 1–4, and
+hiding a heavy compound is not reduced volume — it is a different programme, and on a `keyLifts`
+member it would also delete the six-week check's evidence for the first four weeks.
+
+**What is deliberately *not* claimed:** that a `cut` slot never shares a **day** with a heavy slot.
+The unit "heavy" attaches to for R1 and for the Plans screen is the day; the unit V1 subtracts is the
+slot, and on a bodybuilder split every training day leads with its heavy compound by construction —
+there is nowhere else for an accessory to go. `ppl5`'s two heavy days happen to carry no `cut` slot,
+because `p4e`, `p4f`, `p5c`, `p5d` and `p5e` are all `power` 6–10 and none is an accessory I would
+drop; that is a property of that template, not a rule. The keep/lose table in §23.2.3 says the same
+thing and is about `ppl5` only.
 
 ### 23.3.4 `fig` — omitted on all four, and this is not an oversight
 
@@ -7949,9 +8077,8 @@ already trained the front delts and triceps hard. **Arms last is correct** in bo
 have had Tuesday's rows and the triceps Monday's and Friday's pressing, so arms is the day that can
 be short without costing anything.
 
-`[Opinion]`, and it is the one piece of this section I would change on his word without argument.
-**This template is the least settled of the four** and one line from him is worth having before it
-ships.
+`[Opinion]`, and it was the one piece of this section I said I would change on his word without
+argument. **Chady confirmed this order on 2026-09-29 (§23.11). It is settled and ships as written.**
 
 ```
 planId:       "bb5"
@@ -8106,26 +8233,45 @@ physiotherapist, not for a template.**
 | T2 | backend | Four plan documents, `readOnly: true`, frozen, from §23.4–§23.7. Plan ids `ppl5`, `ppl3`, `ul2`, `bb5`. Slot, day and `lift` ids are distinct within each plan and across all five. `implement` transcribed from the tables, **not derived** (§23.8). No `fig` on any slot. |
 | T2a | backend | Rule HD1 as pure functions: an eligibility predicate `k === "power" && hi <= 8`, subject filters over `keyLifts` and `speedSource`, ABSENT-not-THIN at zero eligible, and **no write to the stored plan**. §23.2.5 example 1 is the regression case; example 2 is the red-first case. |
 | **New, PM** | backend | **Rule TW1b** (§23.6.2) — `trainingWeeks`' threshold becomes `min(3, plan.days.length)`. Red-first. Not T1's, not inside the templates. |
-| T3 | frontend | HD1.4's disclosure and HD1.6's offer, **Plans screen only, never the session card**. If the PM would rather ship without the offer, ship without it — HD1.3's ABSENT state is complete on its own and the offer is the optional half. |
-| T4 | qa | Every `mv` resolves by id at the pinned SHA. No slot carries a slash-name. `validatePlan` ok ×4. The four `keyLifts` lists are all HD1-eligible on day one. PHAT's HD1 output is unchanged. |
+| T3 | frontend | HD1.4's disclosure on **two surfaces — the Plans screen and the Trend tab, never the session card** (§23.2.6, which corrects "Plans screen only"). Three reason-keyed literals; the range comes from `planKeyLiftsDropped()` and is never hardcoded. HD1.6's offer is Plans screen only. **T3's Trend half is not optional** — without it a dropped key lift is anonymous on the screen that reports the check, which is less than the app said before T2a. If the PM would rather ship without the *offer*, ship without it: HD1.3's ABSENT state is complete on its own. |
+| T4 | qa | Every `mv` resolves by id at the pinned SHA. No slot carries a slash-name. `validatePlan` ok ×4. The four `keyLifts` lists are all HD1-eligible on day one. PHAT's HD1 output is unchanged. **Plus §23.2.6:** no rendered string contains a hardcoded `3–5`; a dropped lift is named on Trend, not only on Plans; `hi: 8` eligible / `hi: 9` dropped, red-first; the `power` 6–10 case is dropped and prints case (c); at zero eligible `Reading 0 of 4 key lifts.` never renders. Weeks 1–4 set totals: `ppl5` 68, `bb5` 65. |
 | — | Chady | §23.11. |
 
 ---
 
-## 23.11 Needs from Chady — four one-line questions
+## 23.11 Answered by Chady, 2026-09-29 — settled, do not re-ask
 
-1. **Bodybuilder split day order — Chest, Back, Legs, Shoulders, Arms (mine, legs mid-week), or the
-   conventional Chest, Back, Shoulders, Arms, Legs?**
-2. **5-day Lower: conventional deadlift, or Romanian deadlift?** I chose the conventional one so the
-   week-6 test has four lifts; the RDL is already on Legs at 8–12.
-3. **5-day Pull, second curl: hammer curl, or something else?** The only slot I picked with no reason
-   behind it.
-4. **None of the four has speed work. Is that right?** I think it is (§23.3.2), and it is the one
-   thing these plans give up relative to PHAT.
+All four questions are closed. He asked not to be asked again; nothing below is reopened by a later
+pass without new evidence, and none of it is a proposal any more.
+
+| # | Question | His answer | Effect |
+|---|---|---|---|
+| 1 | Bodybuilder split day order | **Chest · Back · Legs · Shoulders · Arms** — mine, legs mid-week | `bb5` ships as written in §23.7. No change. |
+| 2 | 5-day Lower: conventional deadlift or RDL | **Conventional deadlift** | `p5b` stays `mv_Barbell_Deadlift`. `keyLifts` keeps four members. §23.1's alternative (drop to three lifts) is void. |
+| 3 | 5-day Pull, second curl | **Hammer curl stays** | `p2f` stays `mv_Hammer_Curls`. It was the one slot I said I would change without argument; I no longer would. |
+| 4 | Speed work in any of the four | **None** | `speedSource` stays omitted on all four and no `k: "speed"` slot exists. §23.3.2 is now a decision, not a proposal. |
+
+**Also settled, same day:** the neutral-grip revision (`f056963`) is **reverted at his instruction** —
+he will work around the forearm with the in-session swap (WO-014). **Do not reinstate it**, and do not
+re-derive it from a pain note: S1/S1b suppress and disclose, they do not re-write a grip. If the
+forearm becomes a standing problem that is a conversation with a physiotherapist, not a plan edit the
+app makes for him.
 
 ## 23.12 Verdict
 
-**Four templates delivered, two rulings, one defect found.**
+**Four templates delivered, two rulings, one defect found — and, after T2, two corrections to this
+section's own text.**
+
+- **Corrected, §23.2.6.** HD1.4's literal said `not a 3–5 lift`, which is false on three of the four
+  plans I wrote in this same section, and its disclosure was confined to the Plans screen, which left
+  a dropped key lift anonymous on Trend — **quieter than the app was before the change**. Copy
+  rewritten, reason-keyed, printing the slot's own range; Trend added; §9.1's ST1 literal superseded
+  and its `lo > 8` predicate replaced by HD1's `hi > 8`. **The engineer refusing to transcribe a
+  sentence it could see was false is the review working. Nothing else caught it.**
+- **Corrected, §23.3.3.** *"No `cut` slot sits on a heavy day"* is false on my own `bb5`, where all
+  four of `b1`–`b4` are heavy days carrying `cut` accessories. **The invariant was wrong, not the
+  plan** — restated at the slot level, where the reasoning actually lives. No flag moved.
+- Prose slip: `ppl5`'s weeks 1–4 total is **68**, not 67.
 
 - **Ruling 1: Rule HD1.** Heavy is derived and never stored; `keyLifts` and `speedSource` are
   validated and never re-derived; zero eligible subjects is ABSENT, never "log more"; a replacement is
