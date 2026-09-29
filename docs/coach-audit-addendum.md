@@ -7448,7 +7448,7 @@ regression target: **the five shipped plans, unedited, must produce byte-identic
 | 1a | The PM's guess — derive `keyLifts` and `speedSource` automatically | **Rejected, and I will hold it.** Reason in §23.2.4. | `[Opinion]` |
 | 2 | Should a slot name sanctioned alternates (B-159)? | **No.** No new field, and not in the cue either. The act is shipped (WO-014 swap), the identity is shipped (MV1), and the thing that actually failed him is WO-017. | `[Opinion]`, held |
 | 3 | Day breakdown for the bodybuilder split | **Chest · Back · Legs · Shoulders · Arms.** Not the conventional order; reason in §23.7.1. **Confirmed by Chady 2026-09-29 — settled (§23.11).** | `[Opinion]`, now settled |
-| 4 | **Found while in here — a 2-day plan can never accumulate a training week.** Rule TW1 requires ≥ 3 training days in a week, so on the 2-day template `trainingWeeks` is permanently 0 and ST1, V1, D1 T3 and `cycleLine` are silently inert — no ABSENT line, no explanation, forever. | **Rule TW1b:** the threshold is `min(3, plan.days.length)`. PHAT and the 5-day and 3-day templates are unchanged at 3; the 2-day plan gets 2. **Filed for the PM — it is outside T1's four templates and must not be built inside them.** | `[Certain]` on the defect, `[Likely]` on the fix |
+| 4 | **Found while in here — a 2-day plan can never accumulate a training week.** Rule TW1 requires ≥ 3 training days in a week, so on the 2-day template `trainingWeeks` is permanently 0 and ST1, V1, D1 T3 and `cycleLine` are silently inert — no ABSENT line, no explanation, forever. | **Rule TW1b:** the threshold is `min(3, plan.days.length)`. PHAT and the 5-day and 3-day templates are unchanged at 3; the 2-day plan gets 2. **Filed for the PM — it is outside T1's four templates and must not be built inside them.** **Amended 2026-09-29: TW1b's `Output copy: none` was wrong — see Rule TW1c (§23.6.3) for the two sentences that state the threshold.** | `[Certain]` on the defect, `[Likely]` on the fix |
 | 5 | `speed` work in any of the four | **None.** All four omit `speedSource` deliberately. §23.3.2. **Confirmed by Chady 2026-09-29 — settled (§23.11).** | `[Opinion]`, now settled |
 | 7 | **Correction to Ruling 1's copy, after T2.** HD1.4's first literal said `not a 3–5 lift`, which is false on `ppl3`, `ul2` and `bb5` — none has a 3–5 key lift. And HD1.4 disclosed on the Plans screen only, which left a dropped lift **unnamed on Trend**, less disclosure than §9.1 gave before the change. | **Copy rewritten, reason-keyed, printing the slot's own range from `planKeyLiftsDropped()`; disclosure now renders on Trend as well. §9.1's ST1 `lo > 8` literal is superseded — HD1 excludes at `hi > 8`.** §23.2.6. | `[Certain]` on the falsity, `[Opinion]` on excluding the partially readable case |
 | 6 | `fig` (photographs) on the new slots | **Omitted from all four.** F1p forbids approving a frame sight-unseen and I have viewed none of these. Follow-up item, not a gap. | `[Certain]` |
@@ -8039,7 +8039,11 @@ Logic:        TW1b.1  The threshold is min(3, plan.days.length), not the constan
                       the straddle ruling (§6b), all of it.
               TW1b.3  On a plan with no days, or where the plan cannot be read, the
                       threshold stays 3. A degenerate plan must not make every week count.
-Output copy:  none. No string changes.
+Output copy:  TWO strings state the threshold and both are rewritten by Rule TW1c (§23.6.3).
+              `tierLines`' `explain` (interpolated, shipped) and `tierLines`' pre-first-week
+              `count` (was a spelled "three", false on `ul2`). This line read `none` until
+              2026-09-29 and was wrong when it was written: a rule that moves a number
+              moves every sentence that states the number.
 Not enough data: unchanged from TW1.
 Worked:       PHAT (5 days) -> 3. Unchanged, byte for byte, and this is the regression case.
               ppl5 (5) -> 3. ppl3 (3) -> 3. Both unchanged.
@@ -8057,6 +8061,102 @@ backend item with a red-first test (`ul2` + two sessions in one week → `traini
 the pre-fix tree). **Until it lands, the 2-day template ships with ST1 and D1 T3 dead.** That is
 survivable for a maintenance plan and it is *not* survivable silently — so if the PM ships the
 templates first, the 2-day's Plans-screen copy needs one honest line and I will write it on request.
+
+### 23.6.3 Rule TW1c — the sentences that state the threshold, now that the threshold moves
+
+**My own instruction against interpolating this number is overturned, by me, and here is the
+narrow reason.** §9.13 ruling 3 said *"three" is spelled, not interpolated … if the minimum ever
+moves, the sentence is rewritten by the coach.* That instruction had one premise — that
+`TRAINING_WEEK_MIN` is a constant this copy does not parameterise. TW1b removed the premise. The
+number is now a fact about the plan, and a spelled "three" on `ul2` is not a style choice, it is a
+**false sentence on the first screen he sees after his first session on that plan**. The instruction
+is replaced, not defeated in principle: the *shape* is still mine, and the shape is only safe down to
+two. At one it breaks, so the rule below puts a floor under it rather than trusting the number.
+
+**Shape chosen: interpolate the existing sentence, with a floor. Not a number-free rewording.**
+A number-free form ("Week 1 starts when a week holds a full round of the plan") is vaguer about the
+one thing he needs to act on — how many more sessions, this week — and it makes him do a lookup to
+find out. The count is the actionable part; keep it, spell it, and stop saying it where it stops
+being true.
+
+```
+Rule: TW1c - every sentence that states the training-week threshold reads it from the plan
+Applies to:   `tierLines` on the Train screen and on Trend - both callers, same strings.
+              All exercise roles; this is programme state, not a set.
+Inputs:       nSess (sessions logged), tw (PHAT.trainingWeeks), cw (calendar weeks),
+              twMin = trainingWeekMin(plan) = min(3, plan.days.length) per TW1b.
+              No history minimum beyond the one each branch already has.
+
+Logic:
+  TW1c.1  The pre-first-week count line (nSess > 0 && tw === 0), replacing the
+          spelled "three":
+            twMin >= 2  ->  "{nSess} session|sessions logged. Week 1 starts when
+                             {numWord(twMin)} land in one week."
+            twMin <= 1  ->  "{nSess} session|sessions logged."
+                             THE SECOND SENTENCE IS DROPPED. Do not bend it to
+                             the singular.
+  TW1c.2  The `explain` sentence (already shipped, WO-014) is CONFIRMED as written
+          at every threshold, including one:
+            "A training week is a week with {numWord(twMin)} or more logged sessions."
+  TW1c.3  NOT IN SCOPE, FILED SO IT IS NOT FOUND THE HARD WAY. The reduced-volume
+          zero line still spells three:
+            "Reduced volume until you have logged {numWord(rw)} weeks of three or
+             more sessions."
+          It is TRUE on every plan that can reach it today - that branch needs a
+          `cut` tier, and every plan declaring one (PHAT, ppl5, ppl3, bb5) has at
+          least three days, so twMin is 3. Leave the bytes alone in this work order.
+          The day any plan with fewer than three days declares `reducedWeeks`, it
+          becomes false and takes TW1c.1's treatment: `numWord(twMin) + " or more
+          sessions"`, with the same floor - at twMin <= 1 the qualifier is dropped
+          and the line reads "...{numWord(rw)} weeks with a logged session."
+
+Output copy: the literals above, character for character. `numWord` spells 0-12.
+
+Not enough data: nSess === 0 is unchanged and is not this rule's - the day-one line
+          (`No sessions logged. Start with {firstDay}.`) names the next action and
+          states no threshold at all. Correct, and it stays.
+
+Worked examples:
+  1. PHAT, 2 sessions in different weeks. twMin 3, tw 0.
+     -> "2 sessions logged. Week 1 starts when three land in one week."
+     BYTE-IDENTICAL to the shipped string. This is the regression case, and every
+     3-day-or-more plan (PHAT, ppl5, ppl3, bb5) is in it.
+  2. `ul2`, 1 session. twMin 2, tw 0. THE BUG.
+     Was:  "1 session logged. Week 1 starts when three land in one week."  FALSE.
+     Now:  "1 session logged. Week 1 starts when two land in one week."
+     This is the first thing he sees on that plan after his first session.
+  3. BOUNDARY, twMin === 2, the sentence still reading as written: "two land in one
+     week" needs no verb change, no article, no branch. Two is the floor of the
+     shape, which is why the floor is where it is and not lower.
+  4. FAILING CASE, a 1-day plan, twMin 1. The naive interpolation gives
+     "Week 1 starts when one land in one week" - ungrammatical - and its fixed-up
+     singular, "when one session lands in one week", is WORSE: it is grammatical
+     and it contradicts the clause in front of it, which has just said he logged a
+     session. On that plan the first session IS week 1. So the app says
+     "1 session logged." and stops.
+  5. REACHABILITY of case 4: with twMin 1, any logged session makes its own week a
+     training week, so tw >= 1 and this branch cannot render. The floor is
+     therefore defence against bad data (an unparseable date counted in nSess and
+     in no week), not a screen anyone should see. Defend it anyway - an app that
+     prints a contradiction once has taught him not to read the line.
+
+Rationale:   the sentence promises when week 1 starts, and after TW1b that promise
+             is plan-specific. A number that is wrong by one on a two-day plan tells
+             him to log a third session he has no slot for, on a screen whose whole
+             job is telling him what is missing. Spelling the number is worth
+             keeping down to two and worth abandoning at one, because the shortest
+             true sentence beats a grammatical false one.
+```
+
+**The `one` case on TW1c.2 — confirmed, not replaced.** `[Certain]` that it is true; `[Opinion]`
+that it reads. *"A training week is a week with one or more logged sessions."* is stiff, and it is
+stiff in the right direction: it renders **only** next to the divergence line, where the two numbers
+disagree and he is owed the arithmetic. On a 1-day plan, logged in week 1, nothing in week 2, logged
+in week 3, he reads *"Week 3 by the calendar, week 2 of real training. A training week is a week with
+one or more logged sessions."* — and the second sentence is the only thing on the screen that
+explains the first. Dropping to a friendlier *"a week you trained at all"* loses the property that
+makes the sentence work: it is the definition, in the same words at every threshold, so the number is
+the only thing that changes between plans and he never has to re-learn the sentence. Keep it.
 
 ---
 
