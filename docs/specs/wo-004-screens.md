@@ -801,6 +801,15 @@ quoted him saying something he did not say. **Line 2 (`S1_LINES[1]`) is untouche
 test string and it already carries the hold in its first two words, which is why the replacement does
 not repeat it.
 
+**The 21-day restatement (Rule S1a) replaces both lines above with one** — §22.12 #53, amended the same
+day and for the same reason. Position, styling, A11y and the no-dismiss rule are identical; only the text
+differs, and it is the only place in the notice where a date is interpolated:
+
+```
+This exercise was flagged on 22 Sep and you have not logged it since. Still holding the
+weight. Not something this app can assess. If it has not settled, see a physio or a doctor.
+```
+
 Provenance line, when the source is history rather than the current note (WO-003 §2.3, **NEW**,
 still pending coach review): `From your last session on this.`
 
@@ -4865,6 +4874,7 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 50 | chip, line 2 | swapped card, changed in the sheet | `Set for this session` |
 | 51 | session card + summary, pain notice, line 1 (`S1_LINES[0]`) | any pain trigger | `This exercise is flagged. Not something this app can assess.` **AMENDED 2026-09-29 (coach §24.5).** Replaces `You logged pain on this. Not something this app can assess.` The second sentence is §10's prohibition and is carried over unchanged; only the opening moves. **`S1_LINES[1]` does not change** |
 | 52 | train, volume tier (`blockedLine`, Rule S2b) | V1 offer suppressed | `No new exercise this week. An exercise was flagged in the last 7 days.` **AMENDED 2026-09-29 (coach §24.5.5).** Replaces `No new exercise this week. You logged pain in the last 7 days.` The first sentence — the decision — does not move; only the reason does |
+| 53 | session card + summary, pain notice, **the whole notice** (Rule S1a, the 21-day restatement — it replaces *both* `S1_LINES`, `logic.js` `painState`) | `gap >= S1A_DAYS` | `This exercise was flagged on {date} and you have not logged it since. Still holding the weight. Not something this app can assess. If it has not settled, see a physio or a doctor.` **AMENDED 2026-09-29 (coach §24.5, §22.12 #51).** Replaces `You noted pain on this on {date} and have not logged it since. The app cannot tell you whether it has settled. If it still hurts, see someone qualified to look at it.` `{date}` is `dayMon(out.date)`, the **only** interpolation, unchanged (§10 forbids a second) |
 
 Substitutions beyond §0.8: `{original}` the movement the slot carried before the swap, escaped ·
 `{new}` the movement picked, escaped · `{query}` the typed query, escaped · `{Equipment}` the library's
@@ -4889,6 +4899,42 @@ stored, and a standing condition reads correctly on an old card where an announc
 news. #52's past tense is the 7-day window's, not an event's. **Boundary:** #51 renders only where
 `painFlag` is true and #52 only where V1 is suppressed by it; **no string on a card with no pain
 trigger moves, and the notice's position, styling and A11y are unchanged** (§4.8).
+
+**#53 is the same decision, one layer down, and it was missed twice.** The stale branch does not render
+`S1_LINES` — it *replaces* them — so amending #51 left the 21-day restatement still saying
+`You noted pain on this`, and that is the identical defect: the app reporting what he *noted* or
+*logged* can only name a symptom he never wrote, because the detector fires on `not recovered`, a
+status report. This literal carried the misquote **twice** — `You noted pain` at the open and
+`If it still hurts` at the close, which additionally presumes the symptom in order to offer the
+referral. Both are gone. What replaces them reuses the two clauses already signed off rather than
+inventing more medical copy: `Not something this app can assess.` is #51's second sentence verbatim,
+and `see a physio or a doctor` is `S1_LINES[1]`'s referral verbatim — only the opening fact and the
+referral's condition are new, exactly as in #51. The condition is `If it has not settled`, not
+`If it still hurts`: `settled` names no body part, no severity and no symptom, and does not assume
+one was ever reported.
+
+**Why this one names the hold and #51 does not.** #51 deliberately leaves the hold to `S1_LINES[1]`
+because the two lines render as one utterance. #53 has no second line, so `Still holding the weight.`
+must be in it — the whole point of the notice is that a load is parked, and a restatement that drops
+that fact turns a training decision into a system notice. It is `Still holding`, not `Holding`, because
+that single word is the state the 21 days changed.
+
+**Tense, and why the date leads.** The family's pair holds: `is flagged` where the condition is
+standing (#51), `was flagged` where a time is named (#52). #53 takes `was flagged on {date}` and carries
+the standing part in `Still holding the weight.` — the flag was an event on a day, the hold is what is
+still true. The date leads the sentence because S1a's entire purpose is that the text change *once*, to
+be noticed; an opening one word deep (`is still flagged`) would read as the line he has read many times.
+`you have not logged it since` is second person and the rest is not, and the mix is the ruling: passive
+where naming who flagged it would misquote him, second person where the fact is plainly his own record.
+Neither fact is a quotation — a date and an absence of entries are things the store knows.
+
+**The sweep, stated so a third pass is not needed.** Every user-facing string in this family, in the
+shipping tree, is now four and only four: `S1_LINES[0]` (#51), `S1_LINES[1]` (untouched, coach's test
+string), `blockedLine` (#52) and the S1a restatement (#53). `S1_PROVENANCE` (`From your last session on
+this.`) is in the same element but says nothing about the body and does not move. `index.html` holds no
+copy of its own — every hit for *pain* in it is `paint`; `painFlag`, `painWindow`, `PAIN_WORDS`,
+`PAIN_DAYS` and `out.blocked === "pain"` are identifiers and internal keys with no rendered text. **There
+is no fifth variant.** B-45 — the third tier the coach declined to write — remains deliberately unwritten.
 
 **The regression boundary of the 2026-09-28 amendments (#31, #34, #38, #42b, #48, #49).** Every one of
 them renders **only** on a card or a Summary block that is **swapped** or **added**, or under a
