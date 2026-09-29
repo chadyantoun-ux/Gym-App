@@ -6825,8 +6825,15 @@ Output copy:  MV1-C1  (fallback prior, beneath the existing ghost line)
               MV1-C3  (MV1.1 skipped the most recent entry under this slot)
                 Last time you swapped this for Machine row. Not used as this exercise's history.
               MV1-C4  (H1 case 3 on a slot whose only prior is a fallback)
+                AMENDED 2026-09-28 under Rule CH1 (22.4.6). The old string ended
+                "...still in the history and on the chart." The earlier sets sit under a
+                DIFFERENT slot, and a sparkline is drawn only for the ACTIVE plan's key
+                lifts (`KEY_LIFTS = planKeyLifts(plan)`), so in this rule's own worked
+                example 3 — a restructure into PPL — the source slot is not in the active
+                plan and those sets are on no line at all. The claim was false in the
+                canonical case it was written for. The log half is unconditional and stays.
                 First session on this exercise. This becomes your baseline. Your earlier
-                Bent-over row sets are still in the history and on the chart.
+                Bent-over row sets are still in the history.
 Not enough data: MV1 needs no history to decide, deliberately — the ghost and the seed are the
               first things on screen and a stale target is most dangerous before any new set
               exists. Where a gate refuses, the copy above IS the not-enough-data state and it
@@ -7015,19 +7022,131 @@ correct split and it is the same one §18.3 drew.
 ### 22.4.6 "Make it permanent" — the consequence the copy must state
 
 Changing a slot's `mv` re-points MV1.1: the movement's entries under that slot become the slot's
-history, and the previous movement's entries stop being it. Nothing is deleted, nothing is re-keyed,
-everything stays on the chart. The confirmation must say so before he taps, because next session's
-card will look different and he must not be surprised by it:
+history, and the previous movement's entries stop being it. Nothing is deleted and nothing is
+re-keyed — the replaced movement's sets stay in the log, the export, the backup, `Recent sessions`,
+the tonnage series and `painWindow`. **They do leave that slot's sparkline**, at the moment of the
+tap; see the ruling below. The confirmation must state the consequence before he taps, because next
+session's card will look different and he must not be surprised by it.
+
+**The shipping strings are §22.7's three lines of `docs/specs/wo-004-screens.md`** — UX owns the
+words, I own which facts they carry. The illustrative draft here is corrected to match them and
+carries no chart claim:
 
 ```
-Make Machine row this exercise from now on? Your Seated cable row sets stay in the history and
-on the chart, but they stop being this exercise's last session. The next verdict reads your
-Machine row sets.
+Put Machine row in the plan?
+It replaces Seated cable row on Upper hypertrophy from your next session.
+Your Seated cable row sets stay where they are. They stop being this slot's last numbers.
+The next verdict reads your Machine row sets.
 ```
 
-`[Opinion]` on the wording; `[Certain]` that the three facts it carries — nothing is lost, the prior
-moves, the verdict follows — must all be in it. UX owns placement, and the PM has already ruled it
-belongs on Summary and never mid-set.
+`[Opinion]` on the wording; `[Certain]` that the three facts it carries — **nothing is lost from the
+log**, the prior moves, the verdict follows — must all be in it. UX owns placement, and the PM has
+already ruled it belongs on Summary and never mid-set.
+
+#### The chart clause — ruling, 2026-09-28
+
+**Struck. The confirmation claims the log and does not mention the chart.** UX refused to write the
+draft clause rather than ship a sentence that stops being true one tap later, and the refusal was
+correct. From schema 7 `buildSession` stamps `mv` on every entry (`logic.js:1422–1424`), so the
+instant the slot's `mv` becomes Machine row the cable-row entries fail MV1.1(a)'s comparison —
+`slot.mv` present AND `effectiveMv(entry, slot) !== slot.mv` — and leave that slot's line. There is
+no movement-grouped chart for them to land on; that is B-141 and it is unbuilt. My draft promised a
+placement the app does not deliver, which is the failure the sentence existed to prevent, pointing
+the other way.
+
+**B-141 is not a blocker for this deploy.** I considered the alternative — keep the promise, build
+the movement-grouped chart first — and reject it, on the training truth below and on the standing
+principle that a right silence beside a wrong fact is the better of the two.
+
+**Is losing the line's continuity a coaching loss, or a cosmetic one? Cosmetic, with one honest cost
+that is not on the chart at all.** `[Certain]` on the first half: an e1RM point from a machine row
+and an e1RM point from a barbell row are not the same measurement. Leverage, stabiliser demand and
+the path are different, so 100 kg on one and 70 kg on the other is not a 30% regression — it is two
+numbers that were never comparable. A line that joined them would answer Trend's only question, *is
+this working*, with a shape that means nothing, and it would do it in the most persuasive form the
+app has. **The continuity he loses is false continuity, and removing it removes no information he can
+act on.** No verdict, no seed, no prior, no rest timer and no increment changes; the sets are still
+in every place a number is counted.
+
+The one real cost sits in ST1, not in the sparkline: after a permanent change on a **key lift**, the
+prior block's entries are skipped by MV1.1(a), so the six-week test on that lift falls under its
+minimum data and goes quiet until the new movement has `ST1_DATES` dates in both blocks — roughly
+three to six weeks. `[Certain]` that is the correct behaviour and not a regression: the alternative
+is a comparison across two movements, which on a lighter machine load prints `No progress on
+Bent-over row` at a lifter who is progressing. A wrong stall warning costs him a deload he does not
+need; a quiet screen costs him nothing he was going to act on this week. **This adds no string to
+this order** — ST1's existing not-enough-data copy already covers it, and I decline to invent a
+fourth sentence for a dialog read between sets.
+
+#### Rule CH1 — no string may place a set on a chart
+
+This is the general rule the drift produced, written down so it is not rediscovered. The confirmation
+copy and the chart filter had two different authors inside one work order and disagreed by the time
+they met.
+
+```
+Rule: CH1 — no string may place a set on a chart
+Applies to:   EVERY user-visible string in the app, all roles, all screens —
+              confirmations, verdicts, disclosures, toasts, onboarding, help text,
+              empty states. No engine reads CH1; it constrains authors and it is
+              checkable by reading.
+Inputs:       the string; the predicate that draws the chart it names, BY RULE NUMBER;
+              the set of entries that predicate returns at the moment the string is read.
+              Minimum data: the predicate. Without it there is nothing to check.
+Logic:        CH1.1  A string may say a set is "on the chart" / "on the line" / "still
+                     charted" ONLY IF the predicate that draws that chart includes that
+                     set. The spec line must name the predicate. An unnamed predicate is
+                     not a claim that may ship.
+              CH1.2  A CONFIRMATION IS EVALUATED AGAINST THE WORLD AFTER THE TAP. A
+                     sentence that is true while he reads it and false when he acts on it
+                     is the `Discard` defect class: the app saying one thing and doing
+                     another.
+              CH1.3  A CONDITIONAL CLAIM IS STRUCK, NOT QUALIFIED. "on the chart, if this
+                     is one of the four key lifts" is not copy anyone reads between sets.
+                     Claim the log — which is unconditional, and is the fact he is
+                     actually afraid of losing — and stop there.
+              CH1.4  THE CHART SCREEN OWNS ITS OWN EXCLUSIONS. What is not on a line is
+                     stated under that line, from the same predicate and the same count the
+                     line used, never re-derived in a view and never announced from another
+                     screen (§22.6 (2) of the screens spec).
+Output copy:  none of its own. CH1 decides which clauses may exist.
+Not enough data: if the drawing predicate cannot be named, the app does not make the claim.
+              There is no partial credit and no "probably still on the chart".
+```
+
+**Worked examples.**
+
+1. **Failing — the case that produced the rule.** Draft: `your Seated cable row sets stay in the
+   history and on the chart`. Predicate: `exclude = slot.mv present AND effectiveMv(entry, slot) !==
+   slot.mv`. After the tap `slot.mv` is Machine row and every cable-row entry carries its own `mv`
+   → excluded. False under CH1.2 one tap after it renders. **Struck**, log clause kept.
+2. **Passing — and this is what passing looks like.** `{n} sessions are not on this line — a
+   different movement.`, rendered under the line, counted by the predicate that drew it, zero
+   renders nothing. Named predicate, same screen, evaluated at read time. Ships.
+3. **Boundary — his four existing sessions.** They carry no `mv`, so `effectiveMv` is the slot's and
+   they are never excluded; they follow the slot wherever it points and a chart claim about *them*
+   would be true. It still may not ship: the same sentence is false for anything logged after schema
+   7, and a clause true for some of his sets and false for others is struck under CH1.3, not
+   conditionalised.
+4. **Failing, and it is live on `main` — H1.3c.** `logic.js:7250` ships `Prescription changed to
+   {s} × {lo}–{hi}. This is the new baseline. Your earlier sets are still in the history and on the
+   chart.` H1.3c fires on **any** slot, and a sparkline exists only for the active plan's four key
+   lifts (`KEY_LIFTS = planKeyLifts(plan)`). On a hypertrophy slot such as `d3c` there is no chart
+   for those sets to be on, so the clause is false on most of the slots it fires on — and this is
+   true today, before MV1. Correct string, one clause shorter:
+   `Prescription changed to {s} × {lo}–{hi}. This is the new baseline. Your earlier sets are still
+   in the history.`
+   **My recommendation to the PM: take it in this order.** Backend is already inside H1 case 3 for
+   MV1-C4, it is one clause in one string, and QA re-pins one assertion (`tests.html:7546`). If W4
+   has already landed, file it rather than reopen — it is a wrong reassurance, not a wrong number,
+   and nothing he does depends on it.
+5. **MV1-C4, amended above.** Same defect, same fix, in the rule block of MV1 itself.
+
+**Rationale.** The three facts the confirmation carries are all about *loss*, because loss is the
+only thing that would stop him tapping — so every one of them has to survive the tap, and the chart
+clause did not. `[Certain]` that a chart is the most persuasive surface in this app and the least
+argued with, which is why a string may only describe one by pointing at the predicate that draws it.
+The log is the promise worth making; the chart states its own exclusions where they can be true.
 
 ### 22.4.7 Worked examples
 
