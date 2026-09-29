@@ -4196,7 +4196,7 @@ function stallCard(){
   /* The red rule is the SECOND channel. The first is the sentence itself:
      the stalled state opens `Week 6 and no progress on …` in the lead. */
   let h=`<div class="pad mt16"><div class="tcard${a.state==="stalled"?" stall":""}">
-    <span class="kick">Week 6 test</span>`;
+    <span class="kick">Six-week check</span>`;
   /* Addendum §9.9 and Rule HD1.4: the disclosure about the CHECK sits ABOVE
      the finding (§23.2.1, "the Trend tab, above every ST1 result") and is
      never joined to it — what the check could not read changes what its
@@ -4236,13 +4236,13 @@ function vTrend(){
      control is deliberately NOT here: the demo sandbox (W13b) is not built,
      and a control that does nothing is worse than no control. */
   if(!n) return h+`<div class="pad mt24"><h2>No sessions yet</h2>
-    <p class="sub">Top sets appear here after the first logged session, and the week 6 test
+    <p class="sub">Top sets appear here after the first logged session, and the six-week check
     unlocks once there are two weeks to compare.</p></div>`;
 
   h+=stallCard();
   h+=`<section class="pad mt16" aria-labelledby="tl-h"><h2 id="tl-h">Key lifts</h2>
     <p class="tiny">Estimated one-rep max, from the best set at 8 reps or fewer. The same
-    number the week 6 test reads.</p>
+    number the six-week check reads.</p>
     ${trendRows()}</section>`;
 
   h+=`<section class="pad mt24"><h2>Recent sessions</h2>`;
