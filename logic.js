@@ -5711,8 +5711,12 @@
        to    the set array that replaces it
        meta  the three schema-7 keys to add, or null to add none
      12 Sep is CHADY_EXPORT, the server's own bytes (tests.html). 22 Sep is
-     WO-015's table, transcribed from the server's rows; the repo holds only
-     that session's d1b note (docs/decisions.md, coach addendum 24.4). */
+     WO-015's table, transcribed from the server's rows; its d1b note is on
+     the record here too (docs/decisions.md, coach addendum 24.4). BOTH
+     SESSION IDS WERE READ OFF public.sessions ON 2026-09-29, thirteen digits
+     each, and every field of every row is gated - `note: null` is still
+     honoured by b131Mismatch and b131Done for a future row, but no row uses
+     it. */
   var B131_TABLE = [
     { sid: 1789264514484, date: "2026-09-12", ex: "d1b",
       why: "iso-lateral front lat pulldown logged on the weighted pull-up slot; loads unchanged",
@@ -5728,7 +5732,7 @@
       to:   [{ w: 31.5, r: 12 }, { w: 38.5, r: 5 }, { w: 38.5, r: 6 }, { w: 40.5, r: 3 }],
       meta: null },
 
-    { sid: 1790128305390, date: "2026-09-22", ex: "d1b",
+    { sid: 1790128305395, date: "2026-09-22", ex: "d1b",
       why: "iso-lateral front lat pulldown logged on the weighted pull-up slot; loads unchanged",
       note: "I did pull down on this, arm still not recovered",
       from: [{ w: 65, r: 12 }, { w: 75, r: 12 }, { w: 85, r: 9 }, { w: 95, r: 3 }],
@@ -5736,13 +5740,14 @@
       meta: { mv: B131_MV, sw: 1, n: B131_N } },
 
     /* The only row logged after WO-010, so the only one with components: the
-       lb `add` halves beside `w` or the set stops composing. `note` is null
-       because this repo has never held that entry's note - the 22 Sep d1b
-       note is on the record and this one is not, and a fingerprint that
-       guessed it would refuse the repair on his real bytes. */
-    { sid: 1790128305390, date: "2026-09-22", ex: "d1d",
+       lb `add` halves beside `w` or the set stops composing. The note is the
+       empty string, read off the server on 2026-09-29: the column came back
+       blank where `deleted_at` came back NULL in the same grid, so an empty
+       note and an absent one are distinguishable and this one is empty. Every
+       field on every row is now gated. */
+    { sid: 1790128305395, date: "2026-09-22", ex: "d1d",
       why: "the pair added together on a per-hand slot; every load and every ld.add halves",
-      note: null,
+      note: "",
       from: [{ w: 77.1, r: 8, ld: { add: 170, au: "lb" } },
              { w: 81.6, r: 5, ld: { add: 180, au: "lb" } },
              { w: 81.6, r: 4, ld: { add: 180, au: "lb" } },
