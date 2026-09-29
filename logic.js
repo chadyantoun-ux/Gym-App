@@ -6455,11 +6455,30 @@
      deadlift ever enters the plan.
 
      Exported frozen as PHAT.PAIN_WORDS and compiled into the regex, so the
-     suite pins the LIST and not a regex literal (§13.6). §13.5 tabulates
-     **21 entries** and this array holds **30 fragments** — the table groups
+     suite pins the LIST and not a regex literal (§13.6). The coach tabulates
+     **29 entries** and this array holds **41 fragments** — the table groups
      spellings on one row (`pain`/`painful`/`painfully` is entry 1). Both
      numbers are right; do not "correct" either to the other. Compiled, the
-     regex is character-identical to the one printed in §13.5. */
+     regex is character-identical to the one printed in §24.2.
+
+     ADDENDUM §24 (2026-09-29) — entries 22-29, the eleven fragments after
+     `g(?:ave|ives|iving) way`. Literal alternations only; §13.5's "do not
+     extend this into a parser" is a prohibition on negation SCOPE, proximity
+     and body-part tables, not on multi-word literals. Three things that look
+     like untidiness and are not:
+        ['’]      straight AND curly apostrophe. iOS substitutes the curly one
+                  silently; dropping it makes `hasn’t recovered` deaf again.
+        tender before tenderness   `tender` fails the trailing \b inside
+                  `tenderness` and the engine backtracks. Same shape as the
+                  shipped `numb|numbness`. Do not reorder.
+        (?:\w+\s+)?   the gap in entry 22 is capped at ONE word on purpose.
+                  Unbounded, it drifts across clauses onto
+                  `not sure, the elbow recovered fine`.
+     Held exclusions §24.3: bare `flare`/`flared` stays OUT (`elbows flared on
+     the press`) — only the particle forms are in; `sore` HOLD (frequency);
+     `stiff` HOLD (`d2d` is a stiff-legged deadlift); physio/doctor/MRI/
+     cortisone HOLD. Bare `recovered`, `not right`, `bad`, `not 100` are all
+     OUT and each has a named benign note behind it. */
   var PAIN_WORDS = Object.freeze([
     "pain", "painful", "painfully",
     "hurt", "hurts", "hurting",
@@ -6481,7 +6500,17 @@
     "tears?", "tore", "torn",
     "spasms?",
     "pulled",
-    "g(?:ave|ives|iving) way"
+    "g(?:ave|ives|iving) way",
+    "not\\s+(?:\\w+\\s+)?(?:recovered|healed|settled)",
+    "(?:has|have|had)\\s?n['’]?t\\s+(?:\\w+\\s+)?(?:recovered|healed|settled)",
+    "still\\s+(?:not|is\\s?n['’]?t)\\s+right",
+    "still\\s+bad",
+    "play(?:ing|s)\\s+up",
+    "act(?:ing|s)\\s+up",
+    "flar(?:ed|ing)\\s+up",
+    "flare-up",
+    "tender", "tenderness",
+    "dodgy"
   ]);
   var PAIN_RE = new RegExp("\\b(?:" + PAIN_WORDS.join("|") + ")\\b", "i");
   function painFlag(note) {
