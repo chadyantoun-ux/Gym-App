@@ -7430,6 +7430,720 @@ be right or wrong about 800 movements, and the only ones that matter are the one
 
 ---
 
+# 23. WO-018 T1 — the four templates, and the heavy day he can move — 2026-09-29
+
+Four plan documents, transcribable slot by slot, plus two rulings that govern all four and one
+defect found while writing them that is bigger than either ruling.
+
+**PHAT does not move.** Its 42 slots, its `keyLifts`, its `speedSource`, its `reintroOrder` and its
+`reducedWeeks` are untouched by every rule in this section, and Rule HD1 is written so that PHAT's
+declared subjects all pass its eligibility test unchanged. That is stated here so T2a has a
+regression target: **the five shipped plans, unedited, must produce byte-identical output.**
+
+## 23.0 Rulings at a glance
+
+| # | Question | Ruling | Tag |
+|---|---|---|---|
+| 1 | What is "heavy", and what follows when he moves it? | **Rule HD1.** Heavy is derived, never stored: a slot is heavy iff `k === "power" && hi <= 8`. `keyLifts` and `speedSource` are **validated, not re-derived** — an entry whose slot no longer passes is dropped at read time and the feature goes ABSENT (C7a), never PRESENT-THIN. A replacement is **offered, never adopted.** `reintroOrder` and `reducedWeeks` do not move at all. | `[Certain]` on the predicate, `[Opinion]` on offer-not-adopt |
+| 1a | The PM's guess — derive `keyLifts` and `speedSource` automatically | **Rejected, and I will hold it.** Reason in §23.2.4. | `[Opinion]` |
+| 2 | Should a slot name sanctioned alternates (B-159)? | **No.** No new field, and not in the cue either. The act is shipped (WO-014 swap), the identity is shipped (MV1), and the thing that actually failed him is WO-017. | `[Opinion]`, held |
+| 3 | Day breakdown for the bodybuilder split | **Chest · Back · Legs · Shoulders · Arms.** Not the conventional order; reason in §23.7.1. Needs one line from him. | `[Opinion]` |
+| 4 | **Found while in here — a 2-day plan can never accumulate a training week.** Rule TW1 requires ≥ 3 training days in a week, so on the 2-day template `trainingWeeks` is permanently 0 and ST1, V1, D1 T3 and `cycleLine` are silently inert — no ABSENT line, no explanation, forever. | **Rule TW1b:** the threshold is `min(3, plan.days.length)`. PHAT and the 5-day and 3-day templates are unchanged at 3; the 2-day plan gets 2. **Filed for the PM — it is outside T1's four templates and must not be built inside them.** | `[Certain]` on the defect, `[Likely]` on the fix |
+| 5 | `speed` work in any of the four | **None.** All four omit `speedSource` deliberately. §23.3.2. | `[Opinion]` |
+| 6 | `fig` (photographs) on the new slots | **Omitted from all four.** F1p forbids approving a frame sight-unseen and I have viewed none of these. Follow-up item, not a gap. | `[Certain]` |
+
+---
+
+## 23.1 Two things in his draft that A1 forbids, corrected before anything else
+
+His 5-day draft, which I am otherwise taking as written, contains two lines that cannot ship as one
+slot each. Neither is a disagreement about training; both are Rule A1 (§8.2), which is settled.
+
+1. **Upper: "arms 2×6–10"** is one line and becomes **two slots** — a curl and a triceps extension.
+   One slot holding "arms" has one history, one `lift`, one verdict and one load column, and a
+   cambered-bar curl at 30 kg and a skull crusher at 30 kg are not the same number.
+2. **Lower: "Deadlift or Romanian Deadlift"** is a slash-name. **Resolved to the conventional
+   deadlift** (`mv_Barbell_Deadlift`), because the Romanian deadlift already occupies the Legs day's
+   hinge slot at 8–12, and because ST1's week-6 test wants a 3–5 deadlift or it wants no deadlift.
+   `[Certain]` on the A1 half, `[Opinion]` on which one wins — if he would rather keep the RDL on
+   Lower, the trade is that `keyLifts` drops to three lifts, which is a valid plan (§9.9) and simply
+   means the week-6 test covers row, bench and squat.
+
+A third, smaller one: his Pull day says "a second curl 3×10–12". I have named it
+`mv_Hammer_Curls`. That is a choice, not a transcription, and it is the one slot in the 5-day I would
+change without argument.
+
+---
+
+## 23.2 Ruling 1 — Rule HD1
+
+### 23.2.1 The rule
+
+```
+Rule: HD1 — what "heavy" is, and what follows when he moves it
+Applies to:   every plan, shipped or copied, PHAT included. Consumed by ST1 (the week-6
+              test), D1 triggers T1 and T2, SP1 (speed load) and the Plans screen.
+              NOT by P1, H1, R1, Z1-Z3, PE1, MV1, W1 or the diet screen - those read the
+              slot in front of them and already follow an edit with no further work.
+Inputs:       per slot: k, lo, hi, and whether the slot still exists.
+              per plan: keyLifts, speedSource, reintroOrder, reducedWeeks.
+              NO history. HD1 is answerable on day zero against an empty log, and must be,
+              because C7a requires ABSENT to be detectable before anything is logged.
+Logic:        HD1.1  "HEAVY" IS NOT A FIELD AND MUST NOT BECOME ONE. A slot is heavy iff
+                     k === "power" AND hi <= 8. A day is heavy iff it holds at least one
+                     heavy slot. Derived at read time, never stored, never migrated.
+              HD1.2  KEYLIFTS ARE VALIDATED, NOT REWRITTEN. A declared key lift counts as a
+                     subject only while its slot (a) still exists in the plan and (b) is
+                     heavy by HD1.1. Otherwise it is INELIGIBLE and is skipped by ST1 and by
+                     D1 T1/T2 at read time. The STORED list is not edited - a flip he undoes
+                     must restore the old behaviour exactly, and rewriting the document on
+                     read would make that impossible.
+              HD1.3  ZERO ELIGIBLE SUBJECTS => ABSENT, NOT THIN. If every declared key lift
+                     is ineligible (or none is declared), ST1 and D1 T1/T2 take C7a's ABSENT
+                     state with C7a's existing literals. They must NEVER reach
+                     PRESENT-THIN. `Log it weekly.` is forbidden on an ineligible lift: he
+                     IS logging it weekly and more data will never help.
+              HD1.4  SOME ELIGIBLE => run on those, and disclose the dropped ones once, on
+                     the Plans screen only, naming each dropped lift.
+              HD1.5  SPEEDSOURCE IS VALIDATED THE SAME WAY. A mapping speedSlot -> sourceSlot
+                     counts only while the source slot exists and is heavy by HD1.1.
+                     Otherwise SP1 is ABSENT for that speed slot, with C7a's existing SP1
+                     literal. No derivation, no nearest lift, no "the heaviest thing on that
+                     day".
+              HD1.6  NO SILENT RE-NOMINATION, EVER. Where an eligible non-subject slot exists
+                     the app may OFFER it, once, with a button. It may not adopt it.
+              HD1.7  REINTROORDER AND REDUCEDWEEKS DO NOT MOVE. Heaviness is not an input to
+                     either. reintroOrder is keyed by day and scoped to `cut`; the only
+                     reconciliation is the one that already exists - a slot that no longer
+                     carries `cut` is skipped by V1 at read time.
+              HD1.8  R1 NEEDS NOTHING. restTarget already reads k and hi per exercise (§8.5),
+                     so a flip moves the rest target by construction. Listed only so that
+                     nobody "fixes" it into a day-level field and reintroduces B-56.
+Output copy:  Dropped subject (HD1.4), Plans screen only, once per plan, one line per lift:
+                Bench press is not a 3–5 lift on this plan any more, so it is out of the
+                week 6 test.
+                Pick a replacement in the plan, or leave it out.
+
+              Offer (HD1.6), Plans screen only, at most one per plan per edit:
+                Squat is your heaviest lift on Lower and is not in the week 6 test.
+                Buttons: Add it / Leave it
+
+              Speed source lost (HD1.5): C7a's existing SP1 ABSENT literal, unchanged:
+                No source lift set for this speed work. Set one in the plan to get a number.
+                Until then: 65–70% of a weight you could triple.
+Not enough data: not applicable, and that is the point. HD1 reads the plan document only.
+              A plan that names no eligible subject is ABSENT (HD1.3), which is a different
+              state from "log more" and must not share its copy (C7a).
+Rationale:    a stale subject does not produce a wrong load - it produces a diagnosis about
+              a lift the programme is no longer testing, and, worse, a PRESENT-THIN nag at a
+              man who is doing exactly what the app told him. That is B-07's failure mode
+              with a new cause. Validating costs a line of disclosure; deriving costs the
+              app's word on what counts as progress.
+```
+
+### 23.2.2 Why `hi <= 8`, and why it is not a new number
+
+`[Certain]`, and this is the load-bearing paragraph of the whole ruling. **8 is already the app's
+boundary, twice:**
+
+- **ST1's own sample gate is `r <= 8`** (§C7b, clause 2). A set of 11 is not admitted to the e1RM
+  series. A slot prescribed `8–12` therefore contributes, at best, its bottom-of-range sets and
+  usually nothing — which is exactly how a "silently no longer tested" lift produces a
+  not-enough-data nag instead of an answer.
+- **R1 splits the power rest row at `hi <= 8`** (150/180 vs 120/180, §8.5). The app already treats
+  `hi <= 8` as the line between a lift you rest fully for and one you do not.
+
+So HD1.1 does not invent a threshold; it names the one the two consuming engines already use. A
+predicate of `lo <= 5`, or `k === "power"` alone, or a `mechanic: compound` test would each have been
+a new number or a K3 violation.
+
+**`k === "power"` is required as well as `hi <= 8`**, because `k` is what routes P1 rather than H1
+(K3.1). A slot at `k:"hyp", 6–8` is progressing on tonnage and range compliance, not on a top-set
+load, and its e1RM series means something different. Both conditions, not either.
+
+### 23.2.3 The keep / lose table, under his arrangement
+
+Read as: **the 5-day, Upper and Lower heavy, Push/Pull/Legs 8–12, no speed work.** This is what he
+gets and what he gives up relative to PHAT today.
+
+| Engine | On PHAT today | On the 5-day | Keep / lose | Why |
+|---|---|---|---|---|
+| **P1** power progression | 8 power slots over 2 days | 11 power slots over Upper + Lower | **Keep** | reads `k` per slot |
+| **H1** hypertrophy progression | 3 days | Push, Pull, Legs, plus the 8–12 accessories on the heavy days | **Keep** | reads `k` per slot |
+| **R1** rest targets | per exercise | per exercise, follows the flip automatically (HD1.8) | **Keep** | §8.5 |
+| **Z1–Z3** zero load | rack chin, dips | weighted dip, weighted pull-up | **Keep** | reads `implement` |
+| **PE1** prescription epoch | per slot | per slot | **Keep** | unaffected by day identity |
+| **MV1** swapped-movement history | shipped | shipped, and now the only alternates mechanism (Ruling 2) | **Keep** | reads `mv` per entry |
+| **ST1** week-6 test | row, bench, squat, SLDL | row, bench, squat, **conventional deadlift** — all `power`, `hi ≤ 8` | **Keep, and it is stronger** | four true 3–5 lifts instead of three plus a 5–8 |
+| **D1 T1 / T2** deload triggers | on the four key lifts | on the four key lifts | **Keep** | HD1.2 passes all four |
+| **D1 T3** calendar backstop | runs | runs | **Keep** | dates only |
+| **V1** reduced-volume tier | 9 `cut` accessories, `reducedWeeks: 4` | 5 `cut` accessories on the three hypertrophy days, `reducedWeeks: 4` | **Keep, narrower** | the heavy days carry no `cut` slot on purpose — §23.3.3 |
+| **SP1** speed work | 3 speed slots, sourced from d1a/d2a/d1d | **absent** — no `k:"speed"` slot exists | **Lose, deliberately** | §23.3.2 |
+| **`cycleLine`** | week + phase + accessories | same shape | **Keep** | `trainingWeeks` ≥ 3 days/week holds |
+| **W1 / diet** | his bodyweight | his bodyweight | **Keep** | plan-agnostic (§16.1) |
+
+**Only one thing is lost, and it is lost on purpose.** That is worth saying plainly to him: the
+5-day is not a reduced version of PHAT's advice layer. It gives up speed work and nothing else.
+
+### 23.2.4 Why I reject the PM's (ii), derivation — and I will hold this
+
+The PM's `[Guessing]` read was that `keyLifts` and `speedSource` should be **derived** from the
+arrangement and follow a flip automatically. I disagree, for three reasons, and the third is the one
+I will not move on.
+
+1. **There is no honest derivation.** "The heaviest compound on each heavy day" needs the word
+   *compound*, and the only field that offers it is upstream `mechanic`, which K3 already refuses as
+   a source of programme meaning — `d1h` skull crusher is `isolation` and `power`, `d4b` hack squat
+   is `compound` and `hyp`. Strip `mechanic` out and the derivation collapses to "the first `power`
+   slot with `hi ≤ 8`", i.e. **slot order**, which is a display artefact. On the 5-day's Lower day
+   that happens to give the squat; on the Upper day it gives whichever of row and bench he dragged
+   to the top last.
+2. **Derivation makes the two subjects disagree about their own purpose.** `speedSource` is not a
+   nomination at all — it is a *pairing*: this speed triple is 65–70% of *that* lift. Deriving a new
+   source when the old one goes light would silently re-point a computed kilogram number at a
+   different lift. HD1.5 is therefore not a policy choice; it is the only correct behaviour, and once
+   `speedSource` is validated rather than derived, deriving `keyLifts` alone is inconsistent.
+3. **ST1's output is the app's verdict on whether the programme is working.** `Your top sets on
+   bench are no higher than week 1` is a strong sentence. The app may say it about four lifts a coach
+   nominated. It may not say it about four lifts it nominated for itself, at a moment he was editing
+   something else, without telling him. `[Opinion]`, and the cost of my being wrong is one tap on an
+   offer; the cost of the alternative being wrong is a diagnosis he acts on about a lift he never
+   entered into evidence.
+
+**Where I agree with the PM: (i) for `reintroOrder` — but (i) turns out to be a no-op.** Heaviness is
+not an input to the reintroduction ramp at any point. `reintroOrder` is keyed by day and scoped to
+`cut`, and a flip changes neither. HD1.7 says so explicitly rather than leaving it to be rediscovered.
+
+### 23.2.5 Worked examples
+
+1. **PHAT, untouched.** `keyLifts` `d1a` (3–5 `power`), `d1d` (3–5 `power`), `d2a` (3–5 `power`),
+   `d2d` (5–8 `power`) — all four pass HD1.1. `speedSource` sources `d1a`, `d2a`, `d1d` — all pass.
+   **HD1 changes nothing. Zero disclosure lines, zero offers, byte-identical output.** This is T2a's
+   regression case.
+2. **The flip in the acceptance criterion.** He copies the 5-day, sets Legs heavy (`p3a` leg press →
+   `power` 3–5) and Upper light (`p4a` row → `hyp` 8–12, `p4b` bench → `hyp` 8–12). `keyLifts` still
+   reads `["p4a","p4b","p5a","p5b"]`. HD1.2 drops `p4a` and `p4b`; `p5a` and `p5b` survive. **ST1
+   runs on squat and deadlift only**, D1 T1/T2 likewise, and the Plans screen prints two dropped-lift
+   lines and at most one offer. **No engine returns a number computed off the old heavy day** — which
+   is B-158's criterion, satisfied without a toggle.
+3. **Boundary — `hi` exactly 8.** He sets `p4d` military press to `k:"power", lo:5, hi:8` and adds it
+   to `keyLifts`. `hi <= 8` is true, so it is eligible and ST1 admits it. At `hi: 9` it is ineligible.
+   The boundary is inclusive because ST1's own sample gate is `r <= 8` inclusive.
+4. **Failing case — every day light.** He copies the 5-day and sets every slot to `hyp` 8–12.
+   `keyLifts` has zero eligible members → HD1.3 → **ST1 and D1 T1/T2 ABSENT**, C7a's literal
+   (`This plan names no key lifts, so the app cannot spot a stall or recommend a deload from your
+   numbers. It will still flag nine straight weeks without a lighter one.`). D1 T3 still runs. The
+   wrong behaviour this case exists to forbid: printing `Not enough sessions on bench to judge. Log
+   it weekly.` forever.
+5. **Failing case — the speed pairing.** On a copy of PHAT he sets `d1a` to `hyp` 8–12 and leaves
+   `speedSource: {d3a: "d1a"}`. Without HD1.5 the app computes `65–70% of your 3–5RM` from a lift he
+   no longer performs below 8 reps, and prints a kilogram number. With HD1.5, `d3a` shows SP1's
+   ABSENT literal and no number. **A percentage of nothing is not a load.**
+
+---
+
+## 23.3 Four decisions that apply to all four templates
+
+Each template restates these per plan-level field (the acceptance criterion says four explicit
+decisions per template, and they are in the tables below). The reasoning is common and lives here.
+
+### 23.3.1 `keyLifts` — declared on all four
+
+All four templates declare it, and in every case the four named slots are `k:"power"` with
+`hi <= 8`, so HD1 admits them on day one. **Fewer than four is valid** (§9.9) and the bodybuilder
+split deliberately names four lifts that do not include a deadlift.
+
+### 23.3.2 `speedSource` — omitted on all four, and no template contains speed work
+
+`[Opinion]`, and I want the reason on the record rather than an empty field.
+
+Speed work in PHAT exists because PHAT separates the week into two dedicated power days and three
+hypertrophy days, and the speed triples are what keeps bar speed on the power lifts during the
+hypertrophy block. **None of the four splits has that shape.** In the 5-day the Upper and Lower days
+*are* the heavy stimulus and they land 48 and 72 hours from the hypertrophy days, so a speed triple
+would be a fourth and fifth exposure to the same pattern in a week he is already training five times.
+In the 3-day and 2-day there is no room. In the bodybuilder split there is no strength block to
+maintain between.
+
+The second reason is honest and smaller: **speed work is the most easily mis-executed thing in the
+programme** — 65–70%, stop when the bar slows, do not grind — and it is the part the app has the
+least evidence he is doing. Four logged sessions, none containing a speed slot. Adding it to four new
+plans would be adding a rule nobody has tested against behaviour.
+
+Consequence, stated so it is not a surprise: on all four templates SP1 has no subject at all, so
+**C7a's SP1 ABSENT line renders nowhere** — it renders "in the place the feature would have appeared"
+and the feature appears nowhere. That is correct and requires no copy.
+
+### 23.3.3 `cut` and `reintroOrder` and `reducedWeeks` — declared on the two 5-day plans, omitted on the 3-day and 2-day
+
+`[Opinion]`, with a stated threshold so it is checkable.
+
+The reduced-volume tier exists to manage the ramp into a **higher** weekly volume than the lifter is
+currently carrying. It is subtraction, and subtraction from a small number is how a plan stops
+working.
+
+- **5-day PPLUL (83 working sets/week) and the bodybuilder split (86)** — both are above PHAT's
+  volume and both declare `cut`, `reintroOrder` and `reducedWeeks: 4`. Weeks 1–4 run at 67 and 65
+  sets respectively.
+- **3-day (49) and 2-day (35)** — both **omit all three, deliberately.** Cutting a 3-day plan to
+  ~40 sets, or a 2-day plan to under 30, produces a programme that is not a bulking stimulus for a
+  85 kg lifter with thirteen years of training. The C7a ABSENT line renders on the Plans screen and
+  is correct: `This plan has no reduced-volume tier. Every exercise runs from week 1.`
+
+**No `cut` slot sits on a heavy day, on any template.** A `cut` slot is hidden for weeks 1–4, and
+hiding a 3–5 compound is not reduced volume — it is a different programme. Every `cut` slot in all
+four templates is an accessory at `hi >= 10`.
+
+### 23.3.4 `fig` — omitted on all four, and this is not an oversight
+
+Rule F1p (§17.1) forbids mapping a slot to a photograph without viewing the frames, and the §17.8 eye
+check found 8 of 31 ids failed on position — including `Weighted_Pull_Ups`, which appears in the
+5-day, and `Dips_-_Triceps_Version`, whose named frames failed and whose row fallback was the thing
+that shipped. **I have viewed no frames for these 80-odd slots.** `figFor()` reads the shipped PHAT
+plan only, so a `fig` written here would be inert anyway; writing one would be a claim with no
+mechanism behind it. Cue-only on every slot, exactly as the 10 cue-only PHAT slots ship today. A
+photograph pass for the templates is a separate item and belongs to whoever can run the eye check.
+
+---
+
+## 23.4 Template 1 — Push · Pull · Legs · Upper · Lower
+
+```
+planId:       "ppl5"
+name:         "Push Pull Legs Upper Lower"
+from:         "Chady's day order, 2026-09-29. Exercises and prescriptions by strength-coach, WO-018."
+readOnly:     true
+keyLifts:     ["p4a", "p4b", "p5a", "p5b"]        DECLARED - row, bench, squat, deadlift, all power hi<=8
+speedSource:  omitted                              DECLARED ABSENT - no speed slot exists (§23.3.2)
+reintroOrder: { p1: ["p1d","p1f"], p2: ["p2f","p2d"], p3: ["p3d"] }   DECLARED
+reducedWeeks: 4                                    DECLARED
+days:         p1 Push (Mon) · p2 Pull (Tue) · p3 Legs (Wed) · p4 Upper (Fri) · p5 Lower (Sun)
+              Thursday and Saturday are gaps in the cycle, not documents.
+```
+
+**p1 · Push · Mon — hypertrophy, 19 sets (13 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `p1a` | Barbell bench press | `mv_Barbell_Bench_Press_-_Medium_Grip` | 4 | 8 | 12 | `hyp` | `bb` | `l5_bench_hyp` | — | Touch the same point on the chest every rep. |
+| `p1b` | Incline barbell press | `mv_Barbell_Incline_Bench_Press_-_Medium_Grip` | 3 | 8 | 12 | `hyp` | `bb` | `l5_incline` | — | Keep the bar over the collarbone, not the face. |
+| `p1c` | DB shoulder press | `mv_Dumbbell_Shoulder_Press` | 3 | 8 | 12 | `hyp` | `db` | `l5_dbshoulder` | — | Ribs down, do not arch the lower back. |
+| `p1d` | Side lateral raise | `mv_Side_Lateral_Raise` | 3 | 12 | 15 | `hyp` | `db` | `l5_lateral` | `1` | Lead with the elbow, stop at shoulder height. |
+| `p1e` | Triceps pushdown | `mv_Triceps_Pushdown` | 3 | 10 | 15 | `hyp` | `cable` | `l5_pushdown` | — | Keep the elbows pinned to the ribs. |
+| `p1f` | Weighted dip | `mv_Dips_-_Triceps_Version` | 3 | 8 | 12 | `hyp` | `bodyweight` | `l5_dip` | `1` | Keep the torso upright and the shoulders down. |
+
+**p2 · Pull · Tue — hypertrophy, 19 sets (13 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `p2a` | Seated cable row | `mv_Seated_Cable_Rows` | 4 | 8 | 12 | `hyp` | `cable` | `l5_cablerow` | — | Pull to the navel, do not lean back to finish. |
+| `p2b` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 10 | 12 | `hyp` | `cable` | `l5_pulldown` | — | Bring the bar to the collarbone, chest up. |
+| `p2c` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 3 | 8 | 12 | `hyp` | `bb` | `l5_bbrow_hyp` | — | Keep the torso at the same angle for every rep. |
+| `p2d` | Face pull | `mv_Face_Pull` | 3 | 12 | 15 | `hyp` | `cable` | `l5_facepull` | `1` | Pull the rope to the forehead, elbows high. |
+| `p2e` | Barbell curl | `mv_Barbell_Curl` | 3 | 8 | 12 | `hyp` | `bb` | `l5_bbcurl` | — | Do not rock the torso to start the rep. |
+| `p2f` | Hammer curl | `mv_Hammer_Curls` | 3 | 10 | 12 | `hyp` | `db` | `l5_hammer` | `1` | Thumbs up the whole way, elbows still. |
+
+**p3 · Legs · Wed — hypertrophy, 17 sets (14 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `p3a` | Leg press | `mv_Leg_Press` | 4 | 10 | 15 | `hyp` | `machine` | `l5_legpress_hyp` | — | Stop before the lower back lifts off the pad. |
+| `p3b` | Romanian deadlift | `mv_Romanian_Deadlift` | 3 | 8 | 12 | `hyp` | `bb` | `l5_rdl` | — | Push the hips back; the bar stays on the legs. |
+| `p3c` | Lying leg curl | `mv_Lying_Leg_Curls` | 3 | 10 | 15 | `hyp` | `machine` | `l5_legcurl_hyp` | — | Keep the hips down on the pad throughout. |
+| `p3d` | Leg extension | `mv_Leg_Extensions` | 3 | 12 | 15 | `hyp` | `machine` | `l5_legext` | `1` | Keep the hips down in the seat, do not swing the pad up. |
+| `p3e` | Standing calf raise | `mv_Standing_Calf_Raises` | 4 | 10 | 15 | `hyp` | `machine` | `l5_calf_hyp` | — | Full stretch at the bottom, pause at the top. |
+
+**p4 · Upper · Fri — heavy, 15 sets**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `p4a` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 3 | 3 | 5 | `power` | `bb` | `l5_bbrow_pwr` | — | Keep the torso at the same angle for every rep. |
+| `p4b` | Barbell bench press | `mv_Barbell_Bench_Press_-_Medium_Grip` | 3 | 3 | 5 | `power` | `bb` | `l5_bench_pwr` | — | Touch the same point on the chest every rep. |
+| `p4c` | Weighted pull-up | `mv_Weighted_Pull_Ups` | 2 | 6 | 8 | `power` | `bodyweight` | `l5_pullup` | — | Reach a full dead hang at the bottom of every rep. |
+| `p4d` | Standing military press | `mv_Standing_Military_Press` | 3 | 5 | 8 | `power` | `bb` | `l5_ohp` | — | Squeeze the glutes; do not lean back to press. |
+| `p4e` | Cambered bar curl | `mv_EZ-Bar_Curl` | 2 | 6 | 10 | `power` | `bb` | `l5_ezcurl` | — | Do not rock the torso to start the rep. |
+| `p4f` | Skull crusher | `mv_EZ-Bar_Skullcrusher` | 2 | 6 | 10 | `power` | `bb` | `l5_skull` | — | Take the bar to the forehead on every rep. |
+
+**p5 · Lower · Sun — heavy, 13 sets**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `p5a` | Squat | `mv_Barbell_Squat` | 3 | 3 | 5 | `power` | `bb` | `l5_squat` | — | Drive the hips and shoulders up together. |
+| `p5b` | Deadlift | `mv_Barbell_Deadlift` | 3 | 3 | 5 | `power` | `bb` | `l5_deadlift` | — | Take the slack out of the bar before you pull. |
+| `p5c` | Leg press | `mv_Leg_Press` | 2 | 8 | 10 | `power` | `machine` | `l5_legpress_pwr` | — | Stop before the lower back lifts off the pad. |
+| `p5d` | Lying leg curl | `mv_Lying_Leg_Curls` | 2 | 6 | 10 | `power` | `machine` | `l5_legcurl_pwr` | — | Keep the hips down on the pad throughout. |
+| `p5e` | Standing calf raise | `mv_Standing_Calf_Raises` | 3 | 6 | 10 | `power` | `machine` | `l5_calf_pwr` | — | Full stretch at the bottom, pause at the top. |
+
+**Note on the six duplicated movements.** Bench, bent-over row, leg press, lying leg curl and
+standing calf raise each appear twice in this plan, at two different `k` / rep ranges — **and that is
+the same deliberate arrangement as PHAT's `d1h` / `d5i`.** They are two histories on purpose; the
+`lift` ids are distinct (`_hyp` / `_pwr`) so Trend does not merge them, and MV1's cross-slot fallback
+will disclose in words when it reads one for the other. Anyone "de-duplicating" this plan is
+reintroducing B-46.
+
+---
+
+## 23.5 Template 2 — Push · Pull · Legs, 3 days
+
+```
+planId:       "ppl3"
+name:         "Push Pull Legs — 3 days"
+from:         "Written for this app by strength-coach, WO-018."
+readOnly:     true
+keyLifts:     ["t1a", "t2a", "t3a", "t3b"]         DECLARED - bench, row, squat, RDL
+speedSource:  omitted                               DECLARED ABSENT - no speed slot (§23.3.2)
+reintroOrder: omitted                               DECLARED ABSENT - no `cut` slot (§23.3.3)
+reducedWeeks: omitted                               DECLARED ABSENT - meaningless without `cut`
+days:         t1 Push (Mon) · t2 Pull (Wed) · t3 Legs (Fri)
+```
+
+**t1 · Push · Mon — 16 sets**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `t1a` | Barbell bench press | `mv_Barbell_Bench_Press_-_Medium_Grip` | 4 | 5 | 8 | `power` | `bb` | `l3_bench` | — | Touch the same point on the chest every rep. |
+| `t1b` | Incline DB press | `mv_Incline_Dumbbell_Press` | 3 | 8 | 12 | `hyp` | `db` | `l3_incdb` | — | Keep each wrist stacked under the dumbbell. |
+| `t1c` | DB shoulder press | `mv_Dumbbell_Shoulder_Press` | 3 | 8 | 12 | `hyp` | `db` | `l3_dbshoulder` | — | Ribs down, do not arch the lower back. |
+| `t1d` | Side lateral raise | `mv_Side_Lateral_Raise` | 3 | 12 | 15 | `hyp` | `db` | `l3_lateral` | — | Lead with the elbow, stop at shoulder height. |
+| `t1e` | Triceps pushdown | `mv_Triceps_Pushdown` | 3 | 10 | 15 | `hyp` | `cable` | `l3_pushdown` | — | Keep the elbows pinned to the ribs. |
+
+**t2 · Pull · Wed — 16 sets**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `t2a` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 4 | 5 | 8 | `power` | `bb` | `l3_bbrow` | — | Keep the torso at the same angle for every rep. |
+| `t2b` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 10 | 12 | `hyp` | `cable` | `l3_pulldown` | — | Bring the bar to the collarbone, chest up. |
+| `t2c` | Seated cable row | `mv_Seated_Cable_Rows` | 3 | 8 | 12 | `hyp` | `cable` | `l3_cablerow` | — | Pull to the navel, do not lean back to finish. |
+| `t2d` | Face pull | `mv_Face_Pull` | 3 | 12 | 15 | `hyp` | `cable` | `l3_facepull` | — | Pull the rope to the forehead, elbows high. |
+| `t2e` | Barbell curl | `mv_Barbell_Curl` | 3 | 8 | 12 | `hyp` | `bb` | `l3_bbcurl` | — | Do not rock the torso to start the rep. |
+
+**t3 · Legs · Fri — 17 sets**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `t3a` | Squat | `mv_Barbell_Squat` | 4 | 5 | 8 | `power` | `bb` | `l3_squat` | — | Drive the hips and shoulders up together. |
+| `t3b` | Romanian deadlift | `mv_Romanian_Deadlift` | 3 | 5 | 8 | `power` | `bb` | `l3_rdl` | — | Push the hips back; the bar stays on the legs. |
+| `t3c` | Leg press | `mv_Leg_Press` | 3 | 10 | 15 | `hyp` | `machine` | `l3_legpress` | — | Stop before the lower back lifts off the pad. |
+| `t3d` | Lying leg curl | `mv_Lying_Leg_Curls` | 3 | 10 | 15 | `hyp` | `machine` | `l3_legcurl` | — | Keep the hips down on the pad throughout. |
+| `t3e` | Standing calf raise | `mv_Standing_Calf_Raises` | 4 | 10 | 15 | `hyp` | `machine` | `l3_calf` | — | Full stretch at the bottom, pause at the top. |
+
+**Why the lead compound is `power` 5–8 rather than 3–5.** `[Opinion]`. On three days a week each
+pattern is trained once, so the weekly exposure to a heavy triple is one. 5–8 keeps the slot inside
+ST1's `r <= 8` sample window and inside HD1's eligibility, while giving enough reps per session to
+drive the hypertrophy this plan is otherwise short of. A 3–5 triple once a week, for a lifter eating
+in a surplus, is a strength plan with a hypertrophy tail — which is not what "Push Pull Legs" is for.
+
+---
+
+## 23.6 Template 3 — Upper / Lower, 2 days
+
+```
+planId:       "ul2"
+name:         "Upper / Lower — 2 days"
+from:         "Written for this app by strength-coach, WO-018."
+readOnly:     true
+keyLifts:     ["u1a", "u1b", "u2a", "u2b"]         DECLARED - bench, row, squat, deadlift
+speedSource:  omitted                               DECLARED ABSENT - no speed slot (§23.3.2)
+reintroOrder: omitted                               DECLARED ABSENT - no `cut` slot (§23.3.3)
+reducedWeeks: omitted                               DECLARED ABSENT
+days:         u1 Upper (Mon) · u2 Lower (Thu)
+```
+
+**u1 · Upper · Mon — 18 sets**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `u1a` | Barbell bench press | `mv_Barbell_Bench_Press_-_Medium_Grip` | 4 | 5 | 8 | `power` | `bb` | `l2_bench` | — | Touch the same point on the chest every rep. |
+| `u1b` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 4 | 5 | 8 | `power` | `bb` | `l2_bbrow` | — | Keep the torso at the same angle for every rep. |
+| `u1c` | Standing military press | `mv_Standing_Military_Press` | 3 | 6 | 10 | `power` | `bb` | `l2_ohp` | — | Squeeze the glutes; do not lean back to press. |
+| `u1d` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 8 | 12 | `hyp` | `cable` | `l2_pulldown` | — | Bring the bar to the collarbone, chest up. |
+| `u1e` | Barbell curl | `mv_Barbell_Curl` | 2 | 8 | 12 | `hyp` | `bb` | `l2_bbcurl` | — | Do not rock the torso to start the rep. |
+| `u1f` | Triceps pushdown | `mv_Triceps_Pushdown` | 2 | 10 | 15 | `hyp` | `cable` | `l2_pushdown` | — | Keep the elbows pinned to the ribs. |
+
+**u2 · Lower · Thu — 17 sets**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `u2a` | Squat | `mv_Barbell_Squat` | 4 | 5 | 8 | `power` | `bb` | `l2_squat` | — | Drive the hips and shoulders up together. |
+| `u2b` | Deadlift | `mv_Barbell_Deadlift` | 3 | 5 | 8 | `power` | `bb` | `l2_deadlift` | — | Take the slack out of the bar before you pull. |
+| `u2c` | Leg press | `mv_Leg_Press` | 3 | 10 | 15 | `hyp` | `machine` | `l2_legpress` | — | Stop before the lower back lifts off the pad. |
+| `u2d` | Lying leg curl | `mv_Lying_Leg_Curls` | 3 | 10 | 15 | `hyp` | `machine` | `l2_legcurl` | — | Keep the hips down on the pad throughout. |
+| `u2e` | Standing calf raise | `mv_Standing_Calf_Raises` | 4 | 10 | 15 | `hyp` | `machine` | `l2_calf` | — | Full stretch at the bottom, pause at the top. |
+
+### 23.6.1 The uncomfortable half of the 2-day, said once
+
+**35 working sets a week is a maintenance plan, not a bulking plan.** `[Likely]`. For an 85 kg
+lifter with thirteen years of training, eating in a surplus and aiming at 0.2–0.3 kg/week, two
+sessions a week will hold what he has and add very little. It is a good plan for a bad month and it
+is the right thing to have in the list. It is not a smaller version of the 5-day, and the app should
+not let him believe it is.
+
+**The app does not currently say this, and I am not asking for it to.** A line of copy on the Plans
+screen saying "this is maintenance" is a judgement about his life, not his lifting. Recording it here
+is enough.
+
+### 23.6.2 Found while in here — Rule TW1b. A 2-day plan can never accumulate a training week
+
+`[Certain]` on the defect. **This is the most consequential thing in §23 and it is not in the work
+order.**
+
+Rule TW1 (§6) defines a training week as a calendar week containing **at least 3 distinct training
+days**. On the 2-day template the maximum is 2. Therefore `PHAT.trainingWeeks` is **permanently 0**,
+and everything gated on it is permanently inert:
+
+| Gated on `trainingWeeks` | On a 2-day plan | What he sees |
+|---|---|---|
+| ST1's `trainingWeeks >= 6` | never true | **Nothing. No week-6 test, ever.** |
+| V1's `reducedWeeks` window | never advances | n/a here — no `cut` tier — but it would break on any 2-day plan that declared one |
+| D1 T3's nine-week backstop | never true | **Nothing. No deload prompt, ever.** |
+| `cycleLine` | `trainingWeeks === 0` | the §9.8 zero case, for ever |
+
+And **none of it is ABSENT.** C7a's three states do not cover this: the plan *declares* key lifts, so
+ST1 is PRESENT; it is simply never reached. The app is silently switched off and says nothing, which
+is the exact failure C7a exists to prevent, arriving through a door C7a does not watch.
+
+```
+Rule: TW1b — the training-week threshold follows the plan
+Applies to:   PHAT.trainingWeeks and every gate that reads it (ST1, V1, D1 T3, cycleLine).
+Inputs:       the sessions' dates (unchanged) and plan.days.length. No history minimum.
+Logic:        TW1b.1  The threshold is min(3, plan.days.length), not the constant 3.
+              TW1b.2  Everything else in TW1 is unchanged - distinct days, Monday start,
+                      the straddle ruling (§6b), all of it.
+              TW1b.3  On a plan with no days, or where the plan cannot be read, the
+                      threshold stays 3. A degenerate plan must not make every week count.
+Output copy:  none. No string changes.
+Not enough data: unchanged from TW1.
+Worked:       PHAT (5 days) -> 3. Unchanged, byte for byte, and this is the regression case.
+              ppl5 (5) -> 3. ppl3 (3) -> 3. Both unchanged.
+              ul2 (2) -> 2. Two sessions in one Mon-Sun week now count as a training week,
+              so ST1 can reach week 6 and D1 T3 can reach week 9.
+              A 1-day plan -> 1. Correct: one session a week IS that plan's week.
+Rationale:    "a training week" means "a week in which he trained the programme", and the
+              programme defines how many days that is. 3 was never a fact about weeks; it
+              was PHAT's number, hard-coded before there was more than one plan.
+```
+
+**This is not T1's to build and must not be built inside the templates.** It changes
+`PHAT.trainingWeeks`, which is read by four engines and pinned by the suite. Filed for the PM as a
+backend item with a red-first test (`ul2` + two sessions in one week → `trainingWeeks === 1`, red on
+the pre-fix tree). **Until it lands, the 2-day template ships with ST1 and D1 T3 dead.** That is
+survivable for a maintenance plan and it is *not* survivable silently — so if the PM ships the
+templates first, the 2-day's Plans-screen copy needs one honest line and I will write it on request.
+
+---
+
+## 23.7 Template 4 — the bodybuilder split
+
+### 23.7.1 The day order I propose, and why it is not the conventional one
+
+**Chest · Back · Legs · Shoulders · Arms**, Mon / Tue / Wed / Fri / Sat.
+
+The conventional reading — chest, back, shoulders, arms, legs — puts **legs last on a Friday**, and
+legs-last is where a bodybuilder split reliably dies: it is the hardest day, it lands on the most
+fatigued and most socially contested slot of the week, and it is the one that gets moved to "next
+week". Moving legs to Wednesday costs nothing and removes the failure mode.
+
+The order also spaces the pressing: chest Monday, shoulders Friday — four days, with legs and a rest
+day between. Under the conventional order shoulders lands Wednesday, 48 hours after a chest day that
+already trained the front delts and triceps hard. **Arms last is correct** in both orders: the biceps
+have had Tuesday's rows and the triceps Monday's and Friday's pressing, so arms is the day that can
+be short without costing anything.
+
+`[Opinion]`, and it is the one piece of this section I would change on his word without argument.
+**This template is the least settled of the four** and one line from him is worth having before it
+ships.
+
+```
+planId:       "bb5"
+name:         "Bodybuilder split"
+from:         "Chady's ask, 2026-09-29: \"the normal split like any bodybuilder does\". Day order and exercises by strength-coach, WO-018."
+readOnly:     true
+keyLifts:     ["b1a", "b2a", "b3a", "b4a"]        DECLARED - bench, row, squat, military press.
+                                                  NO DEADLIFT, deliberately: this split has no
+                                                  slot a conventional deadlift belongs in, and a
+                                                  key lift the plan does not prescribe is a
+                                                  subject with no evidence. Four eligible lifts.
+speedSource:  omitted                              DECLARED ABSENT - no speed slot (§23.3.2)
+reintroOrder: { b1: ["b1d"], b2: ["b2e","b2d"], b3: ["b3e"], b4: ["b4e"], b5: ["b5e","b5f"] }  DECLARED
+reducedWeeks: 4                                    DECLARED
+days:         b1 Chest (Mon) · b2 Back (Tue) · b3 Legs (Wed) · b4 Shoulders (Fri) · b5 Arms (Sat)
+```
+
+**b1 · Chest · Mon — 15 sets (12 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `b1a` | Barbell bench press | `mv_Barbell_Bench_Press_-_Medium_Grip` | 4 | 6 | 8 | `power` | `bb` | `lb_bench` | — | Touch the same point on the chest every rep. |
+| `b1b` | Incline barbell press | `mv_Barbell_Incline_Bench_Press_-_Medium_Grip` | 3 | 8 | 12 | `hyp` | `bb` | `lb_incline` | — | Keep the bar over the collarbone, not the face. |
+| `b1c` | Incline DB press | `mv_Incline_Dumbbell_Press` | 3 | 8 | 12 | `hyp` | `db` | `lb_incdb` | — | Keep each wrist stacked under the dumbbell. |
+| `b1d` | Cable crossover | `mv_Cable_Crossover` | 3 | 12 | 15 | `hyp` | `cable` | `lb_crossover` | `1` | Keep a fixed soft bend at the elbow throughout. |
+| `b1e` | Weighted dip | `mv_Dips_-_Chest_Version` | 2 | 8 | 12 | `hyp` | `bodyweight` | `lb_dip` | — | Lean forward and let the chest lead. |
+
+**b2 · Back · Tue — 16 sets (10 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `b2a` | Bent-over row | `mv_Bent_Over_Barbell_Row` | 4 | 6 | 8 | `power` | `bb` | `lb_bbrow` | — | Keep the torso at the same angle for every rep. |
+| `b2b` | Wide-grip lat pulldown | `mv_Wide-Grip_Lat_Pulldown` | 3 | 8 | 12 | `hyp` | `cable` | `lb_pulldown` | — | Bring the bar to the collarbone, chest up. |
+| `b2c` | Seated cable row | `mv_Seated_Cable_Rows` | 3 | 8 | 12 | `hyp` | `cable` | `lb_cablerow` | — | Pull to the navel, do not lean back to finish. |
+| `b2d` | One-arm DB row | `mv_One-Arm_Dumbbell_Row` | 3 | 10 | 12 | `hyp` | `db` | `lb_dbrow` | `1` | Keep the shoulders square; do not twist to finish. |
+| `b2e` | Barbell shrug | `mv_Barbell_Shrug` | 3 | 10 | 15 | `hyp` | `bb` | `lb_shrug` | `1` | Straight up and down; do not roll the shoulders. |
+
+**b3 · Legs · Wed — 20 sets (17 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `b3a` | Squat | `mv_Barbell_Squat` | 4 | 6 | 8 | `power` | `bb` | `lb_squat` | — | Drive the hips and shoulders up together. |
+| `b3b` | Leg press | `mv_Leg_Press` | 3 | 10 | 15 | `hyp` | `machine` | `lb_legpress` | — | Stop before the lower back lifts off the pad. |
+| `b3c` | Romanian deadlift | `mv_Romanian_Deadlift` | 3 | 8 | 12 | `hyp` | `bb` | `lb_rdl` | — | Push the hips back; the bar stays on the legs. |
+| `b3d` | Lying leg curl | `mv_Lying_Leg_Curls` | 3 | 10 | 15 | `hyp` | `machine` | `lb_legcurl` | — | Keep the hips down on the pad throughout. |
+| `b3e` | Leg extension | `mv_Leg_Extensions` | 3 | 12 | 15 | `hyp` | `machine` | `lb_legext` | `1` | Keep the hips down in the seat, do not swing the pad up. |
+| `b3f` | Standing calf raise | `mv_Standing_Calf_Raises` | 4 | 10 | 15 | `hyp` | `machine` | `lb_calf` | — | Full stretch at the bottom, pause at the top. |
+
+**b4 · Shoulders · Fri — 17 sets (14 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `b4a` | Standing military press | `mv_Standing_Military_Press` | 4 | 6 | 8 | `power` | `bb` | `lb_ohp` | — | Squeeze the glutes; do not lean back to press. |
+| `b4b` | Seated DB press | `mv_Seated_Dumbbell_Press` | 3 | 8 | 12 | `hyp` | `db` | `lb_dbshoulder` | — | Ribs down, do not arch the lower back. |
+| `b4c` | Side lateral raise | `mv_Side_Lateral_Raise` | 4 | 12 | 15 | `hyp` | `db` | `lb_lateral` | — | Lead with the elbow, stop at shoulder height. |
+| `b4d` | Reverse machine flye | `mv_Reverse_Machine_Flyes` | 3 | 12 | 15 | `hyp` | `machine` | `lb_revflye` | — | Keep the arms level with the shoulders. |
+| `b4e` | Face pull | `mv_Face_Pull` | 3 | 12 | 15 | `hyp` | `cable` | `lb_facepull` | `1` | Pull the rope to the forehead, elbows high. |
+
+**b5 · Arms · Sat — 18 sets (12 in weeks 1–4)**
+
+| id | n | mv | s | lo | hi | k | implement | lift | cut | cue |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `b5a` | Close-grip bench press | `mv_Close-Grip_Barbell_Bench_Press` | 3 | 6 | 10 | `power` | `bb` | `lb_cgbench` | — | Hands shoulder-width; keep the elbows in. |
+| `b5b` | Barbell curl | `mv_Barbell_Curl` | 3 | 8 | 12 | `hyp` | `bb` | `lb_bbcurl` | — | Do not rock the torso to start the rep. |
+| `b5c` | Skull crusher | `mv_EZ-Bar_Skullcrusher` | 3 | 8 | 12 | `hyp` | `bb` | `lb_skull` | — | Take the bar to the forehead on every rep. |
+| `b5d` | Preacher curl | `mv_Preacher_Curl` | 3 | 10 | 12 | `hyp` | `bb` | `lb_preacher` | — | Keep the armpits on the pad at the bottom. |
+| `b5e` | Triceps pushdown | `mv_Triceps_Pushdown` | 3 | 12 | 15 | `hyp` | `cable` | `lb_pushdown` | `1` | Keep the elbows pinned to the ribs. |
+| `b5f` | Hammer curl | `mv_Hammer_Curls` | 3 | 10 | 15 | `hyp` | `db` | `lb_hammer` | `1` | Thumbs up the whole way, elbows still. |
+
+**Why the lead compound on four of five days is `power` 6–8.** `[Opinion]`. Without it this split has
+**no slot HD1 can call heavy**, `keyLifts` has zero eligible members, and ST1 and D1 T1/T2 are ABSENT
+from day one — a five-day plan with no way to tell whether it is working. 6–8 is also what most
+people actually do on a bro split's first movement, so this is not a coaching imposition dressed as a
+default. The arms day has no key lift and needs none.
+
+---
+
+## 23.8 `implement` — where I wrote the value and where the library and I disagree
+
+Rule I3 refuses 199 of 876 rows, and a refusal is not a default. Two slots across the four templates
+carry an `implement` the library **will not supply**, and I am writing it:
+
+| Slot(s) | Movement | Library `eq` | I3 says | I write | Why |
+|---|---|---|---|---|---|
+| `p4c` | `mv_Weighted_Pull_Ups` | `other` | **refused** | **`bodyweight`** | Same call PHAT's `d1b` already ships. `w` on this slot is the **added** load (Rule L4), and `bodyweight` is the word Z2 must print at zero. `[Certain]` |
+| `b1e` | `mv_Dips_-_Chest_Version` | `other` | **refused** | **`bodyweight`** | Same reasoning; PHAT's `d1e` ships `bodyweight` against this exact row. `[Certain]` |
+
+**Every other slot in all four templates agrees with I3.1's table**, value for value — I checked each
+`mv` against the shipped `assets/exercises.json` at the pinned SHA. Two notes on rows that look like
+disagreements and are not:
+
+- `mv_Wide-Grip_Lat_Pulldown` is `cable`, not `machine`. Correct: I2's appendix is true for both, and
+  a pulldown is a pin stack.
+- `mv_EZ-Bar_Curl` and `mv_EZ-Bar_Skullcrusher` are `e-z curl bar` → `bb`. Correct, and already ruled
+  for PHAT's `d1g` / `d1h`.
+
+**A note for T2, because it is a trap.** `implement` here is a *stored plan field*, which I3.2
+governs. I3.3's read-time derivation applies to a **swapped entry's** `mv`, not to these. A backend
+pass that "derives implement from the library" for these templates would blank two slots and change
+nothing else — and the two it blanks are the two that matter most (`w` = added load).
+
+---
+
+## 23.9 Ruling 2 — sanctioned alternates per slot (B-159): **No**
+
+`[Opinion]`, and I will hold it under pushback.
+
+**No new field. Not on the slot, not in the cue, not in a table beside the plan.**
+
+His evidence is two `d1b` notes, ten days apart, both saying the forearm is *still not recovered*,
+both recording that he did a lat pulldown instead of a weighted pull-up. That is the complete
+observed population: **one substitution, on one slot, for one reason.** Four reasons:
+
+1. **The act is already shipped and it is four taps.** WO-014's swap searches 876 movements offline
+   and writes `mv` / `sw` / `n` on the entry. An alternate field would not have saved him one tap —
+   he still has to pick it, and `Lat pulldown` is the first result for `pulldown`.
+2. **A named alternate is a recommendation that is permanently on screen to solve a case that
+   occurred twice.** The session card is read one-handed with chalk on it. A second movement name on
+   every slot, forever, so that on one slot in fifty he sees the one he would have picked anyway, is
+   a bad trade in the place where the trade is worst.
+3. **The failure in his data was not that he picked a bad substitute. It was that the app never
+   noticed the arm.** `PAIN_RE` returned `false` on *still not recovered*, twice, so S1 stayed silent
+   and the app went on recommending load increases across an injury (B-155, WO-017). Fixing the
+   vocabulary is the intervention that would have changed an outcome here. An alternates field would
+   have changed nothing — he already made the substitution.
+4. **The arithmetic problem an alternate creates is the one MV1 already solves, and only because the
+   entry carries `mv`.** A pull-up's `w` is the added load; a pulldown's `w` is the whole stack. On
+   `d1b` those differ by roughly 80 kg. Sanctioning the pulldown as an alternate does not make
+   `lastFor` read it correctly — `mv` does, by skipping a disagreeing movement and disclosing the
+   fallback in words. **The feature that makes an alternate safe is shipped, and it is shipped
+   independently of naming one.**
+
+**A1 either way, as the criterion requires.** A1 forbids two exercises in one slot because it forbids
+two histories in one column. An `alt: [...]` field would not itself be a slash-name — it names ids,
+not a string — but it would *encourage* the thing A1 exists to prevent, and it would do so with the
+app's endorsement. Under my ruling A1 is untouched: every slot in all four templates names exactly
+one movement, and a substitution remains an act he performs and the app records, not a prescription
+the app writes.
+
+**The medical half, said plainly and once.** Recurring forearm trouble across ten days is not
+something this app should be reasoning about, and no field in a plan document will make it so. The
+app's correct behaviour is the one WO-017 is building: notice the words, stop recommending more load,
+and show the referral line. **If the arm is still not right, that is a question for a
+physiotherapist, not for a template.**
+
+---
+
+## 23.10 What this changes, by work item
+
+| Item | Owner | What |
+|---|---|---|
+| T2 | backend | Four plan documents, `readOnly: true`, frozen, from §23.4–§23.7. Plan ids `ppl5`, `ppl3`, `ul2`, `bb5`. Slot, day and `lift` ids are distinct within each plan and across all five. `implement` transcribed from the tables, **not derived** (§23.8). No `fig` on any slot. |
+| T2a | backend | Rule HD1 as pure functions: an eligibility predicate `k === "power" && hi <= 8`, subject filters over `keyLifts` and `speedSource`, ABSENT-not-THIN at zero eligible, and **no write to the stored plan**. §23.2.5 example 1 is the regression case; example 2 is the red-first case. |
+| **New, PM** | backend | **Rule TW1b** (§23.6.2) — `trainingWeeks`' threshold becomes `min(3, plan.days.length)`. Red-first. Not T1's, not inside the templates. |
+| T3 | frontend | HD1.4's disclosure and HD1.6's offer, **Plans screen only, never the session card**. If the PM would rather ship without the offer, ship without it — HD1.3's ABSENT state is complete on its own and the offer is the optional half. |
+| T4 | qa | Every `mv` resolves by id at the pinned SHA. No slot carries a slash-name. `validatePlan` ok ×4. The four `keyLifts` lists are all HD1-eligible on day one. PHAT's HD1 output is unchanged. |
+| — | Chady | §23.11. |
+
+---
+
+## 23.11 Needs from Chady — four one-line questions
+
+1. **Bodybuilder split day order — Chest, Back, Legs, Shoulders, Arms (mine, legs mid-week), or the
+   conventional Chest, Back, Shoulders, Arms, Legs?**
+2. **5-day Lower: conventional deadlift, or Romanian deadlift?** I chose the conventional one so the
+   week-6 test has four lifts; the RDL is already on Legs at 8–12.
+3. **5-day Pull, second curl: hammer curl, or something else?** The only slot I picked with no reason
+   behind it.
+4. **None of the four has speed work. Is that right?** I think it is (§23.3.2), and it is the one
+   thing these plans give up relative to PHAT.
+
+## 23.12 Verdict
+
+**Four templates delivered, two rulings, one defect found.**
+
+- **Ruling 1: Rule HD1.** Heavy is derived and never stored; `keyLifts` and `speedSource` are
+  validated and never re-derived; zero eligible subjects is ABSENT, never "log more"; a replacement is
+  offered, never adopted; `reintroOrder` and `reducedWeeks` do not move. **The PM's (ii) is rejected
+  for `keyLifts` and `speedSource` and I will hold that.**
+- **Ruling 2: no sanctioned alternates.** The act is shipped, the identity is shipped, and the thing
+  that actually failed him is WO-017.
+- **Found: Rule TW1b.** On the 2-day template `trainingWeeks` can never exceed 0, so ST1, D1 T3 and
+  `cycleLine` are silently dead. **This is the item in §23 most likely to ship as a wrong app**, and
+  it is the reason the 2-day template cannot be transcribed and forgotten.
+
+**The standing item, for the tenth time.** Four logged sessions in seventeen days; the last was seven
+days ago. This section adds four ways to arrange training that is not currently happening, and I have
+written all four properly because he asked for them. **The number that moves is the fifth session.**
+Nothing in this document does that.
+
+---
+
 # 24. WO-017 W1 + W2 — negated recovery, and the instrument — 2026-09-29
 
 Amends **one line of §13.5**: the `Inputs` line of Rule S1b, which becomes the list below. **Nothing
