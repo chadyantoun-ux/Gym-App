@@ -3684,3 +3684,132 @@ keeps and what he loses under each reading. That table is the coach's, it writes
 four, including PPL and Upper/Lower, whose plan-level declarations turn on the same reading — wait for his answer.
 And the standing diagnosis at its ninth asking: four logged sessions, and the swap is what costs him one every
 week. **Track A ships alone.**
+
+---
+
+## 2026-09-29 — B-131 answered (half of it), the column that means something other than the total, MV1's blind spot on the only data he has, and his heavy/light ruling for Track B
+
+Four rulings from one round of answers. Filed together because three of them come out of the same session on
+2026-09-12 and the fourth gates Track B. The work orders are **WO-015** (the repair), **WO-016** (the column) and
+**WO-014 W11** (the blind spot). Nothing here plans Track B.
+
+### 1. `d1d` — the pair, halved, and it is the whole row
+
+He was asked whether `81` on `d1d` (Flat DB press, `implement:"db"`, per hand by Rule I1) was per dumbbell or the
+pair. **"Pair added together."** So the per-hand load is **40.5 kg** and every engine on that slot has been reading
+double.
+
+**The answer describes the row, not the number.** The stored entry is `63 x 12, 77 x 5, 77 x 6, 81 x 3`
+(`tests.html:14101`, `CHADY_EXPORT`, the server's own bytes, hash 1528318698). A man who logs the pair total on his
+top set logged the pair total on the three below it; halving only the last set would leave `63, 77, 77, 40.5`, which
+is not a ramp any lifter performed. **All four halve — 31.5 / 38.5 / 38.5 / 40.5 — and his one word confirming
+"every number on that row is the pair" is owed before the pass runs.** We are rewriting numbers in his only real
+training log; inferring three of the four from an answer about one is exactly the kind of confident gap-filling this
+repo keeps finding in its own advice engines.
+
+This does not fix B-116. The row is still a warm-up ramp read as prescribed work, so P1's working load on `d1d`
+becomes `min(31.5, 38.5, 38.5)` = 31.5 kg. The number is right and the reading is still wrong. B-116 stays open and
+is still the PM's first question.
+
+### 2. `d1b` — held, because the data contradicts the answer
+
+He first said `86` was the machine stack, then corrected himself — the stack reading was withdrawn in his own words
+— and then answered *pull-ups, nothing added*, which would make the repair `w` to 0.
+
+**The stored bytes contradict that, and the contradiction is on the entry itself.** `d1b` holds
+`68 x 12, 77 x 12, 77 x 11, 86 x 5` and the note **`"I have done iso-lateral front lat pull downs- forearm still not
+recovered"` — on `d1b`, not on a neighbouring entry.** A monotone load ramp 68 to 86 with reps falling 12 to 5 is a
+stack ramp; it is not four sets of unweighted pull-ups, where the load column would be one number or none. Under
+*pull-ups, nothing added* the three loads below 86 are unexplained, and an unexplained number in a repair is a
+fabricated training record.
+
+**`d1b` is held on one more sentence from him.** Two readings, both specified in WO-015 so no further round-trip is
+needed:
+
+- **(P) the pulldown.** The loads are real machine stack numbers; the **movement** is wrong, not the number. Repair
+  is WO-014's own shape — `mv` + `sw:1` + `n` on the entry — and the loads stay. `strength-coach` rules the movement
+  id (mint versus reusing `d3e`'s `mv_Close-Grip_Front_Lat_Pulldown`; the PM recommends minting, because reusing it
+  injects an 86 kg x 5 prior into a 2 x 15-20 slot through MV1's cross-slot fallback) and rules whether a
+  plate-loaded iso-lateral machine's number is per side or total, which is B-150's defect arriving a third time on
+  the same session.
+- **(B) unweighted pull-ups.** Every set's `w` goes to 0, Z1/Z2 print `bodyweight`, and the entry keeps feeding
+  history.
+
+**Which is cheaper to get wrong: (B).** Zeroing four loads that were really a stack costs the pulldown numbers and
+leaves a truthful "he did pull-ups at bodyweight" record that no engine can misread. Re-attributing to a pulldown he
+did not perform writes a movement he never did into his history, seeds a cross-slot prior from it, and puts a wrong
+fact where the app will repeat it confidently. Both are recoverable from the `recover:*` keep and the server
+archive; only one of them can lie to him next session. **If his next answer is anything short of certain, take (B).**
+
+### 3. B-150 — the column means something other than the total, on exactly the two slot types where he thinks in totals
+
+**Both errors on 2026-09-12 are one error, and it is the app's, not his.** A `bodyweight` slot's `w` is the *added*
+load; a `db` slot's `w` is *per hand*. He entered his bodyweight on one and the pair total on the other. He is an
+experienced lifter, he is not confused about training, and **he enters totals** — he said so during WO-010, in his
+own words, *"I can do total, which I think is better"*, and WO-010 built totals for the bar-plus-added case and left
+these two reading as something else.
+
+**Ruled: a label is the cheap half, not the fix.** The correct shape is WO-010's own, applied to the two slot types
+it skipped — a dumbbell card accepts the **pair total** and stores per hand; a bodyweight card says *added* in the
+field and offers `bodyweight only` as one tap. **`w`'s stored meaning does not move** — per hand stays per hand,
+added stays added — because WO-015's repair table is written against today's meaning and a storage change under it
+would invalidate the repair mid-flight.
+
+It outranks the repair. The repair is two entries and finite; this produces new wrong data every time he logs a
+dumbbell or a bodyweight slot, and **WO-014's swap widens it**, because a swap can land him on either implement
+mid-session. Its own order, **WO-016**, first thing after WO-014 ships.
+
+### 4. B-152 — MV1 does not fire on the only four sessions he has
+
+W9 found and printed it while proving its own change (`9d4336b`, `scratchpad/w9/proof2.mjs`), and did not fix it,
+correctly: the fix is in W4's function, not W9's. The v7 pass stamps no `mv` on a logged entry — zero bytes moved in
+the log store, a hard acceptance criterion and the reason the migration was safe. `effectiveMv(entry, slotMv)` then
+reads an entry with no `mv` as **the slot's movement**, and on a swapped card the slot handed to the engines is
+*shimmed to the swapped movement*. So his pre-schema-7 entries inherit a movement he never performed: the first swap
+on an existing lift returns the old entry as the prior and prints `Volume up 31% — 2,520 kg against 1,925 kg` across
+two different movements, and `H1.3d` cannot fire because a prior was found — which makes W9's own
+`Swapped to {new}. Not compared to last session.` unreachable on his real data.
+
+**Ruled: fix the shim's basis, not `effectiveMv`'s meaning, and it blocks the WO-014 deploy.** The four options were
+(a) stamp `mv` in the migration, (b) make an absent `mv` never match a shimmed slot, (c) ship it and disclose,
+(d) accept it and let it self-heal.
+
+- (a) is rejected: it breaks the zero-bytes criterion that made the migration safe, needs a keep and a
+  re-verification of four real documents, and still does not fix an old export imported later under B-04.
+- (c) is rejected: nothing detects the case today, so there is nothing to disclose from — and a disclosed wrong
+  percentage is still a wrong percentage on screen.
+- (d) is rejected: it self-heals only on slots he re-logs, the affected case is **the first swap on each lift**, and
+  the swap is the entire ask. This repo has shipped "correct code, wrong fact" three times (P1.2 on `!equal`, the
+  diet screen with no day type, the duplicate `PROGRAM`); each one shipped because it looked survivable.
+- (b) is adopted, **in its narrow form.** `effectiveMv`'s inheritance rule — an entry with no `mv` is the slot's
+  movement — is *true of the slot's declared movement* and *false of a shimmed one*. The shim is a lie told to the
+  engine. So the comparison takes two movements, not one: an entry with no `mv` inherits the slot's **declared**
+  movement, and is skipped when that declared movement differs from the movement being compared against. When they
+  are equal — every unswapped path — the answer is byte-identical, so W9's 120,000-case sweep still holds. Zero
+  stored bytes move, and the hole closes for every pre-7 entry forever, including an imported one.
+
+With it, a swapped card whose slot has only pre-7 history finds no prior and falls to the swapped sentence, which is
+what section 22.4.5 wrote it for. `strength-coach` signs off **the H1.3d gate** — not its wording, which is
+`[Certain]` and untouched: the branch fires only when no comparable prior exists, so a second session on the same
+swapped movement gets a real comparison, and section 22.4.5 does not address the gate at all.
+
+**And one fact about the evidence base, on the record:** only one of his four sessions exists in this repo
+(`CHADY_EXPORT`, 12 Sep). W9's data criterion was met against that one plus three synthetic documents. **No repair
+writes to his store until all four real documents are in hand** — pulled from Supabase by REST and, if he will send
+one, cross-checked against a phone export. The fingerprint gate makes a mismatch a no-op rather than a corruption,
+which is why the missing three block the *claim of coverage*, not the build.
+
+### 5. Chady's heavy/light ruling — a decision, and it gates Track B's T1
+
+**Upper and Lower are his heavy days — 3-5 reps on the compounds — and Push/Pull/Legs runs at 8-12.** And, verbatim:
+**"I also get to change that as needed."**
+
+That second sentence is not a qualifier, it is the requirement. **Heavy/light is a per-day setting he can flip, not
+a property baked into a split template.** A template that hard-codes Upper as heavy answers the question once and
+makes him rebuild a plan the week he wants it otherwise; the flip has to be a control on the day, in the plan
+editor, with the prescription and the rest row following it — `k` is what routes P1 versus H1 and R1's rest row
+(coach section 8a: the day heading governs), so the setting he flips is the day's role and the slots follow.
+
+Recorded here because it is the answer to WO-014 Q1 and T1 is written against it. **Track B is not planned in this
+pass and nothing in this entry authorises starting it** beyond T1a, the keep/lose table, which was already ruled
+dispatchable. The templates still wait.

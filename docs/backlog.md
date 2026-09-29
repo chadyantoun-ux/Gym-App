@@ -394,3 +394,25 @@ answer the question that gates everything else.
 `B-21` is WO-001's zero-weight defect. The `strength-coach` audit proposed its own `B-21`–`B-30`;
 those were renumbered to **B-22–B-31** on merge. If you are reading `docs/coach-audit.md` directly,
 its "PROPOSED BACKLOG CHANGES" table uses the old numbers — this file is authoritative.
+
+---
+
+## 2026-09-28, second pass — B-131 answered, B-150 / B-151 / B-152 filed
+
+Filed by the `project-manager` after Chady answered B-131 and after W9 (`9d4336b`) reported a defect it did
+not introduce. Three items. **The one that blocks a deploy is B-152, and it is inside WO-014.**
+
+| ID | Issue | Owner | Status |
+|---|---|---|---|
+| B-150 | **The load column means something other than the total on exactly the two slot types where he thinks in totals — and his real data proves it twice in one session.** A `bodyweight` slot's `w` is the *added* load (Z1/Z2); a `db` slot's `w` is *per hand* (Rule I1). On 12 Sep he entered `86` on `d1b` (his bodyweight, a total) and `81` on `d1d` (the pair added together, a total). Two entries, two slot types, one mistake: **he enters totals.** He said so during WO-010 in his own words — *"I can do total, which I think is better"* — and WO-010 built bar + added as a total for barbell slots only, leaving these two reading as something else. It is live on his phone, it recurs on every bodyweight and dumbbell slot, and **WO-014's swap makes it worse**: the swap can land him on a dumbbell or a bodyweight movement mid-session, so the column's meaning is about to matter on many more than the four slots it does today. **A label is the cheap half of the fix, not the fix** — the PM's recommendation is WO-010's own shape: a dumbbell slot accepts the **pair total** and stores per hand, and a bodyweight slot states *added* in the field itself with a one-tap `bodyweight only` (w = 0) beside it. `w`'s stored meaning must not move — per hand stays per hand, added stays added — or B-131's repair table is invalidated | ux → frontend, with strength-coach on Z1/Z2/I1/I2 | **open — P1, ongoing. Its own order (WO-016), the first thing after WO-014 ships. Outranks the B-131 repair: the repair is finite, this produces new wrong data every session** |
+| B-151 | **The B-131 correction pass is throwaway code that writes to his only real training data.** A one-off, id-keyed, fingerprint-gated pass is the right instrument while B-05 does not exist, and it is debt the moment it has run: it must be deleted once the correction is observed on **both** of his storage contexts (WO-011 H1) and on the server row, and not before — deleting it earlier lets an un-upgraded context re-push the uncorrected bytes with nothing left to repair them | backend + release | **open — P3, opens when WO-015 deploys. Closes with B-05, which makes the whole class unnecessary** |
+| B-152 | **MV1 does not fire on the only four sessions he has.** The v7 pass deliberately stamps no `mv` on a logged entry (`logic.js:4738` — zero bytes moved in the log store, a hard acceptance criterion). `effectiveMv(entry, slotMv)` then reads an entry with no `mv` as *the slot's movement* — and on a swapped card the slot handed to the engines is **shimmed to the swapped movement**, so a pre-schema-7 entry inherits a movement he never performed. W9 proved and printed it (`scratchpad/w9/proof2.mjs`): his first swap on an existing lift returns the old entry as the prior and prints `Volume up 31% — 2,520 kg against 1,925 kg` **across two different movements**, and `H1.3d` cannot fire because a prior was found — so W9's new `Swapped to {new}. Not compared to last session.` is unreachable on his real data. This is the exact defect MV1 was written to stop, on the exact feature that is the ask. New sessions are clean; only pre-deploy history is exposed, which is all of his | backend, with strength-coach on the H1.3d gate | **specified — WO-014 W11. BLOCKS the WO-014 deploy** |
+
+**B-131 is answered and moves from *his word owed* to *a repair specified*.** `d1d` 81 kg was the **pair added
+together** → 40.5 kg per hand; his answer describes the row, so all four sets (63 / 77 / 77 / 81) are pair totals and
+all four halve — **his one word on "all four" is owed before the pass runs.** `d1b` he answered as *pull-ups, nothing
+added* → `w` 0, **and that contradicts the note stored on that very entry**: `CHADY_EXPORT` (`tests.html:14101`,
+hash 1528318698, the server's own bytes) carries `"I have done iso-lateral front lat pull downs- forearm still not
+recovered"` on `d1b` itself, with a monotone load ramp 68 / 77 / 77 / 86 that reads as a stack and does not read as
+bodyweight. **`d1b` is held. One more sentence from him closes it**; `d1d` is not held by it. Repair order is
+**WO-015**, after WO-014 ships, fingerprint-gated, keep-before-write, no-op everywhere else.

@@ -854,3 +854,112 @@ shared file. W10 is alone in `index.html` afterwards. T1a writes only to
 | ST1's `unswapped` variant turns into a `stallReport` refactor riding a copy fix | P2 | W9's stop-and-report clause. The generic thin line is the named fallback |
 | The deploy slips while three small items run | P2 | Three files, three owners, one round. The alternative is QA twice |
 | B-147 (the empty photograph slot) is treated as a blocker | P3 | Ruled: it is not. It ships as built, and Chady's answer moves one line |
+
+---
+
+## 10. Second amendment — 2026-09-29. MV1 does not fire on the four sessions he has (B-152). **Blocks the deploy.**
+
+Found by W9 (`9d4336b`) while proving its own change; **not introduced by it**. W9 was right not to fix it: the fix
+lives in W4's function, not W9's, and every plausible shape trades against something this order fixed in place.
+
+### 10.1 The defect
+
+The v7 pass stamps **no `mv` on a logged entry** (`logic.js:4738`) — "the migration moves zero bytes in the log
+store" was a hard acceptance criterion and the reason it was safe to ship. `effectiveMv(entry, slotMv)`
+(`logic.js:1818`) then reads an entry with no `mv` as **the slot's movement**. On a swapped card the slot handed to
+the engines is **shimmed to the swapped movement** — so a pre-schema-7 entry inherits a movement he never performed.
+
+Proved and printed by W9 (`scratchpad/w9/proof2.mjs`): his **first swap on an existing lift** returns the old entry
+as the prior and prints `Volume up 31% — 2,520 kg against 1,925 kg` **across two different movements**. `H1.3d`
+cannot fire on that data either, because a prior *was* found — so §22.4.5's
+`Swapped to {new}. Not compared to last session.`, which W9 has just built, is **unreachable on his real data**.
+
+New sessions are clean. Only pre-deploy history is exposed, which is all four of his.
+
+### 10.2 The ruling
+
+**Fix the shim's basis, not `effectiveMv`'s meaning. It blocks the deploy.** Reasoning in full in
+`docs/decisions.md` (2026-09-29, §4). In short: stamping `mv` in the migration breaks the zero-bytes criterion and
+still misses an imported old export; disclosing it has nothing to detect from; accepting it leaves a fabricated
+percentage on the first swap of every existing lift, and the swap is the ask.
+
+`effectiveMv`'s inheritance rule is *true of the slot's **declared** movement* and *false of a shimmed one*. The
+shim is a lie told to the engine. So the comparison takes **two** movements: an entry with no `mv` inherits the
+slot's **declared** movement, and is skipped when that declared movement differs from the movement being compared
+against. Where the two are equal — every unswapped path — the answer is byte-identical, so W9's 120,000-case sweep
+still holds.
+
+### 10.3 W11 · Close the legacy-`mv` hole — owner: `backend-engineer`
+
+`logic.js` only, all pure. Scope: the movement comparison gains the slot's **declared** movement as an input, and
+every MV1 site that today passes a possibly-shimmed movement passes both. `effectiveMv`'s two-argument contract does
+not move; `mvSkips`'s three states (`undefined` = rule off, `null` = MV1.1(b), a movement = MV1.1(a)) do not move.
+**Out:** the migration (no stored byte moves, in any store), `index.html`, any string, any prescription.
+
+Acceptance criteria:
+
+- On a fixture where `d3c` holds an entry **with no `mv`** on 18 Sep and the card is swapped to a different movement
+  on 25 Sep, the 25 Sep card finds **no prior**, prints `Swapped to {new}. Not compared to last session.`, and
+  **never** prints a volume percentage. The pre-fix output (`Volume up 31% — 2,520 kg against 1,925 kg`) is pinned
+  red-first against `9d4336b` and shown to go green.
+- On the same fixture with the slot's declared movement **equal** to the compared movement — i.e. not swapped — the
+  prior, the verdict and every number are byte-identical to `9d4336b`. Asserted as a string comparison over W9's
+  existing sweep, not by eye.
+- A slot with no declared movement (`null`, MV1.1(b)) behaves exactly as it does on `9d4336b`: `sw === 1` is the
+  only skip, and an entry with no `mv` is never skipped by this change.
+- A two-argument call anywhere in `logic.js`, `index.html` or `tests.html` cannot tell the difference. Asserted:
+  `git grep` the call sites and pin each unchanged.
+- After *make it permanent* re-declares the slot's movement, the entries that carried `sw: 1` **are** the slot's
+  history again — the §22.4.6 promise — and the exclusion count W9 returns still goes 1 → 0.
+- **Data:** nothing in W11 writes. The log store is byte-identical before and after every function it touches is
+  called, asserted on `CHADY_EXPORT` with `d1b` and `d1d` pinned individually (D2).
+
+Depends on: — (parallel-safe with W10, which is `index.html`). **Blocks W6.**
+
+### 10.4 W12 · The H1.3d gate — owner: `strength-coach`
+
+`docs/coach-audit-addendum.md` only. **The gate, not the wording** — the string is `[Certain]` and untouched.
+H1.3d fires only when no comparable prior exists, so a *second* session on the same swapped movement gets a real
+comparison; §22.4.5 does not address the gate at all. Rule whether that is the intended coaching behaviour, and
+whether a swapped card whose slot holds only pre-schema-7 history should say anything beyond §22.4.5's sentence.
+Out: any new string that is not a sign-off on an existing one; anything about B-131 or B-150 (those are WO-015 and
+WO-016). Depends on: —
+
+Acceptance criteria:
+
+- A one-line ruling on the gate, `[Certain]` / `[Likely]` / `[Guessing]` tagged, in §22, naming W11's behaviour as
+  the thing signed off.
+- If a sentence is owed that §22.4.5 does not give, it is written as a literal in §22.12's table so W11 or W10
+  transcribes it without interpretation. If none is owed, that is stated in one sentence so it is not re-asked.
+
+### 10.5 The evidence base, stated so it is not assumed
+
+**Only one of his four sessions exists in this repo** (`tests.html:14101`, `CHADY_EXPORT`, 12 Sep, hash
+1528318698). W9's data criterion was met against that one plus three synthetic documents. Any migration or repair —
+this order's or WO-015's — needs his **real** export, and the only places all four exist are his phone and Supabase.
+The procedure, owned by `release-engineer` and run before anything writes: pull the four `sessions` rows by REST for
+his account, record `client_id`, `local_date` and `v_session_counts` for each, and cross-check against a phone
+export if he sends one. **The fingerprint gate makes a mismatch a no-op rather than a corruption**, which is why the
+missing three block the *claim of coverage*, not the build.
+
+### 10.6 Amended sequence
+
+```
+  W9   backend  (landed 9d4336b) ─┐
+  W11  backend  (logic.js)       ─┼──> W6 QA ──> W7 release
+  W10  frontend (index.html)     ─┤
+  W12  coach    (addendum)       ─┘
+```
+
+W11 and W10 are parallel: different files. W12 is parallel to both: it writes only the addendum. **W6 waits for all
+three** — nothing pins a string or a series that is about to move, which is this amendment's governing principle as
+much as the first one's.
+
+### 10.7 What this amendment does not fold in
+
+- **B-131's repair** (his two wrong loads on 12 Sep) — its own order, **WO-015**, after this one ships. Neither half
+  depends on the swap schema any more; `d1b` is held on one more sentence from him.
+- **B-150** (the load column means something other than the total on `bodyweight` and `db` slots) — its own order,
+  **WO-016**, and it **outranks the repair**. It must not change `w`'s stored meaning, or WO-015's repair table is
+  invalidated mid-flight.
+- **Track B.** Still T1a only.
