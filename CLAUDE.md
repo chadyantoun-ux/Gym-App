@@ -113,9 +113,19 @@ bodyweight advice, or `PROGRAM` must be reviewed by `strength-coach`.
   links were rejected: a link from an email opens in the browser, not the installed PWA. A device's stores belong to
   the account that first backed them up; a sign-in to a different account is refused, not merged. Server state at the
   last close: 2 users, 1 session, 0 conflicts.
-- **Deploy:** manual Vercel API, **team-scoped** (`teamId` required on every call). The GitHub App is still not
-  installed; installing it on `chadyantoun-ux/Gym-App` makes a push to `main` deploy itself and retires the manual
-  upload. **Bytes come from `git cat-file blob`, never the working tree** — `core.autocrlf` is on here. Verify a deploy
+- **Deploy:** manual Vercel API, **team-scoped** (`teamId` required on every call). **The GitHub App must NOT be
+  installed yet — installing it as `docs/deploy.md` §7 describes would publish the whole repository at public
+  URLs** (WO-014 release, 2026-09-29). The repo tracks 123 files; the deploy is 61. There is no `vercel.json` and no
+  `.vercelignore`, and §7 step 10 says to leave Output Directory empty, which for a no-build static project makes the
+  **repo root** the output. A git-linked deploy would serve `docs/context/phat-log.xlsx` (his prior training log, the
+  system of record), `CLAUDE.md`, every backlog/decision/spec/work-order, `supabase/schema.sql`, `rls.sql`,
+  `rls-selftest.sql`, all migrations and `.claude/agents/*.md` — unauthenticated, on `gym-app-psi-eight.vercel.app`.
+  The repo being private does not help; the *deployment* is public. `verify-deploy.sh`'s upward check does not catch it
+  either: it scans top-level `*.html`/`*.js`/`*.webmanifest` and `assets/*` only, so nothing under `docs/` or
+  `supabase/` is on its radar. **`.vercelignore` is a prerequisite for §7, not a follow-up**, and §7 is not to be run
+  until a deploy has been verified to 404 on `/CLAUDE.md` and `/docs/context/phat-log.xlsx`. Until then the manual
+  61-file upload is the only deploy path, and it is unaffected and safe.
+  **Bytes come from `git cat-file blob`, never the working tree** — `core.autocrlf` is on here. Verify a deploy
   by fetching `/logic.js` and requiring the current version constant in the body, never a build status. `sw.js` is
   **`v6`** (WO-011 P1, B-122). **The rule, learned on the phone: once per worker lifetime is not once per launch on
   iOS** — v2–v5 refreshed the shell once per worker and then served their cache forever, so a content deploy under an
