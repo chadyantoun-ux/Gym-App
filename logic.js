@@ -5880,10 +5880,24 @@
         }
       }
 
+      /* DISTINCT session ids, never B131_TABLE.length. The table holds one row
+         per ENTRY — four rows across two sessions — and `out.absent` holds
+         SESSION IDS, so `absent.length === B131_TABLE.length` could never be
+         true and the "neither session is on this device" sentence was
+         unreachable. A fresh install, Diana's phone included, was told
+         "nothing on this device matches the correction table": a MISMATCH,
+         the one state the all-or-nothing gate exists to distinguish from
+         ABSENCE. Nothing is written on either branch, so this is wording. */
+      var sids = {}, nsids = 0;
+      for (t = 0; t < B131_TABLE.length; t++) {
+        key = String(B131_TABLE[t].sid);
+        if (!has(sids, key)) { sids[key] = 1; nsids++; }
+      }
+
       if (!todo.length) {
         out.note = (done || marked)
           ? "B-131 repair: already applied on this device; nothing changed."
-          : (out.absent.length === B131_TABLE.length
+          : (out.absent.length === nsids
               ? "B-131 repair: neither session is on this device; nothing changed."
               : "B-131 repair: nothing on this device matches the correction table; nothing changed.");
         if (out.near.length) out.note += " " + out.near.join("; ") + ".";
@@ -9100,14 +9114,22 @@
     return "Six weeks in but the log is too thin to test. Log " + andList(names) + " weekly.";
   }
 
-  /* Addendum §9.1 — a key lift the six-week check CANNOT read, because the
-     plan now prescribes it above 8 reps and ST1 scores nothing above 8. This
-     is not thin data: logging it weekly will never help, so it must not get
-     the "log it weekly" line. */
-  function st1Unreadable(name) {
-    return name + " is prescribed above " + ST1_REPS + " reps, so the six-week check " +
-           "cannot read it. It needs sets at " + ST1_REPS + " reps or fewer.";
-  }
+  /* Addendum §9.1's ST1 "unreadable" literal — the builder `st1Unreadable`,
+     which told him a key lift's rep range put it out of the six-week check's
+     reach — was DELETED here by coach §23.2.6 (WO-014). Its wording is
+     deliberately not reproduced anywhere in this file, comments included: it
+     must not exist in the build in any form. It was already unreachable —
+     QA proved that independently before the coach ruled. The branch fired on
+     `lo > ST1_REPS`, and Rule HD1 admits a key lift only when `hi <= 8`, with
+     `lo <= hi` — so every subject that reaches stallAdvice has `lo <= 8`. The
+     one product caller passes `keyLiftRows()`, which resolves through
+     `planKeyLifts`, the HD1-filtered reader; there is no path that supplies an
+     HD1-ineligible subject. Everything else in §9.1 (PE1, the ghost rows, the
+     prefill, the SP1 literal) and both §9.9 literals stand untouched.
+
+     `stallAdvice` still RETURNS `unreadable: []` — the field is part of a
+     pinned shape and a caller may read it — but nothing populates it now, and
+     nothing else ever did: the push below was its only writer. */
 
   /* Addendum §9.9 — ST1's authority is that it is a FOUR-lift check agreed in
      advance. Becoming a three-lift check silently is the app narrowing its own
@@ -9516,13 +9538,9 @@
 
     if (rep.untested.length) {
       out.state = "thin";
-      /* Addendum §9.5 and §9.1. Two reasons a lift is untested, and they need
+      /* Addendum §9.5. Two reasons a lift is untested, and they need
          different sentences:
 
-           UNREADABLE  the plan now prescribes it above 8 reps, so ST1 can
-                       score nothing on it. "Log it weekly" is false advice —
-                       he could log it every day and the check still could not
-                       read it. It names the reps it needs instead.
            THIN        genuinely not enough sessions. Unchanged copy.
            SWAPPED     thin ONLY because Rule MV1.1 skipped the sessions in
                        which he swapped the movement. Coach §22.4.5: the word
@@ -9536,34 +9554,32 @@
          (never counts them). Any other mix falls to the per-lift lines, which
          are true at any count — and a swapped lift ALWAYS falls there, because
          the all-thin sentence has one clause for every lift and cannot carry a
-         different reason for one of them. */
-      var lo = {}, byId = {}, i2, l2, nm2;
+         different reason for one of them.
+
+         The §9.1 UNREADABLE arm was deleted by coach §23.2.6 (WO-014) — see
+         the note where its literal used to live. `out.unreadable` keeps its
+         place in the returned shape and is now permanently []. */
+      var byId = {}, i2, l2, nm2;
       for (i2 = 0; i2 < lifts.length; i2++) {
         l2 = lifts[i2];
         if (!isObj(l2)) continue;
         nm2 = (typeof l2.n === "string" && l2.n.trim() !== "") ? l2.n : str(l2.id).trim();
         if (nm2 === "") continue;
-        if (typeof l2.lo === "number" && isFinite(l2.lo)) lo[nm2] = l2.lo;
         byId[nm2] = l2;
       }
-      var thin = [], unreadable = [], swapped = [];
+      var thin = [], swapped = [];
       for (i2 = 0; i2 < rep.untested.length; i2++) {
         nm2 = rep.untested[i2];
-        if (own(lo, nm2) && lo[nm2] > ST1_REPS) unreadable.push(nm2);
-        else {
-          thin.push(nm2);
-          if (own(byId, nm2) &&
-              st1SkipEmptied(sessions, byId[nm2], today, isObj(c.state) ? c.state : null)) {
-            swapped.push(nm2);
-          }
+        thin.push(nm2);
+        if (own(byId, nm2) &&
+            st1SkipEmptied(sessions, byId[nm2], today, isObj(c.state) ? c.state : null)) {
+          swapped.push(nm2);
         }
       }
-      out.unreadable = unreadable.slice(0);
       if (thin.length && thin.length === lifts.length && swapped.length === 0) {
         out.lines = [st1ThinAll(thin)];
       } else {
         out.lines = rep.untested.map(function (n) {
-          if (unreadable.indexOf(n) >= 0) return st1Unreadable(n);
           if (swapped.indexOf(n) >= 0) {
             return "Not enough unswapped sessions on " + n + " to judge. Log it weekly.";
           }
