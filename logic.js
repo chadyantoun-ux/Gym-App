@@ -10655,12 +10655,20 @@
          names what is actually missing from his log: he has the sessions,
          they are spread out, concentration is the gap.
 
-         "three" IS SPELLED, NOT INTERPOLATED, and that is deliberate: the
-         sentence is one sentence about one week, and TRAINING_WEEK_MIN is a
-         constant this copy does not parameterise. If the minimum ever moves,
-         the sentence is rewritten by the coach, not re-interpolated here. */
-      out.count = nSess + (nSess === 1 ? " session" : " sessions") +
-                  " logged. Week 1 starts when three land in one week.";
+         The number WAS spelled and not interpolated, on the grounds that
+         TRAINING_WEEK_MIN is a constant this copy does not parameterise.
+         Rule TW1b removed that premise, and the coach overturned his own
+         instruction in addendum section 23.6.3 (Rule TW1c) rather than leave
+         a false sentence: at twMin 2 week 1 starts when TWO land. The SHAPE
+         is still his, and it is only safe down to two - at twMin <= 1 the
+         promise sentence is DROPPED, because "when one land in one week" is
+         ungrammatical and the fixed-up singular is worse, contradicting the
+         clause in front of it. At twMin 3 this is byte-identical to what
+         shipped, and that is the regression pin. */
+      out.count = nSess + (nSess === 1 ? " session" : " sessions") + " logged.";
+      if (twMin >= 2) {
+        out.count += " Week 1 starts when " + numWord(twMin) + " land in one week.";
+      }
     }
 
     if (hasSessions && cw !== tw && tw > 0) {
