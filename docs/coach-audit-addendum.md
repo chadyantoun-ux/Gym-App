@@ -7430,6 +7430,381 @@ be right or wrong about 800 movements, and the only ones that matter are the one
 
 ---
 
+## 22.10 WO-019 W2 — AD1 from a session-level door, recency as a presented order, the pain interaction, and B-161 — 2026-10-08
+
+Appended under §22 because every question here is a clause of a rule §22 already owns. **No new rule
+id is minted.** AD1 gains one amended literal and one clause; I3 gains a fourth path in its
+`Applies to`; SW-ORDER gains a basis and two notices. Nothing else moves.
+
+**The context that changes the weight of these answers:** nine sessions logged, five in the last
+eight days, on a copy of the 5-day template. This is the first section in this document written
+against real use rather than against a plan. The standing diagnosis is suspended, as WO-019 §0 says.
+
+### 22.10.0 Rulings at a glance
+
+| # | Question | Ruling | Tag |
+|---|---|---|---|
+| 1 | AD1's third clause, from a door whose premise is *not in my plan* | **Amend the literal, do not make it conditional.** `Add it to your plan to get one.` → `A verdict needs it in your plan.` The three clauses C7a requires all survive; the instruction becomes a fact. **One literal, not two** — the card outlives the door that opened it. | `[Certain]` on not conditioning it, `[Opinion]` on the wording |
+| 2 | Is recency a defensible presented order? | **Yes**, with a floor: `basis:"recent"` only when **at least one** movement is in the window. At zero, fall back to `order:"name"` with its own honest notice. A typed query still outranks recency (+6 prefix > +2 recent) and that is correct. | `[Certain]` that it is relevance and not advice; `[Opinion]` that it beats name-ascending |
+| 3 | Does the **list** owe anything to an open pain flag? | **No. No suppression, no mark, no sentence.** Reasons in 22.10.3, and the strongest one is that a mark would be the app assessing an injury. **But AD1.4 does not currently deliver what it promises on an added card** — a *historical* flag cannot reach a minted exId. Filed, not built here. | `[Certain]` on suppression being wrong; `[Likely]` on no mark; `[Certain]` on the AD1.4 gap |
+| 4 | **B-161** — does an added movement derive its `implement` from the library at read time? | **Yes. Ship it. It is I3.3's path, not a new question**, and read-time derivation is what puts the added card *inside* WO-016's blast radius instead of outside it. On the 199 upstream-unknown rows: **silence** — no claim, no prompt, no form. | `[Certain]` on deriving; `[Certain]` on silence |
+| 4a | Does item 4 need Chady awake? | **No.** Every word it prints is a word already shipping on a slot with that implement, and the only number it introduces is **his own profile's bar**, named on the card and changed by one chip tap. The open question underneath it (B-117, which bars his gym has) governs every barbell slot today and is not created by this. | `[Certain]` |
+
+---
+
+### 22.10.1 Ruling 1 — AD1's verdict line, amended
+
+The shipped literal is `Added today. No sets or reps set, so no verdict. Add it to your plan to get
+one.` (§22.12 #34). Reached from `Swap → Add as well` it read correctly, because that door is about
+the card in front of him. Reached from a control whose entire premise is *this is not in my plan and
+I do not want it there*, the third clause tells him to undo the choice he just made, five days a
+week. That is the app arguing with him.
+
+**Three options and why two lose.** *Keep it* — it will nag, and it does not state a fact he needs,
+it states an act he declined. *Make it conditional on the door* — rejected `[Certain]`: the card is
+read at set 1, at set 4, on the Summary, and tomorrow on a restored draft, long after which door
+opened it is knowable or interesting; a literal that depends on a navigation path is a literal that
+will eventually be wrong on the same card. *Amend the literal* — the route to a verdict is still
+named, so C7a's shape holds, but it is named as a **condition** rather than an **instruction**.
+
+```
+AD1 amendment — Output copy, verdict slot. Supersedes the string in 22.3.
+  Added today. No sets or reps set, so no verdict. A verdict needs it in your plan.
+```
+
+Clause by clause, unchanged in function: `Added today.` the fact · `No sets or reps set, so no
+verdict.` the consequence in his words · `A verdict needs it in your plan.` what switches it on,
+stated as a mechanism. Nothing congratulates, nothing nags, nothing guesses. **Everything else in
+AD1 is untouched** — AD1.2 still silences every verdict, AD1.3 still prints `No type set, so no rest
+target.`, AD1.5 still feeds no engine.
+
+**Worked examples.** (1) He adds `Face_Pull` from the new door at the end of a Pull day and logs
+`25 × 15, 25 × 15`: verdict slot prints the amended line, no rest target, no badge. (2) He adds the
+same movement for the fourth week running: the line does not change and the app still does not offer
+a prescription (22.3's ruling, held — three improvised sessions are not a decision to programme
+something). (3) **The failing case the amendment prevents:** the old line on the new door, read at
+the end of a session he deliberately improvised — the only sentence in the app's voice is a
+recommendation to stop improvising. (4) Boundary — he *does* later add it to a plan: the slot now has
+`s/lo/hi/k`, the line does not render at all, and P1 or H1 speaks. Unchanged by this amendment.
+
+**Not a new rule, and the PM's §4 guess was [Likely] it stands — I am overriding it narrowly.** The
+guess was right that the clause states the only true route and that the app does not flatter. It
+missed that *stating a route* and *issuing an instruction* are different sentences, and only one of
+them argues with him.
+
+---
+
+### 22.10.2 Ruling 2 — recency is a defensible presented order, with a floor and a true sentence
+
+**Yes, and the distinction is load-bearing: a list ordered by what he has actually trained is a
+report of his own behaviour, not a recommendation from the app.** `[Certain]` on that distinction.
+The app is not asserting that these movements are good for him, suit his split, or belong at the end
+of this session; it is asserting *you have done these lately*, which is a fact it holds, checkable
+against his own log. Compare the thing I refused in §22.1: `lv` (`beginner`/`intermediate`/`expert`)
+must never order the sheet, because that **is** an upstream editorial judgement about him. Recency is
+the opposite — it is the only signal in this sheet that comes from him.
+
+`[Opinion]`, held: it also beats alphabetical on the merits for the question he is asking. *One more
+thing, probably something I already do* is a recency query in plain words, and 40 of 876 names
+starting at `Ab_Roller` answers a question nobody asked.
+
+```
+Rule: SW-ORDER, basis "recent" — the order when there is no slot at all
+Applies to:   librarySearch with no `slot` and no `mv`, called from the session-level Add door.
+              NOT the Plan Editor's mode:"form" list (its return must stay byte-identical,
+              basis null / order "name" — WO-019 W3's second criterion).
+              NOT a swap (it has a slot and keeps today's scoring untouched).
+Inputs:       recentMovements(sessions, plans, today, SW_RECENT_DAYS) — already pure, already
+              passed into the sheet's `base`. SW_RECENT_DAYS = 56 days. A movement counts on
+              one COMPLETED set in the window, which is the existing definition and is right:
+              a movement he opened and abandoned is not something he trains.
+              MINIMUM DATA: at least ONE movement in the window.
+Logic:        SW-ORDER.R1  With no slot and no mv and the caller asking for it, and
+                           Object.keys(recent).length >= 1: order "score", basis "recent".
+                           The ONLY scoring clauses live are the recency bonus (+2) and the
+                           query's prefix bonus (+6). Every slot-relative clause (pm, force,
+                           mech, eq near/exact) stays suppressed — there is no reference row,
+                           and a bonus computed against nothing is how a false order ships.
+              SW-ORDER.R2  Ties break on the folded name then the id, unchanged. So the list
+                           is: recent movements alphabetically, then everything else
+                           alphabetically. Stable, testable, same instrument as today.
+              SW-ORDER.R3  WHAT HE TYPED OUTRANKS WHAT HE TRAINS. +6 prefix > +2 recent, by
+                           construction and deliberately: once he types, he has named the
+                           thing, and a recency bonus must never float a movement he did not
+                           ask for above one whose name begins with his query.
+              SW-ORDER.R4  ZERO RECENT MOVEMENTS => basis null, order "name", and the
+                           name notice. This is the real boundary and it is not hypothetical:
+                           Diana's first session, a restored device, or a 56-day layoff. A
+                           notice claiming an order the list is not in is exactly what
+                           UX §22.3.1 forbids.
+Output copy:  basis "recent":  Ordered by what you have trained in the last 8 weeks. Search for
+                               anything else.
+              basis null, no slot:
+                               Ordered by name. Nothing logged in the last 8 weeks to rank by.
+Not enough data: SW-ORDER.R4 IS the not-enough-data state, and its answer is a different true
+              sentence rather than silence — an unlabelled list of 876 names is the one thing
+              worse than a labelled one.
+```
+
+**Two things the notice must do, and they are why I am not leaving it to a paraphrase.** It must
+state the order *and* say the rest of the library is still reachable, because recency can fill the
+whole list: he has roughly 30–45 distinct movements inside 56 days and `SW_LIMIT` is 40, so on his
+current data the first screen may be entirely things he already does. That is correct for the
+question and wrong as a dead end, and `Search for anything else.` is the whole remedy — the field is
+already there (SW-ORDER's own reason for existing is that the list, not the keyboard, does the work;
+this does not change that, it tells him the keyboard is the way out).
+
+**`8 weeks` is `SW_RECENT_DAYS = 56`, in weeks because he trains in weeks.** It is an interpolation
+of a constant written as a word. **If the constant moves, both literals move** — a notice naming a
+window it no longer reads is the same defect as #12's false slot clause, and QA should pin the pair.
+
+**§22.12 #12 is not retired.** `Ordered by name. This slot does not name a movement.` is still true
+and still correct for a slot that carries no `mv` (an unmapped or user-built plan). It is only wrong
+when there is no slot, which is the case these two new literals cover. Do not delete #12; do not
+reuse it here.
+
+**Worked examples.** (1) He opens the door at the end of a Pull day. 34 movements are inside 56 days.
+List: those 34 alphabetically, then the first 6 of the rest alphabetically. Notice: the recent line.
+Correct. (2) He types `fac`. `Face_Pull` begins with it: +6, and it is also recent: +8. It leads;
+`Cable_Face_Pull`-style names containing but not beginning with the token follow. What he typed won.
+(3) **Boundary, zero recent.** Diana's first session, or his own return after nine weeks off: no
+movement scores, the sort collapses to folded name, basis is null and the notice says so. No sentence
+in the app claims a ranking it did not perform. (4) **Failing case the floor prevents:** one recent
+movement, `basis:"recent"`, notice claiming the list is ordered by what he trains — true of row 1 and
+of nothing else. With the floor at 1 that notice is still literally true *and* the second sentence
+carries the tail, which is why 1 is the floor and not 3: a higher floor would need a number I cannot
+defend, and the sentence is honest at 1. `[Opinion]` on the floor's value, `[Certain]` that the
+sentence must be true at the boundary.
+
+**The foam-roll tail, since §22.1 raised it.** 198 of 876 rows are non-strength, and `foam roll`
+"must never be ordered first in the swap sheet". Under basis "recent" it cannot be: a foam-roll row
+scores 0 and sits in the alphabetical tail, below every movement he has trained. Recency makes that
+guarantee *stronger* than name-ascending does, which is a second argument for it.
+
+---
+
+### 22.10.3 Ruling 3 — the pain interaction. The list owes nothing; AD1.4 owes one thing it cannot currently pay
+
+`[Certain]` **No suppression.** Three reasons, in order of weight. (a) Hiding a movement from the
+list would be the app forming a view about his forearm, which §10 and CLAUDE.md §3 put outside what
+this app may do — it is not his doctor and a suppression is a clinical act dressed as a UI detail.
+(b) The movement in question is **the substitute** — the pulldown exists *because* the pull-up was
+not available — so suppressing it pushes him back toward the thing he worked around. An app that
+hides the lat pulldown when his forearm is flagged has got the sign backwards. (c) A suppression is
+invisible by construction: he cannot tell a hidden row from a row the library does not have, and he
+would conclude the search was broken.
+
+`[Likely]` **No mark, and no sentence in the sheet.** This is the one I would change if given new
+information, and the three costs are: (a) **`painWindow` keys on `exId`, the list ranks `mv`** — a
+mark needs an exId→movement join, and on a swapped entry that join is genuinely ambiguous, so the
+mark would sometimes name the wrong movement. A wrong mark about pain is worse than no mark. (b) It
+puts his injury on a 40-row scroll list of movement names — a new surface for the most private data
+in the app, read in a gym, possibly over his shoulder. §10 keeps pain output to one place for a
+reason. (c) It is redundant where it is right: the information is on the card, one tap later, where
+it is actionable, and where the referral line already is.
+
+**The S2b objection, answered because a reviewer will raise it.** §22.12 #52 has the app refuse to
+*offer* a new exercise while something is flagged inside 7 days (`No new exercise this week. An
+exercise was flagged in the last 7 days.`), and WO-019's door is literally "add an exercise". These
+do not conflict, and the line between them is the line this whole document runs on: **V1's offer is
+the app recommending volume; this door is him choosing it.** The app does not initiate added volume
+while a flag is open, and it also does not forbid him. So S2b does not fire on this path, the sheet
+prints nothing about pain, and the door is never withheld. `[Certain]` on the distinction. Matching
+§22.9(b)'s standing refusal: **no new mid-session warning, at any strength.**
+
+**What the list does not owe, the card does — and AD1.4 currently promises it without delivering.**
+`[Certain]`, and it is a finding rather than a ruling, so it is filed rather than built:
+
+> AD1.4 says the pain referral line still renders on an added movement. That is true only of a note
+> he writes **today, on that card** — S1/S1b read the note in front of them. The *historical* notices
+> (`painWindow`, `painState`, S1a's 21-day restatement, §22.12 #51 and #53) are keyed to an **exId**,
+> and `addDraftEntry` mints a fresh id for every added entry. **So an added movement can never
+> inherit a flag, and the app is silent on the one path where it knows something and says nothing.**
+> He adds the exact movement he flagged nine days ago; the plan slot's card would print `This
+> exercise is flagged. Not something this app can assess.`; the added card prints nothing.
+
+This is not created by WO-019's door — it is true today through `Add as well` and has been since
+2026-09-29 — but **the door makes it reachable on purpose and recency-ranking puts the movement near
+the top of the list.** The fix, when it is built, is a clause inside AD1.4 and **no new rule id**: on
+an entry with `mv` and no slot, the historical pain notices resolve their subject by **`mv` through
+`effectiveMv`** across the pain window, not by the minted `exId`. Note the direction — this is
+MV1's *additive* half, so it needs MV1.2's discipline about disclosure, not MV1.1's skip; and
+§22.4's standing exclusion (`EXPLICITLY NOT painWindow`) is untouched, because that exclusion forbids
+*hiding* a note and this proposal only finds one.
+
+**It does not block WO-019 and it must not be folded into it** — same reasoning as the PM's on B-161
+before I overrode that one: it changes what a pain rule's subject is, which is a bigger question than
+a discoverability order, and unlike B-161 it needs a `logic.js` change nobody has scoped. **Route it
+to the PM as its own item.** `[Likely]` it is a one-week item, not a one-night one.
+
+---
+
+### 22.10.4 Ruling 4 — B-161. An added movement derives its `implement` at read time. Ship it
+
+**Reject the PM's deferral. `[Certain]`.** WO-019 §5(3) files B-161 and routes it to WO-016 on the
+grounds that deriving the implement "changes what three coaching rules say on a card, which needs the
+coach, and it is the same question WO-016 exists to answer." The second half is where it goes wrong,
+and the coach it needed is writing this: **it is not the same question.** WO-016 owns *what the load
+column means* — whether a dumbbell number is per hand or a pair total, whether a bodyweight number is
+added or total. B-161 owns *whether the app declares a meaning at all.* Deferring it does not hold
+the question open; it ships the only surface in the app that declares **nothing**, and it ships it
+behind a door built to be used five days a week.
+
+```
+I3 amendment — Applies to. Supersedes the three-path list in 22.1.
+  (1) the Plan Editor's add-exercise form, (2) a mid-session swap, (3) the "make it permanent"
+  write, and (4) A MOVEMENT ADDED MID-SESSION — the AD1 entry, from either door (the swap
+  sheet's `Add as well` or WO-019's session-level control). Path (4) is governed by I3.3,
+  word for word: the implement FOLLOWS THE MOVEMENT, derived at read time from the entry's
+  `mv` through the I3.1 table (PHAT.libraryImplementOf), and is NOT a stored field.
+  I3.2 does NOT apply to path (4): there is no form, so nothing asks, and a refusal is silence.
+
+AD1.1 amendment — one sentence appended.
+  The entry's implement is derived under I3 path (4). It reaches FOUR consumers and no others:
+  I1's ` · per DB` suffix, I2's increment appendix, Z2's word at zero load (`loadWord`), and
+  `cardModeFor`'s `a.implement` argument. It must never be read to derive `k`, a prescription,
+  a rep range, a rest target, a Trend line or a stall subject — AD1.2 and AD1.5 are unchanged
+  and this amendment adds no input to any engine.
+```
+
+**On the 199 — silence, and it is already written down.** I3.3's refusal branch is the answer
+unchanged: no claim, `per DB` suppressed, the appendix suppressed, and `loadWord` falls back to
+`zero load`. **No prompt, no form, no refusal string on this path** — he is mid-session with chalky
+hands and the app has nothing to ask about, because unlike the Plan Editor there is no field to fill
+and nothing downstream that needs the answer (every verdict is silent anyway). `[Certain]`. A row
+upstream could not classify is a row about which the app says `zero load` and nothing else, which is
+honest: it does not know the movement is bodyweight, and `bodyweight` is a claim.
+
+**Three of the four consumers are words, and each replaces a false or absent claim with the app's
+existing one.** The fourth is a number and needs its own paragraph.
+
+| Consumer | Today, on an added movement | With derivation | Why it is safe tonight |
+|---|---|---|---|
+| Z2 / `loadWord(0, …)` | **`zero load`** on a rack chin or a dip — flatly false, he was not holding nothing | `bodyweight` on the 111 `body only` rows | A true word replacing a false one. No number changes. `[Certain]` |
+| I1's ` · per DB` | **Nothing.** An added dumbbell movement's load column has **no declared meaning whatsoever** | ` · per DB`, the same suffix `d1d` prints | It is the convention already shipped on every `db` slot. WO-016 may flip that convention; if it does, **this card flips with it for free**, because the derivation is read-time. `[Certain]` |
+| I2's appendix | Nothing, so no increment guidance on a cable or machine add | The appendix on `cable`/`machine`, suppressed on `bb` | Unchanged logic, correct input. L1 still reads the set's `ld` and never `implement` (§18.2). `[Certain]` |
+| `cardModeFor`'s `a.implement` | No bar seed on an added **barbell** movement; the card opens kg-direct | His profile's first bar, exactly as a `bb` slot and exactly as a swap | Argued below. `[Likely]` |
+
+**The bar seed, which is the only one with a number in it.** `cardModeFor`'s own comment states the
+conservatism: *"Absent, the card gets the unit and NO BAR — the conservative answer, because a wrong
+bar silently changes the kg total that is stored."* I considered holding this one consumer back and
+rejected it, and the reason is the word **silently**. A bar card *names its bar*: the chip says it,
+the column is the added weight in the card's unit, and the ghost and the `+` seed are built on it
+(SD1). A wrong bar on a bar card is **visible and one tap from fixed**. A kg-direct card with no
+declared implement is **invisible ambiguity** — he has to work out which number the column wants, and
+the two times he has got that wrong (B-131: 86 kg on a bodyweight slot, 81 kg on a dumbbell slot) are
+the entire reason WO-016 exists. **Visible-and-wrong beats invisible-and-ambiguous.** `[Likely]`,
+and the boundary is named below rather than hidden.
+
+**The decisive argument, and it inverts the PM's sequencing on this one item:** read-time derivation
+puts the added card **inside** WO-016's blast radius. Every word on it is then produced by I1/I2/Z2
+from a derived implement, so whatever WO-016 rules about the load column's meaning lands on added
+movements automatically, with no second pass and no migration. **Defer it and the added card becomes
+the one surface WO-016's fix cannot reach** — a card with no implement is not waiting for the ruling,
+it is permanently outside it. "Nothing moves after the pin" protects a pin; it does not require
+shipping a surface that no later pin can bind.
+
+**Worked examples.** (1) He adds `Lat_Pulldown` (`eq: "cable"`): derived `cable`, no `per DB`, I2's
+appendix prints, Z2 never fires because the stack is loaded. Card otherwise identical to today. (2)
+He adds `Dumbbell_Lateral_Raise` (`eq: "dumbbell"`): derived `db`, ` · per DB` prints, and the column
+now **declares** per hand. Without derivation the same card declares nothing and his 12 could mean
+either — which is B-150's defect arriving by a fifth route, and this closes the route instead of
+widening it. (3) He adds a dip or a rack chin (`eq: "body only"`): derived `bodyweight`, `0 × 12`
+reads `bodyweight × 12` instead of `zero load × 12`, and `w` is the **added** load per L4, as on
+every bodyweight slot. (4) **Boundary — a refused row.** He adds a kettlebell swing (`eq:
+"kettlebells"`, 56 rows): no claim, no `per DB`, no appendix, `zero load` at 0, every verdict still
+silent per AD1.2. He can log whatever number he likes and the app says nothing about the apparatus,
+which is I3.1's ruling, not a gap. (5) **Failing case, stated because it is real:** he adds a curl
+mapped from `e-z curl bar` → `bb` (9 rows) and the card seeds his profile's **first** bar, which may
+be a 20 kg straight bar when he is holding a lighter cambered one. The card then shows a bar he is
+not using and the stored kg total is high by the difference. **This is not new and is not created
+here** — it is already true of `d1g` and `d5e`, which ship as `bb` EZ-bar slots (§17.1), and of any
+swap onto an EZ-bar movement since 2026-09-29. The remedy is the shipped one: the bar is named on the
+chip and changed in one tap. **B-117 (his bars by name, and whether the gym has 2.5 lb plates) is
+still the open question underneath it, and it governs 11 shipped slots today.** That is the honest
+boundary of `[Likely]` on the bar seed.
+
+**Does any of this need Chady awake? No.** `[Certain]`, and these are the four tests I applied: it
+introduces **no new convention** (every word is already shipping on a slot with that implement); it
+introduces **no new stored byte** (read-time, I3.3, no migration, `SCHEMA_VERSION` stays 7); it
+introduces **no engine input** (AD1.2/AD1.5 unchanged, no verdict, no Trend, no stall subject, no
+rest target); and the single number it can affect — the bar component — is **his own profile's bar,
+named on the card and reversible in one tap.** The question that does need him, B-117, is open,
+unanswered, and already decides eleven slots he trains now; this adds no urgency to it and takes none
+away.
+
+**What would make me hold the deploy, stated so the condition is checkable rather than rhetorical:**
+if the derivation were written anywhere onto the draft or the saved document, or if it reached a
+fifth consumer. Either turns a read-time word into a stored fact about equipment the app never
+identified, and that is a one-line change away from being a number. QA's instrument is the one WO-019
+already specifies: C5's byte assertion on the saved entry (`mv` and `n`, no `rx`, no `sw`) must also
+assert **no `implement` key**, and C7's byte-identity between the two doors must hold with the
+derivation live on both.
+
+---
+
+### 22.10.5 Strings owed to §22.12 — one amendment, two new
+
+UX transcribes these verbatim into `docs/specs/wo-004-screens.md` §22.12. **Ids are the next free
+numbers as of 2026-10-08 (#59 is the last row); if WO-016's UX lane lands rows first, UX owns the
+renumbering and the strings are what must not move.**
+
+| # | Where | Case | String |
+|---|---|---|---|
+| 34 | card, verdict slot | added, no prescription | `Added today. No sets or reps set, so no verdict. A verdict needs it in your plan.` **AMENDED 2026-10-08 (coach §22.10.1), Rule AD1.** Replaces `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` Third clause only; clauses 1 and 2 do not move. **One literal for both doors — not conditional on which control opened the card.** |
+| 60 | sheet, notice | **no slot at all** (session-level Add), `basis:"recent"`, ≥ 1 movement inside 56 days | `Ordered by what you have trained in the last 8 weeks. Search for anything else.` **NEW 2026-10-08 (coach §22.10.2), Rule SW-ORDER basis "recent".** `8 weeks` **is** `SW_RECENT_DAYS = 56`; if the constant moves, this string and #61 move with it. The second sentence is not decoration — recency can fill all 40 rows on his current data, and it is the only thing that names the way out. |
+| 61 | sheet, notice | **no slot at all**, zero movements inside 56 days (`basis: null`, `order: "name"`) | `Ordered by name. Nothing logged in the last 8 weeks to rank by.` **NEW 2026-10-08 (coach §22.10.2), SW-ORDER.R4.** The real boundary: a first session, a restored device, a 56-day layoff. Replaces nothing — **#12 is NOT reused here and is NOT retired**; #12 remains correct for a slot that carries no `mv`, and is false only when there is no slot. |
+| — | sheet, any row or notice | an exercise is flagged inside the pain window | **No string. Nothing renders.** **RULED 2026-10-08 (coach §22.10.3)** — the absence is designed, like #31 and #38. No suppression, no mark, no sentence: a mark would be the app assessing an injury, `painWindow` keys on `exId` while the list ranks `mv`, and §22.9(b)'s refusal of any new mid-session warning stands. S2b (#52) does not fire on this path: it refuses the app's **offer** of volume, never his **choice** of it. |
+
+The sheet's `.lbl` kicker for a slot-less list (#9 `CLOSEST TO {EX}` cannot interpolate) is **UX's,
+not mine** — a kicker labels, it does not claim an order. The claim is in #60/#61 and that is the
+coach's.
+
+---
+
+### 22.10.6 Left open, and the one thing I will not fill in
+
+1. **The AD1.4 historical-flag gap (22.10.3).** Filed for the PM, not built here, does not block.
+   Its fix is a clause inside AD1.4 and needs no new rule id.
+2. **Volume creep through the new door, raised once and deliberately not answered with copy.** He is
+   training five days a week and this control makes an extra exercise one tap away at the end of every
+   session. AD1.5 means added work feeds **no** engine, so V1's reduced-volume tier, `reintroOrder`
+   and the one-exercise-per-week reintroduction are all blind to it — he can add five exercises a week
+   while the app believes he is on the reduced tier. **I am not fixing that with a warning:**
+   §22.9(b) refuses a new mid-session warning at any strength, and a man with thirteen years of
+   training who decides he has one more exercise in him is making a call the app is not better placed
+   to make. It is recorded as a known blind spot in V1's inputs, for the order that next opens V1.
+   `[Opinion]`, and I would hold it.
+3. **Anything about his forearm.** Unchanged from §22.8(5): outside what this app should advise on.
+   The referral line is the whole of its response, and no rule in §22.10 assesses, adapts around, or
+   comments on an injury.
+4. **B-116, sixth asking.** Still unanswered, and WO-019 §8(3) sharpens it correctly: a ramp into an
+   added movement lands on a card with no rep range to judge it against. One sentence from him.
+
+---
+
+### 22.10.7 Verdict
+
+**Sign off with changes, on all four.**
+
+- **(1)** AD1's third clause is **amended, not conditional**: `A verdict needs it in your plan.`
+  §22.12 #34 moves; AD1's other clauses do not.
+- **(2)** Recency is **defensible and preferred**, with the floor at one recent movement, the typed
+  query outranking it, and the two notices in 22.10.5. `basis:"recent"` is approved as the name.
+- **(3)** The list owes **nothing**. The card owes a historical flag it cannot currently resolve;
+  filed, unblocking.
+- **(4)** B-161: **derive at read time, four consumers, silence on the 199, and ship it tonight.**
+  The PM's deferral is overridden on the ground that deferral is not neutral — it ships the one
+  surface in the app that declares no meaning for its load column, behind a door designed to be used
+  daily.
+
+**Item 4 is safe to ship without him**, subject to the two QA assertions in 22.10.4 (no `implement`
+on the saved entry; C7 byte-identity across both doors with the derivation live). **No question in
+this section needs Chady awake.** The two that need him — B-117 and B-116 — were open before this
+order and are not made worse by it.
+
+---
+
 # 23. WO-018 T1 — the four templates, and the heavy day he can move — 2026-09-29
 
 Four plan documents, transcribable slot by slot, plus two rulings that govern all four and one
