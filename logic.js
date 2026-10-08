@@ -3876,6 +3876,262 @@
     return { ok: true, store: next, problems: [] };
   }
 
+  /* ======================================== WO-023 W3a/W3b: the promote
+
+     Two pure functions behind UX §22.22's one control: "keep the movement I
+     added tonight". ADDITIVE. Nothing above this comment changes behaviour —
+     both CALL the shipped editors and the shipped validators rather than
+     restating them, because two copies of one validator is two validators and
+     they drift. No DOM, no storage, no clock, no argument mutated.
+
+     The division of labour: `editableTarget` answers "where may I write?" and
+     `promoteDraftEntry` answers "what do I write?". Neither persists anything;
+     the caller writes the returned store through `save()` (WO-013's
+     read-before-write), and a failed write leaves both of these never having
+     happened. */
+
+  /* planNameKey(name) — trimmed, case-folded, and NOTHING ELSE.
+     Deliberately not `fold()`: folding strips the em dash, so
+     "PHAT — my version" and "PHAT my version" would count as the same name
+     while reading differently on the Plans screen. The thing being prevented
+     is two rows a man cannot tell apart, so the comparison is the string he
+     reads, trimmed and case-insensitive. */
+  function planNameKey(name) { return str(name).trim().toLowerCase(); }
+
+  /* planNamesTaken(store) -> { "<key>": true }
+     Every name a Plans row can print: the stored documents AND the five
+     shipped templates. The templates are code and are never in `store.plans`
+     (planStoreUpsert refuses all five), but they are rows on that screen, so
+     a copy may not take a template's name either. */
+  function planNamesTaken(store) {
+    var t = {}, i, list = (isObj(store) && Array.isArray(store.plans)) ? store.plans : [];
+    for (i = 0; i < SHIPPED_PLANS.length; i++) t[planNameKey(SHIPPED_PLANS[i].name)] = true;
+    for (i = 0; i < list.length; i++) if (isObj(list[i])) t[planNameKey(list[i].name)] = true;
+    return t;
+  }
+
+  var COPY_NAME_MAX = 1000;            /* a terminating loop, not a policy */
+
+  /* freePlanName(store, base, fallback) -> `base`, or `base n` for the LOWEST
+     free integer n >= 2.
+
+     `base` is `copyPlan`'s own default — this function never builds the stem,
+     so "— my version" has exactly one author. `fallback` is the copy's minted
+     planId and is reached only if a thousand numbered names are taken: unique
+     by construction and, unlike a timestamp, available without a clock. */
+  function freePlanName(store, base, fallback) {
+    var b = str(base).trim();
+    var taken = planNamesTaken(store), n, cand;
+    if (b === "" || !own(taken, planNameKey(b))) return b;
+    for (n = 2; n <= COPY_NAME_MAX; n++) {
+      cand = b + " " + n;
+      if (!own(taken, planNameKey(cand))) return cand;
+    }
+    return b + " " + str(fallback).trim();
+  }
+
+  /* editableTarget(store, todayStr) -> {ok, store, plan, created, problems}
+
+     WO-023 W3a, specified verbatim as WO-022 §3 W3. The promote needs
+     somewhere writable; this is the only thing that decides where.
+
+       active plan EDITABLE  -> {ok:true, store: THE SAME OBJECT, plan: the
+                                document in that store, created:false}. The
+                                no-op case moves zero bytes, and it is the
+                                same object rather than an equal one so that
+                                "byte-identical" is true by identity and not
+                                by a comparison someone has to run.
+       active plan READ-ONLY -> copyPlan -> renamePlan (only if the default
+                                name collides) -> planStoreUpsert ->
+                                planStoreSetActive, and created:true.
+
+     THE NAME IS RESOLVED HERE, from the store, because UX §22.22 prints
+     `editableTarget(...).plan.name` in the sheet and the commit makes the same
+     call: what he reads and what Plans shows then agree by construction rather
+     than by two code paths agreeing. `validatePlan` does not forbid duplicate
+     plan names and is not being changed to.
+
+     WHAT IT DOES NOT TOUCH. `state.reintro` and `lastReintroDate` live on the
+     LOG store (schema 3) and are keyed by dayId, not planId — they are not
+     this function's to write and it cannot reach them. That is load-bearing,
+     not incidental: had the counter been plan-keyed, a copy would have
+     silently reset V1's week-5 reintroduction ramp to zero (coach §25.1).
+
+     Refusals, all with the ORIGINAL store handed straight back:
+       activePlanId absent   -> {field:"activePlanId", reason:"missing"}
+       activePlanId unknown  -> {field:"activePlanId", reason:"unknown"}
+       the stored active plan fails validatePlan -> {reason:"invalid"}
+
+     That last one is a deliberate addition to the order's list. `activePlanOf`
+     runs PHAT when the stored active plan is broken (index.html, spec 0.7) and
+     leaves the broken document on disk; copying PHAT here would ALSO repoint
+     `activePlanId` away from his own plan, which is a silent abandonment of
+     the plan he lifts on. Refusing says so instead.
+
+     `todayStr` is passed in, never read from a clock. An unusable date gives
+     the copy `createdAt: null` — copyPlan's shipped behaviour, unchanged. */
+  function editableTarget(store, todayStr) {
+    function fail(problems) {
+      return { ok: false, store: store, plan: null, created: false, problems: problems };
+    }
+    if (!isObj(store)) return fail([{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    var id = str(store.activePlanId).trim();
+    if (id === "") return fail([{ scope: "plan", id: null, field: "activePlanId", reason: "missing" }]);
+
+    /* Resolved exactly as the app resolves it: a shipped template is code and
+       is found ahead of the store (`shippedPlan`), which is the only thing
+       that may hold one by id. */
+    var src = shippedPlan(id), list = Array.isArray(store.plans) ? store.plans : [], i, v;
+    if (!src) {
+      for (i = 0; i < list.length && !src; i++) {
+        if (isObj(list[i]) && str(list[i].planId).trim() === id) src = list[i];
+      }
+      if (!src) return fail([{ scope: "plan", id: id, field: "activePlanId", reason: "unknown" }]);
+      v = validatePlan(src);
+      if (!isObj(v) || v.ok !== true) return fail([{ scope: "plan", id: id, field: null, reason: "invalid" }]);
+    }
+
+    if (src.readOnly !== true) {
+      return { ok: true, store: store, plan: src, created: false, problems: [] };
+    }
+
+    var cp = copyPlan(src, undefined, todayStr);
+    if (!cp.ok) return fail(cp.problems);
+    var name = freePlanName(store, cp.plan.name, cp.plan.planId);
+    if (name !== cp.plan.name) {
+      var rn = renamePlan(cp.plan, name);
+      if (!rn.ok) return fail(rn.problems);
+      cp = rn;
+    }
+    var up = planStoreUpsert(store, cp.plan);
+    if (!up.ok) return fail(up.problems);
+    var ac = planStoreSetActive(up.store, cp.plan.planId);
+    if (!ac.ok) return fail(ac.problems);
+    /* The document IN the returned store, not the one beside it: one object,
+       so a caller cannot edit a copy the store will not persist. */
+    var held = null, pl = Array.isArray(ac.store.plans) ? ac.store.plans : [];
+    for (i = 0; i < pl.length && !held; i++) {
+      if (isObj(pl[i]) && str(pl[i].planId).trim() === str(cp.plan.planId).trim()) held = pl[i];
+    }
+    if (!held) return fail([{ scope: "plan", id: str(cp.plan.planId), field: "planId", reason: "unknown" }]);
+    return { ok: true, store: ac.store, plan: held, created: true, problems: [] };
+  }
+
+  /* promoteDraftEntry(plan, dayId, exId, entry, spec, index)
+       -> {ok, plan, exId, lift, implement, implementSource, problems}
+
+     WO-023 W3b. Writes the movement he added mid-session into his plan as a
+     real slot, once, after the work. Rule AD1.6 and coach §25.3.
+
+     IT CALLS `addExercise`. Every predicate on `n`, `s`, `lo`, `hi`, `k`,
+     `implement` and `mv`, the read-only refusal and the unknown-day refusal
+     are that function's, reached by calling it, so the `problems` this emits
+     are byte-identical to the ones the Plan Editor emits and cannot drift
+     from them. The one thing it does afterwards is rewrite the new slot's id.
+
+     AD1.6.3 — THE SLOT CARRIES THE DRAFT ENTRY'S OWN ID. Tonight's sets ARE
+     this slot's history: carry the id and next session's ghost is its own
+     prior, with no MV1 cross-slot fallback disclosure. If that disclosure
+     appears, the id was not carried. The rewrite is safe because `next` is
+     addExercise's fresh clone that nobody else holds, and assigning an
+     existing key leaves the key order — and so the stored byte shape — exactly
+     as addExercise wrote it.
+
+     `implement`, Rule I3 and coach §25.3.2: `spec.implement` WINS when it is
+     present, and `libraryImplementOf` fills when it is absent. The form shows
+     the derived value pre-filled and CHANGEABLE (§3.2), so a derived value
+     that beat his edit would discard the one thing he was asked to check.
+     Neither available -> REFUSED with `{field:"implement", reason:"missing"}`,
+     never an invalid plan and never a guessed implement: on the 199 library
+     rows I3 refuses, the form asks, and a caller that did not ask gets a
+     reason it can print instead of a control that dies.
+
+     WHAT IT NEVER WRITES, and these are refusals rather than omissions
+     because silently dropping a field a caller passed is the same bug class
+     as silently dropping a set:
+       `cut`    -> "drop for weeks 1-4, reintroduce from week 5" is meaningless
+                   on a slot created in week 9, and V1's stored counter is an
+                   INDEX into the day's `reintroOrder` list, so appending to
+                   that list changes what the existing counter means.
+       `lift`   -> minted fresh, never joined to an existing slot's. Joining
+                   two prescriptions' series onto one Trend line is B-46.
+       `cue`    -> absent, a supported state (B-153's family).
+     `reintroOrder` and `keyLifts` are not read and not written. A slot with
+     one session of history nominated as a stall subject would be a six-week
+     verdict on no evidence.
+
+     Position: END of the day's `ex`, always, regardless of where `afterExId`
+     put the card tonight (AD1.6). A plan is a prescription, not a transcript
+     of one session, and added work sits behind the work it must not
+     compromise. The day is never substituted and never created (AD1.6.5):
+     an unresolvable `dayId` is addExercise's own `{scope:"day", field:"id",
+     reason:"unknown"}`.
+
+     AD1.6.6 — the same movement twice in one day WARNS, it does not refuse.
+     The warning is copy (MOVE_WARN.Q4) and its literal lives with the view,
+     so this function neither refuses nor states it: the caller checks the
+     day for `mv` before it asks.
+
+     Provenance: promoting a `hyp` slot into a PHAT-derived `d1` makes PV1(b)
+     fail, so `phatProvenance` flips to false and ST1's and D1's copy moves
+     from the PHAT lines to the generic ones. ACCEPTED AND DISCLOSED by clause
+     PV1.2, not prevented here (coach §25.2.2). Nothing in this function reads
+     or protects provenance.
+
+     Nothing about tonight is re-judged (AD1.6.4): no `rx`, no `sw`, no
+     verdict. This touches the PLAN document and nothing else. */
+  function promoteDraftEntry(plan, dayId, exId, entry, spec, index) {
+    var id = str(exId).trim();
+    function fail(problems) {
+      return { ok: false, plan: plan, exId: null, lift: null,
+               implement: null, implementSource: null, problems: problems };
+    }
+    if (!isObj(plan)) return fail([{ scope: "plan", id: null, field: null, reason: "missing" }]);
+    if (plan.readOnly === true) return fail([{ scope: "plan", id: str(plan.planId), field: "readOnly", reason: "locked" }]);
+    if (!isObj(entry)) return fail([{ scope: "ex", id: null, field: null, reason: "missing" }]);
+    if (!isObj(spec)) return fail([{ scope: "ex", id: null, field: null, reason: "missing" }]);
+    if (id === "") return fail([{ scope: "ex", id: null, field: "id", reason: "missing" }]);
+    /* Taken ANYWHERE in the plan - plan id, day ids, exercise ids and lift
+       ids are one namespace, and a collision there would make one token mean
+       two things (WO-004 C-6). */
+    if (own(takenIds(plan), id)) return fail([{ scope: "ex", id: id, field: "id", reason: "taken" }]);
+
+    var unsupported = [];
+    if (spec.cut !== undefined) unsupported.push({ scope: "ex", id: id, field: "cut", reason: "unsupported" });
+    if (spec.lift !== undefined) unsupported.push({ scope: "ex", id: id, field: "lift", reason: "unsupported" });
+    if (spec.cue !== undefined) unsupported.push({ scope: "ex", id: id, field: "cue", reason: "unsupported" });
+    if (unsupported.length) return fail(unsupported);
+
+    var mv = isMvId(entry.mv) ? entry.mv : null;
+    var derived = libraryImplementOf(index, mv);
+    var impl = (spec.implement !== undefined) ? spec.implement : derived;
+    var isrc = (spec.implement !== undefined) ? "spec" : (derived === null ? null : "library");
+    if (impl === null || impl === undefined) {
+      return fail([{ scope: "ex", id: id, field: "implement", reason: "missing" }]);
+    }
+
+    var sp = { n: entry.n, s: spec.s, lo: spec.lo, hi: spec.hi, k: spec.k, implement: impl };
+    if (mv !== null) sp.mv = mv;
+    var r = addExercise(plan, dayId, sp);
+    if (!r.ok) return fail(r.problems);          /* passed through VERBATIM */
+
+    var next = r.plan, slot = exById(next, r.exId);
+    if (!isObj(slot)) return fail([{ scope: "ex", id: id, field: "id", reason: "unknown" }]);
+    slot.id = id;
+    var lift = str(slot.lift);
+    if (lift === id) {
+      /* addExercise probed the lift against the id it minted, not against the
+         one that replaced it. One draw in 1.7e12 and the kind prefixes differ,
+         but the guarantee mintId offers is the probe, not the entropy. */
+      var taken = takenIds(next);
+      taken[id] = true;
+      lift = mintId(taken, "lift");
+      slot.lift = lift;
+    }
+    return { ok: true, plan: next, exId: id, lift: lift,
+             implement: impl, implementSource: isrc, problems: [] };
+  }
+
   /* ---- name resolution for a session whose plan is gone ----
      resolveEx(plans, exId) -> the exercise, from the first plan in `plans`
      that carries the id, or null. Callers pass [active, ...stored, PHAT]:
@@ -13127,6 +13383,13 @@
     newPlan: newPlan,
     planStoreUpsert: planStoreUpsert,
     planStoreSetActive: planStoreSetActive,
+    /* ---- WO-023 W3a/W3b. The promote, pure: editableTarget answers where
+       it may be written and promoteDraftEntry what is written. Neither
+       persists anything and neither restates a validator — both call the
+       shipped editors, so the Plan Editor's refusals and these are one set of
+       refusals. `editableTarget(...).plan.name` is what UX §22.22 prints. */
+    editableTarget: editableTarget,
+    promoteDraftEntry: promoteDraftEntry,
     EX_GONE: EX_GONE,
     DAY_GONE: DAY_GONE,
     resolveEx: resolveEx,
