@@ -1618,6 +1618,22 @@ const S={tab:"train",sub:"",sessions:[],includeCut:false,bw:[],draft:null,dayId:
             is spoken (UX 22.10). `swap` is the sheet's own state:
             {exId, q, pick, back} - in memory, dropped on close. */
          lib:{st:"off",index:null,reason:null}, swap:null,
+         /* WO-023 W4 (UX §22.22). `Keep {name} in the plan` - the Summary
+            promote of a movement he added mid-session. IN MEMORY ONLY and
+            deliberately so (§22.22.14): `open` is the exercise id whose
+            inline form is rendered, or null, and `f` holds the typed spec per
+            exercise id - {s, lo, hi, k, implement, err, warn} - so CANCEL,
+            a stepper tap and an UNDO all come back to his own four numbers
+            while a reload comes back to an empty form. He may add two
+            movements; each carries its own entry in `f` and only one `open`.
+            `undo` is the pending byte restore: {exId, name, dayName,
+            copyName, source, before, after} - the bytes the commit replaced,
+            the bytes it wrote, and the names its two toasts print. Dropped
+            with the draft, never written anywhere.
+            THE DURABLE HALF IS NOT HERE. Whether a movement has ALREADY been
+            promoted is `kp:1` on the draft entry (§22.22.15), because that
+            fact has to survive a reload and this object may not. */
+         keep:{open:null,f:{},undo:null},
          /* WO-012 W4. gymKeep: the `unit` / `ex` keys salvaged from a profile
             whose BARS were refused whole (S.gymBad), merged back under the
             next Gym write so a bad bar list never costs the decided unit or
@@ -2934,6 +2950,33 @@ async function gymRemove(i){
   const back=document.getElementById("gym-add"); if(back) back.focus();
 }
 
+/* WO-023 W4 (UX §22.22.15). HAS THIS MOVEMENT BEEN ADDED TONIGHT AND KEPT IN
+   THE PLAN? The one question every added-ness read in this file asks, and the
+   only durable fact behind it: `kp:1` on the draft entry, carried by saveDraft
+   and hydrateDraft both.
+
+   WHY IT EXISTS AT ALL. The promote writes a real slot carrying the draft
+   entry's own id (AD1.6.3), so from the next paint PHAT.resolveEx SUCCEEDS on
+   that id - and `added` was computed as "no slot resolves", which is now
+   false. Nothing in the draft changed, nothing about tonight changed, and yet
+   in one repaint the block he is looking at would lose its `ADDED` kicker,
+   lose `No prescription` and Rule AD1's sentence, gain a VERDICT computed
+   from a prescription he typed after the sets it grades, gain a target line,
+   gain a rest target and an EXTRA flag, and at `Save session` the entry could
+   acquire an `rx` it never had. AD1.6.4 says tonight is not re-judged, in any
+   of those ways, so the mark is read at every seam that asks:
+     exAnywhere   - a marked id resolves to the ADDED stub, ahead of the slot
+     sessionCtx   - the day's list skips it; the draft loop keeps the card
+     sumBody      - the same, for the record's rows and for its counters
+     cardMovement - added stays true even if a caller hands over the slot
+     finish       - the plan handed to buildSession has the slot stripped,
+                    which is the `rx` half of the same ruling
+   The slot is in the plan from the NEXT session. That is the whole promise the
+   confirm makes, and this is the code that keeps it. */
+function keptInPlan(id){
+  const st=S.draft&&S.draft.entries&&S.draft.entries[id];
+  return !!(st&&st.kp===1);
+}
 /* ============================================================ W7: session
    ONE EXERCISE PER SCREEN. Everything the screen needs, computed once per
    paint. Fails OPEN (spec §0.7): if Rule V1 throws, the whole day renders,
@@ -2960,7 +3003,12 @@ function sessionCtx(){
      the tier hides it. A refusal pointing at an unreachable row is the worst
      state in the spec. */
   S.problems.forEach(pr=>{ if(pr.exId&&ids.indexOf(pr.exId)<0) ids.push(pr.exId); });
-  let list=day?day.ex.filter(e=>ids.indexOf(e.id)>=0):[];
+  /* WO-023 W4 (§22.22.15). A KEPT ADDED MOVEMENT IS NOT A PLAN ROW TONIGHT.
+     Its slot is in the day from the next session on, so the day's own list
+     skips it here and the draft loop below picks it up through exAnywhere -
+     which is where it was before the promote, in the same position, so the
+     card order and the `{i} of {n}` header do not move. */
+  let list=day?day.ex.filter(e=>ids.indexOf(e.id)>=0&&!keptInPlan(e.id)):[];
   /* D8. AN ENTRY WHOSE EXERCISE IS NO LONGER IN THIS DAY IS STILL A SCREEN.
      The plan moved under the draft (an exercise removed by the editor, or a
      restore that brought down a different plan); the numbers he typed are
@@ -2971,7 +3019,9 @@ function sessionCtx(){
      device, and flagged in words on the card (vSession). */
   const ents=(S.draft&&S.draft.entries)||{};
   Object.keys(ents).forEach(k=>{
-    if(day&&day.ex.some(e=>e.id===k)) return;
+    /* WO-023 W4: a KEPT added movement is in `day.ex` from this paint on, and
+       dropping it here would delete the card he is standing in front of. */
+    if(day&&day.ex.some(e=>e.id===k)&&!keptInPlan(k)) return;
     if(list.some(e=>e.id===k)) return;
     const st=ents[k]; if(!st) return;
     /* WO-014 W5. A MOVEMENT HE ADDED IS A SCREEN BEFORE HE HAS TYPED
@@ -3016,7 +3066,13 @@ function cardMovement(e){
   const st=(e&&S.draft&&S.draft.entries)?S.draft.entries[e.id]:null;
   const mv=(st&&typeof st.mv==="string"&&st.mv)?st.mv:null;
   const slotMv=(e&&typeof e.mv==="string"&&e.mv)?e.mv:null;
-  const added=!!(e&&e.added);
+  /* WO-023 W4 (§22.22.15). THE MARK IS READ HERE TOO, not only in the row
+     builders. `e.added` is the stub's flag; `keptInPlan` is the fact. A kept
+     movement whose SLOT is handed over - by a caller the row builders do not
+     reach, or by one written later - is still an added movement tonight, and
+     `swapped` is still false even though the promote wrote the entry's own
+     `mv` onto the slot. Defence in depth for one repaint he is looking at. */
+  const added=!!(e&&e.added)||keptInPlan(e&&e.id);
   const swapped=!added&&!!mv&&mv!==slotMv;
   const nm=(st&&typeof st.n==="string"&&st.n.trim()!=="")?st.n.trim():null;
   return {mv:mv, slotMv:slotMv, swapped:swapped, added:added,
@@ -3915,7 +3971,18 @@ function sumRow(e,st,C){
      this screen, so the mark is a kicker plus a line, in the shape SKIPPED
      already uses (UX §22.6). */
   const mvc=cardMovement(e);
-  let h=`<div class="sumex"><div class="row"><span class="nm">${esc(mvc.name)}</span>`;
+  /* WO-023 (UX §22.22.3). DOES THIS ROW CARRY THE PROMOTE SLOT? An ADDED
+     movement with at least one completed set, on Summary, before the save -
+     never a swapped entry (that is §22.7's control and two controls in one
+     block is a defect), never a plan slot, never a D5 stub, and never on zero
+     completed sets, where there is nothing to write a prescription about and
+     a greyed control would be a question he answers by guessing (coach §3.6).
+     The name element is made programmatically focusable only on these rows,
+     because the commit moves focus there - that is where the changed reading
+     is (§22.22.13). Every other row's name is the markup it always was. */
+  const keepable=mvc.added&&done.length>0&&!e.gone;
+  let h=`<div class="sumex"><div class="row"><span class="nm"${
+    keepable?` id="kn-${esc(e.id)}" tabindex="-1"`:""}>${esc(mvc.name)}</span>`;
   /* spec 5.2: a state, not a verdict. No enclosure, no kicker, no arrow. */
   h+=done.length?"":`<span class="sumskip">Skipped</span>`;
   h+=(mvc.swapped?`<span class="sumskip">Swapped</span>`
@@ -4015,6 +4082,18 @@ function sumRow(e,st,C){
       ? `<p class="sumro">Today only. ${esc(sp().name||"This plan")} is read-only &mdash; duplicate it in Plans to keep a change.</p>`
       : `<button class="ghostbtn sumperm" data-perm="${esc(e.id)}">${esc("Put "+mvc.name+" in the plan")}</button>`;
   }
+  /* ---- WO-023 (UX §22.22). `KEEP {NAME} IN THE PLAN` - the added
+     movement's promote, in the slot immediately after Rule AD1's advice
+     block: after the reading, not before it. §22.7's geometry, for §22.7's
+     reason. An added card has no verdict; AD1's sentence is its reading, and
+     the condition and its remedy then read in sequence - `A verdict needs it
+     in your plan.` followed by the one tap that puts it there.
+     THE FORM GROWS DOWNWARD ONLY. Nothing above moves, and nothing in the
+     bottom stack below changes except its scroll position. Built after the
+     per-row catch and inside the row builder, so a thrown rule costs the
+     verdict block and not this control, and a throw here costs the row and
+     never `Save session` (§0.7). */
+  if(keepable) h+=vKeepSlot(e,mvc,C);
   return h+`</div>`;
 }
 /* An exercise by id from ANY day of the plan, because a draft can legitimately
@@ -4025,7 +4104,16 @@ function sumRow(e,st,C){
    writes, and silently omitting it is the one thing this screen may not do. */
 function exAnywhere(id){
   let out=null;
-  try{ out=PHAT.resolveEx([sp()].concat(allPlans()),id); }catch(err){ out=null; }
+  /* WO-023 W4 (§22.22.15). THE MARK IS CONSULTED BEFORE THE PLAN, and the
+     order is the whole point: the promote put a real slot in the plan under
+     this very id, so resolveEx now SUCCEEDS and would hand back a slot with
+     s/lo/hi/k on it. Tonight that slot does not exist yet (AD1.6.4), so a
+     kept entry skips the lookup and falls through to the added seam below -
+     s:0, lo:0, hi:0, k:"" - which is byte for byte what it resolved to
+     before he tapped. */
+  if(!keptInPlan(id)){
+    try{ out=PHAT.resolveEx([sp()].concat(allPlans()),id); }catch(err){ out=null; }
+  }
   if(out) return out;
   /* WO-014 W5. THE SEAM FOR A MOVEMENT ADDED MID-SESSION (the WO's own
      wording: "an added library movement resolves through the entry's own
@@ -4059,8 +4147,12 @@ function sumBody(C){
      tier hid that has numbers in it (those save, so they show). Then anything
      left in the draft that is not in this day at all, appended rather than
      dropped. */
-  const rows=C.day.ex.filter(e=>C.list.some(x=>x.id===e.id)||has(e.id))
-    .concat(Object.keys(ents).filter(k=>has(k)&&!C.day.ex.some(e=>e.id===k)).map(exAnywhere));
+  /* WO-023 W4 (§22.22.15): a KEPT added movement leaves the day's half of
+     this list and comes back through the draft's half, so its row is built
+     from the ADDED stub and reads what it read before the promote - same
+     kicker, same `No prescription`, same AD1 sentence, no verdict. */
+  const rows=C.day.ex.filter(e=>(C.list.some(x=>x.id===e.id)||has(e.id))&&!keptInPlan(e.id))
+    .concat(Object.keys(ents).filter(k=>has(k)&&(!C.day.ex.some(e=>e.id===k)||keptInPlan(k))).map(exAnywhere));
 
   /* THE COUNTERS READ EVERY DRAFT ENTRY, not just the listed rows, so the
      numbers can never describe less than the save writes. Volume INCLUDES
@@ -4075,7 +4167,11 @@ function sumBody(C){
        hidden. The same two counters vTrend prints, in the same words. */
     if(done.length) nEx++;
     else if(String(st.note==null?"":st.note).trim()!=="") nNote++;
-    const e=C.day.ex.find(x=>x.id===k)||exAnywhere(k);
+    /* WO-023 W4 (§22.22.15): the `Extra sets` counter reads the PRESCRIPTION,
+       so a kept added movement must reach it through the added stub (s:0) or
+       three logged sets would become three extra sets the moment he typed
+       `3` into the form. */
+    const e=(keptInPlan(k)?null:C.day.ex.find(x=>x.id===k))||exAnywhere(k);
     try{ const r=PHAT.extraSets(st.sets,PHAT.deloadEx(e,C.deload.active===true));
          if(r) nX+=r.count; }catch(err){}
   });
@@ -5331,11 +5427,21 @@ function stepInt(cur,dir,lo,hi){
 function blankForm(dayId){ return {dayId:dayId,n:"",s:"",lo:"",hi:"",k:"",implement:"",lift:"",cue:"",mv:"",mvN:"",err:"",warn:null}; }
 /* Rule K2 warn-once: the two type/reps mismatches that hurt in the harmful
    direction (heavy sets under short rest). Returns the message or "". Power
-   never warns. */
-function kindWarn(k,lo,hi){
+   never warns.
+
+   WO-023 W4 (UX §22.22.16 (1)). `btn` NAMES THE CONTROL THE SECOND TAP LANDS
+   ON, because Rule K2 now fires on two forms with two different buttons: the
+   Plan Editor's `Add exercise` and the Summary promote's `Keep it in the
+   plan`. A sentence that tells him to tap a button this screen does not have
+   is a dead instruction, so the token is a parameter and the default is the
+   shipped word - the Plan Editor passes it explicitly and renders BYTE-
+   IDENTICALLY to before. Rule K2's content is untouched: same two
+   conditions, same two sentences, same warn-once contract. */
+function kindWarn(k,lo,hi,btn){
   const range=lo===hi?String(lo):lo+"–"+hi;
-  if(k==="speed"&&hi>5) return "Speed work is 3–5 reps moved fast. At "+range+" reps this is hypertrophy work. Change the reps or the type, or tap Add exercise again to keep it.";
-  if(k==="hyp"&&hi<=5) return "Hypertrophy work rests 1–2 min. At "+range+" reps that is too short for heavy sets. Choose Power, or tap Add exercise again to keep it.";
+  const b=btn||"Add exercise";
+  if(k==="speed"&&hi>5) return "Speed work is 3–5 reps moved fast. At "+range+" reps this is hypertrophy work. Change the reps or the type, or tap "+b+" again to keep it.";
+  if(k==="hyp"&&hi<=5) return "Hypertrophy work rests 1–2 min. At "+range+" reps that is too short for heavy sets. Choose Power, or tap "+b+" again to keep it.";
   return "";
 }
 /* ADD, refused naming the first empty field (§9.5). Nothing is created until
@@ -5355,7 +5461,7 @@ function addFromForm(){
   else if(!f.k) err="Not added. Choose a type.";
   else if(!f.implement) err="Not added. Choose an implement.";
   if(err){ f.err=err; render(true); const el=document.querySelector(".peform .refuse"); if(el) el.scrollIntoView({block:"nearest"}); return; }
-  const wmsg=kindWarn(f.k,lo,hi);
+  const wmsg=kindWarn(f.k,lo,hi,"Add exercise");
   const armed=f.warn&&f.warn.k===f.k&&f.warn.lo===lo&&f.warn.hi===hi;
   if(wmsg&&!armed){ f.warn={k:f.k,lo:lo,hi:hi,msg:wmsg}; render(true); const el=document.querySelector(".peform .refuse"); if(el) el.scrollIntoView({block:"nearest"}); return; }
   const spec={n:String(f.n).trim(),s:s,lo:lo,hi:hi,k:f.k,implement:f.implement};
@@ -6369,6 +6475,22 @@ document.getElementById("view").addEventListener("click",async e=>{
   /* WO-014 (UX §22.7): *make it permanent*, on the Summary only. */
   const perm=e.target.closest("[data-perm]");
   if(perm){ askPermanent(perm.dataset.perm); return; }
+  /* WO-023 (UX §22.22). `Keep {name} in the plan`, on the Summary only, and
+     delegated from #view like everything else - the control and its form are
+     rebuilt on every paint and a per-node listener would leak across the
+     re-render. The form's own controls are only consulted while a form is
+     open, so a stray data-kf* attribute from any other screen cannot reach
+     this state. */
+  const kpb=e.target.closest("[data-keep]");
+  if(kpb){ keepOpen(kpb.dataset.keep); return; }
+  if(S.keep.open){
+    const kst=e.target.closest("[data-kfstep]");
+    if(kst){ keepStep(kst.dataset.kfstep,kst.dataset.dir); return; }
+    const kk=e.target.closest("[data-kfk]"); if(kk){ keepPick("k",kk.dataset.kfk); return; }
+    const ki=e.target.closest("[data-kfi]"); if(ki){ keepPick("implement",ki.dataset.kfi); return; }
+    const ka=e.target.closest("[data-kfadd]"); if(ka){ keepAsk(ka.dataset.kfadd); return; }
+    const kc=e.target.closest("[data-kfcancel]"); if(kc){ keepCancel(kc.dataset.kfcancel); return; }
+  }
   if(e.target.closest("#addset")){ addSet(); return; }
   const rm=e.target.closest("#rmset");
   if(rm){ askRemoveSet(+rm.dataset.k); return; }
@@ -6537,6 +6659,19 @@ document.getElementById("view").addEventListener("input",e=>{
       if((t.dataset.pf==="lo"||t.dataset.pf==="hi")&&S.pe.form.warn){ S.pe.form.warn=null; const el=document.querySelector(".peform .refuse"); if(el) el.remove(); }
       return;
     }
+    return;
+  }
+  /* WO-023 W4 (UX §22.22.7 tap 2). The promote form's numbers live in
+     S.keep.f and NEVER in the DOM, which is B2's own pattern and exists for
+     exactly this: a stepper tap re-renders the form and cannot lose a typed
+     value. NO render on a keystroke (B-19), and the one node a typed reps
+     change invalidates - Rule K2's armed warning - is removed rather than
+     repainted under the finger. Nothing here writes a storage key: the typed
+     spec is memory only, by design (§22.22.14). */
+  if(e.target.dataset.kf&&S.keep.open&&S.keep.f[S.keep.open]){
+    const f=S.keep.f[S.keep.open], k=e.target.dataset.kf;
+    f[k]=e.target.value; f.err="";
+    if((k==="lo"||k==="hi")&&f.warn){ f.warn=null; const el=document.querySelector(".peform .refuse"); if(el) el.remove(); }
     return;
   }
   if(e.target.classList.contains("note")){
@@ -7805,6 +7940,422 @@ async function writePlanDoc(doc){
   if(S.sessPlan&&S.sessPlan.planId===doc.planId) S.sessPlan=storedPlan(doc.planId)||doc;
   return true;
 }
+
+/* ================================================= WO-023: KEEP IT IN THE PLAN
+   UX §22.22, coach addendum §25.3 (clauses K3.5 and AD1.6). HIS ASK, in his
+   words: "allow me to decide if it's permanent or just for the session." The
+   default is still just-for-the-session - adding never touches the plan - and
+   this is the one explicit control that makes it permanent, AFTER the work,
+   on the record screen, for a movement he added mid-session and actually
+   logged sets on.
+
+   ONE CONTROL, ONE FORM, ONE CONFIRM, ONE TOAST, ONE UNDO, all of it inside
+   the added movement's own Summary block, below Rule AD1's sentence. Nothing
+   that rendered before renders differently (§22.22.18).
+
+   WHAT REACHES DISK: one patch of phat:v1:plans - {plans, activePlanId}
+   TOGETHER, through save(), on the commit tap and again on the undo - plus the
+   one draft mark §22.22.15 requires. No log write, no bodyweight write, no
+   prefs write. `Save session` shares no flag, no lock and no refusal slot
+   with any of it and is never blocked (§22.22.9).
+
+   THE SESSION'S PLAN DOES NOT MOVE. Unlike writePlanDoc above, this flow does
+   NOT re-point S.sessPlan at the written document: the slot is in the plan
+   from his NEXT session, which is the only promise the confirm makes, so the
+   open session keeps reading the document it started on. The durable mark
+   (keptInPlan) is what makes that true after a reload as well, when the
+   resumed draft legitimately hydrates against the new plan. */
+
+/* The literals, §22.22.11 #73-#92. Every one through esc() at the point of
+   use. #77 `Cancel`, #84 `Not now`, #81 (MOVE_WARN.Q4) and #91's first two
+   sentences (DEMO_STORE) are REUSED verbatim from what already ships; the
+   rest are this section's own. The rule behind the last four: every refusal
+   reachable from the road to `Save session` ends on `Today's sets still
+   save.`, or it reads as a failed save. */
+const KEEP_FAIL="Could not keep it. Nothing changed. Today's sets still save.";                                   /* #89 */
+const KEEP_D8="That day is not in your plan any more, so there is nowhere to keep this. Today's sets still save."; /* #90 - coach §25.3.4, verbatim */
+const KEEP_DEMO=DEMO_STORE+" Today's sets still save.";                                                            /* #91 - a composition, not an edit */
+const KEEP_BROKEN="The plan you are on will not load, so there is nowhere to keep this. Export from Settings, then open diag.html. Today's sets still save."; /* #92 */
+const keepReceipt=day=>day+" holds it from your next session. No verdict for tonight.";                            /* #86 */
+
+/* The draft entry this control is about. Added movements only - the entry is
+   the only thing that knows what it is (`n` names it, `mv` identifies it). */
+function keepEntry(id){
+  const st=S.draft&&S.draft.entries&&S.draft.entries[id];
+  return (st&&typeof st.mv==="string"&&typeof st.n==="string"&&st.n.trim()!=="")?st:null;
+}
+/* The day's name as the plan the promote WRITES spells it, falling back to the
+   session's own day. Used by the receipt and both toasts, which outlive the
+   `editableTarget` call the trigger made. */
+function keepDayName(C){
+  let d=null;
+  try{ d=PHAT.resolveDay([S.plan].concat(allPlans()),S.dayId); }catch(err){ d=null; }
+  return (d&&d.name)||(C&&C.day?C.day.name:"This day");
+}
+/* WHERE MAY IT BE WRITTEN, and if nowhere, WHICH SENTENCE SAYS SO.
+   §22.22.3 rows 3 and 4. Pure apart from reading S: `editableTarget` builds
+   the prospective copy without persisting a byte, so this is safe to call on
+   every paint of Summary and vSummary stays a read (C6).
+
+   ORDER, and it is a reading of the spec rather than its literal sequence:
+   row 3's condition is "the day does not resolve IN THE PLAN THE PROMOTE
+   WOULD WRITE", so there has to be such a plan before the question can be
+   asked. Demo and a blocked store are decided first because they are cheap
+   and decisive; then the target; then the day.
+
+   THE BROKEN-PLAN BRANCH READS THE ENGINE'S OWN REASON and never re-runs
+   validatePlan to work out the cause: `reason:"invalid"` is editableTarget's
+   word for "activePlanId names a stored plan that will not validate", which
+   the coach ruled (§25.9.2) must refuse rather than fall back to a PHAT copy
+   - a fallback would hand ST1, D1, SP1 and V1 a keyLifts, speedSource and
+   reintroOrder he never programmed. */
+function keepTarget(){
+  if(S.plansMeta.demo===true) return {ok:false,line:KEEP_DEMO};
+  if(S.blockWrites[PLANS]) return {ok:false,line:KEEP_FAIL};
+  let et=null; try{ et=PHAT.editableTarget(S.plans,PHAT.localDate()); }catch(err){ et=null; }
+  if(!et||et.ok!==true){
+    const bad=!!(et&&Array.isArray(et.problems)&&et.problems.some(p=>p&&p.reason==="invalid"));
+    return {ok:false,line:bad?KEEP_BROKEN:KEEP_FAIL};
+  }
+  const day=((et.plan&&et.plan.days)||[]).find(d=>d&&d.id===S.dayId);
+  if(!day) return {ok:false,line:KEEP_D8};
+  return {ok:true,et:et,day:day};
+}
+/* THE DUPLICATE TEST IS BY MOVEMENT, NOT BY `lift` (§22.22.16 (4)).
+   moveWarnText's Q4 branch finds its twin with `x.lift === e.lift`, and the
+   promote MINTS A FRESH `lift` on purpose (coach §25.3.1 - joining two
+   prescriptions onto one Trend line is the B-46 collapse), so a `lift`
+   comparison here could never match and MOVE_WARN.Q4 would never render. So:
+   `mv` against each slot's effective movement, and on a slot that carries no
+   `mv` - an unmapped slot is a supported state forever - a trimmed,
+   case-insensitive name comparison instead. It WARNS and does not refuse
+   (AD1.6.6): two rep ranges on one movement in one day is a real technique
+   and PHAT ships it across days. */
+function keepDup(day,st){
+  const mv=(st&&typeof st.mv==="string"&&st.mv)?st.mv:null;
+  const nm=String((st&&st.n)||"").trim().toLowerCase();
+  const ex=(day&&day.ex)||[];
+  for(let i=0;i<ex.length;i++){
+    const x=ex[i]; if(!x) continue;
+    const xmv=(typeof x.mv==="string"&&x.mv)?x.mv:null;
+    if(xmv){ if(mv&&xmv===mv) return x; continue; }
+    if(nm&&String(x.n||"").trim().toLowerCase()===nm) return x;
+  }
+  return null;
+}
+
+/* ---- the slot: one position in the block, exactly one of six things ---- */
+function vKeepSlot(e,mvc,C){
+  const id=e.id;
+  /* ALREADY PROMOTED THIS SESSION. Decided ahead of every standing line:
+     once it is in the plan, a sentence about where it could go is moot. Its
+     condition is the DRAFT MARK, so it survives a reload (§22.22.15) and the
+     block is not silent after the toast expires. */
+  if(keptInPlan(id)) return `<p class="sumnote">${esc(keepReceipt(keepDayName(C)))}</p>`;
+  const t=keepTarget();
+  if(!t.ok) return `<p class="sumnote">${esc(t.line)}</p>`;
+  if(S.keep.open===id) return vKeepForm(e,mvc,t);
+  /* NO aria-haspopup: it opens an inline region in this page, not a dialog,
+     and no aria-expanded either - the trigger is REPLACED by the form rather
+     than disclosing one beneath itself, so there is no control left to be
+     expanded. #73 on the face, #74 as the accessible name with #73 as its
+     prefix (WCAG 2.5.3) - the clause is off the face so it cannot wrap to
+     three lines. */
+  const face="Keep "+mvc.name+" in the plan";
+  return `<button class="ghostbtn sumperm" id="keep-${esc(id)}" data-keep="${esc(id)}"
+    aria-label="${esc(face+" from your next session")}">${esc(face)}</button>`;
+}
+/* ---- the form: WO-006 B2's, reused, with four fields dropped ----
+   INLINE, in the trigger's place, and the page scrolls. It is ~771 px tall at
+   393 px and 100% text and the sets it is about are rendered three inches
+   above it; a bottom sheet would put them behind a scrim, which is the one
+   thing the coach's own ruling on the hint line assumes is not true (§25.3.2).
+   Name, `Same movement as`, Cue and `Pick from the library` are GONE - the
+   movement is already decided and named by the block's own heading. Sets,
+   Reps from, Reps to are EMPTY and Type is UNSELECTED: collected, never
+   guessed (B-57, coach §25.3.1 / §25.3.2). Implement arrives pre-filled from
+   Rule I3's read-time derivation where the library answers and ASKS on the
+   199 rows it refuses - and his edit wins either way, because
+   promoteDraftEntry takes spec.implement ahead of the derived value.
+   Every id is namespaced by the entry id: one form renders at a time, and the
+   namespace is what keeps that true if a build ever renders two. */
+function vKeepForm(e,mvc,t){
+  const f=S.keep.f[e.id]||{}, nsp=k=>"kf-"+e.id+"-"+k;
+  const seg=(name,list,cur,attr,lbl)=>`<span class="lbl">${lbl}</span><div class="seg" role="group" aria-label="${lbl}">${
+    list.map(k=>`<button data-${attr}="${esc(k)}" aria-pressed="${cur===k?"true":"false"}"><span class="mk" aria-hidden="true"></span>${esc(name[k])}</button>`).join("")}</div>`;
+  const step=(key,lbl)=>`<div class="grp"><span class="unit">${lbl}</span><span class="stepper">
+    <button data-kfstep="${key}" data-dir="-" aria-label="${lbl} down">&minus;</button>
+    <input id="${esc(nsp(key))}" data-kf="${key}" inputmode="numeric" value="${esc(f[key])}" aria-label="${lbl}">
+    <button data-kfstep="${key}" data-dir="+" aria-label="${lbl} up">+</button></span></div>`;
+  return `<div class="peform" role="group" aria-labelledby="${esc(nsp("h"))}">
+    <span class="lbl" id="${esc(nsp("h"))}" tabindex="-1">${esc("Keep "+mvc.name)}</span>
+    <div class="perange" style="margin-top:var(--s3)">${step("s","Sets")}${step("lo","Reps from")}${step("hi","Reps to")}</div>
+    ${seg(KIND_LBL,PHAT.PLAN_KINDS,f.k,"kfk","Type")}
+    <p class="tiny">${esc(KIND_HELP[f.k]||KIND_HELP.none)}</p>
+    ${seg(IMPL_LBL,PHAT.PLAN_IMPLEMENTS,f.implement,"kfi","Implement")}
+    <p class="tiny">Implement sets how a zero load is named and whether you get a fallback when 2.5 kg is not available.</p>
+    ${f.err?`<div class="refuse mt12" role="alert"><p><span aria-hidden="true">! </span>${esc(f.err)}</p></div>`
+      :f.warn?`<div class="refuse mt12" role="alert"><p><span aria-hidden="true">! </span>${esc(f.warn.msg)}</p></div>`:""}
+    <button class="primary mt12" id="${esc(nsp("add"))}" data-kfadd="${esc(e.id)}">Keep it in the plan</button>
+    <button class="ghostbtn mt12" data-kfcancel="${esc(e.id)}">Cancel</button>
+  </div>`;
+}
+
+/* ---- tap 1: open the form. Nothing is written, and his own numbers come
+   back if he has been here before (§22.22.14 - that is not a pre-fill: a
+   pre-fill is a number the app chose). Focus goes to the group label, never
+   to a stepper input: an autofocused numeric field opens the keyboard over a
+   form he has not read yet. ---- */
+function keepOpen(id){
+  if(!S.sum) return;
+  const st=keepEntry(id); if(!st) return;
+  if(keptInPlan(id)) return;
+  if(!S.keep.f[id]){
+    let im=null;
+    try{ im=PHAT.libraryImplementOf(S.lib.index,st.mv); }catch(err){ im=null; }
+    S.keep.f[id]={s:"",lo:"",hi:"",k:"",implement:im||"",err:"",warn:null};
+  }
+  S.keep.f[id].err=""; S.keep.f[id].warn=null;
+  S.keep.open=id;
+  render(true);
+  const h=document.getElementById("kf-"+id+"-h");
+  if(h){ h.focus(); h.scrollIntoView({block:"nearest"}); }
+}
+/* tap 6: close it. The typed values stay in S.keep.f for as long as Summary
+   holds this draft, and the trigger comes back with focus on it. */
+function keepCancel(id){
+  if(S.keep.open!==id) return;
+  S.keep.open=null;
+  if(S.keep.f[id]){ S.keep.f[id].err=""; S.keep.f[id].warn=null; }
+  render(true);
+  const b=document.getElementById("keep-"+id); if(b) b.focus();
+}
+/* tap 2: a stepper or a segmented option. Values in memory only; the form
+   re-renders from S.keep.f, which is why a tap cannot lose a typed number. */
+function keepStep(key,dir){
+  const f=S.keep.f[S.keep.open]; if(!f) return;
+  f[key]=String(stepInt(f[key],dir,1,key==="s"?20:100));
+  f.err=""; if(key!=="s") f.warn=null;
+  render(true);
+}
+function keepPick(key,val){
+  const f=S.keep.f[S.keep.open]; if(!f) return;
+  f[key]=val; f.err="";
+  if(key==="k") f.warn=null;
+  render(true);
+}
+function keepRefuse(f,msg){
+  f.err=msg; render(true);
+  const el=document.querySelector(".peform .refuse");
+  if(el) el.scrollIntoView({block:"nearest"});
+  announce(msg,true);
+}
+
+/* ---- taps 3 / 3' / 4: refuse, warn once, then ask ----
+   B2's six refusal literals, verbatim, in B2's `.refuse` slot, in B2's order,
+   naming the first empty or out-of-range field. `Not added. Name it first.`
+   is unreachable here and is not rendered: there is no name field and the
+   entry always carries `n`. `Not added.` on a button labelled `Keep it in the
+   plan` is kept deliberately (§22.22.16 (6)) - it is literally true, nothing
+   was added to the plan, and the informative half of each sentence is which
+   field. One literal with one source beats a second wording that drifts.
+   Rule K2's range check then fires as written (K3.5.5): all three of
+   (k, lo, hi) are being typed here for the first time, so unlike a swap there
+   IS a form. The same tap again proceeds; any change to k, lo or hi disarms
+   it. The sentence names THIS form's button, not the Plan Editor's. */
+function keepAsk(id){
+  const f=S.keep.f[id]; if(!f||S.keep.open!==id) return;
+  const st=keepEntry(id); if(!st) return;
+  const s=parseInt(f.s,10), lo=parseInt(f.lo,10), hi=parseInt(f.hi,10);
+  let err="";
+  if(!(s>=1&&s<=20)) err="Not added. Sets must be 1 to 20.";
+  else if(!(lo>=1&&lo<=100)||!(hi>=1&&hi<=100)) err="Not added. Reps must be 1 to 100.";
+  else if(lo>hi) err="Not added. Reps from must not be above reps to.";
+  else if(!f.k) err="Not added. Choose a type.";
+  else if(!f.implement) err="Not added. Choose an implement.";
+  if(err){ keepRefuse(f,err); return; }
+  const wmsg=kindWarn(f.k,lo,hi,"Keep it in the plan");
+  const armed=f.warn&&f.warn.k===f.k&&f.warn.lo===lo&&f.warn.hi===hi;
+  if(wmsg&&!armed){
+    f.warn={k:f.k,lo:lo,hi:hi,msg:wmsg}; render(true);
+    const el=document.querySelector(".peform .refuse");
+    if(el) el.scrollIntoView({block:"nearest"});
+    announce(wmsg,true);
+    return;
+  }
+  /* The store or the plan moved while the form was open. The slot's own
+     standing line is the honest answer, so the form closes onto it with every
+     typed value kept, and the line is announced. No new literal. */
+  const t=keepTarget();
+  if(!t.ok){ S.keep.open=null; render(true); announce(t.line,true); return; }
+  /* THE PROSPECTIVE WRITE, COMPUTED NOW AND CARRIED INTO THE CONFIRM, so the
+     four numbers the sheet prints and the bytes the commit writes are the
+     same object - a mistyped `s` is catchable on this screen and nowhere
+     after it. Pure: nothing below reaches disk until tap 5. */
+  const spec={s:s,lo:lo,hi:hi,k:f.k,implement:f.implement};
+  let pr=null;
+  try{ pr=PHAT.promoteDraftEntry(t.et.plan,S.dayId,id,st,spec,S.lib.index); }catch(err){ pr=null; }
+  if(!pr||pr.ok!==true){ keepRefuse(f,"Not added. Check the fields."); return; }
+  keepConfirm(id,st,t,pr,spec);
+}
+
+/* ---- the confirm: the slot's facts, then the plan, then the warning, then
+   provenance. askSheet's shipped shell with its 300 ms arm - this is the one
+   control on this screen that changes something outside this session. Each
+   paragraph is gated on its own truth and the ORDER is a ruling. ---- */
+function keepConfirm(id,st,t,pr,spec){
+  const name=String(st.n).trim(), day=t.day.name||"this day";
+  const kindword=spec.k==="hyp"?"hypertrophy":spec.k==="speed"?"speed":"power";
+  const more=[];
+  /* 2 - the consequence he did not ask for. #67 - #68 - #69 VERBATIM by
+     reference to §22.21.3, not reworded and not re-derived. Only when a copy
+     will actually be made; on an editable plan nothing appears anywhere. */
+  const srcName=t.et.created
+    ? ((PHAT.shippedPlan(S.plans.activePlanId)||activePlanOf(S.plans).plan||{}).name||"The plan you are on")
+    : null;
+  if(t.et.created) more.push("A copy called "+t.et.plan.name+" becomes the plan you are on. "+
+    "Nothing else moves — every logged set stays, and every other card reads as it does now. "+
+    srcName+" stays in Plans, read-only.");
+  /* 3 - a fact about where it lands, found only once the day is known.
+     MOVE_WARN.Q4 verbatim. It warns, it does not refuse, and it does NOT arm
+     a second tap: the 300 ms-armed commit below it already IS the second tap,
+     and arming both would be two blind re-taps on one road. */
+  const dup=keepDup(t.day,st);
+  if(dup) more.push(MOVE_WARN.Q4(day,dup));
+  /* 4 - LAST, under PV1.2.1's truth-condition gate, computed on the
+     prospective plan and never guessed from `k`. Unreachable on the plan he
+     trains on today: derivedFrom is not "phat", so provenance is already
+     false and an edit that changes nothing about provenance says nothing
+     about it. PV1.2.3's interpolation names the NON-POWER kind in the
+     collision, derived without judgement. */
+  let pv=false;
+  try{ pv=PHAT.phatProvenance(t.et.plan)===true&&PHAT.phatProvenance(pr.plan)===false; }catch(err){ pv=false; }
+  if(pv){
+    const w=spec.k==="hyp"?"hypertrophy":spec.k==="speed"?"speed"
+      :(((t.day.ex||[]).some(x=>x&&x.k==="hyp"))?"hypertrophy":"speed");
+    more.push(day+" would hold power and "+w+" work together. Each exercise keeps its own rule and rest. "+
+      "The six-week check will treat this plan as yours, not PHAT.");
+  }
+  askSheet({
+    headline:"Keep "+name+" in "+day+"?",
+    body:day+" gets "+name+" at the end of the day: "+tgtText(spec)+", "+kindword+". "+
+         "It is in the plan from your next session. Tonight's sets save as they are, with no verdict.",
+    more:more,
+    danger:"Keep it", safe:"Not now", back:"kf-"+id+"-add",
+    onDanger:()=>keepCommit(id,st,t,pr)});
+}
+
+/* ---- tap 5: the commit. ONE patch of {plans, activePlanId} through save(),
+   which reads the key NOW and overlays - WO-013's read-before-write, union by
+   planId with whatever another tab wrote since this one booted. Two writes
+   where one patch is owed is how `activePlanId` ends up naming a plan the
+   store does not hold, so the two keys go together or not at all.
+   Before anything: the bytes on disk are snapshotted, for an undo that
+   RESTORES rather than guesses. ---- */
+async function keepCommit(id,st,t,pr){
+  const name=String(st.n).trim(), day=t.day.name||"this day";
+  if(S.plansMeta.demo===true||S.blockWrites[PLANS]){ sheetErr(KEEP_FAIL); return; }
+  /* The day could have gone between the paint and this tap (AD1.6.5): the
+     confirm STAYS OPEN, #90 renders in its own refusal slot, announced, and
+     zero bytes are written. */
+  if(!((t.et.plan&&t.et.plan.days)||[]).some(d=>d&&d.id===S.dayId)){ sheetErr(KEEP_D8); return; }
+  let v=null; try{ v=PHAT.validatePlan(pr.plan); }catch(err){ v=null; }
+  if(!v||v.ok!==true){ sheetErr(KEEP_FAIL); return; }
+  let up=null; try{ up=PHAT.planStoreUpsert(t.et.store,pr.plan); }catch(err){ up=null; }
+  if(!up||up.ok!==true){ sheetErr(KEEP_FAIL); return; }
+  /* THE PRE-COMMIT BYTES, read from the key itself, so the undo restores what
+     was really there rather than what memory thinks was. An unreadable store
+     is refused here rather than written over - save() would refuse it too,
+     and this way the sentence is the flow's own. A store that is ABSENT has
+     no bytes at all, and `absent` records that: its undo removes the key
+     rather than writing an empty document the commit invented. Snapshotted
+     deep, so nothing the write does afterwards can reach it. */
+  const r0=await readRaw(PLANS);
+  if(r0.status==="error"&&S.stores.plans!=="error"){ sheetErr(KEEP_FAIL); return; }
+  const had=r0.status==="ok"&&r0.value&&typeof r0.value==="object";
+  let base=null;
+  try{ base=had?JSON.parse(JSON.stringify(r0.value)):{}; }catch(err){ base=null; }
+  const copyName=t.et.created?t.et.plan.name:null;
+  const srcName=t.et.created
+    ? ((PHAT.shippedPlan(S.plans.activePlanId)||activePlanOf(S.plans).plan||{}).name||null) : null;
+  const ok=await save(PLANS,{plans:up.store.plans,activePlanId:up.store.activePlanId});
+  if(!ok){ sheetErr(KEEP_FAIL); return; }
+  /* THE DURABLE MARK, and it is written before the repaint that would
+     otherwise re-judge tonight. In memory first so the paint below is
+     correct, then to disk so a reload is correct too (§22.22.15). A failed
+     draft write leaves the mark in memory and says so through S.err; the next
+     autosave retries it. */
+  if(S.draft&&S.draft.entries&&S.draft.entries[id]){
+    S.draft.entries[id].kp=1;
+    cancelDraftSave();
+    await saveDraft(S.draft,S.dayId);
+  }
+  /* What the undo will put back, and what it must find on disk before it
+     dares. Read back rather than assumed: the bytes save() wrote are the
+     overlay's, not the patch's. */
+  let after=null;
+  try{ const r1=await readRaw(PLANS); after=(r1.status==="ok")?JSON.stringify(r1.value):null; }catch(err){ after=null; }
+  S.keep.open=null;
+  S.keep.undo=(base&&after)?{exId:id,name:name,day:day,copyName:copyName,source:srcName,
+    base:base,absent:!had,after:after}:null;
+  closeSheet(); render(true);
+  /* Focus to the block's NAME, which is where the changed reading is - not to
+     the toast's Undo, a control that hides itself after 6 s. */
+  const nm=document.getElementById("kn-"+id); if(nm) nm.focus();
+  const say=copyName?(day+" now holds "+name+". You are on "+copyName+"."):(day+" now holds "+name+".");
+  const rec=S.keep.undo;
+  if(rec) toastUndo(say,()=>keepUndoTap(rec)); else toast(say,false);
+}
+/* ---- tap 7: the undo. ONE act got ONE undo, so this is one restore of the
+   bytes that one patch replaced - the slot out of the day, and if a copy was
+   made the copy out of `plans` with activePlanId naming the read-only plan
+   again.
+
+   AND THE GUARD THAT IS NOT OPTIONAL: it RE-READS phat:v1:plans and refuses
+   if what is there is not what the commit wrote. A blind byte restore would
+   delete a plan another tab created in between, which is B-76 / B-128's class
+   and has bitten this repo twice. On a mismatch, or on a failed write,
+   NOTHING is written and #88 says where he is and that his session is safe -
+   deliberately not `Nothing changed.`, because something did, just not by the
+   undo. Bounded on purpose: the toast is the reach, and leaving Summary hides
+   it (goSum / leaveSum already call hideToast). */
+async function keepUndoTap(rec){
+  if(!rec||S.keep.undo!==rec||!S.sum||!S.draft) return;
+  const fail=rec.copyName
+    ? "Could not undo. "+rec.name+" is still in "+rec.day+", and you are still on "+rec.copyName+". Today's sets still save."
+    : "Could not undo. "+rec.name+" is still in "+rec.day+". Today's sets still save.";
+  if(S.blockWrites[PLANS]){ hideToast(); toast(fail,false,4200); return; }
+  let now=null; try{ now=await readRaw(PLANS); }catch(err){ now=null; }
+  if(!now||now.status!=="ok"||JSON.stringify(now.value)!==rec.after){
+    hideToast(); toast(fail,false,4200); return;
+  }
+  /* TWO SHAPES, ONE ACT, because "the bytes before" has two spellings. If the
+     key existed, `replace` writes it back whole - the only write that may
+     shrink a store, and earned here by the byte match above: this is a
+     restore of what was just read, not a patch computed from memory. If the
+     key did NOT exist - his device today, where the active plan is a shipped
+     template and nothing has ever written phat:v1:plans - then the pre-commit
+     bytes are NO KEY, and writing an empty store instead would leave a
+     document on disk the commit invented. So the key goes, and memory takes
+     the same answer the boot read would have given it. */
+  let ok;
+  if(rec.absent){ ok=await del(PLANS); if(ok) adoptPlans({}); }
+  else ok=await save(PLANS,rec.base,{replace:true});
+  if(!ok){ hideToast(); toast(fail,false,4200); return; }
+  /* The mark goes only after the plan is back, and in that order: a cleared
+     mark over a standing slot would re-judge tonight. */
+  if(S.draft&&S.draft.entries&&S.draft.entries[rec.exId]){
+    delete S.draft.entries[rec.exId].kp;
+    cancelDraftSave();
+    await saveDraft(S.draft,S.dayId);
+  }
+  S.keep.undo=null;
+  hideToast(); render(true);
+  toast(rec.source?(rec.name+" is out of "+rec.day+" again. You are back on "+rec.source+".")
+                  :(rec.name+" is out of "+rec.day+" again."),false);
+  const b=document.getElementById("keep-"+rec.exId); if(b) b.focus();
+}
+
 /* ---- the Plan Editor's picker. Same sheet, and it commits on the row tap
    rather than through a confirm state: there is nothing destructive to catch
    here and the picked name lands in a Name field he is looking at and can
@@ -8044,6 +8595,23 @@ async function saveDraft(draft,dayId){
          is coerced and nothing rides silently. */
       Object.assign(entries[k],PHAT.entryMeta(e));
       if(e.mode&&typeof e.mode==="object") entries[k].mode=modeCopy(e.mode);
+      /* WO-023 W4 (UX §22.22.15). THE WRITE-SIDE HALF OF THE PROMOTE MARK.
+         `kp:1` says "this movement was added tonight AND kept in the plan",
+         and it is what keeps the entry ADDED for the rest of the session: the
+         moment the slot exists, resolveEx succeeds, and without this every
+         added-ness read would flip - the kicker would go, tonight's sets
+         would be graded against a prescription typed after them, and the save
+         would stamp an `rx` the session never had.
+         B-112's LESSON, APPLIED: the mark is two halves and this is one of
+         them. Its twin is in hydrateDraft, written in the same pass, because
+         a mark only one side carries dies on the first reload and takes the
+         defect's absence with it. `1` or absent, exactly as `sw` - a marker
+         with two spellings is a marker two readers disagree about.
+         IT IS A DRAFT KEY AND NOTHING ELSE. phat:v1:draft carries no
+         SCHEMA_VERSION of its own and is never backed up, validateDraft
+         rebuilds each entry from {sets, note, mv, sw, n}, so this byte cannot
+         reach phat:v1:log, a session document or the server. */
+      if(e.kp===1) entries[k].kp=1;
     });
     /* exIx rides the draft. Coming back on exercise 1 of 9 after a reload has
        lost his place, and finding it again means nine taps with chalky hands
@@ -8214,14 +8782,31 @@ function reserveDock(){
    destructive one. Plus a 300 ms pointer-events guard on the destructive
    button — not disabled, no greyed-out state, it simply does not fire. ---- */
 let sheetState=null;
+/* WO-023 W4 (UX §22.22.16 (3)). `cfg.more` IS UP TO THREE EXTRA BODY
+   PARAGRAPHS, each gated on its own truth by the caller, and when any are
+   passed all of them - paragraph 1 included - go inside ONE scroll wrapper at
+   `max-height:52vh`, so four paragraphs at 200% text scroll inside the sheet
+   instead of pushing the two buttons off the bottom of a phone.
+
+   THE BYTE-IDENTITY REQUIREMENT, in the WO-010 D8 class: with no `more`
+   passed there is NO WRAPPER AND NO EXTRA NODE - the paragraph is the same
+   `<p class="det">` this function has always written, so every existing call
+   site renders byte for byte what it rendered before. The wrapper's two
+   declarations are inline rather than a new rule because the one state they
+   describe is this one sheet with extras in it; no selector in the sheet's
+   CSS changes, which is what keeps that identity checkable by diff. */
 function askSheet(cfg){
   sheetState=cfg;
   cfg.armAt=Date.now()+300;   // enforced in the handler as well as by CSS
+  const more=Array.isArray(cfg.more)
+    ? cfg.more.filter(p=>typeof p==="string"&&p.trim()!=="").slice(0,3) : [];
+  const body=`<p class="det">${esc(cfg.body)}</p>`;
   const m=document.getElementById("modal");
   m.innerHTML=`<div class="scrim" data-sheet="cancel"></div>
     <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title">
       <h2 id="dr-confirm-title" tabindex="-1">${esc(cfg.headline)}</h2>
-      <p class="det">${esc(cfg.body)}</p>
+      ${more.length?`<div style="overflow-y:auto;max-height:52vh">${body}${
+        more.map(p=>`<p class="det">${esc(p)}</p>`).join("")}</div>`:body}
       ${cfg.typed?`<label class="bklbl" for="dr-typed">Type ${esc(cfg.typed)} to continue</label>
       <input class="bkin" id="dr-typed" autocomplete="off" autocapitalize="characters" spellcheck="false">`:""}
       <div id="dr-sheet-err"></div>
@@ -8248,9 +8833,15 @@ function closeSheet(){
   document.getElementById("modal").innerHTML="";
   if(back){ const el=document.getElementById(back); if(el) el.focus(); }
 }
+/* WO-023 W4 (UX §22.22.13 / §22.22.16 (2)). IT ANNOUNCES. `#dr-sheet-err` is
+   not a live region and the sheet does not move focus when a write refuses,
+   so until this line a refusal inside a confirm was SILENT to a screen
+   reader - the one shape of message that may never be silent. Assertive, one
+   line, every call site: §22.7's #46 and §22.20's sheet refusals gain it too. */
 function sheetErr(msg){
   const el=document.getElementById("dr-sheet-err");
   if(el) el.innerHTML=`<p class="rule">${esc(msg)}</p>`;
+  announce(msg,true);
 }
 /* {n} phrasing for the destructive button and its headline, W4 §1.1 State 1F. */
 const discardLabel=n=>n===0?"Discard this session":"Discard "+plural(n,"logged set");
@@ -8319,6 +8910,13 @@ function hydrateDraft(stored){
        still attached to it (D3 / D4). */
     Object.assign(entries[id],PHAT.entryMeta(se));
     if(se.mode&&typeof se.mode==="object") entries[id].mode=modeCopy(se.mode);
+    /* WO-023 W4 (UX §22.22.15). THE READ-SIDE HALF OF THE PROMOTE MARK, and
+       the half B-112 lost. Same key, same test, same line, so the round trip
+       is one definition: a movement he added and kept comes back KEPT, the
+       block still reads `ADDED` with no verdict, and the receipt (#86) still
+       stands in the control's place. Without this line the reload is where
+       the whole of §22.22.15 comes back. */
+    if(se.kp===1) entries[id].kp=1;
   };
   Object.keys(src).forEach(id=>{ if(src[id]&&typeof src[id]==="object") take(id,src[id],d.ex.find(e=>e.id===id)); });
   d.ex.forEach(e=>{ if(!entries[e.id]) take(e.id,{},e); });
@@ -8338,11 +8936,39 @@ function resumeDraft(withToast){
      lands on the exercise screen the index points at — never on a Summary
      built before the reload. */
   S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
+  S.keep={open:null,f:{},undo:null};   /* WO-023 W4: a resumed draft's form is empty (§22.22.14) */
   S.offer=null;
   closeSheet(); render();
   if(withToast) toast("Resumed your unfinished session.");
   return true;
 }
+/* WO-023 W4 (UX §22.22.15, the `rx` half of the mark). THE PLAN THE SAVE
+   STAMPS PRESCRIPTIONS FROM, with every KEPT added slot taken out of it.
+
+   Rule PE1's stamp is `rx = the draft's own, or the plan's slot` - so the
+   moment a promoted slot exists, the entry he logged WITHOUT a prescription
+   would be written to disk claiming one, and `Prescription changed` would
+   fire against it next week. AD1.6.4 forbids exactly that: no `rx`, no `sw`,
+   no verdict for tonight. Stripping the slot from the document handed to
+   buildSession is the whole fix, and it is per-entry precise because the
+   stamp is looked up by id: every other row stamps exactly what it stamped
+   before, and `planId` is still `sp().planId` - the session is logged under
+   the plan it ran on.
+
+   WITH NOTHING MARKED IT RETURNS `sp()` ITSELF, by identity, so a session
+   with no kept movement in it is byte-for-byte the session this app has
+   always written. Nothing is mutated: a shipped plan is deep-frozen and this
+   builds new objects for the one day it has to change. */
+function rxPlan(){
+  const p=sp();
+  const ids=Object.keys((S.draft&&S.draft.entries)||{}).filter(keptInPlan);
+  if(!ids.length) return p;
+  const out=id=>ids.indexOf(id)>=0;
+  const days=(p.days||[]).map(d=>(Array.isArray(d.ex)&&d.ex.some(x=>x&&out(x.id)))
+    ? Object.assign({},d,{ex:d.ex.filter(x=>!(x&&out(x.id)))}) : d);
+  return Object.assign({},p,{days:days});
+}
+
 /* The only two places allowed to delete the draft are here and finish(). */
 async function doDiscard(then){
   cancelDraftSave();
@@ -8351,6 +8977,10 @@ async function doDiscard(then){
   S.offer=null; S.draftRead={status:"none"};
   S.draft=null; S.dayId=null; S.err=null; S.problems=[]; S.sessPlan=null;
   S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
+  /* WO-023 W4: the promote form's typed numbers and its pending byte restore
+     belong to ONE draft. A new, discarded or saved session starts with
+     neither - §22.22.8's `After Save session` row is "nothing, no residue". */
+  S.keep={open:null,f:{},undo:null};
   closeSheet(); toast("Discarded.");
   if(then) then(); else render();
   return true;
@@ -8422,6 +9052,10 @@ async function startDay(id){
   if(!d) return;
   S.dayId=id; S.err=null; S.problems=[];
   S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
+  /* WO-023 W4: the promote form's typed numbers and its pending byte restore
+     belong to ONE draft. A new, discarded or saved session starts with
+     neither - §22.22.8's `After Save session` row is "nothing, no residue". */
+  S.keep={open:null,f:{},undo:null};
   /* The session runs on the plan that was active when it STARTED, and the
      draft records that plan's id from its first write (D9). */
   S.sessPlan=S.plan;
@@ -8483,7 +9117,7 @@ async function finish(){
       r.value.sessions.forEach(s=>{ if(s&&s.id!=null) taken[String(s.id)]=true; });
     let id=Date.now(); while(taken[String(id)]) id++;
     sess=PHAT.buildSession(S.draft,S.dayId,S.draft.date,id,
-      sp().planId,sp());
+      sp().planId,rxPlan());
     if(!sess) return false;
     /* Build the next log without mutating S.sessions: a failed save used to
        leave a phantom session in memory that a retry would duplicate. */
@@ -8515,6 +9149,10 @@ async function finish(){
   await clearDraft();
   S.draft=null; S.dayId=null; S.err=null; S.sessPlan=null;
   S.exIx=0; S.rest=null; S.undo=null; S.v1msg=""; S.v1added=null; S.sum=false;
+  /* WO-023 W4: the promote form's typed numbers and its pending byte restore
+     belong to ONE draft. A new, discarded or saved session starts with
+     neither - §22.22.8's `After Save session` row is "nothing, no residue". */
+  S.keep={open:null,f:{},undo:null};
   S.offer=null; S.draftRead={status:"none"};
   render(); toast("Session saved.");
 }
