@@ -9481,7 +9481,7 @@ decides a field in a form he can see, and it is the last thing standing between 
 | WO-022 W3 (backend) | `phatProvenance(copy) === phatProvenance(source)` for all five shipped plans is the right assertion and my reading is that it passes. **Add: `state.reintro` and `lastReintroDate` are untouched by `editableTarget`** — they are not its to write, and the criterion makes that visible |
 | WO-023 W1 | **Closed.** Five answers, clauses **K3.5** and **AD1.6**, three strings (one new, two reuses) |
 | WO-023 W2 (ux) | The form is WO-006 B2's, reused: `s`/`lo`/`hi` empty, `k` unselected, `implement` pre-filled when I3 derives and asked when it refuses, `KIND_LINE` as the Type line, K2's range warning live. The confirm carries the slot facts then PV1.2's sentence last. Two literals from me: the D8 refusal (NEW) and MOVE_WARN.Q4 (REUSED). **No derived "today you did…" line** |
-| WO-023 W3 (backend) | `promoteDraftEntry` writes no `cut`, never touches `reintroOrder`, never adds to `keyLifts`, mints a fresh `lift`, pushes to the end of `day.ex`, and refuses an unresolvable `dayId`. `implement` comes from `libraryImplementOf` when it answers and from `spec` when it does not |
+| WO-023 W3 (backend) | `promoteDraftEntry` writes no `cut`, never touches `reintroOrder`, never adds to `keyLifts`, mints a fresh `lift`, pushes to the end of `day.ex`, and refuses an unresolvable `dayId`. ~~`implement` comes from `libraryImplementOf` when it answers and from `spec` when it does not~~ — **struck 2026-10-08, see 25.9: `spec.implement` wins when present, `libraryImplementOf` fills when it is absent, neither refuses.** The struck wording was mine, repeated from the order, and it is wrong |
 | WO-023 W5 (qa) | **C8 is corrected: run it on PHAT or a PHAT copy, not on his export** — on his plan it tests nothing. **New C13** in 25.4. Pin H1.3b's string for the `s`-too-large case |
 | B-168 | **Not a defect. Ruled acceptable, disclosed under PV1.2's gate, and unreachable on his current plan.** Recommend the PM reclassify it from P1 to a recorded consequence |
 
@@ -9526,3 +9526,97 @@ session he actually trained, and both arrived within hours of the feature they w
 in eight days. Whatever else is true of this repo, the training is no longer the bottleneck, and the
 right response to that is to keep the surfaces small and the questions few — which is why this section
 mints no rule id, adds one sentence to one confirm, and leaves four fields empty for him to fill.
+
+---
+
+## 25.9 One line, asked for: his edit wins. And two confirmations from the same lane
+
+**Ruled 2026-10-08, on WO-023 W3b (`c7dfc04`). The backend engineer is right, the order's wording is
+wrong, and the wording was wrong in my own §25.6 table too — struck above.**
+
+### 25.9.1 The ruling
+
+**His edit wins. `spec.implement` present ⇒ it wins; absent ⇒ `libraryImplementOf` fills it; neither ⇒
+refuse.** `[Certain]`. That is what `c7dfc04` built and it is what §25.3.1 meant.
+
+Precedence, stated once so nothing has to be re-derived from prose:
+
+```
+Rule: I3.6 — implement precedence on a promote (a clause of I3; I3.1-I3.5 unchanged)
+Applies to:   WO-023's promote (an I3 path (1) write). Every role. Form and engine both.
+Inputs:       `spec.implement` (the form's output) and `libraryImplementOf(index, entry.mv)`.
+Logic:        I3.6.1  spec.implement PRESENT -> it is the stored value, whatever the
+                      library says. It is never compared to the derived value and never
+                      replaced by it.
+              I3.6.2  spec.implement ABSENT  -> the derived value is the stored value,
+                      `implementSource:"library"`.
+              I3.6.3  NEITHER -> refuse, `{field:"implement", reason:"missing"}`. No guess.
+              I3.6.4  spec.implement PRESENT and NOT in `PLAN_IMPLEMENTS` -> `addExercise`'s
+                      own `reason:"enum"` refusal. A bad answer is refused, never
+                      silently corrected to the derived one. A refusal he can read beats a
+                      value he did not choose.
+Output copy:  none of its own. The form's control and its refusal are WO-006 B2's.
+Not enough data: I3.6.3 is the not-enough-data state and a refusal is its answer.
+```
+
+**Why, in three sentences.** The derived value is a fact about *the library's row*, not a fact about
+*his gym* — I3.1 maps 876 `eq` strings written by strangers, and the two slots §23.6 already overrides
+by hand are the proof that the table is sometimes wrong about what he actually picks up. Derivation
+exists for the case with **no form** (I3.3, a swap, chalky hands, someone waiting); the moment there
+is a form, the form's output is the authority, because the only reason to show a field is that the
+answer might differ from the pre-fill. A derived value that beat his edit would make the one field he
+was asked to check the one field that cannot be changed, which is worse than not asking.
+
+**Three worked cases.**
+
+1. Barbell hip thrust, library `eq: "barbell"`. Form pre-fills `bb`, he taps through unchanged. Stored
+   `implement: "bb"`, `implementSource:"spec"`. Identical bytes to the derived path — correct, and the
+   lost "this was derived" bit is not wanted: he confirmed it, so it is his.
+2. **The boundary.** Library says `machine`; he does it on the cable stack and changes the control to
+   `cable`. Stored `cable`. Under the order's literal wording this edit is discarded on save and R1,
+   Z2 and I2's appendix all speak about a machine he is not using. This case is the whole ruling.
+3. **Failing case.** Kettlebell swing — one of I3's 199 refusals. No derived value, so the form
+   **asks** (§25.3.1), he answers `other`, `implementSource:"spec"`. If a caller skips the ask, I3.6.3
+   refuses with a reason the screen can print. Neither path invents `bb`.
+
+**One consequence, since the two-line change is not needed.** A promoted `implement` is a **stored
+plan field from the moment it lands**, so I3.5 (a SHA bump moves derived implements) does not reach it.
+That is deliberate: he looked at the value and kept it, and a library correction six months later must
+not silently re-equip a slot he lifts on. `implementSource` is diagnostic only — nothing coaching-side
+may branch on it.
+
+### 25.9.2 A stored active plan that fails `validatePlan` — refusing is the right side to fail on
+
+**Confirmed. `[Certain]`.** Running PHAT's prescription under his plan's name is wrong advice, and
+repointing `activePlanId` at a PHAT copy is the plan he lifts on being abandoned without a sentence —
+PHAT brings its own `keyLifts`, `speedSource` and `reintroOrder`, so ST1, D1, SP1 and V1 would all
+start speaking about slots he never programmed. **A refused promote costs him one feature for one
+evening; a silent repoint costs him his plan and tells him nothing.** Two notes rather than changes:
+the refusal must reach a screen as words, not a dead tap — that literal is `ux-designer`'s and is owed
+before W4 — and it should point him at Export and `diag.html`, never at a repair this app attempts on
+its own. `activePlanOf`'s own PHAT fallback for *reading* is untouched by this and stays.
+
+### 25.9.3 `spec.cut` / `spec.lift` / `spec.cue` refused loudly — confirmed, not relaxed
+
+**Confirmed, and the stricter reading is the better one. `[Certain]`.** §25.3.1's "never written" is a
+statement about the stored document; it does not choose between dropping and refusing, so the backend
+had a call to make and made it the safe way. A caller that passes `cut` is a caller that believes the
+reduced-volume tier applies to a slot created in week 9, and that belief is exactly the V1 bug one
+layer up — `cut` is only half the mechanism, `reintroOrder` is the other half, and a dropped field lets
+a frontend ship holding the wrong model of the program with nothing on screen and nothing in a test to
+say so. Refusing surfaces it at build time, which is where a wrong model of the program is cheap.
+
+`cue` is the weakest of the three — it carries no advice and B-153's family treats absent as supported
+— and I still confirm it: no caller passes it today, so the refusal costs nothing, and the day WO-016
+wants a cue on a promote it should arrive as an amendment with a review, not as a field that quietly
+started working. **Relaxation requires a named clause here, never a silent drop.** The one line that
+must not change: these refusals are `reason:"unsupported"`, which is a different thing from
+`reason:"enum"` — the first says *this app does not write that field*, the second says *that value is
+not one of mine*, and a screen may need to say different words.
+
+### 25.9.4 Verdict
+
+**Sign off on `c7dfc04`, no changes.** The inversion is correct, the extra refusal is on the right side,
+and the strict field refusals are stricter than my §25 in the direction §25 would have gone had it
+addressed the question. Three documents now agree; the order's §3 wording is the one that is wrong, and
+PM should correct it there so the next reader of the order does not re-derive the bug.
