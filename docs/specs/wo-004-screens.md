@@ -4822,12 +4822,12 @@ consumes a prescription states its absence instead of going quiet.
 
 | Slot | Normal | With no prescription |
 |---|---|---|
-| Target line (§4.3) | `3 × 3–5` | `No prescription` **NEW**, bone `.55` — the line keeps its height; it never disappears |
+| Target line (§4.3) | `3 × 3–5` | `No prescription` **NEW**, bone `.55` — the line keeps its height; it never disappears. **AMENDED 2026-10-08 (b):** on a derived `implement:"db"` (B-161) the slot reads **`No prescription · per DB`** — Rule I1's suffix is not dropped here, because without it an added dumbbell card's weight column declares nothing, which is the defect that cost him twice in September (B-131 `d1d`). §22.12 #32 holds the ruling. **§0.1 #9 still binds: it never wraps, never truncates, never shrinks — the name gives way, and on this card it does.** It is the widest string this slot has ever held at 393 px and it fits. **If a build ever finds it cannot fit without shrinking, that escalates to UX, not to a font-size, and the answer is already decided: drop the `No prescription` token and keep the unit.** The absence of advice is said again by #34 in the verdict slot one element below; the unit is said nowhere else |
 | Prescription line | `Last 100 × 5, 100 × 5.` | absent (there is no prior) — or §22.8's line if a movement prior exists |
 | Set rows | `ex.s` rows | **One row**, and `+ ADD SET {n}` adds more as usual |
 | `EXTRA` flag | Rows beyond `ex.s` | **Never.** With no prescription nothing is beyond it. §4.5's `Set 4 is beyond the prescription.` line does not render |
-| Verdict slot (§4.7) | `WAITING` / a verdict | Present, fixed height, holding Rule AD1's sentence, the coach's, verbatim: `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` **AMENDED 2026-09-28** — W1 filled the slot and this table now records what shipped. **This element owns "added" on the card** (B-149); the mark line above it is deleted |
-| Rest band (§4.10) | `restTarget(ex)` from `k` | Rule R1 has no `k` to read. **`[W1 SLOT]`** — the band's absent state, the coach's. My recommendation: the band shows the elapsed clock and no target, and says nothing about how long to rest |
+| Verdict slot (§4.7) | `WAITING` / a verdict | Present, fixed height, holding Rule AD1's sentence, the coach's, verbatim: `Added today. No sets or reps set, so no verdict. A verdict needs it in your plan.` **AMENDED 2026-10-08 (b)** — third clause only, per coach §22.10.5; §22.12 #34 is the row. **AMENDED 2026-09-28** — W1 filled the slot and this table now records what shipped. **This element owns "added" on the card** (B-149); the mark line above it is deleted |
+| Rest band (§4.10) | `restTarget(ex)` from `k` | Rule R1 has no `k` to read. **`[W1 SLOT]`** — the band's absent state, the coach's. My recommendation: the band shows the elapsed clock and no target, and says nothing about how long to rest. **FILED 2026-10-08 (b), not a WO-019 blocker.** The band can currently show the **previous** exercise's target while he stands on an added card (`Rest 0:03 · go at 2:30`), because `restStart` refuses to start on a movement with no `k` and Rule R1 allows one timer for the whole app. It is pre-existing, identical through `Add as well`, and introduced by nothing in §22.20. It is still wrong — it prescribes a rest for an exercise he is no longer doing, which is arithmetic on a wrong fact and no test can catch it. **The suppression is mine and is ruled now so the item is one line when it is picked up: with no `k`, the band renders the elapsed clock and drops the ` · go at {t}` clause. It does not inherit, and it does not disappear** (§0.1 #4 — the band never changes height). The *target* string, if one is ever wanted here, stays the coach's. R1's one-timer rule is not reopened by this |
 | Load chip | §21 | Unchanged — the chip reads the card's unit, not the prescription |
 | Summary | verdict verbatim | **AMENDED 2026-09-28 (B-149):** the kicker `ADDED` — which owns "added" on this screen — then the advice block `No prescription` + AD1's sentence, and **no verdict row**. The line `Added during the session. No prescription.` is deleted. An absent verdict is never rendered as a verdict, and the block's kicker says which it is |
 
@@ -4912,9 +4912,9 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 29 | toast | undo of Add | `{new} removed.` |
 | 30 | card, under the name | swapped | `Swapped · was {original}` |
 | 31 | card, under the name | added | ~~`Added today`~~ **DELETED — AMENDED 2026-09-28 (B-149).** Replaced by: nothing renders. #34 owns the fact on the card |
-| 32 | card, target line | no prescription | `No prescription` |
+| 32 | card, target line | no prescription | `No prescription` — and `No prescription · per DB` where Rule I1's suffix applies (`implement:"db"`). **BLESSED AS BUILT 2026-10-08 (b), WO-019 W4.** The composition is approved unchanged and the order is fixed: **absence first, unit second.** `Per DB · no unit` orderings are refused — the unit is a suffix on every other card in the app and must stay a suffix here, and the slot's primary job is the prescription. The reading *"no prescription per dumbbell"* was considered and dismissed: `·` is this app's field separator everywhere it appears (`{day} · {i} of {n}`, `Cable · lats`, `Rest 0:03 · go at 2:30`), so a reader of this app has already learnt it means *and, separately*; and the token on the right is **byte-identical to the one he has seen on every dumbbell card** — only the token on the left changed. A longer, grammatically tidier variant (`· weight per DB`) was written and refused, because it would give the app two words for one fact on the one card with no prescription to anchor them, which is what §20.1 and #64 forbid. **Not on Summary:** the advice block's kicker is `No prescription` with no suffix, and that is correct, not an omission — Rule I1 has one site, the target line |
 | 33 | card, under the prescription | cross-slot prior | `Last numbers are from {day}, {date}.` **[W1 SLOT]** |
-| 34 | card, verdict slot | added, no prescription | `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` **AMENDED 2026-09-28** — Rule AD1, **the coach's string, recorded not authored.** Replaces the placeholder `No prescription. Nothing to compare this to.` **[W1 SLOT]** |
+| 34 | card, verdict slot | added, no prescription | `Added today. No sets or reps set, so no verdict. A verdict needs it in your plan.` **AMENDED 2026-10-08 (coach §22.10.1 / §22.10.5, WO-019 W2) — third clause only; clauses 1 and 2 do not move.** Replaces `…Add it to your plan to get one.` (2026-09-28), which replaced the placeholder `No prescription. Nothing to compare this to.` Rule AD1, **the coach's string, recorded not authored** — this row was stale against the shipped `AD1_VERDICT` until 2026-10-08 (b) and is now transcribed from it. **One literal for both doors**, not conditional on which control opened the card |
 | 35 | summary, kicker | swapped | `SWAPPED` |
 | 36 | summary, line | swapped | `Was {original}.` |
 | 37 | summary, kicker | added | `ADDED` |
@@ -4942,8 +4942,8 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 58 | home, repair notice, body line 4 | `np >= 1` | `The pulldown sessions are not on the pull-up line — a different movement.` **NEW 2026-09-29.** Word for word #48's clause, on purpose: the Trend line and this line are one voice saying one thing twice, not two explanations. CH1-safe — it asserts absence, never presence |
 | 59 | home, repair notice, button | always, when the notice renders | `Dismiss` **NEW 2026-09-29.** Full width × 48, `.ghostbtn` |
 | 60 | session **last card** bottom stack **and** summary bottom stack, button | always, both hosts | `Add an exercise` **NEW 2026-10-08 (WO-019, §22.20).** His own words — *"I cannot add a new exercise within a session"* — so the label is the phrase he searched for and failed to find. `exercise` is the session's noun (`{n} exercises · {n} notes`, `Previous exercise`); `movement` is the library's and belongs inside the sheet. The *today-only* fact is **not** in the label: it is the sheet's first line, one tap later, where every other today-only fact in §22 lives. **Reused verbatim as the sheet's heading in `extra` mode** — the sheet is obviously the thing he tapped (§22.2's own rule), and it is the one heading in this sheet that dereferences nothing |
-| 61 | sheet, notice (`.det`, in the kicker's place) | `extra` mode, no query, `basis === "recent"` | `Your recent movements first. Search for anything else.` **NEW 2026-10-08.** Two short sentences and they do two jobs: the first names the order — the only defence against *why is this list not alphabetical* — and the second names the escape, which matters **here** and not in `swap` mode, because with no slot the ranked list is a guess at *what he trains*, not a similarity to a thing on screen. **Content is `strength-coach`'s (WO-019 §4.2); the words are mine.** It claims recency and nothing else: no frequency (`what you lift most` would be false), no recommendation, no count |
-| 62 | sheet, notice (`.det`, in the kicker's place) | **no slot at all** and `basis === null` — the recency window is empty (fresh install, or nothing logged in 56 days), or the coach refused recency and W3 fell back to §1(iii) | `Ordered by name. Search for the movement you want.` **NEW 2026-10-08.** **This is the replacement for #12 on a list that has no slot**, and #12's defect was the second clause, not the first: `This slot does not name a movement.` is false when there is no slot. `Ordered by name.` is kept verbatim from #12 so the order half of the sentence is single-sourced across both. The second clause points at the field because an alphabetical list of 876 movements is not an answer and the field is. **It is also the first-run and empty-window state of the new door** and needs no further string |
+| 61 | sheet, notice (`.det`, in the kicker's place) | `extra` mode, no query, `basis === "recent"` | `Your recent movements first. Search for anything else.` **NEW 2026-10-08.** Two short sentences and they do two jobs: the first names the order — the only defence against *why is this list not alphabetical* — and the second names the escape, which matters **here** and not in `swap` mode, because with no slot the ranked list is a guess at *what he trains*, not a similarity to a thing on screen. **Content is `strength-coach`'s (WO-019 §4.2); the words are mine.** It claims recency and nothing else: no frequency (`what you lift most` would be false), no recommendation, no count. **RULED 2026-10-08 (b) — this literal ships; `coach-audit-addendum.md` §22.10.5's variant (`Ordered by what you have trained in the last 8 weeks. Search for anything else.`) is not carried.** The coach's *content* ruling stands in full — recency is the order, the floor is one recent movement, a typed query outranks it, `basis:"recent"` is the name. Only the wording is refused, on three grounds: (a) **`8 weeks` in a string is a second source of truth for `SW_RECENT_DAYS`**, and the coach's own row concedes the string moves if the constant does — a literal in a spec file that must be hand-chased when a constant changes is the duplicate-`PROGRAM` defect in miniature, and `Your recent movements` is true at every value of the constant; (b) the notice answers exactly one question — *why is this list not alphabetical* — and `Your recent movements first.` answers it whole; the 56-day boundary is not actionable, he cannot move it and nothing he does depends on knowing it; (c) it is read at arm's length between sets, where two short sentences beat one long one. `recent` is an honest rendering of the window because it claims recency and no span |
+| 62 | sheet, notice (`.det`, in the kicker's place) | **no slot at all** and `basis === null` — the recency window is empty (fresh install, or nothing logged in 56 days), or the coach refused recency and W3 fell back to §1(iii) | `Ordered by name. Search for the movement you want.` **NEW 2026-10-08.** **This is the replacement for #12 on a list that has no slot**, and #12's defect was the second clause, not the first: `This slot does not name a movement.` is false when there is no slot. `Ordered by name.` is kept verbatim from #12 so the order half of the sentence is single-sourced across both. The second clause points at the field because an alphabetical list of 876 movements is not an answer and the field is. **It is also the first-run and empty-window state of the new door** and needs no further string. **RULED 2026-10-08 (b) — this literal ships; `coach-audit-addendum.md` §22.10.5's variant (`Ordered by name. Nothing logged in the last 8 weeks to rank by.`) is refused on truth, not on style.** Backend ruled after both strings were written that **`basis` demotes to `null` whenever no returned row earned the recency bonus**, which has three causes: (i) an empty 56-day window, (ii) a movement he trained inside the window that the library does not carry, (iii) the caller excluding the recent rows. The coach's second clause is **false in (ii) and (iii)** — he logged, the ranker simply could not use it — and a notice that tells him he has trained nothing in eight weeks three days after a session does not merely misinform, it makes him doubt the log, which is the one thing in this app that has to be trustable. This row's second clause makes **no claim about his history at all** and is true in all three |
 | 63 | sheet, `.det` | confirm, `extra` mode | `Goes at the end of today's session.` **NEW 2026-10-08.** Present tense, subjectless, taking #19's exact grammar (`Replaces {ex} for today.`) with the heading as its subject. It says *where* because the draft's key order is D8's rule and an exercise he added on card 9 of 9 arrives after card 9 — the toast (#28) then repeats the fact in the past tense, which is the pair this app already uses for a commit. Renders above #20 |
 | 64 | sheet, button | confirm, `extra` mode, primary and only | `Add it` **NEW 2026-10-08.** Not `Add as well` — *as well as what?* has no referent with no slot — and not `Add to today`, which is three words for the thing #63 just said in six. `Add it` is already this app's word for *put this exercise in my session* on Rule V1's offer block (`id="v1-add"`), and one word for one action across two screens is the vocabulary rule §20.1 set. Full × 52. **No `Replace` and no `Add as well` in this mode** |
 | 65 | session last card + summary, button | accessible name on #60 | `Add an exercise to today's session` **NEW 2026-10-08.** Visible text is a prefix (WCAG 2.5.3, as #2). It carries `today's session` because a screen reader user reaches this control with no sheet open and no body text under it, and `Add an exercise` alone is the one reading of this control that could mean the plan |
@@ -5486,7 +5486,7 @@ says so and it is right). `exId` is **absent** in this mode — there is no card
 │ │ Seated cable row                     │ │
 │ │ Cable · middle back                  │ │
 │ └──────────────────────────────────────┘ │
-│ [               Not now               ]  │  full × 52, lowest, pinned
+│ [               Not now               ]  │  full × 48, lowest, pinned
 └──────────────────────────────────────────┘
 ```
 
@@ -5500,7 +5500,7 @@ says so and it is right). `exId` is **absent** in this mode — there is no card
 | Row | As §22.2, unchanged: full × 64, two lines, `{name}` then `{Equipment} · {primary muscle}` |
 | List length | Capped at 40 rows, as §22.2 |
 | Exclusion | **Nothing is excluded.** `swap` mode drops the slot's own movement because replacing a movement with itself is a no-op; **adding a second block of something is not a no-op** — a second helping of the thing that is working is the commonest unplanned exercise there is. A movement already in today's session is listed, unmarked, and `addDraftEntry` mints an id that is not derived from `mv`, so a duplicate is a real second card |
-| `Not now` | Full × 52, `.ghostbtn`, last, pinned. Scrim and `Escape` the same. Closes with nothing written; focus returns to `Add an exercise` |
+| `Not now` | **Full × 48, `.sheet .ghostbtn`** — last, pinned. **CORRECTED 2026-10-08 (b): this row said 52 and the shipped button is 48. The shipped size is right and this spec was wrong** (§22.20.11). Scrim and `Escape` the same. Closes with nothing written; focus returns to `Add an exercise` |
 | Arm delay | None. Nothing in this mode destroys anything |
 
 #### 22.20.3.1 The list head — one field decides the sentence
@@ -5514,7 +5514,7 @@ window must report `basis: null` (ruled in §22.3.1's 2026-10-08 amendment; W3 c
 |---|---|---|---|---|
 | non-empty | any | either | kicker | `MATCHES` (#10). **No card dereference in any mode** |
 | empty | `"recent"` | **no slot** | notice | `Your recent movements first. Search for anything else.` (#61) |
-| empty | `null` | **no slot** | notice | `Ordered by name. Search for the movement you want.` (#62) — fresh install, an empty 56-day window, or W3's §1(iii) fallback |
+| empty | `null` | **no slot** | notice | `Ordered by name. Search for the movement you want.` (#62) — **any cause of `basis: null`:** a fresh install, an empty 56-day window, a recent movement the library does not carry, the caller excluding the recent rows, or W3's §1(iii) fallback. The string claims nothing about his history, so it is true in all of them |
 | empty | `null` | slot | notice | `Ordered by name. This slot does not name a movement.` (#12) — **unchanged, and still true: there is a slot** |
 | empty | `"equipment"` | slot | notice | unchanged, as shipped |
 | empty | `"score"` | slot | kicker | `CLOSEST TO {EX}` (#9). **The only branch that may read the card**, and it is reachable only where `exId` exists |
@@ -5528,6 +5528,23 @@ There is no case in this table where `extra` mode reaches a kicker other than `M
 as a presented order, **#62 is already the whole of the fallback** — no further string is owed, the
 notice stays true, and the only loss is the quality of the list.
 
+> **RULED 2026-10-08 (b) — the two notices have one source and it is §22.12.** The coach's
+> `coach-audit-addendum.md` §22.10.5 carries variant wordings for both (its rows 60 and 61, which are
+> **this document's #61 and #62** — §22.10.5 assigned UX the renumbering and the shipped ids are these).
+> **§22.12 #61 and #62 ship as written; the coach's two literals are not carried, and §22.10.5 is the
+> document corrected.** The correction is a **pointer, not a restatement**: §22.10.5's two String cells
+> should name §22.12 #61 / #62 as the source and keep the coach's *content* ruling in prose. Two literals
+> for one string in two files is the duplicate-`PROGRAM` defect at small scale, and the coach's content —
+> recency as the order, a floor of one recent movement, a typed query outranking it, `basis:"recent"` as
+> the name — is untouched and is what §22.10.5 is for. Reasons per row, in #61 and #62.
+>
+> **#62's case is truth, not taste, and the fact arrived after both strings were written.** `basis`
+> demotes to `null` whenever **no returned row earned the recency bonus** — an empty window, *or* a
+> recent movement the library does not carry, *or* the caller excluding the recent rows. `Nothing logged
+> in the last 8 weeks to rank by.` is false in two of those three. **The table row above is amended to
+> match:** #62's condition is `basis === null` for **any** of the three causes, not the empty window
+> alone.
+
 ### 22.20.4 The sheet's third mode — confirm state
 
 ```
@@ -5537,8 +5554,8 @@ notice stays true, and the only loss is the quality of the list.
 │ Cable · lats                             │  .det
 │ Goes at the end of today's session.      │  .det                           (#63)
 │ The plan does not change.                │  .det                           (#20, verbatim)
-│ [               Add it                ]  │  full × 52, primary             (#64)
-│ [               Not now               ]  │  full × 52, lowest, pinned
+│ [               Add it                ]  │  full × 56, .primary            (#64)
+│ [               Not now               ]  │  full × 48, lowest, pinned
 └──────────────────────────────────────────┘
 ```
 
@@ -5548,8 +5565,8 @@ notice stays true, and the only loss is the quality of the list.
 | Heading | `{picked name}` — this state exists to catch a mis-tap, so the thing he picked is named at heading weight |
 | Meta | `{Equipment} · {primary muscle}` (#11) |
 | Consequence | **#63 then #20**, two short lines, in that order. #63 says where it lands because the draft's key order is D8's rule and *at the end* is both the behaviour and the thing he asked for; #20 says the plan is untouched, in the words the pick state already used |
-| `Add it` | #64, full × 52, **primary and only**. **`Replace` is not rendered** — there is no slot to replace. **`Add as well` is not rendered** — *as well as what* has no referent here |
-| `Not now` | Full × 52, `.ghostbtn`, lowest, pinned. Scrim and `Escape` the same. Closes the whole sheet |
+| `Add it` | #64, **full × 56, `.primary`**, **primary and only**. **CORRECTED 2026-10-08 (b): this row said 52; the sheet's shipped primaries are 56** (§22.20.11). **`Replace` is not rendered** — there is no slot to replace. **`Add as well` is not rendered** — *as well as what* has no referent here |
+| `Not now` | **Full × 48, `.sheet .ghostbtn`**, lowest, pinned. **CORRECTED 2026-10-08 (b)**, as above. Scrim and `Escape` the same. Closes the whole sheet |
 | Arm delay | **None.** Nothing is destroyed and the commit is one `Undo` away, twice (§22.20.6) |
 | Not said here | AD1's absent-verdict sentence. The sheet speaks about his session; the card and Summary speak about his advice (§22.9's 2026-10-08 amendment) |
 
@@ -5667,3 +5684,23 @@ workout plan"* — there is no slot to re-point, so §22.7 is never offered on a
 movement name · warm-up sets on a prescription-less card (B-116, fifth asking, still his one sentence to
 give) · plate math (B-10) · a rest timer (B-09) · anything on Home, Trend, Weight or Diet · any change to
 the set rows, the ghost row, the `ld` row or the load chip.
+
+### 22.20.11 Button sizes — W4's deviation confirmed, and this spec corrected (2026-10-08 b)
+
+**Confirmed. The build is right and §22.20.3 / §22.20.4 were wrong.** The sheet's confirm buttons stay at
+the sheet's shipped sizes — **`Add it` 56 `.primary`, `Not now` 48 `.sheet .ghostbtn`** — not the
+"full × 52" those two sections asked for. `#addexbtn` itself **is** 52, as specified, and does not move:
+it lives on the card and Summary bottom stacks, which are a different stack with their own sizes.
+
+**Why the deviation is better than the spec.** `52` was a number I wrote from the ≥ 44 floor without
+checking what the same sheet already renders. **Consistency inside one sheet beats a number in my
+document.** A primary that is 56 in `swap` and `form` mode and 52 in `extra` mode, and a `Not now` that is
+48 in two states and 52 in the third, is a bottom stack whose height changes between states of one
+sheet — §0.1 #1's class of defect, reached by a back-tap, for no gym-floor gain whatsoever. Both sizes
+clear the 44 px constraint (§3.6) with room. There is **no third size in this sheet** and that is the rule
+the build enforced and I am now writing down.
+
+**The general rule, so this does not recur:** where a UX section gives a size for a control inside an
+existing component, and the component already ships a different size for the same control in another
+state, **the shipped size wins and the section is corrected** — unless the shipped size is below 44 px, in
+which case it is a defect and escalates. An engineer does not need to ask.
