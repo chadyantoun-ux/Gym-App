@@ -6015,3 +6015,625 @@ happens when the copy is made **and edited in the same breath** (WO-022 §4's ow
 the provenance literal (§22.21.11) · warm-up sets (B-116) · plate math (B-10) · a rest timer (B-09) ·
 anything on Home, Trend, Weight or Diet · any change to the set rows, the ghost row, the `ld` row or the
 load chip.
+
+---
+
+## 22.22 `Keep it in the plan` — the added movement's promote (WO-023 W2, 2026-10-08)
+
+**His words are the scope and the first clause binds hardest:** *"please don't change anything already
+implemented, it's working as expected. just allow me the 'add an exercise' when needed and allow me to
+decide if it's permanent or just for the session."*
+
+So this section specifies **one new control, one reused form, one confirm, one toast, one undo**, all of
+it inside the **added movement's Summary block, below Rule AD1's sentence**. Nothing that renders today
+renders differently, moves, resizes or changes a word. §22.22.18 is the diff-level list of what is not
+touched, written so W4 can check itself and C14 can prove it.
+
+**§22.21 is parked.** It is specified and deliberately unbuilt (WO-022's re-cut). Nothing in this section
+is wired to it, nothing here waits on it, and none of its eight dependencies are inherited — where this
+flow needs the same thing from `askSheet` or `sheetErr`, §22.22.16 states it again as its own requirement.
+§22.7's branch, including literal #47, keeps rendering exactly what `index.html:4013`–`4017` renders
+today.
+
+**The one clause that is not negotiable in any design, stated before anything else: the session saves on
+the first tap of `Save session`, with the offer unanswered, in every state of this flow.** §22.22.9 is
+how, and it is a presence-and-geometry argument, not a promise.
+
+### 22.22.1 Flow
+
+```
+Flow:   Keep it permanently
+Entry:  `Finish session` (#tosum) from any card -> Summary. The offer is a block inside the added
+        movement's own Summary block, below AD1's sentence. There is no interstitial, no second
+        door, no Settings route, no Plans detour, and nothing on a session card.
+Exit:   Keep it (commit) · Cancel (close the form) · Not now / scrim / Escape (close the confirm) ·
+        Undo (while the toast stands) · `Save session`, which never waits for an answer.
+Writes: ONE patch of `phat:v1:plans` — `{plans, activePlanId}` together — through `save()`, on the
+        commit tap and again on the undo tap. Nothing else reaches disk: no log write, no bodyweight
+        write, no prefs write, and the draft is read, never written, by every tap in this flow except
+        the mark §22.22.15 requires.
+```
+
+**One control per added movement.** He may add two; each added block carries its own, independently, and
+only one form is open at a time (§22.22.8).
+
+### 22.22.2 Where it sits — the added block on Summary, at 393 px
+
+```
+[REF] 393 px — Summary, an added movement's block, three states of one slot
+
+  STATE A — the offer                        STATE B — the form open (abridged; ~771 px tall)
+┌───────────────────────────────────────┐   ┌───────────────────────────────────────┐
+│ Face pull                     ADDED   │   │ Face pull                     ADDED   │
+│ 25 × 15 · 25 × 15 · 25 × 14           │   │ 25 × 15 · 25 × 15 · 25 × 14           │
+│ felt easy, go heavier                 │   │ felt easy, go heavier                 │
+│ ┌ NO PRESCRIPTION ──────────────────┐ │   │ ┌ NO PRESCRIPTION ──────────────────┐ │
+│ │ Added today. No sets or reps set, │ │   │ │ Added today. No sets or reps set, │ │
+│ │ so no verdict. A verdict needs it │ │   │ │ so no verdict. A verdict needs it │ │
+│ │ in your plan.                     │ │   │ │ in your plan.                     │ │
+│ └───────────────────────────────────┘ │   │ └───────────────────────────────────┘ │
+│ ┌───────────────────────────────────┐ │   │ ╔═ KEEP FACE PULL ══════════════════╗ │
+│ │ Keep Face pull in the plan        │ │48 │ ║ SETS        REPS FROM             ║ │
+│ └───────────────────────────────────┘ │   │ ║ [− 　 +]    [− 　 +]              ║ │
+└───────────────────────────────────────┘   │ ║ REPS TO                           ║ │
+                                            │ ║ [− 　 +]                          ║ │
+  STATE C — kept (after the commit)         │ ║ TYPE                              ║ │
+┌───────────────────────────────────────┐   │ ║ [□ POWER] [□ HYPERTROPHY]         ║ │
+│ Face pull                     ADDED   │   │ ║ [□ SPEED]                         ║ │
+│ 25 × 15 · 25 × 15 · 25 × 14           │   │ ║ Type sets how the app progresses… ║ │
+│ felt easy, go heavier                 │   │ ║ IMPLEMENT                         ║ │
+│ ┌ NO PRESCRIPTION ──────────────────┐ │   │ ║ [□ BARBELL] [□ DUMBBELL]          ║ │
+│ │ Added today. … in your plan.      │ │   │ ║ [□ MACHINE] [■ CABLE]             ║ │
+│ └───────────────────────────────────┘ │   │ ║ [□ BODYWEIGHT]                    ║ │
+│ Pull holds it from your next session. │   │ ║ Implement sets how a zero load…   ║ │
+│ No verdict for tonight.               │   │ ║ [     Keep it in the plan      ]  ║ │ 56
+└───────────────────────────────────────┘   │ ║ [     Cancel                   ]  ║ │ 48
+                                            │ ╚═══════════════════════════════════╝ │
+                                            └───────────────────────────────────────┘
+```
+
+Below this block, unchanged and in this order: the remaining per-exercise blocks · `Add an exercise`
+(§22.20) · `#bs-slot` · the owner line · `← Back | Save session` · `Nothing is judged here…` ·
+`DISCARD SESSION`. **The form grows downward only.** Nothing above it moves — not the name, not the
+`ADDED` kicker, not the set list, not the note, not AD1's block — and nothing in the bottom stack
+changes except its scroll position.
+
+**Why below AD1's sentence and not above it.** §22.7's geometry, for §22.7's reason: *after the reading,
+not before it.* An added card has no verdict; AD1's sentence is its reading, and the coach ruled it
+stands unchanged on both surfaces (§25.3.5). The condition and its remedy then read in sequence —
+`A verdict needs it in your plan.` followed by the one tap that puts it there.
+
+**Why not an interstitial on `Finish session`.** That tap *is* the navigation to Summary, so his placement
+and this one are the same screen. And `#bs-slot` — the blocked-save message — lives on this screen too:
+teaching him to dismiss a dialog on the road to saving is how he eventually dismisses the one that means
+a set did not make it.
+
+### 22.22.3 Presence — five conditions, and what stands in the slot when one fails
+
+The slot is **one position in the block** (immediately after AD1's advice block) and it holds exactly one
+of five things, decided in this order:
+
+| # | Condition | What is in the slot |
+|---|---|---|
+| 1 | Not Summary, or after `Save session`, or a **swapped** entry, or a plan slot, or `e.gone` (D5) | **Nothing.** Never a session card, never a swapped block — that is §22.7's control and two controls in one block is a defect |
+| 2 | Added entry, **zero completed sets** (including a notes-only entry) | **Nothing, and no explanation of its absence** (coach §3.6). There is nothing to write a prescription about and a greyed control is a question he answers by guessing |
+| 3 | Added entry, ≥ 1 completed set, but the draft's `dayId` does **not** resolve in the plan the promote would write | **#90**, the D8 sentence, as plain `.sumnote` text — no enclosure, no red. §22.22.5 states why that treatment and not a refusal box |
+| 4 | Added entry, ≥ 1 completed set, day resolves, but `editableTarget` refuses, or the plans store is demo (`S.plansMeta.demo === true`), or `S.blockWrites[PLANS]` | **#89** (or **#91** for demo), as plain `.sumnote` text |
+| 5 | Added entry, ≥ 1 completed set, day resolves, a target plan exists | **The trigger, #73.** `.ghostbtn.sumperm`, full × 48 |
+| — | The entry has **already been promoted this session** | **#86**, the receipt, as plain `.sumnote` text. Replaces the trigger; see §22.22.15 for the fact this reads |
+
+**Row 3 is a reading of the coach's clause, not a departure from it.** AD1.6.5 says the offer does not
+render and a tap that races through refuses. A sentence in the control's place is not the offer rendering,
+and the coach wrote the literal to be said. A control that silently is not there teaches him the app is
+unreliable; one that says why teaches him what happened (§22.21.6's ruling, same reasoning). **If
+`strength-coach` wants #90 confined to the tap race, this row is the only thing that changes and the
+literal does not move.**
+
+**Row 4's demo case names its cause**, which is the gap §22.21.6 recorded and declined to fix. It costs no
+new string: `DEMO_STORE` is already on disk and already says the right thing.
+
+### 22.22.4 The form — WO-006 B2's, reused, with four fields dropped
+
+**It is not a sheet.** It opens **inline, in the block, in the trigger's place**, and the page scrolls. The
+reasons, in order of weight:
+
+1. **The coach's own ruling assumes it.** §25.3.2 strikes a derived hint line because *"the sets he logged
+   are already rendered in the same Summary block, three inches above the form."* In a bottom sheet they
+   are behind a scrim.
+2. **It is 771 px tall at 393 px and 100 % text** (§22.22.12). §22.21's 367 px sheet already needed a
+   `max-height:52vh` scroll wrapper to survive 200 % text; a sheet twice that, holding three steppers and
+   eight segmented buttons, with a keyboard-free but focus-trapped interior, is a worse version of a page
+   that already scrolls.
+3. **Nothing in it is destructive and nothing in it writes.** A modal's job is to interrupt. This is a
+   form he fills in, sitting down, after the session.
+
+**The fields, and the four that are gone.**
+
+| Field | In this form | Why |
+|---|---|---|
+| `Name` | **Gone.** The movement is named by the block's own heading and by #75 | It comes from the entry (coach §25.3.1, written). A name field here is an invitation to rename a movement whose `mv` the entry already carries, and a renamed `n` is how the library claim gets dropped (`index.html:5365`) |
+| `Sets` / `Reps from` / `Reps to` | **Empty. No pre-fill, no placeholder number, no derived hint line beside them** | Coach §25.3.1 / §25.3.2, `[Certain]`. `s` is refused on arithmetic grounds that survive any answer to B-116; `lo`/`hi` are blocked on B-116 |
+| `Type` | **Asked. No option pre-selected.** All three offered on every day of every plan | Clause K3.5. A pre-selected radio is a default and B-57 is about defaults, not about dialogs |
+| `Implement` | **Rendered in both cases, with B2's existing control.** Where `libraryImplementOf` answers (677 of 876 rows) one option starts `aria-pressed="true"`; where I3 refuses (199 rows) none does | Coach §25.3.1's correction. Same markup, same control, same refusal — **the only difference between the two cases is which option starts pressed.** Without this the kettlebell swing he logged hits a dead control with no stated reason |
+| `Same movement as` (`lift`) | **Gone** | `lift` is **minted fresh, never joined** (coach §25.3.1, `[Certain]`): joining puts two prescriptions on one Trend line, which is the B-46 collapse and the whole point of the `d1h` / `d5i` pair. A picker whose every option is forbidden is not a picker |
+| `Cue` | **Gone** | Coach: absent, a supported state. One more keyboard between him and the plan, for a string no rule reads |
+| `Pick from the library` (`#pf-lib`) | **Gone** | The movement is decided. The button's whole job is to choose one |
+
+**No line says where `Implement` came from.** A pre-filled derived fact needs no provenance sentence: it
+is on screen, it is changeable with one tap, and the `.tiny` line beneath it already says what the field
+decides. A sentence naming the exercise list as its source would be a new string for a fact he can see
+and overrule.
+
+**Everything else is B2's, verbatim** — the `.peform` enclosure, the `.lbl` field labels, `seg()` with its
+`role="group"` and `aria-pressed`, the stepper triplets with their `{label} up` / `{label} down`
+accessible names, `KIND_HELP` under Type keyed to the current choice with `none` as the prompt before one
+is made, the implement helper line, the `.refuse` slot with `role="alert"`, and the refusal literals. No
+new form, no new control, no new size.
+
+### 22.22.5 The form's refusals and its one warning
+
+**Refusals — B2's literals, verbatim, in B2's `.refuse` slot, in B2's order** (`index.html:5351`–`5357`).
+The first empty or out-of-range field is named and nothing is created:
+
+```
+Not added. Sets must be 1 to 20.
+Not added. Reps must be 1 to 100.
+Not added. Reps from must not be above reps to.
+Not added. Choose a type.
+Not added. Choose an implement.
+Not added. Check the fields.                  <- the engine refused after the fields passed
+```
+
+`Not added. Name it first.` is unreachable here and is not rendered: there is no name field and the entry
+always carries `n`.
+
+**`Not added.` on a button labelled `Keep it in the plan` is kept deliberately.** It is literally true —
+nothing was added to the plan — and the informative half of each sentence, *which field*, is exactly
+right. One literal with one source beats a second wording that drifts. **Recorded as a wording friction,
+not a defect** (§22.22.16 (6)).
+
+**Rule K2's range warning is live and keeps its shipped contract.** `kindWarn(k, lo, hi)` fires on
+`speed` with `hi > 5` and on `hyp` with `hi ≤ 5`, renders in the same `.refuse` slot, and **the same tap
+again commits**; any change to `k`, `lo` or `hi` disarms it. Unlike a swap (K3.4) there is a form here and
+all three of `(k, lo, hi)` are being typed for the first time, so the check applies as written (K3.5.5).
+**One dependency: the shipped sentence ends `…or tap Add exercise again to keep it.`, and this form has no
+button by that name.** §22.22.16 (1) is the fix; it is a token, not a content change, and `Add exercise`
+must not be borrowed as a label here — `Add an exercise` (#60) is a different control on this same screen.
+
+**Why the standing lines (#89 · #90 · #91) are plain text and not a refusal enclosure.** They state that
+the plan moved, or that the store cannot be written — **states, not refusals of something he attempted.**
+The shipped precedent is in this exact block for this exact class of fact: `Not in the plan any more. It
+still saves with this session.` renders as a bare `.sumnote` (`index.html:3932`), and `Skipped` was ruled
+a state and never rendered as a verdict (§5.2). A four-sided red box on a Summary he is reading on the way
+to `Save session` says *your session is in trouble*, which is the one thing none of these sentences means.
+**A refusal of an act he attempted — the tap race, the failed write — renders as `.sheet .rule` inside the
+confirm, which is that surface's shipped refusal shape.**
+
+### 22.22.6 The confirm — the slot facts, then the plan, then the warning, then provenance
+
+`askSheet`'s shipped shell, bottom-anchored, scrim over the viewport, **300 ms arm on the commit** — this
+is the one control on this screen that changes something outside this session.
+
+```
+[REF] 393 px — worst case, all four paragraphs
+
+│  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   │
+│  ┃ Keep Face pull in Pull?                ┃   │ h2, 17 px/800, focused on open
+│  ┃                                        ┃   │
+│  ┃ Pull gets Face pull at the end of the  ┃   │ ¶1 — the slot's facts            #79
+│  ┃ day: 3 × 12–15, hypertrophy. It is in  ┃   │
+│  ┃ the plan from your next session.       ┃   │
+│  ┃ Tonight's sets save as they are, with  ┃   │
+│  ┃ no verdict.                            ┃   │
+│  ┃                                        ┃   │ 8 px
+│  ┃ A copy called PHAT — my version        ┃   │ ¶2 — ONLY when a copy will be
+│  ┃ becomes the plan you are on. Nothing   ┃   │ made. #67 · #68 · #69 VERBATIM
+│  ┃ else moves — every logged set stays,   ┃   │ by reference to §22.21.3
+│  ┃ and every other card reads as it does  ┃   │
+│  ┃ now. PHAT stays in Plans, read-only.   ┃   │
+│  ┃                                        ┃   │ 8 px
+│  ┃ Pull already holds Face pull at        ┃   │ ¶3 — ONLY on a duplicate movement
+│  ┃ 3 × 12–15. This puts the same movement ┃   │ MOVE_WARN.Q4 VERBATIM            #81
+│  ┃ there twice. Keep one unless you mean  ┃   │ A WARNING. It does not refuse and
+│  ┃ both.                                  ┃   │ it does not arm a second tap
+│  ┃                                        ┃   │ 8 px
+│  ┃ Upper power would hold power and       ┃   │ ¶4 — LAST, and only when the gate
+│  ┃ hypertrophy work together. Each        ┃   │ is true. PV1.2, the coach's       #82
+│  ┃ exercise keeps its own rule and rest.  ┃   │
+│  ┃ The six-week check will treat this     ┃   │
+│  ┃ plan as yours, not PHAT.               ┃   │
+│  ┃ [ #dr-sheet-err — a failed write ]     ┃   │
+│  ┃ [  Keep it                          ]  ┃   │ 361 × 48, ghost + danger, ARMED 300 ms
+│  ┃ [  NOT NOW                          ]  ┃   │ 361 × 52, primary, LOWEST — the safe tap
+│  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛   │   sits in the slot the commit occupied
+```
+
+**The order is a ruling and every paragraph is gated on its own truth.**
+
+| ¶ | Renders when | Why there |
+|---|---|---|
+| 1 | always | He tapped a button about a movement. The answer to what he asked comes first, and it carries the four numbers he just typed — **this is the one screen on which a mistyped `s` is catchable before it becomes permanent** |
+| 2 | `editableTarget(...).created === true` | The consequence he did not ask for, second. **#67 · #68 · #69 verbatim, not reworded** — they are §22.21.3's, checkable against the code, and the order forbids re-wording them. Nothing else of §22.21 is used |
+| 3 | the target day already holds this movement | A fact about where it lands, discovered only once the day is known. **It warns and does not refuse** (AD1.6.6) — and it does **not** arm a second tap, because the 300 ms-armed commit below it already *is* the second tap. Arming it in the form as well would be two blind re-taps on one road |
+| 4 | `phatProvenance(before) === true && phatProvenance(after) === false` | **Last, under PV1.2.1's truth-condition gate**, computed on the prospective plan and never guessed from `k`. Not in a Type line: a Type line describes the *option*, PV1.2 describes the *plan* (K3.5.4). **Unreachable on the plan he trains on today** — `derivedFrom` is not `"phat"`, so provenance is already false. The hook is §22.21.11 and it is left empty on purpose; the literal is the coach's, from addendum §25.2.3 |
+
+**On his device, today, the confirm is paragraph 1 and nothing else** — unless his active plan turns out
+to be read-only, in which case it is paragraphs 1 and 2. That is the whole sheet he will actually read.
+
+**Buttons.** Commit `Keep it` (#83), `.sheet .ghostbtn.danger`, 48, armed 300 ms. Safe `Not now` (#84),
+`.sheet .primary`, 52, **lowest**, in the slot the commit occupied, so a stray second tap lands on it.
+Both are the shipped `askSheet` sizes (§22.20.11's rule: the shipped size wins over a number in this
+document).
+
+**The red on `Keep it` is redundant, never the carrier.** The label names the act, the stack's order names
+which tap is safe, and the greyscale test passes on words and position. It reads *this changes something
+outside the session* — §22.7's own meaning for it — and nothing in this flow destroys anything.
+
+### 22.22.7 Interactions, tap by tap
+
+| # | Tap | What changes on screen | What reaches disk |
+|---|---|---|---|
+| 0 | — | The trigger stands in the added block, below AD1's sentence | nothing |
+| 1 | `Keep {name} in the plan` | **The trigger is replaced in place by the form.** Fields empty, no option pressed except a derived `Implement`, `KIND_HELP.none` under Type. Focus moves to the form's group label; **no keyboard opens.** The page does not jump: the form's first row is scrolled into view with `block:"nearest"` only if it is below the fold | **nothing** |
+| 2 | steppers, Type, Implement | Values in memory only. A stepper tap re-renders the form and **cannot lose a typed value** — B2's `S.pe.form` pattern, which exists for exactly this | **nothing** |
+| 3 | `Keep it in the plan`, fields incomplete | B2's refusal in the `.refuse` slot, scrolled into view with `block:"nearest"`, announced assertively. The form stays open and everything typed stays typed | nothing |
+| 3′ | `Keep it in the plan`, K2 range mismatch, first time | `kindWarn`'s sentence in the same slot. **The same tap again proceeds** | nothing |
+| 4 | `Keep it in the plan`, valid | The confirm opens, scrim over the viewport, focus on the h2. The commit is present but **inert for 300 ms** — not disabled, not greyed. The form stays mounted behind the scrim | **nothing.** No byte is written before tap 5 |
+| 5 | `Keep it` | Sheet closes. The block repaints: the form and the trigger are **gone**, #86 stands in their place. **Everything above it is byte-identical** — the name, the `ADDED` kicker, the set list, the note and AD1's block (§22.22.15). Toast #85 with `Undo` | **one** `save(PLANS, {plans, activePlanId})`. One patch, both keys, read-before-write (WO-013) |
+| 5′ | `Not now` · scrim · `Escape` | Sheet closes. Focus returns to `Keep it in the plan`. The form is exactly as he left it | nothing. `phat:v1:plans` byte-identical |
+| 6 | `Cancel` in the form | The form closes, the trigger comes back, focus returns to it. **The typed values survive in memory** for as long as Summary holds this draft (§22.22.14) | nothing |
+| 7 | `Undo`, while the toast stands | The block repaints with the trigger back — and, if he re-opens the form, with his numbers still in it. Toast #87 | one `save(PLANS, {plans, activePlanId})` restoring the pre-commit bytes, **after re-reading and matching** (§22.22.10) |
+| — | `Save session`, at any point above | **The session saves, first tap, every time** (§22.22.9) | the log write, exactly as today |
+
+**Tap count is 3 plus the numbers he types, and that is correct here.** The swap and the add are 3-tap
+flows because they happen mid-set with a barbell waiting. This one happens after the last set, on the
+record screen, and its product is permanent. Speed is not the virtue being optimised; **not guessing is.**
+
+### 22.22.8 States — every one
+
+| State | What renders |
+|---|---|
+| **Empty** | No added entry on Summary → **nothing renders.** No placeholder, no disabled button, no "you have not added anything" line. There is no empty state because there is no question to answer |
+| **Added entry, zero completed sets** | **Nothing, and nothing explaining it** (coach §3.6). Includes a notes-only added entry |
+| **First run** | Identical to every run. No onboarding, no cache, no history. The confirm is the onboarding |
+| **Loading** | **None, anywhere.** No library fetch, no network call, no deferred module. The trigger is in the block's first paint and the form and the confirm open synchronously. §22.10's loading states have no counterpart here — `libraryImplementOf` reads `S.lib.index` if it is there and **yields nothing if it is not, which is the I3-refused path already specified**: no option starts pressed and the form asks |
+| **Library absent and `Implement` unanswered** | The form renders, `Implement` asks, B2's refusal names it. **The promote is never blocked by the library** |
+| **Success** | Toast #85 + `Undo`. The trigger and the form leave the block and #86 arrives in the same paint |
+| **Form open, he taps another added block's trigger** | The first form closes (its values kept in memory), the second opens. **One form at a time**, so one `.peform` and one set of ids exist in the DOM |
+| **Day does not resolve** (D8) | #90 in the slot. **Also the tap-race refusal**: if the day vanishes between the paint and the commit, the confirm stays open, #90 renders in `#dr-sheet-err` as `.sheet .rule`, announced assertively, and zero bytes are written |
+| **Duplicate movement in the day** | Commits normally. #81 in the confirm, ¶3. **No refusal, no extra tap** |
+| **Write refuses** (`validatePlan`, `promoteDraftEntry`, `planStoreUpsert` or `save()` fails, `S.blockWrites[PLANS]`) | The confirm **stays open**, **#89** in `#dr-sheet-err` as `.sheet .rule`, announced assertively. `Not now` is right there. `phat:v1:plans` byte-identical; the draft, the session and every typed number untouched. **And `Save session` then saves the whole session including this entry** (C2) |
+| **`editableTarget` refuses before any sheet** | #89 in the slot instead of the trigger. Believed unreachable — a store that cannot resolve an active plan cannot have painted the blocks above it — and specified anyway |
+| **Demo data** | #91 in the slot. C-14 refuses demo as the base of anything that persists, and this sentence **names its cause** |
+| **Already promoted this session** | #86 in the slot. Survives a reload (§22.22.15). No second offer, no second control |
+| **Undo refuses** (the store moved under it, or the write fails) | Toast **#88**. It does not claim nothing changed — he is standing where he just asked to leave — and it ends on the session being safe |
+| **Reload / phone lock / tab kill between the commit and the save** | The draft comes back with every number; the promoted slot is in the plan; #86 is in the slot, because its condition is a fact about the draft and the plan, not a flag in memory. **Declining the draft-restore offer discards the draft and leaves the promoted slot standing** — correct: the plan edit was a separate, explicit act |
+| **A stale tab** | WO-013's read-before-write and lock govern. The commit patches `{plans, activePlanId}` over what is on disk; the undo **re-reads and refuses on a mismatch** (§22.22.10). B-76 / B-128's class, tested by C3 |
+| **Offline** | **Identical to online, in every row above.** `localStorage` is the source of truth; the Supabase push is best-effort and gates nothing — not the toast, not the repaint, not the undo. The slot reaches the server on the next push, and `mergeStores` treats `activePlanId` as the device's own, so Diana's active plan does not move |
+| **Mid-render error on Summary** | §0.7. The per-row catch already wraps the advice block; **this control is built inside the same row builder and after it**, so a thrown rule costs the verdict block and not the control, and a thrown control costs the row and never `Save session` |
+| **After `Save session`** | **Nothing.** The draft is cleared and the app leaves Summary. No offer, no receipt, no residue |
+
+### 22.22.9 The save is never blocked — the mechanism, not the promise
+
+Four facts, each checkable:
+
+1. **The offer is never modal except for the 300 ms-armed confirm he opened himself**, and that confirm has
+   `Not now`, the scrim and `Escape`. Nothing in this flow renders over `Save session` unbidden.
+2. **No state of this flow gates `#finish`.** The control reads the draft and writes `phat:v1:plans`;
+   `Save session` reads the draft and writes `phat:v1:log`. They share no flag, no lock and no refusal
+   slot. `#bs-slot` is not written by anything here.
+3. **The geometry puts his own commit between the fields and the exit.** `Save session` is at the foot of
+   the scroll, below every block; to reach it from an open form he scrolls down **past that form's own
+   `Keep it in the plan` button.** That is why no dialog is needed to protect him from leaving the form
+   unanswered.
+4. **Leaving the form open and saving loses nothing that was ever on disk.** The typed spec lives in
+   memory only; the cost of that path is four numbers he typed a minute earlier, not a logged set — which
+   is precisely why it may be discarded **silently**, with no confirmation and no toast. A dialog on the
+   road to `Save session` is the trade this section refuses.
+
+### 22.22.10 The undo — one act, one undo, and it refuses rather than guesses
+
+**Promote-and-maybe-copy-and-activate is one act and it gets one undo.** The commit is a single `save()`
+of a single patch, so the undo is a single restore of the bytes that patch replaced.
+
+**What it restores:**
+
+1. `phat:v1:plans` to its pre-commit bytes — the slot is out of the day, and if a copy was made the copy
+   is removed from `plans` and `activePlanId` names the read-only plan again.
+2. The block returns to **State A**: the trigger is back, and the values he typed are still in memory if
+   he re-opens the form.
+3. **Tonight is untouched in both directions.** Not the sets, not the note, not the entry's `mv` or `n`,
+   not the `ADDED` reading, not AD1's sentence. Neither the commit nor the undo reads or writes
+   `phat:v1:log` or — apart from the mark §22.22.15 requires — `phat:v1:draft`.
+
+**And one guard that is not optional.** The undo is a **byte restore**, so it must **re-read
+`phat:v1:plans` and refuse if it no longer matches what the commit wrote.** A blind restore would delete a
+plan another tab created in between, which is the B-76 / B-128 class and has bitten this repo twice. On a
+mismatch, or on a failed write, **nothing is written** and **#88** says where he is and that his session is
+safe.
+
+**Bounded on purpose.** The undo lives in the toast (6 s of visible reach, `toastUndo`'s shipped timer) and
+is withdrawn when he leaves Summary — a byte restore of the plans store offered from two navigations away
+is a restore against a store he may have edited in between. **No persistent undo control is added to
+Summary**; after the toast, the way back is the Plan Editor, where the slot is one `Delete from plan` away
+with its own confirmation and its own undo (§9.5). **That route is not named in any string here** —
+a navigation instruction inside a receipt is the clause §25.3.5 rejected.
+
+### 22.22.11 Copy — the literals
+
+Numbering continues §22.12's register. **§22.21.7 claims #66–#72a**, so this section starts at **#73**.
+§22.12 is not this lane's to edit; the PM owes it the pointer for both.
+
+| # | Where | When | String |
+|---|---|---|---|
+| 73 | summary, trigger button | §22.22.3 row 5 | `Keep {name} in the plan` **NEW.** Deliberately not #39/#66's `Put {new} in the plan`: *put in the plan* is the swap's act (re-point an existing slot), *keep* is his own word — *"decide if it's permanent or just for the session"* — and two controls on one screen that both say `Put … in the plan` would be one question asked twice about two different things. `.ghostbtn.sumperm`, `data-keep="{exId}"` |
+| 74 | the same button | accessible name | `Keep {name} in the plan from your next session` **NEW.** #73 is a prefix of it (WCAG 2.5.3). The clause is here and not on the face because the face must not wrap to three lines |
+| 75 | form, group label | form open | `Keep {name}` **NEW**, `.lbl`, `id="kf-h"`, the position B2's `New exercise` occupies. It names the subject of a form that has no name field |
+| 76 | form, primary | form open | `Keep it in the plan` **NEW**, full × 56. **Not `Add exercise`** — B2's label would collide with `Add an exercise` (#60), which is a different control on this same screen |
+| 77 | form, safe, lowest | form open | `Cancel` — **B2's own literal, REUSED verbatim** (`index.html:5238`). Distinct from the confirm's `Not now`, which is good: the two levels do not look like one control |
+| 78 | confirm, h2 | — | `Keep {name} in {Day}?` **NEW** |
+| 79 | confirm body, ¶1 | always | `{Day} gets {name} at the end of the day: {target}, {kindword}. It is in the plan from your next session. Tonight's sets save as they are, with no verdict.` **NEW.** Three sentences, three facts: where and what, when it starts, and that tonight is not re-judged (AD1.6.4). `{target}` is `tgtText`'s own form so the sheet, Q4 and the card's target line all print one shape. **No clause mentions a chart** (Rule CH1, §22.16 #5) |
+| 80 | confirm body, ¶2 | a copy will be made | **#67 · #68 · #69, VERBATIM, by reference to §22.21.3.** Not reworded, not re-numbered, not re-derived. They are coach-adjacent, already written, and checkable against the code |
+| 81 | confirm body, ¶3 | the day already holds this movement | `{Day} already holds {name} at {target}. This puts the same movement there twice. Keep one unless you mean both.` — **`MOVE_WARN.Q4`, REUSED verbatim** (`index.html:4866`), per AD1.6.6 |
+| 82 | confirm body, ¶4, **last** | PV1.2's gate is true | `{Day} would hold power and {hypertrophy\|speed} work together. Each exercise keeps its own rule and rest. The six-week check will treat this plan as yours, not PHAT.` — **the coach's, from addendum §25.2.3, REUSED verbatim.** The interpolation is PV1.2.3's, derived without judgement. §22.21.11's hook, filled by the coach and not by me |
+| 83 | confirm, commit | — | `Keep it` **NEW**, `.sheet .ghostbtn.danger`, 48, armed 300 ms |
+| 84 | confirm, safe, lowest | — | `Not now` — **REUSED**, the app's existing safe literal |
+| 85 | summary, toast | committed | (a) `{Day} now holds {name}.` **NEW** · (b) when a copy was made: `{Day} now holds {name}. You are on {copyName}.` **NEW.** Two sentences in case (b) for #70's reason: a receipt that reports half of a two-part write is the silence §22.19 calls worse than losing a number |
+| 86 | summary, the control's slot | already promoted this session | `{Day} holds it from your next session. No verdict for tonight.` **NEW.** `.sumnote`. **It is why the block is not silent after the toast expires**, and its second clause is what keeps AD1's sentence above it from reading as a contradiction: tonight is not re-judged, deliberately |
+| 87 | summary, toast | undone | (a) `{name} is out of {Day} again.` **NEW** · (b) `{name} is out of {Day} again. You are back on {source}.` **NEW** |
+| 88 | summary, toast | the undo's write failed, or the store moved under it | (a) `Could not undo. {name} is still in {Day}. Today's sets still save.` **NEW** · (b) `Could not undo. {name} is still in {Day}, and you are still on {copyName}. Today's sets still save.` **NEW.** It deliberately does **not** say `Nothing changed.` — nothing changed *by the undo*, and a refusal that leaves him unsure which plan he is on is worse than no refusal |
+| 89 | `#dr-sheet-err` as `.sheet .rule`, **or** the control's slot as `.sumnote` on a preview refusal | any write or preview failure | `Could not keep it. Nothing changed. Today's sets still save.` **NEW** |
+| 90 | the control's slot as `.sumnote`, **or** `#dr-sheet-err` on the tap race | the draft's day is not in the plan | `That day is not in your plan any more, so there is nowhere to keep this. Today's sets still save.` — **the coach's, §25.3.4, REUSED verbatim, both clauses.** It deliberately does not route him to the Plan Editor: the day is gone, so there is nothing there to do |
+| 91 | the control's slot as `.sumnote` | `S.plansMeta.demo === true` | `Sample data is loaded. Leave it before saving a plan. Today's sets still save.` — **`DEMO_STORE` REUSED verbatim** (`index.html:4858`) as the first two sentences, plus the session clause. A composition, not an edit of the literal |
+
+**Reused from WO-006 B2, verbatim, and not numbered here** because §22.12 does not own them: the field
+labels `Sets` · `Reps from` · `Reps to` · `Type` · `Implement`; `KIND_LBL` and `IMPL_LBL`'s option labels;
+`KIND_HELP`'s four sentences under Type including `none`; the implement helper line; the six
+`Not added. …` refusals; and `kindWarn`'s two sentences (with §22.22.16 (1)'s token).
+
+**Substitutions, all through `esc()`:** `{name}` the entry's own `n` · `{Day}` the day's `name` in the
+plan the promote writes · `{target}` `tgtText({s, lo, hi})`, so `3 × 12–15` with U+2013 · `{kindword}`
+lower-case `power` / `hypertrophy` / `speed`, PV1.2.3's own vocabulary, derived from `k` with no judgement
+· `{copyName}` the name resolved by the same `editableTarget` call the commit makes · `{source}` the
+read-only plan's `name`.
+
+**Voice check.** No exclamation marks, no emoji, no congratulation for keeping an exercise. Second person
+only where he acts or stands. **Every refusal reachable from the road to `Save session` ends on
+`Today's sets still save.`** — the coach is `[Certain]` that clause must be present, and this section
+applies it to all four refusals and not only to D8, because a refusal on this screen that does not say it
+reads as a failed save. No string claims a set is on a chart. No string tells him where to navigate.
+
+### 22.22.12 Sizes — measured, at 393 px and at 400 px
+
+**Every height below is the shipped CSS's, not a number I chose** (§22.20.11's rule). Sources:
+`.sumperm{margin-top:var(--s3); min-height:var(--key)}` is `index.html:1140`; `.ghostbtn` 48 and
+`.primary` 56 are `:479`–`:481` and `:476`–`:478`; `.sheet .primary{min-height:52px}` and
+`.sheet .ghostbtn{min-height:var(--key)}` are `:671`–`:672`; `.stepper button{min-height:var(--key);
+min-width:var(--tap)}` is `:276`; `.seg button{min-width:7.5rem; min-height:var(--key)}` is `:891`;
+`.peform{padding:var(--s3) var(--s4) var(--s4); margin-top:var(--s3)}` with a 1 px border is `:1055`;
+`#toast button{min-width:88px; min-height:var(--key)}` is `:705`. `.pad` is `padding:0 var(--s4)`, so the
+Summary content column is the viewport minus 32 px at both widths.
+
+| Control | Class / selector | W at 393 | W at 400 | H | Where the number comes from |
+|---|---|---|---|---|---|
+| Trigger `Keep {name} in the plan` | `.ghostbtn.sumperm` | **361** | **368** | **48** | `min-height:var(--key)`; content box is 12 + 12 + 15.6 ≈ 40, so `min-height` governs. `Keep Face pull in the plan` is 26 characters ≈ 230 px inside a 337 px content box — one line. `Keep Iso-lateral front lat pulldown in the plan` wraps to two and grows to ≈ 56. **It wraps; it never truncates and never shrinks.** Both clear 44 on both axes |
+| Form box | `.peform` | **361** | **368** | see below | 1 px border + 16 px side padding ⇒ inner content **327** / **334** |
+| Stepper key `−` / `+` | `.stepper button` | **44** each | **44** each | **48** | `min-width:var(--tap)`, `min-height:var(--key)`. Exact, and the floor on both axes |
+| Stepper input | `.stepper input` | **≥ 65** | **≥ 69** | **48** | `flex:1 1 auto; min-width:48px`; at a 157.5 px `.grp` the input is 65.5 |
+| `Sets` / `Reps from` / `Reps to` row | `.perange .grp` | **157.5** · **157.5** · **327** | **161** · **161** · **334** | **64** each | `flex:1 1 8.5rem; min-width:8.5rem` (136) with a 12 px gap: 2 × 136 + 12 = 284 fits 327, 3 × 136 + 24 = 432 does not. **Two on row 1, one on row 2** — byte-identically to how the same form already wraps in the Plan Editor at the same 361 px column, so the wrap is familiar, not new |
+| `Type` options | `.seg button` | **159.5** · **159.5** · **327** | **163** · **163** · **334** | **48** each | `min-width:7.5rem` (120), gap 8: two per row, so 2 + 1 |
+| `Implement` options | `.seg button` | **159.5** × 4, then **327** | **163** × 4, then **334** | **48** each | five options ⇒ 2 + 2 + 1 |
+| Form primary `Keep it in the plan` | `.primary` | **327** | **334** | **56** | `.primary{min-height:56px}`. **Not a sheet, so 56 is the number** — the same one `#finish` uses |
+| Form safe `Cancel` | `.ghostbtn` | **327** | **334** | **48** | `.ghostbtn{min-height:var(--key)}`, with **12 px** above it. The gap is stated because `.pebottom .ghostbtn{margin-top:var(--s3)}` does not reach this host: 0 px between a 56 px primary and a 48 px ghost is a mis-tap hazard, and 12 px is this app's button gap everywhere else (`.sheet .btns>button+button`, `:670`). **No size changes — only the gap is named** |
+| Form, whole | `.peform` | 361 | 368 | **≈ 771 at 100 % text** | 25 (margin + border + padding-top) + 25 (`.lbl`) + 148 (`.perange`, two rows) + 25 + 108 (Type) + 62 (`KIND_HELP`, 3 lines) + 25 + 164 (Implement, three rows) + 44 (helper, 2 lines) + 68 (primary) + 60 (Cancel) + 17 (padding-bottom + border). **The page scrolls; nothing is pinned and nothing has a `max-height`** |
+| Confirm commit `Keep it` | `.sheet .ghostbtn.danger` | **361** | **368** | **48** | `.sheet .ghostbtn` |
+| Confirm safe `Not now` | `.sheet .primary` | **361** | **368** | **52** | `.sheet .primary{min-height:52px}` overrides `.primary`'s 56 |
+| Gap between the two | `.sheet .btns>button+button` | — | — | **12** | `var(--s3)` |
+| Confirm body, worst case (four paragraphs) | `.sheet .det` × 4 | **361** | **368** | **≈ 328** | 4 + 4 + 3 + 4 = 15 line boxes at 20.3 plus three 8 px paragraph gaps. Inside the **52vh** wrapper (= 443 px at 852) it does not scroll at 100 % |
+| Confirm sheet, worst case | `#modal .sheet` | 393 | 400 | **≈ 540** = 63 % of 852 | 18 + 6 + 44 + 328 + 16 + 48 + 12 + 52 + 16. Typical case — ¶1 alone — is **≈ 271**. Nothing below the fold, nothing under the tab dock |
+| Toast message | `#toast .msg` | **271** | **278** | **48 one line · 50 two** | 361 − 88 (`Undo`) − 2 (gap). #85 (b) is 58 characters and wraps to two lines at both widths |
+| `Undo` | `#toast button` | **≥ 88** | **≥ 88** | **48** | `min-width:88px; min-height:var(--key)`. §0.4 row 23's floor, shipped |
+| Receipt / standing lines | `.sumnote` | **361** | **368** | **≈ 38 at two lines** | 13 px at line-height 1.45, margin-top 6. `.sumnote` is already this block's paragraph treatment — no new class, no new size |
+
+**Which numbers are exact and which are owed a Playwright pass.** Exact, from the CSS and the two
+viewport widths: every width in the table, every 44 / 48 / 52 / 56 / 12 / 88 height, and both wrap points
+in `.perange` and `.seg` (they follow from `min-width` and the gap, not from a glyph). Computed, from
+Archivo's advance widths: the trigger's one-line/two-line boundary, the `.tiny` and `.det` line counts,
+the **771 px** form, the **328 px** body and the **540 px** sheet. **W4 confirms those five with a
+measurement and W5 records them**, at 393 × 852 and 400 px, at 100 % and 200 %. If a measured line count
+differs, nothing in this section changes but the arithmetic in this cell.
+
+**200 % text.** `.grp`'s and `.seg button`'s minimums are in rem, so at 200 % they become 272 and 240 —
+wider than the 327/334 content box — and every row goes **one control per line**: three stepper rows, three
+Type rows, five Implement rows. A stepper still holds two 44 px keys and a ≥ 48 px input in 327 px, so
+§0.6's normative reflow is satisfied without clipping. The form computes to ≈ 1,250–1,400 px, the page
+scrolls, and **nothing overlaps and nothing is cut off** — the single strongest argument for an inline form
+over a bottom sheet. Pinch-zoom untouched (§0.6, B-13).
+
+### 22.22.13 A11y
+
+| | |
+|---|---|
+| Trigger | A plain `<button>` with **no `aria-haspopup`** — it opens an inline region in the page, not a dialog, and `#addexbtn`'s `aria-haspopup="dialog"` must not be copied here. `aria-expanded` is **not** used either: the trigger is *replaced* by the form rather than disclosing a region beneath itself, so there is no control left to be expanded. Visible text #73, accessible name #74 with #73 as its prefix. `id="keep-{exId}"`, one per added block |
+| Form region | `<div class="peform" role="group" aria-labelledby="kf-h">` — B2's shipped shell. `#kf-h` carries #75 and `tabindex="-1"` |
+| Focus on open | **`#kf-h`.** Not a stepper input: an autofocused numeric input opens the keyboard over the form he has not read yet, and B2 does not autofocus either. A screen reader lands on the group's name, which names the movement |
+| Focus order, form | `#kf-h` → `Sets −` / input / `+` → `Reps from −` / input / `+` → `Reps to −` / input / `+` → `Power` / `Hypertrophy` / `Speed` → the five `Implement` options → *(`.refuse`, not focusable)* → `Keep it in the plan` → `Cancel`. DOM order and visual order agree, and the safe control is last in both |
+| Focus order, screen | … the added block's text → **the trigger (or the form's interior)** → the remaining blocks → `Add an exercise` → `#bs-slot` → `← Back` → `Save session` → `DISCARD SESSION`. **The flow adds nothing above any input and nothing in a top corner** |
+| Field names | B2's, reused: each stepper input `aria-label="{Sets\|Reps from\|Reps to}"`, each key `aria-label="{label} up\|down"`, each segmented group `role="group" aria-label="{Type\|Implement}"` with `aria-pressed` on every option. **Every id in the form is namespaced by the entry id** — one form renders at a time, and the namespace is what keeps that true if a build ever renders two |
+| Selection is never colour alone | `.seg`'s drawn mark has two forms (outline / filled) at identical size, plus `aria-pressed`, plus amber as a third signal. Shipped, unchanged |
+| Refusals and the warning | `.refuse` with `role="alert"` — B2's, shipped — **and announced through `announce(msg, true)`**. The form's refusal is already in a `role="alert"` node; the **confirm's** refusal is not: `sheetErr()` writes `#dr-sheet-err` and announces nothing today, which is a refusal that is silent to a screen reader. **Required here: one assertive announce inside `sheetErr()`** (§22.22.16 (2)) |
+| Live region | One region, `#bs-live`, through `announce()` — §2.6 allows exactly one and nothing here adds a second. The toast already routes through it and sets the control's `aria-label` to `{message} Undo.` |
+| Standing lines (#86 · #89 · #90 · #91) | Ordinary text in the reading order, **not** live regions: they render with the screen, not in response to a tap |
+| Dialog | `askSheet`'s shipped shell, unchanged: `role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title"`, scrim, `Escape` cancels, `Tab` trapped |
+| Focus on confirm open / close | The h2 on open. `Not now`, scrim and `Escape` return focus to **`Keep it in the plan`**, which is still there — `askSheet` is called with `back` pointing at it. On the commit that button no longer exists, so focus moves to **the block's name element**, made programmatically focusable (`tabindex="-1"`), because that is where the changed reading is. **Not** the toast's `Undo`: a control that hides itself after 6 s is a focus target that disappears under a screen-reader user |
+| Focus on `Cancel` | Back to the trigger, which is back on screen |
+| The 300 ms arm and assistive tech | As §22.21.9: the commit is `pointer-events:none` plus a handler guard, so a keyboard or switch activation inside the window fails silently. Reaching it needs focus-on-h2 plus two `Tab`s plus `Enter` inside 300 ms, which is not a reachable human interval. **Recorded, not fixed.** If it ever is, the fix is `aria-disabled="true"` for the window and nothing else — never `disabled`, which would move focus |
+| Contrast, measured against §0.5 | Trigger on `--bg`: label `--bone` **14.8 : 1**, border `--line` **4.0 : 1** (over the 3 : 1 non-text floor). Form on `--surface`: `.lbl` and `.tiny` are `--faint` (`--t55`) = **4.9 : 1** — passes AA for normal text at 11 px/800 and 12 px, **and is the floor: neither may be reduced, and `.50` and `.45` are forbidden on this ground** (§0.5 rule 1). Stepper: `--bone` on the `--hi` key face = **11.8 : 1**; input `--bone` on `--bg` = **14.8 : 1**; border `--line` **3.8 : 1** on surface, over the non-text floor. `.seg` pressed: `--amber` on `--surface` = **7.9 : 1**. `.refuse`: `--bone` text **12.7 : 1**, `--red-hi` border **4.7 : 1**. Sheet: h2 `--bone` **12.7 : 1**, `.det` `--dim` **7.0 : 1**, `.rule` `--bone` **12.7 : 1**. `.sumnote` `--dim` **7.0 : 1**. Toast `--bg` on `--amber` **9.3 : 1** |
+| Greyscale | Every state reads from its words and its forms: the kicker is a word, the refusal is a sentence in a bordered box, the selected option is a filled mark, the receipt is a sentence. Nothing in this flow is carried by hue |
+
+### 22.22.14 What is preserved when he backs out
+
+| He does | What is preserved |
+|---|---|
+| `Cancel` in the form | **Everything, including the four numbers he typed.** They live in memory for as long as Summary holds this draft, so re-opening the form shows his own values. **That is not a pre-fill** — a pre-fill is a number the app chose; these are his. Nothing of them ever reaches disk, and after a reload the form is empty again. `phat:v1:plans` byte-identical |
+| `Not now`, scrim or `Escape` on the confirm | Everything. The form is exactly as he left it, focus back on its primary. No write of any kind |
+| `← Back` from Summary with the form open | The form and its values are still there when he returns, because they are state, not a store |
+| Taps the trigger, types nothing, taps `Save session` | The session saves, first tap. Nothing is kept, nothing is said, and nothing was at risk |
+| `Undo` while the toast stands | The plan is byte-identical to before the commit, the trigger is back, and his typed values are still in memory |
+| Reload, phone lock or tab kill **before** the commit | The draft comes back with every set and note (WO-001). The form's typed values are gone — four numbers, in memory only, and this table says so rather than implying otherwise |
+| Reload **after** the commit | The draft comes back, the slot is in the plan, and #86 is in the block. **Declining the draft-restore offer discards the draft and leaves the promoted slot standing** |
+| The library never loads | The form works. `Implement` asks instead of arriving pre-filled, and B2's refusal names it |
+
+### 22.22.15 The finding that blocks W4 — a promoted entry must stay *added* for the rest of the session
+
+**This is not a request for a feature. As the code stands, the commit re-judges tonight in the same paint,
+and AD1.6.4 and C4 both fail.** Traced, not supposed:
+
+1. `exAnywhere` (`index.html:4026`–`4045`) returns `added:true` **only when `PHAT.resolveEx` fails.** After
+   the promote it succeeds.
+2. `sumBody`'s row list (`:4062`) takes the day's `ex` **first**, so the promoted slot arrives as an
+   ordinary plan row and never passes through the added-movement seam at all.
+3. `cardMovement` (`:3015`–`:3024`) then computes `added:false` — and `swapped:false` too, because
+   `promoteDraftEntry` writes the entry's own `mv` onto the slot, so `mv === slotMv`.
+
+**What that does, in one repaint, to a block he is looking at:** the `ADDED` kicker (`:3922`) disappears ·
+the `No prescription` + AD1 block (`:3962`–`:3963`) is replaced by a **verdict** (`:3965`–`:3996`)
+computed from the prescription he typed thirty seconds ago against sets logged before it existed · the
+session card's target line changes from `No prescription` to `3 × 12–15` · `EXTRA` becomes reachable on
+rows beyond `s` · the rest band gains a target it had refused to show · and at `Save session` the entry can
+acquire an **`rx` it never had**, which is a stored claim that tonight was prescribed.
+
+**Required, and it is W3b's and W4's to shape, not mine to name:** the promoted draft entry is **marked**,
+durably, for the life of that draft, and every added-ness read consults the mark. The draft store is not
+the log store, is not backed up and carries no `SCHEMA_VERSION`, so this costs no migration and no byte in
+`phat:v1:log` — but **B-112's lesson applies in full: it was two halves.** `saveDraft` and `hydrateDraft`
+must both carry the mark verbatim, or it dies on the first reload and the defect above comes back with it.
+
+**The UX requirement, stated without naming a key, because it is testable as written:**
+
+> After the commit, and again after a reload, **tonight's Summary block and tonight's session card read
+> exactly what they read before the tap** — same `ADDED` kicker, same `No prescription`, same AD1
+> sentence, no verdict, no rest target, no `EXTRA` flag — and the session header still reads the same
+> `{i} of {n}`. The only thing that changed on screen is that the trigger became #86.
+
+**C4 should assert the full text of the block and of the card, byte for byte, before and after, and once
+more after a reload.** `no rx` and `no sw` are necessary and not sufficient; the screen is where he would
+see it first.
+
+### 22.22.16 Dependencies, and what I could not settle
+
+1. **`kindWarn` names a button that does not exist here.** Its two sentences end `…or tap Add exercise
+   again to keep it.` (`index.html:5337`–`5338`). **Required: the control's label becomes a parameter** —
+   the Plan Editor passes `Add exercise` and renders **byte-identically to today**, and this form passes
+   `Keep it in the plan`. A token, not a content change; Rule K2's content is untouched. Flagged to
+   `strength-coach` as a courtesy, not as a question.
+2. **`sheetErr` should announce.** `announce(msg, true)`, one line. §22.22.13 requires it for this flow and
+   it also fixes §22.7's #46 and §22.20's sheet refusals. Stated here as **this section's own dependency**,
+   not inherited from §22.21.
+3. **`askSheet` needs an optional second, third and fourth body paragraph and a scroll wrapper.** It
+   renders one `<p class="det">` from `cfg.body` (`:8224`). This confirm needs up to four paragraphs inside
+   one `overflow-y:auto; max-height:52vh` block. **Requirement, in the WO-010 D8 class: with no extra
+   paragraphs passed, every existing call site renders byte-for-byte what it renders today.** Frontend's
+   shape to choose. **This is restated, not inherited** — §22.21 is parked and nothing in it is being
+   built.
+4. **The duplicate-movement test must be by `mv`, not by `lift`.** `moveWarnText`'s Q4 branch finds its
+   twin with `ex.find(x => x.lift === e.lift)` (`:5471`), and the promote **mints a fresh `lift`**
+   (coach §25.3.1, `[Certain]`), so a `lift` comparison can never match and #81 would never render.
+   **Required: the predicate for this flow compares the entry's `mv` against each slot's effective
+   movement, falling back to a trimmed case-insensitive `n` comparison on a slot that carries no `mv`.**
+   Backend's to place; `MOVE_WARN.Q4`'s own sentence is unchanged, and its `{target}` is `tgtText` of the
+   slot it found.
+5. **`KIND_LINE` or `KIND_HELP` — the coach names one and the shipped form renders the other, and I am
+   shipping the shipped one.** K3.5.3 says *"`KIND_LINE`, unchanged. That is the Type line WO-006 B2 and
+   Rule K2 already ship."* B2's Type line is **`KIND_HELP`** (`:5199`–`:5204`, rendered at `#pf-kind-help`);
+   `KIND_LINE` (`:4875`) is the **row detail** in the Plan Editor's list, a different surface. **Decision:
+   `KIND_HELP`, for two reasons that are not preference.** It has a `none` member — the prompt before a
+   choice is made — and with nothing pre-selected `KIND_LINE` would render **no Type line at all** until he
+   picks, which is the one state this form spends the most time in. And *"reuse B2's form, no new form"*
+   points at the string B2 actually renders. The coach's *content* ruling is satisfied either way: the line
+   states the consequence of the option. **If `strength-coach` rules `KIND_LINE`, exactly one row of
+   §22.22.4 changes and `KIND_HELP.none` is still owed for the unanswered state.**
+6. **`Not added. …` on a control labelled `Keep it in the plan`.** Reused verbatim on the PM's instruction
+   and defensible — nothing *was* added — but it is a seam, and it is recorded here rather than papered
+   over. The alternative is six new literals that say the same thing in a second voice, which is the
+   duplicate-`PROGRAM` defect at small scale.
+7. **Does the form survive `← Back` to the session and a return to Summary?** I ruled yes (§22.22.14). It
+   is memory, so it costs nothing, and the alternative loses four numbers to a navigation he may have made
+   to check a set. **Unmeasured:** whether he ever makes that navigation with the form open.
+8. **§22.12's register is owed #66–#72a by §22.21.7 and #73–#91 by this section.** Not this lane's table to
+   edit; both sets are final and ready to paste. The PM owes the pointer.
+9. **§22.21's status marker is still owed** (the backlog records it as `ux-designer`'s). I did not write it:
+   this lane is forbidden to touch §22.21 by one word. **This section names §22.21 as parked, specified and
+   unbuilt, in its own opening, which is as close as it may come.**
+
+### 22.22.17 B-172 — `0 sessions logged`, and my call
+
+**Declared out of scope for §22.22, with the reason, the mitigation and the fix.**
+
+The case: if his active plan is read-only, the first promote creates `{plan} — my version` and activates
+it, and that new row on **Plans** reads **`0 sessions logged`** while the plan he has been lifting on keeps
+all nine, because `sessionsUnderPlan` counts by `planId` (`index.html:5018`, coach §25.1). **He would
+reasonably report that as data loss**, and he would be right to.
+
+**Why it is not worded in this flow.**
+
+1. **The confirm is the wrong host.** It is pre-tap, and this is a post-tap display artefact on a different
+   screen. §22.21.3's standard for that sheet is that every reassurance in it is **checkable from a surface
+   two taps away**; a sentence about what another screen will read next week is a forward reference he
+   cannot check from here, and it would be the only uncheckable sentence in the sheet.
+2. **The sentences that would have to carry it are not mine to reword.** #67 · #68 · #69 are reused
+   verbatim by instruction, and `Nothing else moves — every logged set stays` is exactly the sentence a
+   `0 sessions logged` row appears to contradict. Patching it with a caveat would weaken the one claim in
+   the sheet that is true and checkable, to pre-empt a label on another screen.
+3. **The promote does not cause it.** It is `sessionsUnderPlan`'s attribution, and it is already reachable
+   from a shipped control — `Duplicate PHAT and rearrange it` makes a copy and activates it today. Fixing
+   it inside this confirm would leave the identical false reading on the shipped path and fix nothing.
+
+**The mitigation that is inside this flow, and it is real:** #85 (b) tells him a copy exists and that he is
+on it, at the moment it happens, in a receipt he reads. The surprise on Plans is then a question about a
+plan he knows he has, not a mystery.
+
+**The fix, scoped for whoever next owns §9.1, one string and no new data:** the row's count says what it
+counts. `{n} sessions logged` → **`{n} logged under this plan`**, on every row, which is true at 9 and true
+at 0 and stops the number reading as *your history*. **Recommended, not specified here** — §9.1 is the
+Plans list's section and this lane owns §22.22. Filed as **B-172, P3 display.** QA's C15 records what the
+row actually reads so nobody meets it cold.
+
+### 22.22.18 What this section does NOT touch — the diff-level list
+
+**W4 checks itself against this list; C14 proves it by diff and by browser pass.** If the build appears to
+require one of these to move, **stop and raise it — do not move it.**
+
+| # | Not touched | Anchor |
+|---|---|---|
+| 1 | **§22.7's branch in full** — the `mvc.swapped` test, the `.sumro` read-only line (**literal #47**, which keeps rendering), and the `.ghostbtn.sumperm` trigger with its `data-perm` hook | `index.html:4013`–`4017` |
+| 2 | **§22.7's table**, including its 2026-10-08 (WO-022 W2) amendment row. Not one word. The build is the shipped truth and #47 is what he sees | §22.7 |
+| 3 | **§22.21, every sub-section** — parked, specified, deliberately unbuilt. Nothing here is wired to it and none of its dependencies are inherited | §22.21 |
+| 4 | **The `Swap` sheet** — §22.1–§22.5, `S.swap`, `openSwap*`, `swHead`, `SW-ORDER`, all three modes, the put-back row, the pick rows, the confirm | §22.1–§22.5 |
+| 5 | **`Add as well`** — label, presence, behaviour, and §22.5's no-loss rule | §22.5 |
+| 6 | **`Add an exercise`** — §22.20 entire: `#addexbtn`, both hosts, the `extra` mode, #60–#65, the 52 / 56 / 48 sizes, and §22.20.11's rule, which is **cited** here and not amended | §22.20 |
+| 7 | **AD1's sentence** (`AD1_VERDICT`, #34) on the card and on Summary, and **`No prescription`** (#32). Unchanged, unconditional, and not made dependent on whether the control is beside it | `index.html:3186`, `:3963`; §22.9 |
+| 8 | **The navrow and the bottom stack** — `#tosum` / `Finish session`, `←`, `#finish` / `Save session`, `#bs-slot` / `#bs-msg` / §2.2, the owner line (§18.3), `Nothing is judged here…`, `DISCARD SESSION` (§4.12) | §4.1, §5.2, §2.2 |
+| 9 | **The Summary record** — `.sumskip`'s `Added` / `Swapped` / `Skipped` kickers, `.sumsets`, `.sumnote`'s existing uses, the counters, the count line, and `Not in the plan any more. It still saves with this session.` | `index.html:3918`–`3955` |
+| 10 | **The session card, in every part** — the control strip, set rows, ghost row, `ld` row, the load chip (§21), the note, the rest band (§4.10), the verdict slot, §22.8's MV1 disclosure line | §4.3–§4.11, §21, §22.8 |
+| 11 | **WO-006 B2's form on the Plans screen** — `vExForm`, `addFromForm`, `KIND_HELP`, `KIND_LBL`, `IMPL_LBL`, `PLAN_KINDS`, `PLAN_IMPLEMENTS`, `kindWarn`'s behaviour there, and §9.5. **This section reuses its controls, classes, help lines and refusal literals and changes none of them.** The one dependency, §22.22.16 (1), is explicitly required to leave that call site byte-identical | `index.html:5192`–`5373`; §9.5 |
+| 12 | **`MOVE_WARN.Q1` / `Q3` / `Q4`, `moveWarnText`, `PLACEMENT_LINES`, `KIND_LINE`, `DEMO_STORE`, `tgtText`** — reused verbatim where named, edited nowhere | `index.html:4845`–`4912` |
+| 13 | **§22.12's register #1–#65** — not edited. This section numbers its own literals from **#73** | §22.12 |
+| 14 | **Home, Trend, Weight, Diet, the Plans list, the Plan Editor, Settings, onboarding, first run** | §9, §10, §13, §6, §7 |
+| 15 | **`askSheet`'s shell, `closeSheet`, `sheetErr`, `toast` / `toastUndo` / `hideToast`** — extended only as §22.22.16 (2) and (3) state, each with a byte-identity requirement at every existing call site | `index.html:8217`–`8254`, `:1729`–`:1779` |
+| 16 | **Every stored shape.** `SCHEMA_VERSION` stays **7**, no migration, zero bytes in the log store, no session document changes shape, and the one draft mark §22.22.15 requires touches neither the log nor the backup | — |
+
+### 22.22.19 Out of scope, deliberately
+
+Editing or deleting a **saved** session (**B-05**, still open, still the only thing that would make a
+mis-tap on this screen recoverable) · a persistent undo control on Summary · removing a promoted slot from
+this flow (the Plan Editor does it, sitting down, with its own confirmation and its own undo) · renaming
+the movement, the slot or the copy anywhere in this flow · a `cue`, a `fig`, a `lift` picker, a `cut` tier
+or a `keyLifts` nomination on the promoted slot (coach §25.3.1: never) · inserting the slot anywhere but
+the end of the day (AD1.6.1) · creating or substituting a day (AD1.6.5) · re-judging tonight in any way —
+no `rx`, no `sw`, no verdict, no rest target, no Trend line (AD1.6.4) · any pre-fill or derived hint line
+for `s`, `lo` or `hi` (coach §25.3.2, and **B-116 is unanswered**) · the `0 sessions logged` row on Plans
+(§22.22.17, B-172) · the H1 ramp baseline (**B-171**, accepted, recorded by C13) · a second door to this
+control — Settings, Plans, a session card, an interstitial on `Finish session` · warm-up sets (B-116) ·
+plate math (B-10) · a rest timer (B-09) · anything on Home, Trend, Weight or Diet · any change to the set
+rows, the ghost row, the `ld` row or the load chip.
