@@ -4317,3 +4317,121 @@ and byte-verified — and it was invisible to the one person it was built for, f
 training. Every acceptance criterion passed. **The gap between "QA drove it" and "he found it" is a gap no
 criterion in `CLAUDE.md` §5 currently closes**, and the cheapest instrument against it is not a test: it is
 asking him, after a feature ships, whether he used it.
+
+### 9. Decision — B-164 is one defect with two faces, and the second face is why it is not three lines. `[Certain]`
+
+**The finding, confirmed in the code rather than taken on report.** `painState(sessions, exId, todayStr)`
+(`logic.js:10161`) has **no movement parameter**; it matches history on `own(s.entries, id)` and nothing
+else. `addDraftEntry` sets `var exId = mintId(taken, "ex")` (`logic.js:1597`) — an id that is in no prior
+session **by construction**, and deliberately so: its own header records that keying on `mv` would make two
+sessions' improvised Face pulls one history, which is WO-004 C-6 by a side door. `painWindow` collects
+`Object.keys(s.entries)` and names them through `exName(program, id)`, which falls back to the raw id for a
+movement in no plan. So Rule AD1.4's *"the referral line still renders"* is true **only of a note he types
+today, on that card**. His forearm flags of 12 and 22 September reach the slot's card and never the added
+one.
+
+**The narrowing the PM asked to be verified rather than believed: it holds.** `swapDraftEntry` writes
+`next.entries[id] = e` with `id = str(exId).trim()`, the slot's own id (`logic.js:1546`), and mints nothing —
+its header says so in words (*"The slot keeps its id… so it keeps its history and its prescription"*). A
+swapped card's `painState` call (`index.html:5949`) therefore finds history and the notice renders.
+**Severity does not escalate**, which is the answer that mattered, because he swaps far more often than he
+adds.
+
+**But "a swapped card is unaffected" is not the whole truth, and the part that is missing changes the fix.**
+`painState` took no movement filter when `lastFor` got one: WO-014 added `mvSkips(entry, mv, declaredMv)` to
+`lastFor` precisely because exId-keyed history lies across a swap (that is B-152, and it was live on all four
+of his sessions). Nobody asked the same question of the pain surfaces. So a swapped card today renders the
+**slot's** pain history whichever movement is on it — and resolving the subject by `mv`, the coach's fix
+exactly as framed, would **remove** it. His 12 and 22 Sep entries carry no `mv` at all (the v7 pass moved
+zero bytes, deliberately), so `effectiveMv` inherits the slot's **declared** pull-up, which disagrees with
+today's pulldown and skips.
+
+**Stated plainly so the coach cannot miss it: the fix as framed deletes, on his two real notes, the one
+notice WO-017 exists to create.** `[Certain]` on the mechanism. Whether that is right is a coaching
+question with two defensible answers — inherit by slot, or resolve by movement — and it is the coach's, not
+the PM's. It is also the whole reason this is an order and not a patch.
+
+### 10. Decision — B-164 gets its own order, WO-021. It rides neither WO-016 nor WO-017. `[Certain]`
+
+**Not WO-016.** WO-016 owns what the load column *means* — B-150, B-153, B-161, all of them Z1/Z2/I1/I2/SD1
+and §18. B-164 owns the recovery channel — S1/S1a/S2 and §13. Folding it in puts a coaching question about
+pain in front of a coach reviewing units, in an order that already carries three items.
+
+**Not WO-017, and this is the closer call.** WO-017 is the right subject by every measure: its thesis is *a
+note he wrote was not heard*, it already opens this neighbourhood of `logic.js`, it writes zero stored bytes,
+and its W4 QA builds the corpus test over these exact notes. It is refused anyway on two grounds. First,
+**nothing moves after the pin** — WO-017 is specified and first of the four to deploy, and this pass has
+already refused to do exactly this to WO-019 for B-161; the rule does not get to be convenient. Second and
+decisively: **WO-017's fix reaches a card he is standing on today; B-164's reaches a card he has never once
+created.** Ship the first alone.
+
+**Sequencing: WO-021 branches from WO-017's merged `logic.js`.** Two orders editing one function in sequence
+is one merge conflict and two QA rounds on the same engine; branching from the merge is one of each.
+
+**WO-021 does not block WO-019 and WO-019 does not block WO-021 — and the window that leaves is accepted
+with its reason named.** WO-019's new door, ranked by recency (B-162), will offer him near the top of the
+list the pulldown he flagged twice, and the added card will say nothing about it. That is uncomfortable and
+it is still right: the card is silent **today**, WO-019 makes it silent more *often* rather than more
+*wrongly*, and gating a discoverability fix on an open coaching question is the same side-door error refused
+for B-161 eight sections above.
+
+### 11. Decision — the coach's two refusals stand, and together they are the ruling that the list is not where this gets fixed. `[Certain]`
+
+Both are `strength-coach`'s and both are recorded here because they are the obvious mitigations and they are
+both wrong.
+
+**The list suppresses nothing.** Hiding or demoting the flagged pulldown would push him back toward the
+pull-up — the movement he was avoiding *because of* the forearm. **The sign is backwards:** a suppression
+meant to protect an injury would steer him onto the thing that aggravated it. The substitute is the safe
+option, and the app does not get to make it harder to reach.
+
+**The list marks nothing.** `painWindow` keys on `exId` while the list ranks `mv`, so the join is ambiguous
+on a swapped entry — the flag could belong to the slot's movement or to the one he swapped in, and the data
+does not say which. **A wrong mark about pain is worse than no mark**: it either names an injury he does not
+have or clears a movement he should be careful with, and he has no way to tell which from the badge.
+
+The consequence, stated so nobody proposes either again: the only honest place for this is the **card**,
+after the subject is resolved, which is WO-021's clause inside AD1.4 — not the list, not a badge, and not a
+notice over the search results.
+
+### 12. Decision — the coach overrode the PM's deferral on B-161, and the PM accepts the override. `[Certain]`
+
+**Ruled: implement it, derived at read time, Rule I3 path (4).** Section 5 of this pass deferred B-161 out of
+WO-019 on the grounds that it is WO-016's subject and folding it in would rule B-150 by a side door. That
+reasoning was right about WO-019 and wrong about the deferral, and the coach's reason is better than the
+PM's was:
+
+- **WO-016 owns what the load column *means*. B-161 owns whether the app declares a meaning *at all*.** They
+  are not the same question, and deferring the second ships the one surface that declares nothing behind a
+  door built for daily use.
+- **Read-time derivation puts the added card *inside* WO-016's blast radius.** Defer it and that card becomes
+  the one surface WO-016's fix can never reach — because the fix is about `implement`, and the added card has
+  none.
+
+B-161 stays in **WO-016**, where it was routed, and is now a **ruled requirement** there rather than a PM
+recommendation. The derivation is `PHAT.libraryImplement(eq)` through `mv`, zero stored bytes, no migration;
+storing `implement` on the entry remains refused, because it is a schema bump that inherits B-153's whole
+question.
+
+### 13. A V1 blind spot the coach logged and declined in the same breath — filed as B-165, scheduled by nobody
+
+Rule AD1.5: **added work feeds no engine.** An added entry has no slot, therefore no `cut` membership, so
+V1's tier, the per-session reintroduction counter and `reintroOrder` cannot see it. He can add five
+exercises in a week while the app still believes he is on the reduced tier and still offers him one accessory
+back.
+
+**The coach refuses a new mid-session warning (§22.9(b)) and the PM agrees**: a warning fired on the act of
+adding punishes the one behaviour in this app that came out of real training. It is filed as **B-165, P2,
+deliberately unowned** — not WO-019's, not WO-016's, not WO-021's — and it belongs to **whichever order next
+opens V1.** Written down here so that order inherits it instead of rediscovering it.
+
+### 14. B-116, sixth asking, and it is sharper than it was at the fifth
+
+*Warm-up sets: logged, marked, or omitted?* An added card has no `s`, `lo`, `hi` or `k`, and Rule AD1 forbids
+inventing one — correctly. So ramp sets on an added movement land on a card with **no prescription at all**:
+not a wrong rep range, **no rep range**. His five-set 20 → 70 kg ramp on `d1a` is still read by every engine
+as prescribed work, sixteen days of training later.
+
+**Six orders have now been planned around a question one sentence from him closes.** Recorded as a standing
+item, not as a note in a work order, because five work orders have proved that a note in a work order does
+not get it asked.
