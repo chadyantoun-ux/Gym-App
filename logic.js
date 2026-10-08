@@ -5025,19 +5025,28 @@
                       call is byte-identical whether it passes this or not.
                       ABSENT IS THE OLD BEHAVIOUR, deliberately: the Plan
                       Editor's `mode:"form"` list asks for "all movements" and
-                      its order must not move.
+                      its order must not move. Asking is not getting: if the
+                      window buys the list nothing, `basis` comes back null.
              limit    display cap, default 40 }
 
      `basis` says WHAT the ranking is against, so the sheet can print UX
      string #12 rather than an order it cannot explain:
        "movement"   the slot names a movement that is in the library
        "equipment"  it does not, but the slot's `implement` maps backwards
-       "recent"     there is no slot AT ALL and the caller asked for recency —
-                    the session-level Add door, which has nothing to rank
-                    against and for which "the alphabetically first 40 of 876"
-                    is not a worse list but a useless one (WO-019 §1(ii))
-       null         neither — the list is NAME ASCENDING and the sheet says so
+       "recent"     there is no slot AT ALL, the caller asked for recency, AND
+                    at least one row in the returned list earned the recency
+                    bonus — the session-level Add door, which has nothing to
+                    rank against and for which "the alphabetically first 40 of
+                    876" is not a worse list but a useless one (WO-019 §1(ii))
+       null         none of the above — the list is NAME ASCENDING and the
+                    sheet says so
      Never a silent wrong order. Pure, and never throws.
+
+     `basis` NAMES THE ORDER THE LIST IS IN, NEVER THE INPUT THE RANKER
+     CONSULTED (UX §22.3.1, amended 2026-10-08; a W3 contract line). A
+     slot-less list whose recency window turned out to buy it nothing reports
+     `null`, not "recent", because the list really is alphabetical and the
+     sheet must be able to say so off this field alone.
 
      A CALLER WITH NO SLOT MUST BRANCH ON `basis`, NOT ON ITS OWN MODE: the
      notice `Ordered by name. This slot does not name a movement.` is false
@@ -5104,7 +5113,7 @@
 
     var fq = fold(q);
     var toks = fq === "" ? [] : fq.split(" ");
-    var scored = [], i, r, sc, fn;
+    var scored = [], i, r, sc, fn, recentHit = false;
     for (i = 0; i < index.rows.length; i++) {
       r = index.rows[i];
       if (Object.prototype.hasOwnProperty.call(excl, r.mv)) continue;
@@ -5139,10 +5148,36 @@
         if (r.eq === refEq) sc += SW_SCORE.near + SW_SCORE.eqExact;
         else if (Object.prototype.hasOwnProperty.call(near, r.eq)) sc += SW_SCORE.near;
       }
-      if (out.order === "score" && Object.prototype.hasOwnProperty.call(recent, r.mv)) sc += SW_SCORE.recent;
+      if (out.order === "score" && Object.prototype.hasOwnProperty.call(recent, r.mv)) {
+        sc += SW_SCORE.recent;
+        recentHit = true;                /* a row in this list actually earned it */
+      }
       if (toks.length && fq !== "" && fn.indexOf(fq) === 0) sc += SW_SCORE.prefix;
       scored.push({ row: r, sc: sc, fn: fn });
     }
+
+    /* UX §22.3.1, amendment 2 of 2026-10-08 — a W3 CONTRACT LINE, not a
+       preference: `basis` names the order the list IS IN, never the input the
+       ranker consulted. The sheet prints one sentence off this one field and
+       never second-guesses it, so a `recent` basis over a list that came out
+       in name order would put literal #61 ("Your recent movements first")
+       above the alphabet on a fresh install — the exact defect #12 is being
+       replaced for.
+       The test is "did any row in THIS list earn the bonus", not "is the
+       window empty", because the window is only one of three ways the order
+       can come out alphabetical anyway: an empty window, a window holding
+       only movements the library does not carry (a locally minted movement
+       has an mv no library row has), and a window whose every movement the
+       caller EXCLUDED — which the session-level door may well do, since the
+       movements already on today's card list are exactly the recent ones.
+       All three leave a list that is name-ascending, and the honest field
+       answers for all three at once. Demoting is also provably lossless: the
+       recency clause was the only score this basis could add beyond the
+       prefix bonus, and the prefix bonus fires under `basis: null` too, so
+       the rows are byte-identical to the name path. Only the two labels
+       move. */
+    if (out.basis === "recent" && !recentHit) { out.basis = null; out.order = "name"; }
+
     out.total = scored.length;
     /* Score descending, then NAME ascending — the folded name, so the tie
        break is the same on any locale. A stable answer for a fixed slice and
