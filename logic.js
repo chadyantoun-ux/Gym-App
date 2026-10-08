@@ -5005,7 +5005,8 @@
   }
 
   /* librarySearch(index, query, opts)
-       -> { ok, rows, order:"score"|"name", basis:"movement"|"equipment"|null,
+       -> { ok, rows, order:"score"|"name",
+            basis:"movement"|"equipment"|"recent"|null,
             total, limit, query }
 
      opts: { slot   the slot's exercise object — its `mv` and `implement` are
@@ -5017,14 +5018,30 @@
                       is the one a tired thumb mis-taps)
              recent   { mv: true } from recentMovements, or pass
                       { sessions, plan, todayStr } and it is computed here
+             rankRecent  WO-019 W3 / B-162. Truthy means: if there is NOTHING
+                      to rank against — no slot, no mv — rank on RECENCY alone
+                      rather than falling back to the alphabet. Ignored
+                      whenever there is a slot or an mv, so every existing
+                      call is byte-identical whether it passes this or not.
+                      ABSENT IS THE OLD BEHAVIOUR, deliberately: the Plan
+                      Editor's `mode:"form"` list asks for "all movements" and
+                      its order must not move.
              limit    display cap, default 40 }
 
      `basis` says WHAT the ranking is against, so the sheet can print UX
      string #12 rather than an order it cannot explain:
        "movement"   the slot names a movement that is in the library
        "equipment"  it does not, but the slot's `implement` maps backwards
+       "recent"     there is no slot AT ALL and the caller asked for recency —
+                    the session-level Add door, which has nothing to rank
+                    against and for which "the alphabetically first 40 of 876"
+                    is not a worse list but a useless one (WO-019 §1(ii))
        null         neither — the list is NAME ASCENDING and the sheet says so
      Never a silent wrong order. Pure, and never throws.
+
+     A CALLER WITH NO SLOT MUST BRANCH ON `basis`, NOT ON ITS OWN MODE: the
+     notice `Ordered by name. This slot does not name a movement.` is false
+     twice over a `recent` list — the order is not name, and there is no slot.
 
      `rows` holds the index's own row objects BY REFERENCE, for the same
      reason lastFor returns a stored entry by reference: callers read them.
@@ -5053,6 +5070,21 @@
          backwards through I3's table. */
       out.basis = "equipment";
       refEq = IMPLEMENT_EQ[slot.implement][0];
+    }
+    else if (slot === null && slotMv === null && o.rankRecent) {
+      /* WO-019 W3 — the session-level Add door. There is no slot to rank
+         against and there never will be, so the alternative is not a worse
+         order, it is the alphabetically first 40 of 876 names. `ref` and
+         `refEq` stay null, so the muscle, force, mechanic and equipment
+         clauses below are all skipped by their own guards and the ONLY
+         slot-free signal left is the recency bonus — which already exists,
+         is already pure and is already handed in. One basis, no new scoring
+         input, no new data.
+         `slot === null` is required as well as `slotMv === null`: a slot that
+         names nothing the library holds and maps nowhere backwards is still a
+         slot, and its list keeps the order and the notice UX §22.3.1 ruled
+         for it. Only "no slot at all" earns this. */
+      out.basis = "recent";
     }
     if (out.basis !== null) out.order = "score";
 
@@ -5083,13 +5115,16 @@
         if (!all) continue;
       }
       sc = 0;
-      /* The slot-relative half of the score is suppressed entirely when there
-         is no basis: UX §22.3.1 rules that list NAME ASCENDING and the sheet
-         prints `Ordered by name. This slot does not name a movement.` A
-         notice that says "by name" over a list ordered by anything else is
-         the silent wrong order that rule exists to forbid. The query's own
-         prefix bonus still applies — it is relevance to what he TYPED, which
-         is true whatever the slot is. */
+      /* Every clause below is gated on the basis the function DECLARED, so
+         the printed notice and the actual order can never disagree — the
+         silent wrong order UX §22.3.1 exists to forbid. With no basis at all
+         the whole slot-relative half is suppressed and the list is NAME
+         ASCENDING, which is what that notice says. With basis "recent"
+         (WO-019 W3) the pm/force/mech and equipment clauses are skipped by
+         their OWN guards — `ref` and `refEq` are both null — so `score` there
+         means the recency bonus and the prefix bonus, and nothing else. The
+         query's prefix bonus applies under every basis including none: it is
+         relevance to what he TYPED, which is true whatever the slot is. */
       if (out.order === "score" && ref) {
         /* +5 the primary muscle. pm[0] only, and both sides must HAVE one —
            an empty array is not a match with another empty array. */
