@@ -4338,6 +4338,12 @@ That is the whole reason §22.3 exists.
 permanent* is offered afterwards, on Summary, never mid-set; a swapped entry carries `sw: 1` and shows
 a `Swapped` mark.
 
+> **AMENDED 2026-10-08 (WO-019 W1).** `Add as well` shipped inside this sheet and he could not find it
+> in sixteen days of real training (B-160). **§22 gains a session-level door to the same action** —
+> `Add an exercise`, on the last card and on Summary, opening this sheet in a third mode. The spec is
+> **§22.20**; it amends §22.2, §22.4, §22.5, §22.9, §22.12, §22.13 and §22.14 by the dated lines in each.
+> Nothing in §22.1–§22.5 changes for an existing card, and `Add as well` is **not** removed or relabelled.
+
 ## 22.0 The tap budget — counted, and it is 3
 
 From *the machine is taken* to *the replacement on screen with an empty first set row*:
@@ -4415,6 +4421,10 @@ spent here.
 
 Opens in `#modal`, the list variant of §9.9.3: `.sheet`, scrim, `role="dialog"`, `aria-modal`, heading
 focused on open.
+
+> **AMENDED 2026-10-08 (WO-019 W1).** This sheet has a **third mode** — `extra`, the session-level Add,
+> with no slot and nothing being replaced. Its heading, body, put-back row, exclusion rule and list head
+> are in **§22.20.3**. Every row below is unchanged for `swap` and `form` mode.
 
 ```
 [REF]
@@ -4507,10 +4517,28 @@ W1's table read backwards; if that is absent too, the list is **name ascending**
 replaced by the line `Ordered by name. This slot does not name a movement.` **NEW**, `--dim`. Never a
 silent wrong order.
 
+> **AMENDED 2026-10-08 (WO-019 W1).** Two rulings, both so that the notice never describes an order the
+> list is not in — this section's whole reason for existing.
+>
+> 1. **A slot that is present and ranks on nothing keeps this paragraph exactly as written**, including
+>    #12's sentence: there *is* a slot and it does not name a movement, so the sentence is true. Only
+>    **no slot at all** (the session-level Add) earns the new basis and §22.12 #62's sentence. The
+>    backend's choice is adopted, not flipped.
+> 2. **`basis` names the order the list is in, never the input the ranker consulted.** On an **empty
+>    recency window** — a fresh install, or nothing logged in 56 days — a slot-less list degrades to
+>    name-ascending, so `librarySearch` must report **`basis: null`**, not `basis: "recent"`. The sheet
+>    prints one sentence off one field and never second-guesses it. **This is a W3 contract line**
+>    (backend offered the flip; it is ruled here) and it is also the first-run state of the new door:
+>    alphabetical, and the notice says so and points at the field.
+
 ## 22.4 The sheet — confirm state
 
 One tap on a result row swaps the sheet in place. It does not close, does not commit, and does not
 touch the draft.
+
+> **AMENDED 2026-10-08 (WO-019 W1).** In `extra` mode the consequence lines and the buttons are
+> **§22.20.4**'s: there is no slot, so `Replaces {ex} for today.` has no referent and `Replace` is not
+> rendered at all. Everything below holds for `swap` mode unchanged.
 
 ```
 [REF]
@@ -4579,6 +4607,21 @@ its sets and the new movement is **added**. One rule, no confirmation sheet, no 
    it, and the toast tells the truth instead: `{new} added at the end of the session.` **NEW**. State
    which of the two shipped in the decision record; do not ship the first toast with the second
    behaviour.
+
+> **AMENDED 2026-10-08 (WO-019 W1) — `Add as well` is NOT demoted. Ruled, with the reason, so it is
+> not re-opened.** WO-019 W1 was permitted to demote it and declines. The only demotions available were
+> (a) dropping it from the **untyped** case and (b) a label change, and both cost more than they buy:
+>
+> - **(a) is a capability narrowing.** The new door is deliberately **not on every card** (§22.20.1), so
+>   on cards 1…n−1 `Swap → Add as well` is the *only* way to add a movement from the card he is standing
+>   on. Removing it there would force him to page to the end of the session to do a thing he can do now.
+> - **(b) breaks a matched pair.** The typed-case body says *"…so the movement you pick is added"*
+>   (#5/#21) and the button must carry the same verb. Renaming the button leaves the sentence pointing at
+>   a word that is no longer on screen.
+>
+> It is also still the **only non-destructive exit from a card that holds a typed set**, which is the
+> clause W1 inherited and may not touch. **Two doors, one action, one `addDraftEntry` call, and §22.20's
+> C7 pins the entry byte-identical between them.** What changes about `Add as well`: nothing.
 
 **Both, always:** nothing is written to `phat:v1:log`. The draft is the only store touched, through its
 existing debounce. Killing the tab after a swap and reloading restores the swapped card with its sets
@@ -4760,6 +4803,23 @@ instead of decorating three rows.
 An **added** movement has no `s` / `lo` / `hi` / `k`. Nothing is guessed (W1 item 3), so every slot that
 consumes a prescription states its absence instead of going quiet.
 
+> **AMENDED 2026-10-08 (WO-019 W1).** **This table is unchanged and applies to a movement added through
+> the new session-level door, row for row, with nothing added and nothing withheld.** The door does not
+> change what the card is — it changes where the door is — so an added card is one card shape with one
+> set of strings however it was reached, and the only thing a reader of this section must not conclude is
+> that a session-level Add earns its own treatment. Two consequences worth stating because they would
+> otherwise be guessed:
+>
+> 1. **The sheet does not pre-announce the absent verdict.** Rule AD1's sentence (#34) stays on the card
+>    and on Summary, where it already is. The confirm state says what happens to his *session*
+>    (`Goes at the end of today's session.` #63); what happens to his *advice* is a coach sentence and it
+>    is said once, where it is true, on the surface that owes it. If `strength-coach` rules that AD1 must
+>    also appear in the sheet, that is a one-row change to §22.20.4 and the literal is the coach's.
+> 2. **Whether AD1's third clause (`Add it to your plan to get one.`) still reads right when the door's
+>    whole premise is *not in my plan, and not going in it*** is W2's question (WO-019 §4.1), not mine.
+>    §22.9's row and #34 record whatever the coach rules; **this section is where the changed literal
+>    lands**, and no other section needs to move with it.
+
 | Slot | Normal | With no prescription |
 |---|---|---|
 | Target line (§4.3) | `3 × 3–5` | `No prescription` **NEW**, bone `.55` — the line keeps its height; it never disappears |
@@ -4881,6 +4941,12 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 57 | home, repair notice, body line 3 | always, when the notice renders | `Nothing was removed. Every session is still under Recent sessions.` **NEW 2026-09-29.** The only reassurance in the notice, and the only one provable from a surface: `Recent sessions` excludes nothing (§9.1). **It deliberately does not say "nothing changed" and does not mention any chart** — Rule CH1 |
 | 58 | home, repair notice, body line 4 | `np >= 1` | `The pulldown sessions are not on the pull-up line — a different movement.` **NEW 2026-09-29.** Word for word #48's clause, on purpose: the Trend line and this line are one voice saying one thing twice, not two explanations. CH1-safe — it asserts absence, never presence |
 | 59 | home, repair notice, button | always, when the notice renders | `Dismiss` **NEW 2026-09-29.** Full width × 48, `.ghostbtn` |
+| 60 | session **last card** bottom stack **and** summary bottom stack, button | always, both hosts | `Add an exercise` **NEW 2026-10-08 (WO-019, §22.20).** His own words — *"I cannot add a new exercise within a session"* — so the label is the phrase he searched for and failed to find. `exercise` is the session's noun (`{n} exercises · {n} notes`, `Previous exercise`); `movement` is the library's and belongs inside the sheet. The *today-only* fact is **not** in the label: it is the sheet's first line, one tap later, where every other today-only fact in §22 lives. **Reused verbatim as the sheet's heading in `extra` mode** — the sheet is obviously the thing he tapped (§22.2's own rule), and it is the one heading in this sheet that dereferences nothing |
+| 61 | sheet, notice (`.det`, in the kicker's place) | `extra` mode, no query, `basis === "recent"` | `Your recent movements first. Search for anything else.` **NEW 2026-10-08.** Two short sentences and they do two jobs: the first names the order — the only defence against *why is this list not alphabetical* — and the second names the escape, which matters **here** and not in `swap` mode, because with no slot the ranked list is a guess at *what he trains*, not a similarity to a thing on screen. **Content is `strength-coach`'s (WO-019 §4.2); the words are mine.** It claims recency and nothing else: no frequency (`what you lift most` would be false), no recommendation, no count |
+| 62 | sheet, notice (`.det`, in the kicker's place) | **no slot at all** and `basis === null` — the recency window is empty (fresh install, or nothing logged in 56 days), or the coach refused recency and W3 fell back to §1(iii) | `Ordered by name. Search for the movement you want.` **NEW 2026-10-08.** **This is the replacement for #12 on a list that has no slot**, and #12's defect was the second clause, not the first: `This slot does not name a movement.` is false when there is no slot. `Ordered by name.` is kept verbatim from #12 so the order half of the sentence is single-sourced across both. The second clause points at the field because an alphabetical list of 876 movements is not an answer and the field is. **It is also the first-run and empty-window state of the new door** and needs no further string |
+| 63 | sheet, `.det` | confirm, `extra` mode | `Goes at the end of today's session.` **NEW 2026-10-08.** Present tense, subjectless, taking #19's exact grammar (`Replaces {ex} for today.`) with the heading as its subject. It says *where* because the draft's key order is D8's rule and an exercise he added on card 9 of 9 arrives after card 9 — the toast (#28) then repeats the fact in the past tense, which is the pair this app already uses for a commit. Renders above #20 |
+| 64 | sheet, button | confirm, `extra` mode, primary and only | `Add it` **NEW 2026-10-08.** Not `Add as well` — *as well as what?* has no referent with no slot — and not `Add to today`, which is three words for the thing #63 just said in six. `Add it` is already this app's word for *put this exercise in my session* on Rule V1's offer block (`id="v1-add"`), and one word for one action across two screens is the vocabulary rule §20.1 set. Full × 52. **No `Replace` and no `Add as well` in this mode** |
+| 65 | session last card + summary, button | accessible name on #60 | `Add an exercise to today's session` **NEW 2026-10-08.** Visible text is a prefix (WCAG 2.5.3, as #2). It carries `today's session` because a screen reader user reaches this control with no sheet open and no body text under it, and `Add an exercise` alone is the one reading of this control that could mean the plan |
 
 Substitutions beyond §0.8: `{original}` the movement the slot carried before the swap, escaped ·
 `{new}` the movement picked, escaped · `{query}` the typed query, escaped · `{Equipment}` the library's
@@ -4966,6 +5032,9 @@ criterion that says this whole section is additive. Pin it.
 | 87 | swap sheet | `Clear the search` | full × 48 | Empty-result state only |
 | 88 | summary | `Put {new} in the plan` | full × 48 | Swapped entry, editable plan |
 | 89 | summary | `Change the plan` / `Not now` | full × 52 each | 300 ms arm on the first |
+| 90 | session, **last card only** | `Add an exercise` (#60) | full × 52 | **ADDED 2026-10-08.** Bottom stack, directly above the `← / Finish session` navrow. `.ghostbtn`. One id, `addexbtn`, shared with #91 — they never co-render |
+| 91 | summary | `Add an exercise` (#60) | full × 52 | **ADDED 2026-10-08.** Bottom stack, directly **above** `#bs-slot`, which keeps its adjacency to `Save session` (§2.2). `.ghostbtn` |
+| 92 | swap sheet | `Add it` (#64) | full × 52 | **ADDED 2026-10-08.** Confirm state, `extra` mode only. Primary. No arm delay |
 
 Every one is ≥ 44 px on **both** axes. None is in a top corner of the screen; #83 is in a top corner of a
 *sheet*, which §18.4 already permits for a non-destructive back.
@@ -5005,6 +5074,10 @@ Every one is ≥ 44 px on **both** axes. None is in a top corner of the screen; 
   *before* the set rows and from first paint, so nothing moves on a tap. Result rows wrap to three or
   four lines; the list scrolls; `Not now` stays pinned. No set row is touched by anything in §22.
 - **Pinch-zoom** is already restored (§0.6, B-13). Nothing here reintroduces `maximum-scale`.
+- **AMENDED 2026-10-08 (WO-019 W1).** The session-level `Add an exercise` control and the sheet's
+  `extra` mode have their own a11y block — **§22.20.7** — covering its accessible name (#65), the focus
+  order on both hosts, the focus return target, and the one new live-region case. Every bullet above is
+  unchanged.
 
 ## 22.15 What is preserved when he backs out
 
@@ -5289,3 +5362,308 @@ Any change to #48 or to the exclusion predicate · a Trend-side variant of #48 f
 deep-link from the notice to either session · a notice on Summary (it is a post-session screen; the
 repair is not about the session he just trained) · announcing the repair in the toast queue (a toast is
 for something he just did) · anything about the pull-up line's numbers themselves (B-141).
+
+---
+
+## 22.20 `Add an exercise` — the session-level door (WO-019 W1, 2026-10-08)
+
+**Ruled 2026-10-08 by `ux-designer`.** The capability shipped on 2026-09-29 and he could not find it in
+sixteen days of real training (B-160). Nothing about what Add *does* is reopened — `addDraftEntry`, the
+entry shape, Rule AD1, §22.9's card, the toast and both undos are complete and are reused byte for byte.
+**This section is the door, and only the door.**
+
+```
+Flow:   One more exercise
+Entry:  `Add an exercise`, in the bottom stack of the session's LAST card and in the bottom stack of
+        Summary. Also, unchanged and on every card: Swap → a result row → Add as well.
+Exit:   Add it · ‹ back · Not now / scrim / Escape. Nothing writes to the log. The draft is the only
+        store touched and the change is one Undo away for the rest of the session.
+```
+
+**The scene, in his words:** *"sometimes at the end I feel I can do one more exercise… I want that to be
+by session, not reflected on the actual workout plan, but of course I want to keep track of how much
+weight, how many reps, how many sets."* Three clauses: **at the end** decides the placement, **by
+session** decides the copy, **keep track** is already true and is why nothing underneath moves.
+
+### 22.20.1 Placement — ruled, and why not the other two
+
+**The last card's bottom stack, directly above the `← / Finish session` navrow — and Summary's bottom
+stack, directly above `#bs-slot`. One control, one id (`addexbtn`), two hosts that never co-render.**
+
+```
+[REF] 393 px — the LAST card, bottom of the scroll          [REF] 393 px — Summary, bottom of the scroll
+
+│ … set rows, + ADD SET, note field …          │          │ … per-exercise blocks …                      │
+│ ┌──────────────────────────────────────────┐ │          │ ┌──────────────────────────────────────────┐ │
+│ │ Undo — remove Machine row                │ │ optional │ │ Add an exercise                           │ │ 52
+│ └──────────────────────────────────────────┘ │          │ └──────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────┐ │          │ [ #bs-slot — blocked save lands here ]       │
+│ │ Add an exercise                          │ │ 52       │ Logged by Chady                              │
+│ └──────────────────────────────────────────┘ │          │ ┌────────────┐ ┌───────────────────────────┐ │
+│ ┌────────────┐ ┌─────────────────────────┐   │          │ │  ← Back    │ │     Save session          │ │
+│ │     ←      │ │    Finish session       │   │          │ └────────────┘ └───────────────────────────┘ │
+│ └────────────┘ └─────────────────────────┘   │          │ Nothing is judged here. …                    │
+│ DISCARD SESSION                              │          │ DISCARD SESSION                              │
+```
+
+| | |
+|---|---|
+| Size | **Full width × 52**, `.ghostbtn` — **368 × 52 at 400 px wide** (400 − 2 × 16 px gutter), **361 × 52 at 393**. ≥ 44 on both axes, with 8 px to spare on the short one. W5 measures it with Playwright, not by assertion (C10) |
+| Thumb position at 400 px | In the **lower third of the scroll, immediately above the navrow** — the one place on both screens his thumb is already going, because the navrow is the only way off either screen. He does not hunt for it; he finds it on the way to `Finish session` / `Save session` |
+| Weight | Ghost, never primary. `Finish session` and `Save session` are the primary act on their screens and stay primary. This control is an option, and an option that outweighs the exit is a trap |
+| Presence, session | **The last card only** — including when the last card is itself an added card (he may add two), a deload card, a speed card, a swapped card or a read-only plan's card |
+| Presence, Summary | **Whenever Summary renders**, including with an empty draft (`Nothing logged yet.`), including while a blocked save is in `#bs-slot`, including after `S.err` |
+| Absent | Never on cards 1…n−1. Never on Home, Trend, Weight, Diet, Plans. Never in a header |
+
+**Why the last card's bottom stack and not *beside* `Finish session`** (the PM's recommendation, declined
+in that one detail): the navrow is a two-button geometry pinned by §4.1 and §5 — `←` fixed, the primary
+flexed — and a third button in it at 393 px drops `Finish session` to roughly 120 px, which is a
+thirteen-character label in a nine-character box. The stack **above** the navrow is already this card's
+home for an optional, session-scoped control (`Undo — remove {X}`, §22.5), it is 8 px from the same
+thumb, and it cannot shrink the one control that ends the session.
+
+**Why not every card.** Discoverability is the whole defect, so this was tested against it and still
+loses. The navrow sits below the fold on every card at 393 × 852 (§22.1's arithmetic: 498 px to set row
+3 before the note field), so a control above it is discovered by **scrolling to the end of a card** — and
+he scrolls to the end of the *last* card and of Summary anyway, because that is where the exit is. On
+cards 1…8 it would be a second door to the same sheet, below the fold, competing with `Next — {name}`,
+bought for nothing. **And it is not where he said the moment is.** Add still works from any card through
+`Swap → Add as well`, which is exactly why that button is not demoted.
+
+**Why not the header or the control strip.** `CLAUDE.md` §3.6 and §0.4 keep the top corners clear and
+§4.2 ruled the header is information, not a control. The control strip (§22.1) is a 44 px invariant with
+`Swap` at 88 px and the disclosure flexed to ≥ 200 px at 393 — a third control there either breaks the
+disclosure's minimum or the strip's fixed height, and it would put *add* above the inputs, where §22.1
+says only a control that **reshapes the rows** belongs.
+
+**Summary's position is above `#bs-slot`, not between it and `Save session`.** §2.2 requires the blocked
+save to render **directly above** `SAVE SESSION`; a control between them would separate the refusal from
+the thing it refuses. So the order on Summary is: the record · `S.err` · **`Add an exercise`** · `#bs-slot`
+· the owner line · `← Back | Save session`. 24 px above, 24 px below.
+
+**Rendering the host screen writes nothing, and that is a criterion (WO-019 §3 fact 3, C6).** The control
+is markup in `vSummary`'s and `vSession`'s template strings and a `data-`/`id` hook on the existing
+delegated tap handler. **Rendering it must not call `openSwap*`, must not initialise `S.swap`, must not
+touch `S.draft`, must not schedule or flush a draft save.** Reaching Summary, rendering this control,
+leaving and coming back leaves `phat:v1:draft` byte-identical. The first byte this flow writes is written
+by the tap on `Add it`, through the existing `swAdd` → `flushDraft` — which already writes and then
+navigates, and is why a control here is allowed at all. **Nobody protects the invariant by refusing the
+control.**
+
+### 22.20.2 Tap budget — 3, the same as the swap
+
+| # | Tap | State after |
+|---|---|---|
+| 1 | `Add an exercise` | Sheet opens on the **pick** state in `extra` mode, already holding a ranked list (§22.20.3). No keyboard, no query typed |
+| 2 | A result row | **Confirm** state, naming the movement and where it lands |
+| 3 | `Add it` | Sheet closes. The session navigates to the new card, last in the list, `No prescription`, AD1's sentence, one empty set row, focus on the first weight `−`. Toast #28 + `Undo`, and `Undo — remove {X}` in the new card's bottom stack |
+
+**From Summary, tap 3 leaves Summary** and lands on the new card. `Finish session` on that card returns
+to Summary — the loop closes in one tap and the record he was reading is one tap away. Whatever state
+puts the app on Summary is cleared by the commit; **nothing else about the draft changes.**
+
+**Two taps in one second** (W5's question): the first tap opens the modal and the second lands on the
+scrim or on the sheet's own chrome, because `#modal` covers the control. Worst case is a sheet that opens
+and immediately closes, writing nothing.
+
+### 22.20.3 The sheet's third mode — pick state
+
+`S.swap.mode = "extra"`. **The existing sheet, a third mode, not a second sheet** (`index.html:7336`
+says so and it is right). `exId` is **absent** in this mode — there is no card and no slot.
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ Add an exercise                          │  h2, tabindex=-1, focused        (#60, reused)
+│ Today only. The plan does not change.    │  .det                           (#4, verbatim)
+│ [ Search movements            ] [  ✕  ]  │  input full×48 · clear 44×44
+│ Your recent movements first.             │  .det, in the kicker's place    (#61)
+│ Search for anything else.                │
+│ ┌──────────────────────────────────────┐ │
+│ │ Lat pulldown                         │ │  row, full × 64, <button>
+│ │ Cable · lats                         │ │
+│ ├──────────────────────────────────────┤ │
+│ │ Seated cable row                     │ │
+│ │ Cable · middle back                  │ │
+│ └──────────────────────────────────────┘ │
+│ [               Not now               ]  │  full × 52, lowest, pinned
+└──────────────────────────────────────────┘
+```
+
+| Element | Rule |
+|---|---|
+| Heading | **#60 verbatim, `Add an exercise`** — the trigger's own words, §22.2's rule. It is the one heading in this sheet that **dereferences nothing**: no `cardMovement`, no `swExOf`, no day name |
+| Body | **#4 verbatim, `Today only. The plan does not change.`** Not a new string: it is the exact promise he asked for (*"not reflected on the actual workout plan"*), already signed off, and already true by construction |
+| Put-back row | **Absent.** Nothing was replaced |
+| Search field | As §22.2, unchanged, **never auto-focused**. The ranked list is what makes this fast and the keyboard would cover it |
+| List head | **Exactly one of a notice and a kicker, never both**, and the choice is §22.20.3.1's table — which branches on `res.basis`, never on the mode, and never touches a card |
+| Row | As §22.2, unchanged: full × 64, two lines, `{name}` then `{Equipment} · {primary muscle}` |
+| List length | Capped at 40 rows, as §22.2 |
+| Exclusion | **Nothing is excluded.** `swap` mode drops the slot's own movement because replacing a movement with itself is a no-op; **adding a second block of something is not a no-op** — a second helping of the thing that is working is the commonest unplanned exercise there is. A movement already in today's session is listed, unmarked, and `addDraftEntry` mints an id that is not derived from `mv`, so a duplicate is a real second card |
+| `Not now` | Full × 52, `.ghostbtn`, last, pinned. Scrim and `Escape` the same. Closes with nothing written; focus returns to `Add an exercise` |
+| Arm delay | None. Nothing in this mode destroys anything |
+
+#### 22.20.3.1 The list head — one field decides the sentence
+
+**The notice must describe the order the list is in.** That is §22.3.1's rule and the only reason #12 is
+being replaced. So the sentence is a function of `librarySearch`'s **reported `basis`**, and `basis`
+reports **what the list is ordered by, not what the ranker consulted** — which is why an empty recency
+window must report `basis: null` (ruled in §22.3.1's 2026-10-08 amendment; W3 contract).
+
+| `q` | `res.basis` | Slot? | Head | String |
+|---|---|---|---|---|
+| non-empty | any | either | kicker | `MATCHES` (#10). **No card dereference in any mode** |
+| empty | `"recent"` | **no slot** | notice | `Your recent movements first. Search for anything else.` (#61) |
+| empty | `null` | **no slot** | notice | `Ordered by name. Search for the movement you want.` (#62) — fresh install, an empty 56-day window, or W3's §1(iii) fallback |
+| empty | `null` | slot | notice | `Ordered by name. This slot does not name a movement.` (#12) — **unchanged, and still true: there is a slot** |
+| empty | `"equipment"` | slot | notice | unchanged, as shipped |
+| empty | `"score"` | slot | kicker | `CLOSEST TO {EX}` (#9). **The only branch that may read the card**, and it is reachable only where `exId` exists |
+
+**For the engineer, because the current code would throw here:** `swHead` falls through to a kicker that
+dereferences `cardMovement(swExOf(sw.exId))`, and in `extra` mode there is no `exId`. **Branch on
+`basis` first and make the card-reading kicker the last branch, entered only when a slot is present.**
+There is no case in this table where `extra` mode reaches a kicker other than `MATCHES`.
+
+**#61's content is `strength-coach`'s (WO-019 §4.2); its words are mine.** If the coach refuses recency
+as a presented order, **#62 is already the whole of the fallback** — no further string is owed, the
+notice stays true, and the only loss is the quality of the list.
+
+### 22.20.4 The sheet's third mode — confirm state
+
+```
+[REF]
+┌──────────────────────────────────────────┐
+│ ‹   Lat pulldown                         │  back 56×44 · h2, tabindex=-1, focused
+│ Cable · lats                             │  .det
+│ Goes at the end of today's session.      │  .det                           (#63)
+│ The plan does not change.                │  .det                           (#20, verbatim)
+│ [               Add it                ]  │  full × 52, primary             (#64)
+│ [               Not now               ]  │  full × 52, lowest, pinned
+└──────────────────────────────────────────┘
+```
+
+| Element | Rule |
+|---|---|
+| Back | `‹`, 56 × 44, `Back to the list` (#18). Returns to the pick state **with the query and the scroll position intact** |
+| Heading | `{picked name}` — this state exists to catch a mis-tap, so the thing he picked is named at heading weight |
+| Meta | `{Equipment} · {primary muscle}` (#11) |
+| Consequence | **#63 then #20**, two short lines, in that order. #63 says where it lands because the draft's key order is D8's rule and *at the end* is both the behaviour and the thing he asked for; #20 says the plan is untouched, in the words the pick state already used |
+| `Add it` | #64, full × 52, **primary and only**. **`Replace` is not rendered** — there is no slot to replace. **`Add as well` is not rendered** — *as well as what* has no referent here |
+| `Not now` | Full × 52, `.ghostbtn`, lowest, pinned. Scrim and `Escape` the same. Closes the whole sheet |
+| Arm delay | **None.** Nothing is destroyed and the commit is one `Undo` away, twice (§22.20.6) |
+| Not said here | AD1's absent-verdict sentence. The sheet speaks about his session; the card and Summary speak about his advice (§22.9's 2026-10-08 amendment) |
+
+### 22.20.5 The commit — all of it already exists
+
+`Add it` calls the **existing `swAdd`**, which calls the **existing `PHAT.addDraftEntry(draft, mv, n,
+{plan, plans})`** with **`afterExId` still not passed**. Byte for byte the same entry `Add as well`
+writes (C7 pins it). Nothing in this section asks for a new engine, a new field, a new key, a schema bump
+or a migration.
+
+| Step | What changes on screen |
+|---|---|
+| 1 | The sheet closes |
+| 2 | The entry is appended — the draft gains **one key** and nothing else moves (C1) |
+| 3 | The session navigates to it. The header count `{i} of {n}` grows by one, the pips gain a pip. From Summary, the app leaves Summary |
+| 4 | The card: `No prescription` (#32), AD1's sentence (#34) in the verdict slot, **one** empty set row, `+ ADD SET`, no `EXTRA`, no rest target, no verdict, the load chip per §21 — §22.9's table, unchanged |
+| 5 | Focus lands on the **first weight `−`**: the next thing he does is enter a number |
+| 6 | Toast **#28 verbatim**, `{new} added at the end of the session.` + `Undo` — already shipped, already true of this door, and deliberately not a new string |
+| 7 | `Undo — remove {X}` in the new card's bottom stack, for the rest of the session |
+
+### 22.20.6 States — every one
+
+| State | What is on screen |
+|---|---|
+| **Empty draft, on Summary** | The control is **present**. `Nothing logged yet.` above it. A session that is one unplanned movement and nothing else is a real session |
+| **First run / empty recency window** | The list is name-ascending and says so (#62), with the field named as the way to what he wants. No empty state: the library is 876 rows and never empty |
+| Library fetch in flight | `Loading the exercise list.` (#15) in place of the field and the list; they appear **in place** when it lands; nothing re-opens, nothing steals focus |
+| Library failed, absent or unparseable | Heading and body as normal, then #16 + #17 in §2.2's refusal shape **without** the `!` marker, and `Not now` only. **The control itself never disappears** — a control that comes and goes is a bottom stack that reflows under his thumb |
+| Query matches nothing | `No movement matches "{query}".` (#13) + `Clear the search` (#14) |
+| Offline, primed cache | **Identical to online.** `assets/exercises.json` is a precached shell file (C9) |
+| Offline, never primed | The failed state above. The copy names the fix and does not blame him |
+| `addDraftEntry` refuses | `Could not add. Nothing changed.` *(existing literal, `sheetErr`)* in the sheet, which **stays open**. No draft write, no navigation |
+| Blocked save on Summary | The control is **present and tappable** while `#bs-slot` holds the refusal. Tapping it leaves Summary for the new card; the refusal is recomputed and re-rendered on the next return. **A refusal must not trap him on the screen** — the offending row is named and untouched either way (C12) |
+| `S.err` on Summary | Same. The control is below the error and above `#bs-slot` |
+| Mid-render error on the host | §0.7 — the commit block is built **outside** the try on Summary, and the control is part of that block, so it survives a summary that cannot be built |
+| Deload / speed / read-only plan / swapped last card | Control present, unchanged. Nothing here reads the plan or writes to it |
+| Demo mode | Unchanged (§3). Nothing in this section is gated on it |
+
+### 22.20.7 A11y
+
+- **Control.** `<button aria-haspopup="dialog">`, visible text `Add an exercise` (#60), accessible name
+  `Add an exercise to today's session` (#65) — visible text is a prefix (WCAG 2.5.3). **One id,
+  `addexbtn`**, on both hosts, so `sheetState.back` is one value; the two hosts never render together.
+- **Focus return.** `Not now`, scrim and `Escape` return focus to `addexbtn` on **whichever host opened
+  the sheet**. A commit does not: focus goes to the first weight `−`, because the card is about to be the
+  only thing on screen (the existing `swFocusFirst`).
+- **Focus order, last card:** … set rows → `+ ADD SET` → note → `Undo — remove {X}` (if present) →
+  **`Add an exercise`** → `←` → `Finish session` → `DISCARD SESSION`.
+- **Focus order, Summary:** … per-exercise blocks → **`Add an exercise`** → the `#bs-slot` refusal (if
+  present) → `← Back` → `Save session` → `DISCARD SESSION`.
+- **Sheet.** `role="dialog" aria-modal="true" aria-labelledby=` the heading; heading `tabindex="-1"`,
+  focused on open **and again** on the change to confirm. Unchanged from §22.14.
+- **Live regions.** The list is still **not** a live region; the debounced count (`{n} movements.`)
+  announces as today. The commit announces through the existing `toastUndo` → `announce()` path with #28.
+  **One new case:** the notice (#61 / #62) is ordinary text in the sheet's reading order, between the
+  field and the list, **not** a live region — it changes only when the sheet opens or the query empties,
+  and a sentence read on every keystroke is noise.
+- **Marks are text.** `No prescription` and AD1's sentence are words in the card's reading order, as
+  §22.9 and §22.14 already have them. Nothing in this flow is carried by an icon or a colour, and every
+  state survives a greyscale render.
+- **Contrast.** `.ghostbtn` is `--bone` on a `--line` border — the app's control shape, 12.7 : 1 on both
+  `--bg` (card) and `--surface` (Summary block). Sheet: heading `--bone` 12.7 : 1, `.det` and the notice
+  `--dim` 7.0 : 1. **Never `--faint`, never `.50`, inside the sheet** (§0.5 rule 2).
+- **200 %.** The control wraps to two lines and keeps its 52 px minimum; it is **below every input on
+  both hosts**, so nothing it does can move a set row. The sheet's rows wrap, the list scrolls, `Not now`
+  stays pinned.
+- **Pinch-zoom** untouched (§0.6, B-13).
+
+### 22.20.8 What is preserved when he backs out
+
+| He does | What is preserved |
+|---|---|
+| `Not now`, scrim or `Escape`, either sheet state | Everything. No draft write, no prefs write, no log write. Focus back on `Add an exercise` |
+| `‹` back from confirm | The query, the scroll position and the ranked list |
+| Taps the control on Summary and backs out | `phat:v1:draft` is byte-identical to before the tap, and so is the Summary he returns to (C6) |
+| `Undo` in the toast, or `Undo — remove {X}` on the card | The added entry is gone and the draft is byte-identical to the pre-add bytes (C4). Numbers typed into **other** cards after the add are in their own entry objects and are untouched — Undo undoes the add, never his typing |
+| Reload, phone lock, tab kill after the add | The draft holds the added movement and anything typed into it (C2, C3). Declining the restore offer discards the whole draft and leaves the log byte-identical |
+| Library fails after the add | The card keeps working. It is draft state, not library state |
+
+### 22.20.9 Dependencies and what I could not settle
+
+1. **`basis` on an empty recency window — ruled here, owed by W3.** `librarySearch` must report
+   `basis: null` whenever the list is name-ascending, including when it ranked on recency and found
+   nothing. Backend offered the flip; §22.3.1's amendment takes it. **If it does not land, #61 ships over
+   an alphabetical list and that is the exact defect #12 is being replaced for.**
+2. **#61's content is `strength-coach`'s** (WO-019 §4.2). The words are mine and stand or fall with the
+   basis; #62 is the complete fallback if recency is refused.
+3. **AD1's third clause from this door is W2's** (WO-019 §4.1). §22.9 is where a changed literal lands
+   and #34 is the row; no other section moves with it.
+4. **Does `recentMovements` see the session he is standing in?** It is built from saved sessions, so a
+   movement he has only ever done **today, in this unsaved draft**, may rank nowhere. #61 says *your
+   recent movements*, which is true of saved history either way, so no string depends on the answer —
+   but W3 should state it, because it decides whether the second helping he is most likely to add is at
+   the top of the list or not on the first screen of it.
+5. **A movement already in today's session is listed and unmarked** (§22.20.3). I believe a duplicate
+   card is a legitimate and common thing and a mark would be a judgement; it is unmeasured. If the build
+   finds the duplicate is a mis-tap in practice, the counter-proposal is a `·` meta clause on the row,
+   not an exclusion.
+6. **The load column on an added card is B-161 / WO-016's and is not touched here** — an added movement
+   carries no `implement`, so `loadWord` says `zero load` where it means `bodyweight` and a dumbbell
+   movement's column declares no meaning at all. **This door makes that reachable in two taps from
+   Summary**, which is WO-019 §5's sequencing argument and the reason this ships on WO-016's deploy or
+   after it, never before.
+7. **B-05 is load-bearing again.** Every safety net here lives in the draft and expires at
+   `Save session`. An exercise added by a mis-tap and saved is permanent.
+
+### 22.20.10 Out of scope, deliberately
+
+Inserting a card **between** two existing cards (`afterExId` stays unpassed; D8's order is the day's plan
+first and plan-less entries appended after it, and *at the end* is what he asked for) · the control on
+cards 1…n−1 · any change to `Add as well`, `Replace`, the put-back row, the pick-state rows or §22.5's
+no-loss rule · the load column and `implement` (B-161, WO-016) · offering an added movement to the plan
+(ruled by Chady and recorded in `docs/decisions.md`: *"I don't want that to be reflected on the actual
+workout plan"* — there is no slot to re-point, so §22.7 is never offered on an added card) · a free-text
+movement name · warm-up sets on a prescription-less card (B-116, fifth asking, still his one sentence to
+give) · plate math (B-10) · a rest timer (B-09) · anything on Home, Trend, Weight or Diet · any change to
+the set rows, the ghost row, the `ld` row or the load chip.
