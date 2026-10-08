@@ -55,7 +55,7 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 1061 / 1061 / 0 on wo-014-library @ 718fb33 + this commit - ~2.6 s in Chromium from file://, green on all seven weekdays (the page's clock was forced to each of Mon 5 Oct - Sun 11 Oct 2026) and again at 23:50 on 31 Oct 2026, 00:10 on 1 Nov 2026, 23:55 on 31 Dec 2026, 00:05 on 1 Jan 2027, 29 Feb 2028 and 02:30 on 29 Mar 2026, so the thirteen runs cross a month, a year, a leap day and a DST boundary. <b>Zero held reds and zero skips on all thirteen.</b> One red in that sweep was MINE and is worth recording: S55.F4 asserted <code>exId.indexOf("d1") === -1</code>, and on the 8 Oct clock the mint - base36 of the clock - produced <code>x_&hellip;d1&hellip;</code>. A test whose colour depends on the minute is B-146 again, so the assertion was replaced with the property that actually matters (id COLLISION against every shipped plan) rather than loosened.</b>
+<b>Today: 1090 / 1090 / 0 on wo-014-library @ 71b0a29 + this commit (WO-023 W5: S56 adds 29, the promote's two pure functions; the browser half is item 46 under &ldquo;Already proven&rdquo;, and what this page cannot reach is named under &ldquo;Not testable&rdquo; rather than faked). Previously 1061 / 1061 / 0 on 718fb33 - ~2.6 s in Chromium from file://, green on all seven weekdays (the page's clock was forced to each of Mon 5 Oct - Sun 11 Oct 2026) and again at 23:50 on 31 Oct 2026, 00:10 on 1 Nov 2026, 23:55 on 31 Dec 2026, 00:05 on 1 Jan 2027, 29 Feb 2028 and 02:30 on 29 Mar 2026, so the thirteen runs cross a month, a year, a leap day and a DST boundary. <b>Zero held reds and zero skips on all thirteen.</b> One red in that sweep was MINE and is worth recording: S55.F4 asserted <code>exId.indexOf("d1") === -1</code>, and on the 8 Oct clock the mint - base36 of the clock - produced <code>x_&hellip;d1&hellip;</code>. A test whose colour depends on the minute is B-146 again, so the assertion was replaced with the property that actually matters (id COLLISION against every shipped plan) rather than loosened.</b>
 <b>WO-019 - the session-level <i>Add an exercise</i> door. S55 added 22, and HALF OF THE ORDER IS NOT TESTABLE FROM THIS PAGE, which is said
 in the group's own header rather than discovered.</b> The capability (<code>addDraftEntry</code>, the entry shape, Rule AD1) shipped on
 2026-09-29 and he could not find it in sixteen days of real training - <b>B-160 is the DOOR, not the feature</b> - so the thing most at risk
@@ -23000,6 +23000,627 @@ T("S55 TRIPWIRE - no fixture in S55 wrote a phat:* key", function(a){
     "every fixture in this group is in memory. The browser half runs on a SEPARATE origin and is reported under \"Already proven\"");
 });
 
+/* ============================================================ S56 - WO-023 W5 QA
+   THE PROMOTE: `editableTarget` (W3a) and `promoteDraftEntry` (W3b).
+
+   What this group is for. WO-023's one control writes a movement he added
+   mid-session into his plan, on the road to `Save session`, with a draft
+   holding the whole evening. The two functions below are the only things that
+   decide WHERE it may be written and WHAT is written; everything else in the
+   order is view code, and the half of it this page cannot reach is named in
+   the "Not testable from here" section rather than faked.
+
+   THE RULE THESE TESTS EXIST TO HOLD, and it is the order's own headline:
+   nothing already shipped moves. So every refusal below is asserted against
+   the problem shapes `addExercise` ALREADY emits - by calling both and
+   comparing, never by transcribing - because two copies of one validator is
+   two validators and they drift (WO-023 W3b).
+
+   RED-FIRST, recorded: against `git cat-file blob 4245d13:logic.js` - what is
+   in production - every test in this group is red with `PHAT.editableTarget
+   is missing` / `PHAT.promoteDraftEntry is missing`, because neither function
+   exists there. That is the whole of C11 for W3a and W3b.
+
+   The clock never enters: `editableTarget` takes `todayStr` as an argument
+   (CLAUDE.md 3.4, and the reason this group is green on every forced clock). */
+group("S56 WO-023 W5 QA / the promote / editableTarget (W3a) + promoteDraftEntry (W3b)");
+
+/* A fresh EDITABLE copy of PHAT. `copyPlan` mints a new planId on every call,
+   so nothing below may depend on the mint - only on the properties. */
+function PC56(){
+  var r = P.copyPlan(P.PHAT_PLAN, undefined, "2026-10-01");
+  if (!r.ok) throw new Error("S56 fixture: copyPlan refused " + JSON.stringify(r.problems).slice(0, 180));
+  return r.plan;
+}
+/* The draft entry the Summary control is about: a movement he ADDED tonight
+   and logged three sets on. Shape is `addDraftEntry`'s own output plus typed
+   sets - {sets, note, mv, n} - never a plan slot. */
+function ENT56(o){
+  var e = { sets: [{ w: "25", r: "15" }, { w: "25", r: "15" }, { w: "25", r: "14" }],
+            note: "felt easy, go heavier", mv: "mv_Face_Pull", n: "Face pull" };
+  if (o) Object.keys(o).forEach(function(k){ e[k] = o[k]; });
+  return e;
+}
+/* What the form collects, and ONLY what the form collects (coach 25.3.1):
+   s, lo, hi, k from him; implement derived-and-changeable. No cut, no lift,
+   no cue, no keyLifts. */
+function SPEC56(o){
+  var s = { s: 3, lo: 12, hi: 15, k: "hyp", implement: "cable" };
+  if (o) Object.keys(o).forEach(function(k){ s[k] = o[k]; });
+  return s;
+}
+function DAY56(plan, dayId){
+  var d = (plan.days || []).filter(function(x){ return x.id === dayId; })[0];
+  return d || null;
+}
+/* The junk sweep both functions get. A control on the road to a save may not
+   throw whatever it is handed. */
+var JUNK56 = [undefined, null, 0, 1, "", "x", true, false, [], {}, NaN];
+
+/* ------------------------------------------- A. editableTarget (W3a) ------ */
+
+T("S56.A1 W3a - HIS PLAN IS ALREADY A COPY: the store comes back BY IDENTITY, created:false, and the plan is the document inside that store - the no-op branch moves zero bytes and says so without anyone having to run a comparison", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var cp = PC56(), store = { plans: [cp], activePlanId: cp.planId };
+  var before = JSON.stringify(store);
+  var r = P.editableTarget(store, "2026-10-08");
+  a.eq(r.ok, true);
+  a.eq(r.created, false, "no copy, no activation, nothing on the Plans screen (WO-023 section 5)");
+  a.eq(r.store === store, true, "the SAME object, not an equal one - byte-identity by identity");
+  a.eq(r.plan === store.plans[0], true, "the document IN the store, so a caller cannot edit a copy the store will not persist");
+  a.deep(r.problems, []);
+  a.eq(JSON.stringify(store), before, "and the argument is untouched");
+});
+
+T("S56.A2 W3a - HIS PLAN IS A SHIPPED TEMPLATE: one call copies it, names it, stores it and activates it, created:true - and the ARGUMENT STORE IS UNTOUCHED, so a failed write leaves the function never having happened", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var store = { plans: [], activePlanId: P.PHAT_PLAN_ID };
+  var before = JSON.stringify(store);
+  var r = P.editableTarget(store, "2026-10-08");
+  a.eq(r.ok, true);
+  a.eq(r.created, true);
+  a.eq(r.plan.name, "PHAT — my version", "copyPlan's own default stem - this function never builds the name");
+  a.eq(r.plan.readOnly, false, "the point of the branch");
+  a.eq(r.plan.derivedFrom, "phat", "provenance is carried, which is what PV1.2's gate reads");
+  a.eq(r.plan.createdAt, "2026-10-08", "from the ARGUMENT, never from a clock");
+  a.eq(r.store.plans.length, 1);
+  a.eq(r.store.activePlanId, r.plan.planId, "activated, in the same returned store");
+  a.eq(r.plan === r.store.plans[0], true, "and the returned plan is the stored one");
+  a.eq(JSON.stringify(store), before, "the input store moved nothing");
+  a.eq(store.plans.length, 0, "stated twice on purpose: this is the half a failed save() relies on");
+  a.eq(P.validatePlan(r.plan).ok, true);
+});
+
+T("S56.A3 W3a - all five shipped templates answer, each one copied, editable, active and valid - so the branch is not a PHAT special case", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  a.eq(P.SHIPPED_PLANS.length, 5);
+  P.SHIPPED_PLANS.forEach(function(sh){
+    var store = { plans: [], activePlanId: sh.planId };
+    var r = P.editableTarget(store, "2026-10-08");
+    a.eq(r.ok, true, sh.planId);
+    a.eq(r.created, true, sh.planId);
+    a.eq(r.plan.readOnly, false, sh.planId);
+    a.eq(r.plan.derivedFrom, sh.planId, sh.planId + " carries its source");
+    a.eq(r.plan.name, sh.name + " — my version", sh.planId);
+    a.eq(r.store.activePlanId, r.plan.planId, sh.planId);
+    a.eq(P.validatePlan(r.plan).ok, true, sh.planId);
+    a.eq(store.plans.length, 0, sh.planId + ": argument untouched");
+  });
+});
+
+T("S56.A4 W3a - PURE, on every path including every refusal: the input store is JSON-identical after the call, swept over 9 stores x 2 dates", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var cp = PC56(), broken = JSON.parse(JSON.stringify(PC56()));
+  broken.days[0].ex[0].s = 99;
+  var stores = [
+    { plans: [], activePlanId: P.PHAT_PLAN_ID },
+    { plans: [cp], activePlanId: cp.planId },
+    { plans: [broken], activePlanId: broken.planId },
+    { plans: [], activePlanId: "" },
+    { plans: [], activePlanId: "nosuch" },
+    { plans: [cp], activePlanId: "ppl3" },
+    { plans: null, activePlanId: "phat" },
+    {},
+    { plans: [cp, broken], activePlanId: cp.planId }
+  ];
+  stores.forEach(function(st, i){
+    ["2026-10-08", "nonsense"].forEach(function(d){
+      var before = JSON.stringify(st);
+      a.noThrow(function(){ return P.editableTarget(st, d); }, "store " + i + " date " + d);
+      a.eq(JSON.stringify(st), before, "store " + i + " date " + d + " was mutated");
+    });
+  });
+});
+
+T("S56.A5 W3a - the three refusals, field by field, each handing the ORIGINAL store straight back by identity - a refusal that returned a rebuilt store would be a write nobody asked for", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var s1 = { plans: [] };
+  var r1 = P.editableTarget(s1, "2026-10-08");
+  a.eq(r1.ok, false);
+  a.deep(r1.problems, [{ scope: "plan", id: null, field: "activePlanId", reason: "missing" }]);
+  a.eq(r1.store === s1, true);
+  a.eq(r1.plan, null);
+  a.eq(r1.created, false);
+
+  var s2 = { plans: [], activePlanId: "nosuch" };
+  var r2 = P.editableTarget(s2, "2026-10-08");
+  a.deep(r2.problems, [{ scope: "plan", id: "nosuch", field: "activePlanId", reason: "unknown" }]);
+  a.eq(r2.store === s2, true);
+
+  var r3 = P.editableTarget(null, "2026-10-08");
+  a.deep(r3.problems, [{ scope: "plan", id: null, field: null, reason: "missing" }]);
+  a.eq(r3.store, null, "handed back as given");
+});
+
+T("S56.A6 W3a / UX 22.22 #92 - THE BROKEN STORED PLAN REFUSES, and the problem it emits is `{scope:\"plan\", id, field:NULL, reason:\"invalid\"}` - the exact shape the frontend branches #92 on, so the sentence he reads is the engine's reason and not a second diagnosis", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var broken = JSON.parse(JSON.stringify(PC56()));
+  broken.days[0].ex[0].s = 99;                      /* out of range: 1..20 */
+  a.eq(P.validatePlan(broken).ok, false, "the fixture really is unreadable");
+  var store = { plans: [broken], activePlanId: broken.planId };
+  var before = JSON.stringify(store);
+  var r = P.editableTarget(store, "2026-10-08");
+  a.eq(r.ok, false);
+  a.eq(r.problems.length, 1);
+  a.eq(r.problems[0].scope, "plan");
+  a.eq(r.problems[0].id, broken.planId, "it names the plan he lifts on");
+  a.eq(r.problems[0].field, null,
+    "FIELD IS NULL - not \"activePlanId\". WO-023's brief said otherwise; the engine is the record and #92's test is `reason === \"invalid\"` alone");
+  a.eq(r.problems[0].reason, "invalid");
+  a.eq(r.store === store, true, "and nothing is repointed at a PHAT copy (coach 25.9.2): that would hand ST1, D1, SP1 and V1 a keyLifts, speedSource and reintroOrder he never programmed");
+  a.eq(JSON.stringify(store), before);
+});
+
+T("S56.A7 W3a - `reason:\"invalid\"` is reachable from the broken-stored-plan branch and from NOWHERE ELSE, so #92 cannot be printed for a cause it does not describe (swept over every refusing input this function has)", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var cp = PC56(), broken = JSON.parse(JSON.stringify(PC56()));
+  broken.days[0].ex[0].k = "nonsense";
+  var cases = [
+    [null, false], [undefined, false], [7, false], ["x", false], [{}, false],
+    [{ plans: [] }, false], [{ plans: [], activePlanId: "   " }, false],
+    [{ plans: [], activePlanId: "nosuch" }, false],
+    [{ plans: null, activePlanId: "nosuch" }, false],
+    [{ plans: [cp], activePlanId: cp.planId }, false],
+    [{ plans: [], activePlanId: "phat" }, false],
+    [{ plans: [broken], activePlanId: broken.planId }, true]
+  ];
+  cases.forEach(function(c, i){
+    var r = P.editableTarget(c[0], "2026-10-08");
+    var has = !!(r && Array.isArray(r.problems) && r.problems.some(function(p){ return p && p.reason === "invalid"; }));
+    a.eq(has, c[1], "case " + i + " " + show(c[0] && c[0].activePlanId));
+  });
+});
+
+T("S56.A8 W3a - a shipped template is resolved AHEAD of the store and is never validate-refused: a stored document carrying a template's id cannot make the active plan unreadable", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var fake = { planId: "phat", name: "not really phat", days: [] };   /* would fail validatePlan */
+  var store = { plans: [fake], activePlanId: "phat" };
+  var r = P.editableTarget(store, "2026-10-08");
+  a.eq(r.ok, true, "shippedPlan answers first - the same order activePlanOf uses");
+  a.eq(r.created, true);
+  a.eq(r.plan.derivedFrom, "phat");
+  a.eq(r.plan.days.length, P.PHAT_PLAN.days.length, "copied from the CODE, not from the impostor row");
+});
+
+T("S56.A9 W3a - THE NAME IS RESOLVED FROM THE STORE, lowest free integer, so the sheet and the Plans screen cannot print two rows he is unable to tell apart", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  /* the default stem already taken */
+  var taken = PC56(); taken.name = "PHAT — my version";
+  var r = P.editableTarget({ plans: [taken], activePlanId: "phat" }, "2026-10-08");
+  a.eq(r.plan.name, "PHAT — my version 2");
+  /* and `2` taken as well */
+  var t2 = PC56(); t2.name = "PHAT — my version 2";
+  var r2 = P.editableTarget({ plans: [taken, t2], activePlanId: "phat" }, "2026-10-08");
+  a.eq(r2.plan.name, "PHAT — my version 3", "the LOWEST free integer, never a timestamp");
+  /* case and surrounding space fold, because what is being prevented is two
+     rows a man cannot tell apart */
+  var t3 = PC56(); t3.name = "  phat — MY VERSION  ";
+  var r3 = P.editableTarget({ plans: [t3], activePlanId: "phat" }, "2026-10-08");
+  a.eq(r3.plan.name, "PHAT — my version 2");
+  a.eq(P.validatePlan(r3.plan).ok, true);
+});
+
+T("S56.A10 W3a - a SHIPPED template's name counts as taken too: the five templates are rows on the Plans screen even though planStoreUpsert refuses to store them", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  /* rename the copy's stem onto a template's name by naming the SOURCE copy
+     "PPL3 ..." is not possible, so test the predicate directly: a stored plan
+     named exactly a template's name does not collide with the stem, but a
+     template whose name IS the stem would. The reachable half: the five
+     template names are all refused as copy names. */
+  var sh = P.SHIPPED_PLANS[2];                       /* Push Pull Legs - 3 days */
+  var squat = PC56(); squat.name = sh.name + " — my version";
+  var r = P.editableTarget({ plans: [squat], activePlanId: sh.planId }, "2026-10-08");
+  a.eq(r.plan.name, sh.name + " — my version 2");
+  /* and the em dash is NOT folded away - "PHAT my version" reads differently
+     on the screen, so it is a different name */
+  var nodash = PC56(); nodash.name = "PHAT my version";
+  var r2 = P.editableTarget({ plans: [nodash], activePlanId: "phat" }, "2026-10-08");
+  a.eq(r2.plan.name, "PHAT — my version", "no collision: folding the dash would make two readable names one");
+});
+
+T("S56.A11 W3a / coach 25.6 - `state.reintro` and `lastReintroDate` are NOT this function's to write, and it cannot reach them: they live on the LOG store and are keyed by dayId. The plan's own `reintroOrder`, `keyLifts`, `speedSource` and `reducedWeeks` come through the copy byte for byte", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  var store = { plans: [], activePlanId: "phat" };
+  var r = P.editableTarget(store, "2026-10-08");
+  a.deep(r.plan.reintroOrder, P.PHAT_PLAN.reintroOrder, "V1's stored counter is an INDEX into this list; a copy that reset it would offer to reintroduce something it never cut");
+  a.deep(r.plan.keyLifts, P.PHAT_PLAN.keyLifts);
+  a.deep(r.plan.speedSource, P.PHAT_PLAN.speedSource);
+  a.eq(r.plan.reducedWeeks, P.PHAT_PLAN.reducedWeeks);
+  a.eq(hasKeyDeep(r.store, "reintro"), false, "nothing named reintro is written into the plans store");
+  a.eq(hasKeyDeep(r.store, "lastReintroDate"), false);
+  a.eq(hasKeyDeep(r.plan, "reintro"), false);
+});
+
+T("S56.A12 W3a - THE CLOCK IS AN ARGUMENT, never read: an unusable date is copyPlan's shipped behaviour, `createdAt: null`, and still a VALID plan. The one well-formed impossible date is echoed, which is the SAME already-recorded DATE_RE gap S18b pins on dietTargets and is not this order's", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  [undefined, null, "", "nonsense", 7, {}, [], "8/10/2026", "2026-10-8"].forEach(function(d){
+    var r = P.editableTarget({ plans: [], activePlanId: "phat" }, d);
+    a.eq(r.ok, true, show(d));
+    a.eq(r.plan.createdAt, null, show(d) + " must not become a date nobody chose");
+    a.eq(P.validatePlan(r.plan).ok, true, show(d));
+  });
+  /* OBSERVED, not a new defect: DATE_RE is a FORMAT check, so a well-formed
+     impossible date rides through copyPlan into `createdAt`. The only caller
+     passes PHAT.localDate(), which cannot produce one, and the same gap is
+     already on the record for dietTargets (S18b, P2 backend). Pinned here so
+     the promote's copy is covered by that item rather than hiding behind it. */
+  a.eq(P.editableTarget({ plans: [], activePlanId: "phat" }, "2026-13-45").plan.createdAt, "2026-13-45",
+    "OBSERVED: the impossible date is carried, exactly as DATE_RE allows (P2, backend, already filed)");
+  /* and the real caller's input lands unchanged */
+  a.eq(P.editableTarget({ plans: [], activePlanId: "phat" }, "2026-10-08").plan.createdAt, "2026-10-08");
+});
+
+/* -------------------------------------- B. promoteDraftEntry (W3b) -------- */
+
+T("S56.B1 W3b / AD1.6 - the happy path: the slot lands LAST in the day, carries the DRAFT ENTRY'S OWN ID, mints a fresh lift, takes `n` and `mv` from the entry and s/lo/hi/k from the form - and resolveEx finds it, which is the whole of C5", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56(), day0 = DAY56(plan, "d1").ex.length;
+  var r = P.promoteDraftEntry(plan, "d1", "x_qa_face", ENT56(), SPEC56(), null);
+  a.eq(r.ok, true, "problems: " + show(r.problems));
+  a.deep(r.problems, []);
+  a.eq(r.exId, "x_qa_face");
+  var d = DAY56(r.plan, "d1");
+  a.eq(d.ex.length, day0 + 1);
+  var slot = d.ex[d.ex.length - 1];
+  a.eq(slot.id, "x_qa_face", "AD1.6.3 - tonight's sets ARE this slot's history");
+  a.eq(slot.n, "Face pull", "from the entry");
+  a.eq(slot.mv, "mv_Face_Pull", "from the entry");
+  a.eq(slot.s, 3); a.eq(slot.lo, 12); a.eq(slot.hi, 15);
+  a.eq(slot.k, "hyp"); a.eq(slot.implement, "cable");
+  a.eq(slot.lift, r.lift);
+  a.eq(P.resolveEx([r.plan], "x_qa_face").n, "Face pull");
+  a.eq(P.validatePlan(r.plan).ok, true);
+});
+
+T("S56.B2 W3b - the slot's KEY ORDER is addExercise's, byte for byte: the promote rewrites one existing key and invents no shape of its own", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56();
+  var pr = P.promoteDraftEntry(plan, "d1", "x_qa_face", ENT56(), SPEC56(), null);
+  var ax = P.addExercise(plan, "d1", { n: "Face pull", s: 3, lo: 12, hi: 15, k: "hyp",
+                                       implement: "cable", mv: "mv_Face_Pull" });
+  a.eq(pr.ok, true); a.eq(ax.ok, true);
+  var ps = DAY56(pr.plan, "d1").ex.slice(-1)[0], as = DAY56(ax.plan, "d1").ex.slice(-1)[0];
+  a.deep(Object.keys(ps), Object.keys(as), "same keys in the same order");
+  /* and the same values once the two minted ids are normalised away */
+  a.eq(JSON.stringify(Object.assign({}, ps, { id: "ID", lift: "LIFT" })),
+       JSON.stringify(Object.assign({}, as, { id: "ID", lift: "LIFT" })),
+       "the promoted slot IS an addExercise slot with its id rewritten - nothing else");
+});
+
+T("S56.B3 W3b - PURE on every path including every refusal: the input plan is JSON-identical after 16 calls, and `ok:false` hands the plan back BY IDENTITY", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56(), before = JSON.stringify(plan);
+  var calls = [
+    ["d1", "x_a", ENT56(), SPEC56()],
+    ["d1", "d1a", ENT56(), SPEC56()],
+    ["nosuch", "x_b", ENT56(), SPEC56()],
+    ["", "x_c", ENT56(), SPEC56()],
+    ["d1", "", ENT56(), SPEC56()],
+    ["d1", "x_d", null, SPEC56()],
+    ["d1", "x_e", ENT56(), null],
+    ["d1", "x_f", ENT56(), SPEC56({ s: 0 })],
+    ["d1", "x_g", ENT56(), SPEC56({ k: "" })],
+    ["d1", "x_h", ENT56(), SPEC56({ implement: "kettlebell" })],
+    ["d1", "x_i", ENT56(), SPEC56({ cut: 1 })],
+    ["d1", "x_j", ENT56(), SPEC56({ lift: "l_row" })],
+    ["d1", "x_k", ENT56(), SPEC56({ cue: "x" })],
+    ["d1", "x_l", ENT56({ n: "   " }), SPEC56()],
+    ["d1", "x_m", ENT56({ mv: "junk" }), SPEC56()],
+    ["d5", "x_n", ENT56(), SPEC56({ k: "speed", lo: 3, hi: 3 })]
+  ];
+  calls.forEach(function(c, i){
+    var r = a.noThrow(function(){ return P.promoteDraftEntry(plan, c[0], c[1], c[2], c[3], null); }, "call " + i);
+    a.eq(JSON.stringify(plan), before, "call " + i + " MUTATED the input plan");
+    if (r.ok !== true) a.eq(r.plan === plan, true, "call " + i + ": a refusal returns the plan untouched, by identity");
+  });
+  /* and the junk sweep */
+  JUNK56.forEach(function(v){
+    a.noThrow(function(){ return P.promoteDraftEntry(v, v, v, v, v, v); }, "junk " + show(v));
+    a.eq(P.promoteDraftEntry(v, v, v, v, v, v).ok, false, "junk " + show(v));
+  });
+  a.eq(JSON.stringify(plan), before);
+});
+
+T("S56.B4 W3b - the field refusals are addExercise's OWN problems, asserted against a live addExercise call field by field, so the two cannot drift into two validators", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56();
+  function pr(sp){ return P.promoteDraftEntry(plan, "d1", "x_qa", ENT56(), sp, null).problems; }
+  function ax(sp){
+    var s = { n: "Face pull", mv: "mv_Face_Pull" };
+    Object.keys(sp).forEach(function(k){ s[k] = sp[k]; });
+    return P.addExercise(plan, "d1", s).problems;
+  }
+  var specs = [
+    SPEC56({ s: 0 }), SPEC56({ s: 21 }), SPEC56({ s: "3" }), SPEC56({ s: undefined }),
+    SPEC56({ lo: 0 }), SPEC56({ hi: 101 }), SPEC56({ lo: 15, hi: 12 }),
+    SPEC56({ k: "" }), SPEC56({ k: "hypertrophy" }),
+    SPEC56({ implement: "kettlebell" }), SPEC56({ implement: "" }),
+    SPEC56({ s: 0, lo: 0, k: "" })
+  ];
+  specs.forEach(function(sp, i){
+    var got = pr(sp), want = ax(sp);
+    a.ok(want.length > 0, "fixture " + i + " must really be refused");
+    a.deep(got, want, "spec " + i + " " + show(sp));
+  });
+  /* the one field the form does not have: `n` comes from the entry, and an
+     empty one is addExercise's own `missing` */
+  a.deep(P.promoteDraftEntry(plan, "d1", "x_qa", ENT56({ n: "   " }), SPEC56(), null).problems,
+         [{ scope: "ex", id: null, field: "n", reason: "missing" }]);
+});
+
+T("S56.B5 W3b - an id taken ANYWHERE in the plan refuses `{scope:\"ex\", id, field:\"id\", reason:\"taken\"}` with the plan untouched: plan id, day id, exercise id and lift id are one namespace (WO-004 C-6)", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56(), before = JSON.stringify(plan);
+  [plan.planId, "d1", "d1a", "d5j", "l_row", "l_skull"].forEach(function(id){
+    var r = P.promoteDraftEntry(plan, "d1", id, ENT56(), SPEC56(), null);
+    a.eq(r.ok, false, id + " is taken");
+    a.deep(r.problems, [{ scope: "ex", id: id, field: "id", reason: "taken" }], id);
+    a.eq(r.plan === plan, true, id);
+  });
+  a.eq(JSON.stringify(plan), before);
+  a.deep(P.promoteDraftEntry(plan, "d1", "   ", ENT56(), SPEC56(), null).problems,
+         [{ scope: "ex", id: null, field: "id", reason: "missing" }], "and no id at all is refused before anything else");
+});
+
+T("S56.B6 W3b / AD1.6.5 - an unresolvable dayId is addExercise's own `{scope:\"day\", id, field:\"id\", reason:\"unknown\"}`: the day is NEVER created and NEVER substituted. This is the engine half of UX literal #90", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56(), before = JSON.stringify(plan);
+  /* `d1 ` is NOT in this list on purpose: addExercise trims the dayId, so a
+     trailing space resolves, and that is shipped behaviour this order did not
+     touch. Asserted as such below. */
+  ["nosuch", "D1", "", "d6", "d1a"].forEach(function(id){
+    var r = P.promoteDraftEntry(plan, id, "x_qa", ENT56(), SPEC56(), null);
+    a.eq(r.ok, false, show(id));
+    a.eq(r.problems.length, 1, show(id));
+    a.eq(r.problems[0].scope, "day", show(id));
+    a.eq(r.problems[0].field, "id", show(id));
+    a.eq(r.problems[0].reason, "unknown", show(id));
+    a.eq(r.plan === plan, true, show(id));
+  });
+  a.eq(JSON.stringify(plan), before);
+  a.eq(plan.days.length, 5, "no day was appended by any of them");
+  a.eq(P.promoteDraftEntry(plan, "d1 ", "x_qa", ENT56(), SPEC56(), null).ok, true,
+    "shipped, unchanged: addExercise trims the dayId, so a trailing space still resolves");
+});
+
+T("S56.B7 W3b - a READ-ONLY plan refuses before anything else, with the shipped `{field:\"readOnly\", reason:\"locked\"}`: all five templates, and the frozen PHAT object is not even written to", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  P.SHIPPED_PLANS.forEach(function(sh){
+    var r = P.promoteDraftEntry(sh, sh.days[0].id, "x_qa", ENT56(), SPEC56(), null);
+    a.eq(r.ok, false, sh.planId);
+    a.deep(r.problems, [{ scope: "plan", id: sh.planId, field: "readOnly", reason: "locked" }], sh.planId);
+    a.eq(r.plan === sh, true, sh.planId);
+    a.eq(sh.days[0].ex.some(function(e){ return e.id === "x_qa"; }), false, sh.planId);
+  });
+});
+
+T("S56.B8 W3b / coach 25.3.1 - `cut`, `lift` and `cue` are REFUSED and not silently dropped, with all three named at once when all three are passed: dropping a field a caller handed in is the same bug class as dropping a set", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56();
+  a.deep(P.promoteDraftEntry(plan, "d1", "x_qa", ENT56(), SPEC56({ cut: 1 }), null).problems,
+         [{ scope: "ex", id: "x_qa", field: "cut", reason: "unsupported" }],
+         "V1's counter is an INDEX into reintroOrder; a `cut` on a week-9 slot would change what the stored number means");
+  a.deep(P.promoteDraftEntry(plan, "d1", "x_qa", ENT56(), SPEC56({ lift: "l_row" }), null).problems,
+         [{ scope: "ex", id: "x_qa", field: "lift", reason: "unsupported" }],
+         "joining two prescriptions onto one Trend line is the B-46 collapse");
+  a.deep(P.promoteDraftEntry(plan, "d1", "x_qa", ENT56(), SPEC56({ cue: "x" }), null).problems,
+         [{ scope: "ex", id: "x_qa", field: "cue", reason: "unsupported" }]);
+  a.deep(P.promoteDraftEntry(plan, "d1", "x_qa", ENT56(), SPEC56({ cut: 1, lift: "l_row", cue: "x" }), null).problems,
+         [{ scope: "ex", id: "x_qa", field: "cut", reason: "unsupported" },
+          { scope: "ex", id: "x_qa", field: "lift", reason: "unsupported" },
+          { scope: "ex", id: "x_qa", field: "cue", reason: "unsupported" }]);
+  /* an explicit `undefined` is absence, not a value */
+  a.eq(P.promoteDraftEntry(plan, "d1", "x_qa", ENT56(), SPEC56({ cut: undefined, lift: undefined, cue: undefined }), null).ok, true);
+});
+
+T("S56.B9 W3b - the promoted slot carries NO `cut` and NO `cue`, and `reintroOrder`, `keyLifts`, `speedSource` and `reducedWeeks` are deep-equal to before - on copies of ALL FIVE shipped plans, on EVERY day", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  P.SHIPPED_PLANS.forEach(function(sh){
+    var cp = P.copyPlan(sh, undefined, "2026-10-01").plan;
+    cp.days.forEach(function(day, di){
+      var r = P.promoteDraftEntry(cp, day.id, "x_q_" + sh.planId + "_" + di, ENT56(), SPEC56(), null);
+      a.eq(r.ok, true, sh.planId + " " + day.id + " " + show(r.problems));
+      var slot = DAY56(r.plan, day.id).ex.slice(-1)[0];
+      a.eq(slot.cut, undefined, sh.planId + " " + day.id + ": no cut, ever");
+      a.eq(slot.cue, undefined, sh.planId + " " + day.id + ": absent is a supported state (B-153's family)");
+      a.deep(r.plan.reintroOrder, cp.reintroOrder, sh.planId + " " + day.id);
+      a.deep(r.plan.keyLifts, cp.keyLifts, sh.planId + " " + day.id + ": a slot with one session of history nominated as a stall subject is a six-week verdict on no evidence");
+      a.deep(r.plan.speedSource, cp.speedSource, sh.planId + " " + day.id);
+      a.eq(r.plan.reducedWeeks, cp.reducedWeeks, sh.planId + " " + day.id);
+      a.eq(P.validatePlan(r.plan).ok, true, sh.planId + " " + day.id);
+    });
+  });
+});
+
+T("S56.B10 W3b - the fresh `lift` is not any lift the plan already holds, is not the carried id, and is not a value the caller can force - across all three kinds on all five templates", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  P.SHIPPED_PLANS.forEach(function(sh){
+    var cp = P.copyPlan(sh, undefined, "2026-10-01").plan;
+    var taken = P.takenIds(cp);
+    P.PLAN_KINDS.forEach(function(k){
+      var sp = SPEC56({ k: k, lo: k === "speed" ? 3 : 12, hi: k === "speed" ? 3 : 15 });
+      var r = P.promoteDraftEntry(cp, cp.days[0].id, "x_lift_" + sh.planId + "_" + k, ENT56(), sp, null);
+      a.eq(r.ok, true, sh.planId + " " + k + " " + show(r.problems));
+      a.eq(taken[r.lift], undefined, sh.planId + " " + k + ": the lift is new");
+      a.ne(r.lift, r.exId, sh.planId + " " + k);
+      a.eq(DAY56(r.plan, cp.days[0].id).ex.slice(-1)[0].lift, r.lift, sh.planId + " " + k);
+    });
+  });
+});
+
+T("S56.B11 W3b / AD1.6.1 - END OF THE DAY, ALWAYS: two promotes into one day land in call order at the end, and nothing an `afterExId` draft order did can put a slot ahead of a power or speed slot", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56();
+  var r1 = P.promoteDraftEntry(plan, "d1", "x_one", ENT56({ n: "Face pull" }), SPEC56(), null);
+  var r2 = P.promoteDraftEntry(r1.plan, "d1", "x_two", ENT56({ n: "Cable crunch", mv: "mv_Cable_Crunch" }), SPEC56(), null);
+  a.eq(r2.ok, true, show(r2.problems));
+  var ids = DAY56(r2.plan, "d1").ex.map(function(e){ return e.id; });
+  a.deep(ids.slice(-2), ["x_one", "x_two"]);
+  a.deep(ids.slice(0, 8), ["d1a", "d1b", "d1c", "d1d", "d1e", "d1f", "d1g", "d1h"],
+    "every shipped slot is where it was, in order");
+  /* and the other four days moved nothing at all */
+  var p0 = PC56();
+  a.eq(JSON.stringify(r2.plan.days.slice(1).map(function(d){ return d.ex.map(function(e){ return e.id; }); })),
+       JSON.stringify(p0.days.slice(1).map(function(d){ return d.ex.map(function(e){ return e.id; }); })));
+});
+
+T("S56.B12 W3b / Rule I3 + coach 25.3.2 - HIS EDIT WINS over the derived implement, the library fills when the form did not, and the derived value is `libraryImplementOf`'s own output - the same call the added card makes, compared rather than re-derived", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56(), ix = L55.index;
+  /* (1) the library answers and the form did not touch it */
+  var e1 = ENT56({ mv: "mv_Zebra_Curl", n: "Zebra curl" });
+  var s1 = SPEC56(); delete s1.implement;
+  var r1 = P.promoteDraftEntry(plan, "d1", "x_i1", e1, s1, ix);
+  a.eq(r1.ok, true, show(r1.problems));
+  a.eq(r1.implement, P.libraryImplementOf(ix, "mv_Zebra_Curl"), "the SAME code path, by comparison");
+  a.eq(r1.implement, "db");
+  a.eq(r1.implementSource, "library");
+  a.eq(DAY56(r1.plan, "d1").ex.slice(-1)[0].implement, "db");
+  /* (2) his edit beats it - the form shows the derived value CHANGEABLE, so a
+     derived value that won would discard the one thing he was asked to check */
+  var r2 = P.promoteDraftEntry(plan, "d1", "x_i2", e1, SPEC56({ implement: "machine" }), ix);
+  a.eq(r2.implement, "machine");
+  a.eq(r2.implementSource, "spec");
+  /* (3) I3 REFUSES (a kettlebell row) and the form did not ask: refused with a
+     STATED reason, never an invalid plan and never a guessed implement */
+  var e3 = ENT56({ mv: "mv_Zebra_Crunch", n: "Zebra crunch" });
+  a.eq(P.libraryImplementOf(ix, "mv_Zebra_Crunch"), null, "the fixture really is one of the 199");
+  var s3 = SPEC56(); delete s3.implement;
+  var r3 = P.promoteDraftEntry(plan, "d1", "x_i3", e3, s3, ix);
+  a.eq(r3.ok, false);
+  a.deep(r3.problems, [{ scope: "ex", id: "x_i3", field: "implement", reason: "missing" }],
+    "a caller that did not ask gets a reason it can PRINT, instead of a control that dies");
+  a.eq(r3.plan === plan, true);
+  /* (4) and with the form's answer it goes through */
+  var r4 = P.promoteDraftEntry(plan, "d1", "x_i4", e3, SPEC56({ implement: "db" }), ix);
+  a.eq(r4.ok, true);
+  a.eq(r4.implementSource, "spec");
+  /* (5) no library at all is the same refused path - the promote is NEVER
+     blocked BY the library, only by the absence of an answer */
+  var r5 = P.promoteDraftEntry(plan, "d1", "x_i5", e1, s1, null);
+  a.eq(r5.ok, false);
+  a.eq(r5.problems[0].field, "implement");
+  a.eq(P.promoteDraftEntry(plan, "d1", "x_i6", e1, SPEC56(), null).ok, true, "and with his answer it works with no library on the phone");
+});
+
+T("S56.B13 W3b - an entry whose `mv` fails `isMvId` carries NO `mv` onto the slot and derives nothing: an unmapped slot is a supported state forever. (`isMvId` is a FORMAT check, so `\"junk\"` is a legal id and IS stored - shipped behaviour, shared with addExercise and entryMeta, and asserted here so a future reading of this test does not mistake it for a hole)", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56(), ix = L55.index;
+  a.eq(DAY56(P.promoteDraftEntry(plan, "d1", "x_fmt", ENT56({ mv: "junk" }), SPEC56(), ix).plan, "d1").ex.slice(-1)[0].mv,
+    "junk", "format-legal, so it rides - the same answer addExercise gives, and it is not this order's to change");
+  ["", "  ", 7, null, undefined, {}, "has space", "mv_x!", []].forEach(function(mv){
+    var e = ENT56({ mv: mv });
+    var r = P.promoteDraftEntry(plan, "d1", "x_mv", e, SPEC56(), ix);
+    a.eq(r.ok, true, show(mv) + " " + show(r.problems));
+    var slot = DAY56(r.plan, "d1").ex.slice(-1)[0];
+    a.eq(slot.mv, undefined, show(mv) + " must not be stored as a movement id");
+    a.eq(P.validatePlan(r.plan).ok, true, show(mv));
+    /* and with no implement answer, the junk mv derives nothing */
+    var s = SPEC56(); delete s.implement;
+    a.eq(P.promoteDraftEntry(plan, "d1", "x_mv2", e, s, ix).ok, false, show(mv));
+  });
+});
+
+T("S56.B14 W3b / C8 - PROVENANCE IS OBSERVED, NOT DISCOVERED: a `hyp` slot promoted into PHAT's `d1` flips `phatProvenance` to false, and the report says WHICH clause broke. Pinned both ways, because this value IS PV1.2's gate", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var cp = PC56();
+  a.eq(P.phatProvenance(cp), true, "a fresh PHAT copy is PHAT-derived");
+  a.deep(P.phatProvenanceReport(cp), { phat: true, prescription: true, placement: true });
+  var hyp = P.promoteDraftEntry(cp, "d1", "x_hyp", ENT56(), SPEC56({ k: "hyp" }), null);
+  a.eq(hyp.ok, true, show(hyp.problems));
+  a.eq(P.phatProvenance(hyp.plan), false, "PV1(b) fails: d1 would hold power and hypertrophy work together");
+  a.deep(P.phatProvenanceReport(hyp.plan), { phat: false, prescription: true, placement: false },
+    "the PLACEMENT clause is the one that broke - the prescriptions are all still PHAT's");
+  /* the gate's other side: a POWER slot into a power day keeps provenance, so
+     PV1.2's paragraph must NOT render */
+  var pw = P.promoteDraftEntry(cp, "d1", "x_pw", ENT56(), SPEC56({ k: "power", lo: 6, hi: 10 }), null);
+  a.eq(pw.ok, true, show(pw.problems));
+  a.eq(P.phatProvenance(pw.plan), true, "unchanged, so the disclosure has nothing to disclose");
+  /* and on a plan that was never PHAT the gate is false before and after -
+     which is why C8 may not be run on his own export (coach 25.6) */
+  var mine = PC56(); delete mine.derivedFrom;
+  a.eq(P.phatProvenance(mine), false, "provenance is ALREADY false here, so this plan tests nothing about the gate");
+  var r = P.promoteDraftEntry(mine, "d1", "x_m", ENT56(), SPEC56(), null);
+  a.eq(P.phatProvenance(r.plan), false);
+});
+
+T("S56.B15 W3b / AD1.6.4 - the function touches the PLAN and nothing else: the returned document differs from the input at exactly one path - the day's `ex` array - and the promoted slot carries no `rx`, no `sw` and no trace of tonight", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56();
+  var r = P.promoteDraftEntry(plan, "d1", "x_only", ENT56(), SPEC56(), null);
+  a.eq(r.ok, true);
+  /* every day but d1 is byte-identical; d1 differs only by one appended slot */
+  var a0 = JSON.parse(JSON.stringify(plan)), a1 = JSON.parse(JSON.stringify(r.plan));
+  a.eq(a1.days.length, a0.days.length);
+  var d0 = a0.days.shift(), d1 = a1.days.shift();
+  a.eq(JSON.stringify(a1), JSON.stringify(a0), "nothing outside d1 moved - not a name, not keyLifts, not createdAt");
+  a.eq(d1.ex.length, d0.ex.length + 1);
+  a.eq(JSON.stringify(d1.ex.slice(0, d0.ex.length)), JSON.stringify(d0.ex), "and inside d1 every existing slot is byte-identical");
+  var slot = d1.ex.slice(-1)[0];
+  a.eq(slot.rx, undefined, "a plan slot has no rx - that is a session's stamp, and tonight does not get one");
+  a.eq(slot.sw, undefined);
+  a.eq(slot.sets, undefined, "no set of tonight's rides into the plan");
+  a.eq(slot.note, undefined);
+  a.eq(hasKeyDeep(slot, "kp"), false, "the draft mark is a DRAFT key and reaches no plan document");
+});
+
+T("S56.B16 W3b - the two halves compose: on a READ-ONLY active plan, editableTarget then promoteDraftEntry yields a store whose ACTIVE plan is editable, valid, holds the slot last, and still holds every other plan - which is what the one tap writes", function(a){
+  a.isFn(P.editableTarget, "editableTarget");
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var other = PC56(); other.name = "Diana's plan";
+  var store = { plans: [other], activePlanId: "phat" };
+  var before = JSON.stringify(store);
+  var et = P.editableTarget(store, "2026-10-08");
+  a.eq(et.ok, true); a.eq(et.created, true);
+  var pr = P.promoteDraftEntry(et.plan, "d1", "x_compose", ENT56(), SPEC56(), null);
+  a.eq(pr.ok, true, show(pr.problems));
+  var up = P.planStoreUpsert(et.store, pr.plan);
+  a.eq(up.ok, true, show(up.problems));
+  a.eq(up.store.activePlanId, pr.plan.planId, "the pointer and the document go together or not at all");
+  var active = up.store.plans.filter(function(p){ return p.planId === up.store.activePlanId; })[0];
+  a.eq(!!active, true);
+  a.eq(active.readOnly, false);
+  a.eq(P.validatePlan(active).ok, true);
+  a.eq(DAY56(active, "d1").ex.slice(-1)[0].id, "x_compose");
+  a.eq(up.store.plans.filter(function(p){ return p.name === "Diana's plan"; }).length, 1, "nothing else left the store");
+  a.eq(up.store.plans.length, 2);
+  a.eq(JSON.stringify(store), before, "and the store on disk has still not been touched by any of it");
+});
+
+T("S56.B17 W3b - the SAME MOVEMENT TWICE in one day is accepted by the engine (AD1.6.6: it WARNS, it does not refuse) - and the warning is the view's to print, so this function neither refuses it nor states it", function(a){
+  a.isFn(P.promoteDraftEntry, "promoteDraftEntry");
+  var plan = PC56();
+  /* d1a already carries mv_Bent_Over_Barbell_Row */
+  var e = ENT56({ mv: "mv_Bent_Over_Barbell_Row", n: "Bent-over row" });
+  var r = P.promoteDraftEntry(plan, "d1", "x_dup_mv", e, SPEC56(), null);
+  a.eq(r.ok, true, "two rep ranges on one movement in one day is a real technique, and PHAT ships it across days");
+  a.deep(r.problems, []);
+  var ids = DAY56(r.plan, "d1").ex.filter(function(x){ return x.mv === "mv_Bent_Over_Barbell_Row"; }).map(function(x){ return x.id; });
+  a.deep(ids, ["d1a", "x_dup_mv"]);
+  a.ne(DAY56(r.plan, "d1").ex.slice(-1)[0].lift, "l_row",
+    "and it is NOT joined to d1a's lift - which is exactly why the duplicate test cannot be by `lift` (UX 22.22.16 (4))");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs with no manual input, and in a time that is not pathological (measured, printed, ceiling 60 s)", function(a){
@@ -24211,6 +24832,31 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "<b>(6) Geometry, focus order and the Summary's write-nothing invariant</b> are not readable from a page with no app in it. " +
     "Item 45 measured them with Playwright at 320, 393 and 400 px and at 200 % text.</p>";
 
+  document.getElementById("untestable").innerHTML +=
+    "<p><b>WO-023 &mdash; what this page CAN and CANNOT reach, said before the count is read.</b> " +
+    "<b>Reachable, and in S56:</b> <code>editableTarget</code> and <code>promoteDraftEntry</code> are pure, take their clock as an " +
+    "argument and touch no store, so the whole of W3a and W3b is asserted here from <code>file://</code> &mdash; including the " +
+    "problem shapes, which are asserted <i>against a live <code>addExercise</code> call</i> rather than transcribed, so the two " +
+    "cannot drift into two validators. " +
+    "<b>NOT reachable, and NOT faked:</b> " +
+    "<b>(1) the whole of W4.</b> <code>keptInPlan</code>, <code>keepTarget</code>, <code>vKeepSlot</code>, <code>vKeepForm</code>, " +
+    "<code>keepAsk</code>, <code>keepConfirm</code>, <code>keepCommit</code>, <code>keepUndoTap</code>, <code>keepDup</code> and " +
+    "<code>rxPlan</code> are all in <code>index.html</code> and all read <code>S</code>. Item 46 drove every one of them in a real " +
+    "browser. <b>ASK (B-20, worth doing, two of them):</b> <code>keepDup(day, entry)</code> is a pure predicate over a day and an " +
+    "entry &mdash; it decides whether literal #81 renders, which is a <i>coaching</i> sentence about putting one movement in a day " +
+    "twice, and it is the one piece of this flow whose logic is not pinned by any assertion on this page. And " +
+    "<code>rxPlan()</code> is <code>(plan, markedIds) =&gt; plan</code>: it decides what <code>buildSession</code> stamps as a " +
+    "prescription, which is the seam that writes to <code>phat:v1:log</code>, and it is the single most expensive line in the diff " +
+    "to get wrong. Both would move with their dereference turned into an argument. " +
+    "<b>(2) The draft mark's round trip.</b> <code>saveDraft</code> writes <code>kp</code> and <code>hydrateDraft</code> reads it; " +
+    "both are view-layer and B-112 was exactly this bug with exactly two halves. Item 46 proved the round trip over a real reload " +
+    "and killed a mutant that removes each half separately. Nothing on this page can see it. " +
+    "<b>(3) C9, the backup round trip: NOT VERIFIED THIS PASS, and that is a gap, not a pass.</b> It needs a signed-in account and " +
+    "a server; no stub was built. What IS established: <code>phat:v1:draft</code> is not in <code>BACKED_UP</code>, so the mark " +
+    "cannot reach the server by construction, and <code>sync.js</code> is byte-identical to <code>main @ 4245d13</code>. What is " +
+    "<b>not</b> established is the push/pull of the new slot and of a created copy. The one consequence QA did reproduce in that " +
+    "area &mdash; the 2 s backup timer against the 6 s undo window &mdash; is in the W5 report under B-121's class.</p>";
+
   document.getElementById("manual").innerHTML =
     "<p><b>Seventeen items, then a separate five-item WO-019 list under them. Two to three minutes each. " +
     "Everything else on this page is already covered by automation - see the section under this one for what was measured and how. " +
@@ -24475,6 +25121,40 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "anything, and after each one the focus/scroll should put you back where you were. <b>One thing to know before you save: " +
     "B-05 is still open.</b> Every undo here lives in the draft and expires at <i>Save session</i> &mdash; a movement added by a " +
     "mis-tap and then saved is permanent.</li></ol>" +
+
+    "<p><b>WO-023 &mdash; <i>Keep it in the plan</i>. FOUR items, in order, under two minutes, the next time you add a movement " +
+    "mid-session.</b> Everything below was driven in a desktop browser at 393, 400 and 320 px and at 200 % text (item 46). " +
+    "<b>If you only do one, do item 2.</b></p><ol>" +
+
+    "<li><b>Find it, and read the block around it.</b> Add a movement mid-session, log at least one set on it, then tap " +
+    "<i>Finish session</i>. In that movement's block on the Summary, under <i>NO PRESCRIPTION / Added today&hellip; A verdict " +
+    "needs it in your plan.</i>, there should be one full-width button: <b><i>Keep {movement} in the plan</i></b>. " +
+    "<b>The question is whether you understood what it would do before you tapped it.</b> If the sentence above it and the button " +
+    "under it read as two different things, say so &mdash; that pairing is a UX ruling, not a fact. " +
+    "<b>If you added the movement and logged NO set, there is deliberately nothing there and no line explaining its absence.</b></li>" +
+
+    "<li><b>Keep it, then walk back through every card.</b> Tap it, type sets / reps-from / reps-to, pick a Type, check the " +
+    "<i>Implement</i> it pre-filled, tap <i>Keep it in the plan</i>, read the sheet, tap <i>Keep it</i>. Then: " +
+    "<b>(a)</b> the block must still read <b>ADDED</b> with <i>No prescription</i> and <b>no verdict for tonight</b> &mdash; the " +
+    "only thing that changes is the button becoming <i>{Day} holds it from your next session. No verdict for tonight.</i> " +
+    "<b>(b)</b> tap <i>&larr; Back</i> and walk through <b>every other card</b>: every weight, every rep and every note must be " +
+    "exactly as you left it. <b>(c)</b> tap <i>Save session</i> and check <i>Recent sessions</i>. " +
+    "<b>This is the only item on the list that can cost a number. If anything is missing, do not save again &mdash; open " +
+    "<code>/diag.html</code>, read <code>phat:v1:draft</code>, and say what it holds.</b></li>" +
+
+    "<li><b>The one thing only your phone decides: lock it between the tap and the save.</b> Keep a movement in the plan, then " +
+    "<b>lock the phone, count to ten, unlock</b>. The receipt line must still be there and your sets must still be there. Then " +
+    "force-kill the browser and reopen: <i>Resume</i> must give back every number, the block must still read <b>ADDED</b> with no " +
+    "verdict, and the movement must already be in the plan (check <i>Plan</i> &rarr; your plan). <b>If the block comes back with a " +
+    "verdict on tonight's sets, stop and say so</b> &mdash; that is the one defect this whole feature was built around.</li>" +
+
+    "<li><b>Undo, and the two things that are allowed to surprise you.</b> Tap <i>Undo</i> on the toast while it is up: the button " +
+    "comes back and the movement leaves the plan. <b>(a) If you are on one of the five template plans</b>, keeping a movement also " +
+    "makes <i>{plan} &mdash; my version</i> and switches you onto it &mdash; the sheet says so before you tap, and the Plans row " +
+    "for that copy will read <b><i>0 sessions logged</i></b> even though your history is all still there (B-172, display only, " +
+    "known). <b>(b) If you are signed in and online</b>, an undo more than two seconds after the tap cannot un-send the copy to " +
+    "the backup; the next open pulls it back as a plan row, not as your active plan (B-121's class, known, no set at risk). " +
+    "<b>Neither of these loses anything. Both will look like bugs. Say so anyway if they bother you.</b></li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -25831,6 +26511,165 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "bonus &mdash; 8 reachable cases; unreachable with no query, which is the only case the sheet reads the field for), and one " +
     "pre-existing <code>0 lb</code> on Summary. None of them loses a number.</b> " +
     "<b>file:// suite 1061 / 1061 / 0 on thirteen clocks.</b></span></li>" +
+
+    "<li><b>WO-023 W5 &mdash; KEEP IT IN THE PLAN, AND THE CUT PROVED BY DIFF AND IN A BROWSER. 2026-10-08, on " +
+    "<code>wo-014-library @ 71b0a29</code> (<code>logic.js</code> from <code>c7dfc04</code>), against " +
+    "<code>main @ 4245d13</code>.</b> <span class=\"msg\">" +
+    "Rig: a Node static server per tree on <code>http://127.0.0.1</code> over the real files, Playwright Chromium at " +
+    "<b>400 &times; 852</b> (and 393 and 320, and both at 200 % text), every non-origin request (jsDelivr, Supabase) aborted, " +
+    "<code>/sw.js</code> served as 404 so a cached shell cannot make a baseline comparison lie, <code>localStorage</code> seeded " +
+    "from an init script <b>before any app script runs</b>, and a SHIFTED (never frozen) clock &mdash; a frozen " +
+    "<code>Date.now()</code> would stop the confirm's 300 ms arm from ever expiring and the test would be measuring the rig. " +
+    "Seeds are built by loading the shipping <code>logic.js</code> in a Node <code>vm</code> and calling <code>copyPlan</code> / " +
+    "<code>promoteDraftEntry</code>, so no plan document is transcribed. <b>One seed object is shared by both trees</b>, because a " +
+    "mint that differed between them would make every byte comparison meaningless. Scratchpad <code>lib.mjs</code>, " +
+    "<code>seeds.mjs</code>, <code>c14.mjs</code>, <code>c4.mjs</code>, <code>c4b.mjs</code>, <code>refuse.mjs</code>, " +
+    "<code>ro.mjs</code>, <code>c3.mjs</code>, <code>c5.mjs</code>, <code>c7.mjs</code>, <code>geom.mjs</code>, " +
+    "<code>undoback.mjs</code>. <b>252 browser checks, 0 real page errors.</b> " +
+
+    "<b>(C14, THE HEADLINE) SIX SCENARIOS DRIVEN ON BOTH TREES AND BYTE-COMPARED &mdash; ALL IDENTICAL.</b> A Summary with no " +
+    "added movement (3,167 chars of <code>#view</code>, character for character); the saved session's bytes (1,183 chars, with " +
+    "only the <code>Date.now()</code> id normalised and asserted present on both); the Trend screen after that save; the plans " +
+    "store after the save; <code>phat:v1:draft</code> at Summary and its absence after; a <b>SWAPPED</b> block on the read-only " +
+    "PHAT plan with <b>literal #47 rendering verbatim</b> (<i>Today only. PHAT is read-only &mdash; duplicate it in Plans to keep " +
+    "a change.</i>); the shipped <code>Discard</code> sheet (565 chars of <code>#modal</code>); and <b>WO-006 B2's form plus Rule " +
+    "K2's sentence in the Plan Editor</b> &mdash; 4,759 chars of <code>.peform</code> identical, and the warning still reads " +
+    "<i>&hellip;or tap <b>Add exercise</b> again to keep it.</i> at that call site. <b>Mechanically, on the diff:</b> all 15 " +
+    "deletions are re-guarded lines, each identical in its unmarked case; every changed line that so much as NAMES a not-touched " +
+    "anchor (<code>MOVE_WARN.Q4</code>, <code>DEMO_STORE</code>, <code>KIND_HELP</code>, <code>KIND_LBL</code>, " +
+    "<code>IMPL_LBL</code>, <code>PLAN_KINDS</code>, <code>PLAN_IMPLEMENTS</code>, <code>tgtText</code>) is an ADDITION that READS " +
+    "it; &sect;22.7's branch appears in the diff as CONTEXT only. The two declared dependencies both hold: " +
+    "<code>kindWarn</code> gained a <code>btn</code> parameter defaulting to the shipped word, and <code>askSheet</code> renders " +
+    "<b>no wrapper and no extra node</b> with no <code>cfg.more</code>. <b>The one declared exception is exactly one node:</b> on " +
+    "an added row with &ge; 1 completed set, <code>.sumex .nm</code> gains <code>id=\"kn-{exId}\" tabindex=\"-1\"</code>; every " +
+    "other row's name markup is <code>&lt;span class=\"nm\"&gt;</code> and nothing else, asserted row by row, including the " +
+    "swapped row's. " +
+
+    "<b>(C4, THE DEFECT THIS ORDER NEARLY SHIPPED) TONIGHT IS NOT RE-JUDGED, AND IT IS PROVED BY BYTES, NOT BY `no rx`.</b> " +
+    "Nine cards, <code>s</code> typed as <b>2</b> against <b>3</b> logged sets so that <code>EXTRA</code> and the " +
+    "<i>Extra sets</i> counter are REACHABLE if anything re-judges. Before the tap, after the commit, and again after a real " +
+    "reload: <b>every child of the added block above the control is byte-identical</b>, the <code>ADDED</code> kicker stands, " +
+    "<i>No prescription</i> + AD1's sentence stand, there is no verdict, no rest target and no <code>EXTRA</code>; the three " +
+    "counters and the count line are byte-identical (<i>Extra sets 0</i> throughout); the session CARD is byte-identical and its " +
+    "header still reads <b>9 of 9</b>; <b>the only change anywhere is the trigger becoming #86</b>. On the saved document: no " +
+    "<code>rx</code>, no <code>sw</code>, no <code>kp</code> &mdash; and <b>every other entry still carries the <code>rx</code> it " +
+    "always did</b>, so <code>rxPlan</code>'s strip is per-entry precise. <b>The sixth seam (<code>rxPlan</code> &rarr; " +
+    "<code>buildSession</code>) is the one that would have written a prescription to disk, and it is asserted on the bytes.</b> " +
+
+    "<b>(THE MARK, B-112's LESSON) NINE MUTANTS IN <code>index.html</code>, EACH INJECTION ASSERTED TO MATCH EXACTLY ONCE, EIGHT " +
+    "KILLED.</b> Removing <b><code>hydrateDraft</code>'s half</b> of <code>kp</code> kills 6 checks &mdash; and <b>only on the " +
+    "reload</b>, which is precisely how B-112 shipped; removing <b><code>saveDraft</code>'s half</b> kills 6; removing " +
+    "<code>rxPlan</code> kills the saved-bytes check alone; <code>exAnywhere</code>'s guard kills the counters; " +
+    "<code>sumBody</code>'s row filter puts a <b>tenth block and a second <i>Face pull</i></b> on the reloaded Summary; its " +
+    "counter line reads <i>Extra sets 1</i>; <code>cardMovement</code>'s defence gives the reloaded card an <code>EXTRA</code> " +
+    "flag; <code>sessionCtx</code>'s draft-loop guard <b>deletes the card he is standing in front of</b> (<i>8 of 8</i>). " +
+    "<b>One survived and it is reported as redundancy, not as a kill:</b> <code>sessionCtx</code>'s day-list filter " +
+    "(<code>&amp;&amp;!keptInPlan(e.id)</code>) changes nothing observable in any state QA could construct, because every visible " +
+    "consequence on the card is gated on <code>cardMovement</code>'s mark and the card list already appends draft-only entries " +
+    "last. Layered guards; four of the five are load-bearing. " +
+
+    "<b>(C1) THE PROMOTE CANNOT COST A SET.</b> Nine entries &mdash; six complete plan slots, one partially typed, one " +
+    "notes-only, and the added movement &mdash; promote, <b>reload between the promote and the save</b>, then " +
+    "<code>Save session</code>: <b>every set of every card is in the saved session byte for byte</b> (asserted as a load/rep " +
+    "table, not as a count), the notes-only entry keeps its note and its empty <code>sets</code>, and the draft's entries are " +
+    "identical across the reload. The draft gains <b>exactly one byte of state</b>: <code>kp:1</code> on the added entry and on " +
+    "nothing else, with the rest of the document byte-identical key for key. " +
+
+    "<b>(C2) A FAILED PLAN WRITE CANNOT COST THE SESSION.</b> <code>Storage.prototype.setItem</code> made to THROW on " +
+    "<code>phat:v1:plans</code> and on nothing else: the confirm <b>stays open</b>, <b>#89</b> renders in " +
+    "<code>#dr-sheet-err</code>, it is <b>announced assertively</b> (the new line in <code>sheetErr</code>), " +
+    "<code>phat:v1:plans</code> is byte-identical, <b>there is no mark on the draft</b>, <code>Not now</code> returns focus to " +
+    "the form's primary, and <code>Save session</code> then saves <b>all nine entries including the added one, still with no " +
+    "<code>rx</code></b>. " +
+
+    "<b>(C3) THE TWO-TAB ATTACK, BOTH WAYS, PLUS THE UNDO'S REFUSAL.</b> Two pages, one context, one " +
+    "<code>localStorage</code>. A promotes and saves, B saves from older memory: <b>both sessions on disk</b>, A's still holding " +
+    "nine entries, the promoted slot still in the plan. Reversed: B creates a plan from the Plans screen, A then promotes &mdash; " +
+    "<b>WO-013's read-before-write holds, B's plan survives</b> and the promote still lands on the right document. Then B moves " +
+    "the store again while the toast stands and A taps <i>Undo</i>: <b>#88</b>, verbatim, <i>Could not undo. Face pull is still " +
+    "in Upper power. Today's sets still save.</i> &mdash; it does <b>not</b> say <i>Nothing changed.</i>, <b>nothing is written</b> " +
+    "(byte-identical store), <b>the mark stays on the draft</b> so a refused undo cannot re-judge tonight, and the session still " +
+    "saves whole afterwards. " +
+
+    "<b>(THE READ-ONLY BRANCH, AND C15) </b>With no plans store at all &mdash; his device today if the active row is a template " +
+    "&mdash; the confirm is <b>three</b> paragraphs in the ruled order: #79, then #67&middot;#68&middot;#69 <b>verbatim</b> " +
+    "(<i>A copy called PHAT &mdash; my version becomes the plan you are on&hellip;</i>), then PV1.2 LAST. Toast <b>#85(b)</b>, " +
+    "two sentences. The copy is created, activated, valid, carries <code>derivedFrom:\"phat\"</code> and a " +
+    "<code>createdAt</code> that is the LOCAL day, and <code>keyLifts</code> / <code>reintroOrder</code> / " +
+    "<code>speedSource</code> come across byte for byte; the LOG store's reintro state is never touched. <b>The undo on the " +
+    "absent-key shape REMOVES the key</b> rather than writing an empty store the commit invented, toast <b>#87(b)</b>, the mark " +
+    "comes off, the trigger comes back with focus on it and <b>his four numbers are still in the form</b>. " +
+    "<b>C15, RECORDED: the copy's Plans row reads <i>5 days &middot; 43 exercises &middot; 0 sessions logged &middot; Active</i> " +
+    "with nine sessions on disk</b> &mdash; and the PHAT template's own row shows <b>no count at all</b>, so the nine are not " +
+    "visibly &ldquo;kept&rdquo; anywhere on that screen. B-172, display only, worse than its own filing says. " +
+
+    "<b>(THE FIVE STANDING LINES) #89 #90 #91 #92 and #88 all render and all end on <i>Today's sets still save.</i></b> " +
+    "#91 on a <code>demo:true</code> store; <b>#92</b> on an <code>activePlanId</code> naming a STORED plan that fails " +
+    "<code>validatePlan</code> (<i>The plan you are on will not load&hellip; Export from Settings, then open diag.html.</i>) " +
+    "&mdash; and the engine's problem really is <code>{scope:\"plan\", id, field:<b>null</b>, reason:\"invalid\"}</code>, which is " +
+    "what S56.A6 pins and S56.A7 proves is unreachable from any other refusal, so #92 cannot be printed for a cause it does not " +
+    "describe; <b>#90</b> when the session's day is not in the plan the promote would write. All four are plain " +
+    "<code>.sumnote</code> with no control beside them. " +
+
+    "<b>(C6, AND THE SAVE) </b><code>phat:v1:draft</code> byte-identical across Summary &rarr; card &rarr; Summary, and again " +
+    "<b>with the form open</b>. <code>Save session</code> saves on the <b>first tap</b> with the offer unanswered, with the form " +
+    "open, and with a <code>Not added.</code> refusal standing &mdash; nine entries, and nothing of the abandoned form reaches " +
+    "<code>phat:v1:plans</code>. The form and its typed numbers survive <i>&larr; Back</i> to the card and a return, and are " +
+    "empty again after a reload, exactly as &sect;22.22.14 says. " +
+
+    "<b>(C5) NEXT SESSION SEES IT AS ITS OWN.</b> The promoted slot is the LAST card, with a real target, and its ghost reads " +
+    "<b>its own prior</b> &mdash; <b>no MV1 cross-slot disclosure anywhere on the card</b>, which is the test that the id was " +
+    "carried. (The next session shows <i>8 of 8</i>, not 9: Rule V1's tier now drops <code>d1c</code>, which is week-1 reduced " +
+    "volume and not this order's.) " +
+
+    "<b>(C8) PROVENANCE OBSERVED ON A PHAT COPY, NOT ON HIS EXPORT.</b> A <code>hyp</code> movement into <code>d1</code> of a " +
+    "PHAT copy: <code>phatProvenance</code> true &rarr; false, the report names <b>placement</b> as the clause that broke, and " +
+    "literal <b>#82</b> renders verbatim, last, under its gate. On a plan with <code>derivedFrom</code> removed it does " +
+    "<b>not</b> render and the sheet has no scroll wrapper. A <code>power</code> movement into the same day keeps provenance " +
+    "true, so the gate is pinned from both sides (S56.B14). " +
+
+    "<b>(C7) OFFLINE AND LOCAL DATES, SEVEN CLOCKS.</b> <code>context.setOffline(true)</code> before the first tap, " +
+    "<code>navigator.onLine === false</code> asserted: the whole promote completes, the copy is created and the session saves, " +
+    "on <b>23:30 and 00:30 Beirut across the Oct/Nov boundary, 23:30 Los Angeles on 31 Dec, 00:30 Kiritimati (UTC+14) on 1 Jan, " +
+    "the US DST fall-back night, 29 Feb 2028 and 00:30 on 1 Mar 2028</b> &mdash; 42 checks, and in every one the copy's " +
+    "<code>createdAt</code> and the session's <code>date</code> are the LOCAL calendar day, with <b>no " +
+    "<code>toISOString</code> stamp anywhere in the plans store</b>. " +
+
+    "<b>(GEOMETRY) 51 CHECKS AT FIVE VIEWPORT/TEXT COMBINATIONS, NOTHING UNDER 44 px AND NO SIDEWAYS OVERFLOW.</b> At 393 / 400 " +
+    "the trigger is <b>361 / 368 &times; 48</b>, the form box the same width with a <b>56 px</b> primary and a <b>48 px</b> " +
+    "Cancel, stepper keys exactly <b>44 &times; 48</b>, segmented buttons <b>159.5 / 163 &times; 48</b>; the form measures " +
+    "<b>756 px</b> at 100 % (the spec's computed 771 is arithmetic in one cell, not a requirement) and <b>1,303 px</b> at 200 %, " +
+    "one control per row, no clipping; the confirm is <b>326 px (38 %)</b> at 100 % with two paragraphs and <b>721 px (85 %)</b> " +
+    "at 200 %, both buttons on screen; <code>Undo</code> is <b>&ge; 88 &times; 48</b>. 320 px passes too (form 853 px, seg 123 px). " +
+
+    "<b>(C13) THE RAMP, RECORDED AND NOT ASSERTED</b>, so B-116 has a before-picture. A five-set ascending ramp " +
+    "(<code>20&times;10 / 40&times;8 / 55&times;6 / 70&times;4 / 70&times;3</code>) promoted as <code>hyp 8&ndash;12</code>, then " +
+    "<code>70&times;10</code> on every set of the next session. At <code>s:3</code> &mdash; " +
+    "<b><i>Volume up 147% &mdash; 2,100 kg against 850 kg.</i></b> At <code>s:5</code> &mdash; " +
+    "<b><i>Volume up 161% &mdash; 3,500 kg against 1,340 kg.</i></b> Both are <b>descriptive and carry NO load instruction</b>, " +
+    "which is the condition B-171 was accepted under; <b>if that branch ever gains one, this is a P1 and <code>lastFor</code>'s " +
+    "exclusion is the fix</b>. The ghost row at <code>s:3</code> reads <i>Last 20 &times; 10 / Last 40 &times; 8 / " +
+    "Last 55 &times; 6</i> &mdash; the warm-ups, as his own prior. " +
+
+    "<b>(RED-FIRST, PER COMMIT) Against <code>git cat-file blob 4245d13:logic.js</code> &mdash; what is in production &mdash; the " +
+    "suite is <b>1,061 / 29</b>: every S56 test red, each one on <code>PHAT.editableTarget is missing</code> or " +
+    "<code>PHAT.promoteDraftEntry is missing</code>, and <b>all 1,061 pre-existing tests still green there</b>, which is also the " +
+    "proof that S56 is the only thing this commit adds. The browser half's red-first is the nine mutants above, run against the " +
+    "head tree with one line removed at a time. " +
+
+    "<b>Found: no defect, and one consequence worth a line in the backlog.</b> (1) <b>The 2 s backup timer against the 6 s undo " +
+    "window is real</b> &mdash; <code>save(PLANS)</code> schedules <code>backupSoon</code> at 2,000 ms and " +
+    "<code>toastUndo</code> stands for 6,000 ms, so an undo after ~2 s while signed in and online cannot un-send the copy, and " +
+    "<code>mergeStores</code>' plan union never removes. Reproduced in the END STATE: the copy comes back as a plan ROW with the " +
+    "promoted slot in it, <b>but <code>activePlanId</code> resolves to the device's own</b>, so he is not moved onto it. In that " +
+    "state a draft still open and already undone would re-judge <b>on screen</b> (target, verdict, <code>EXTRA</code>, " +
+    "<i>Extra sets 1</i>, and a false <i>Not in the plan any more.</i>) while the SAVED bytes still carry no <code>rx</code>. " +
+    "B-121's class, no number at risk, recorded and not fixed on instruction. (2) <code>vKeepForm</code> is a <b>second copy of " +
+    "B2's markup</b> rather than a parameterisation of <code>vExForm</code> &mdash; which is what the cut forced, since touching " +
+    "<code>vExForm</code> was forbidden &mdash; so the implement helper line now exists as two identical literals that can drift. " +
+    "P3, recorded. (3) <b>C9 was not run</b> and is reported as a gap, not a pass. " +
+    "<b>file:// suite 1090 / 1090 / 0 on nine forced clocks</b> (the UTC run carries the one pre-existing stated skip, by " +
+    "design), three tripwires intact, no fixture writing a <code>phat:*</code> key.</span></li>" +
 
     "</ol>";
 })();
