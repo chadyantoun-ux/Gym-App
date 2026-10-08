@@ -7537,10 +7537,13 @@ Logic:        SW-ORDER.R1  With no slot and no mv and the caller asking for it, 
                            Diana's first session, a restored device, or a 56-day layoff. A
                            notice claiming an order the list is not in is exactly what
                            UX §22.3.1 forbids.
-Output copy:  basis "recent":  Ordered by what you have trained in the last 8 weeks. Search for
-                               anything else.
+Output copy:  basis "recent":  SUPERSEDED 2026-10-08 - the shipping literal is the screens
+                               spec 22.12 #61. Was: "Ordered by what you have trained in the
+                               last 8 weeks. Search for anything else."
               basis null, no slot:
-                               Ordered by name. Nothing logged in the last 8 weeks to rank by.
+                               SUPERSEDED 2026-10-08 - the shipping literal is 22.12 #62.
+                               Was: "Ordered by name. Nothing logged in the last 8 weeks to
+                               rank by."
 Not enough data: SW-ORDER.R4 IS the not-enough-data state, and its answer is a different true
               sentence rather than silence — an unlabelled list of 876 names is the one thing
               worse than a labelled one.
@@ -7752,8 +7755,8 @@ renumbering and the strings are what must not move.**
 | # | Where | Case | String |
 |---|---|---|---|
 | 34 | card, verdict slot | added, no prescription | `Added today. No sets or reps set, so no verdict. A verdict needs it in your plan.` **AMENDED 2026-10-08 (coach §22.10.1), Rule AD1.** Replaces `Added today. No sets or reps set, so no verdict. Add it to your plan to get one.` Third clause only; clauses 1 and 2 do not move. **One literal for both doors — not conditional on which control opened the card.** |
-| 60 | sheet, notice | **no slot at all** (session-level Add), `basis:"recent"`, ≥ 1 movement inside 56 days | `Ordered by what you have trained in the last 8 weeks. Search for anything else.` **NEW 2026-10-08 (coach §22.10.2), Rule SW-ORDER basis "recent".** `8 weeks` **is** `SW_RECENT_DAYS = 56`; if the constant moves, this string and #61 move with it. The second sentence is not decoration — recency can fill all 40 rows on his current data, and it is the only thing that names the way out. |
-| 61 | sheet, notice | **no slot at all**, zero movements inside 56 days (`basis: null`, `order: "name"`) | `Ordered by name. Nothing logged in the last 8 weeks to rank by.` **NEW 2026-10-08 (coach §22.10.2), SW-ORDER.R4.** The real boundary: a first session, a restored device, a 56-day layoff. Replaces nothing — **#12 is NOT reused here and is NOT retired**; #12 remains correct for a slot that carries no `mv`, and is false only when there is no slot. |
+| 60 | sheet, notice | **no slot at all** (session-level Add), `basis:"recent"`, ≥ 1 movement inside 56 days | **SUPERSEDED 2026-10-08 — the shipping literal is screens-spec §22.12 #61, `Your recent movements first. Search for anything else.` This row maps coach 60 → spec #61. The CONTENT ruling below stands; only the wording was refused, on staleness: `8 weeks` here is a second source of truth for `SW_RECENT_DAYS` and must be hand-chased when the constant moves. Was:**  **NEW 2026-10-08 (coach §22.10.2), Rule SW-ORDER basis "recent".** `8 weeks` **is** `SW_RECENT_DAYS = 56`; if the constant moves, this string and #61 move with it. The second sentence is not decoration — recency can fill all 40 rows on his current data, and it is the only thing that names the way out. |
+| 61 | sheet, notice | **no slot at all**, zero movements inside 56 days (`basis: null`, `order: "name"`) | **SUPERSEDED 2026-10-08 — the shipping literal is screens-spec §22.12 #62, `Ordered by name. Search for the movement you want.` This row maps coach 61 → spec #62. Refused on TRUTH, not style: `basis` demotes to null whenever no returned row earned the recency bonus — an empty window, a recent movement the library does not carry, OR the caller excluding the recent rows — so this sentence is false in two of the three. #62 makes no claim about his history at all. Was:**  **NEW 2026-10-08 (coach §22.10.2), SW-ORDER.R4.** The real boundary: a first session, a restored device, a 56-day layoff. Replaces nothing — **#12 is NOT reused here and is NOT retired**; #12 remains correct for a slot that carries no `mv`, and is false only when there is no slot. |
 | — | sheet, any row or notice | an exercise is flagged inside the pain window | **No string. Nothing renders.** **RULED 2026-10-08 (coach §22.10.3)** — the absence is designed, like #31 and #38. No suppression, no mark, no sentence: a mark would be the app assessing an injury, `painWindow` keys on `exId` while the list ranks `mv`, and §22.9(b)'s refusal of any new mid-session warning stands. S2b (#52) does not fire on this path: it refuses the app's **offer** of volume, never his **choice** of it. |
 
 The sheet's `.lbl` kicker for a slot-less list (#9 `CLOSEST TO {EX}` cannot interpolate) is **UX's,
