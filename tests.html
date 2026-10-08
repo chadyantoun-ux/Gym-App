@@ -55,7 +55,33 @@
 and WO-004 (the redesign).
 Open this file directly from <code>file://</code>. No server, no Node, no network, no framework.
 Every test is named after the backlog ID and the work-order acceptance criterion it covers.<br>
-<b>Today: 1039 / 1039 / 0 on wo-014-library @ 31a3a37 + this commit - ~2.5 s in Chromium from file://, green on all seven weekdays (the clock was forced to each of Mon 28 Sep - Sun 4 Oct 2026) and again on 31 Dec 2026, 1 Jan 2027, 28 Feb 2027 and 29 Feb 2028, so the runs cross a month, a year and a leap-day boundary.</b>
+<b>Today: 1061 / 1061 / 0 on wo-014-library @ 718fb33 + this commit - ~2.6 s in Chromium from file://, green on all seven weekdays (the page's clock was forced to each of Mon 5 Oct - Sun 11 Oct 2026) and again at 23:50 on 31 Oct 2026, 00:10 on 1 Nov 2026, 23:55 on 31 Dec 2026, 00:05 on 1 Jan 2027, 29 Feb 2028 and 02:30 on 29 Mar 2026, so the thirteen runs cross a month, a year, a leap day and a DST boundary. <b>Zero held reds and zero skips on all thirteen.</b> One red in that sweep was MINE and is worth recording: S55.F4 asserted <code>exId.indexOf("d1") === -1</code>, and on the 8 Oct clock the mint - base36 of the clock - produced <code>x_&hellip;d1&hellip;</code>. A test whose colour depends on the minute is B-146 again, so the assertion was replaced with the property that actually matters (id COLLISION against every shipped plan) rather than loosened.</b>
+<b>WO-019 - the session-level <i>Add an exercise</i> door. S55 added 22, and HALF OF THE ORDER IS NOT TESTABLE FROM THIS PAGE, which is said
+in the group's own header rather than discovered.</b> The capability (<code>addDraftEntry</code>, the entry shape, Rule AD1) shipped on
+2026-09-29 and he could not find it in sixteen days of real training - <b>B-160 is the DOOR, not the feature</b> - so the thing most at risk
+here was a rebuild, and <b>C7 is the criterion that forbids one</b>: the entry the new door writes is byte-identical to the one
+<i>Add as well</i> writes, proven in a browser on both doors with the implement derivation live. S55 pins the PURE halves:
+<b>B-162</b> - <code>librarySearch</code>'s new <code>rankRecent</code> branch, <code>basis: "recent"</code>, and the demotion that keeps
+the printed sentence honest. <b>The demotion has three causes and all three are pinned separately</b> (an empty 56-day window; a window
+holding only a locally minted <code>mv</code> no library row carries; a window whose every movement the caller EXCLUDED), each asserted
+byte-identical to the opt-absent return, plus the swept property that <b>with no query, <code>basis: "recent"</code> never stands over a
+list in which no returned row earned the bonus</b> - which is what stops UX #61 rendering over the alphabet, and is the exact defect #12 is
+being replaced for. <b>B-161</b> - the implement an added movement declares: <code>libraryImplementOf</code> over every upstream equipment
+value, <code>loadWord(0, &hellip;)</code> including <code>undefined</code>, which is the call the shipped added card made and the reason a
+dip at <code>0 &times; 12</code> read <i>zero load</i>, and <code>cardModeFor</code> seeding the profile's first bar off
+<code>ex.implement</code>. <b>B-160</b> - one entry appended last, the three existing entries byte-identical, no <code>rx</code>, no
+<code>sw</code>, <b>no <code>implement</code></b> on the saved document, and AD1's silence shown to be structural (the shim's
+<code>k: ""</code> hits the role gate at every set count from 1 to 6). <b>Red-first, per commit, and the two reds are disjoint:</b> against
+<code>git cat-file blob e0a7b57:logic.js</code> the suite is <b>1057 / 4</b> (S55.A1, A2, A3 and C3's floor - nothing of W3 exists there);
+against <code>d62e87a:logic.js</code> it is <b>1056 / 5</b> (S55.C1&ndash;C5 - that build reported <code>basis: "recent"</code> over an
+alphabetical list in all three causes, 185 of 400 swept windows). <b>Seven mutants, all killed:</b> three in <code>logic.js</code> against
+this page (the demotion removed &rarr; 5 red; the guard weakened to <code>slotMv === null</code> &rarr; S55.B2; the recency clause un-gated
+from <code>order === "score"</code> &rarr; S55.B1) and four in <code>index.html</code> against the browser rig (the <code>extra</code>
+branch of <code>swHead</code> removed; <code>args.ex = cardEx(&hellip;)</code> removed; Summary reading the SLOT's implement again; the
+<code>&middot; per DB</code> suffix taken off the added target). <b>THE TWO CONTESTED LITERALS, UX #61 and #62, ARE DELIBERATELY NOT
+PINNED</b> - coach &sect;22.10.2's Output copy and UX &sect;22.12's wording differ and UX is ruling it. What IS pinned is the FIELD the
+sentence is chosen off and <code>SW_RECENT_DAYS = 56</code>, the <i>8 weeks</i> both candidate wordings say out loud, so that whichever
+lands, the pair cannot drift apart.<br>
 <b>WO-015 - the B-131 correction now WRITES, and the write half is not testable from this page.</b> <code>b131Pass</code>, the blocking
 keep, the two call sites and the Home notice all live in <code>index.html</code>. They were DRIVEN in a real browser instead
 (<b>item 44</b> under &ldquo;Already proven&rdquo;, and the extraction ask is under &ldquo;not testable&rdquo;): the happy path field by field, a forced keep
@@ -22497,6 +22523,483 @@ T("S54 TRIPWIRE - up to the end of S54 no fixture wrote a phat:* key", function(
     "every fixture in this group builds its stores in memory; the browser run seeds a SEPARATE origin");
 });
 
+group("S55 WO-019 W5 QA / the session-level Add door / basis \"recent\" (B-162) / the implement an added card declares (B-161) / B-160");
+
+/* ===================================================================== S55
+
+   WO-019. Three commits under test: `d62e87a` + `448c42c` (`librarySearch`,
+   `logic.js`) and `718fb33` (`index.html`).
+
+   WHAT IS IN THIS FILE AND WHAT IS NOT, stated before the first assertion
+   because half of WO-019 lives in `index.html` and this page cannot load it:
+
+   TESTABLE HERE - all of `librarySearch`'s new branch and its demotion, the
+   whole implement derivation's ENGINE half (`libraryImplementOf`,
+   `loadWord`, `cardModeFor`), `addDraftEntry`'s entry and `buildSession`'s
+   refusal to stamp one.
+
+   NOT TESTABLE HERE, and each one is an extraction request under B-20:
+   `cardImplement` / `cardEx`, `swHead`, `swKickText`, `openAddEx`, `swSearch`
+   and the `AD1_VERDICT` literal are all in `index.html`, read `S` directly or
+   touch the DOM. They are driven in a REAL browser instead - "Already proven"
+   item 39 - and nothing here fakes a browser to reach them.
+
+   THE TWO CONTESTED LITERALS ARE DELIBERATELY NOT PINNED. UX §22.12 #61 /
+   #62 and coach §22.10.2's Output copy do not agree on the words, and UX is
+   ruling it. What IS pinned is the FIELD the sentence is chosen off and the
+   window the sentence must name (`SW_RECENT_DAYS`), so that whichever wording
+   lands, the pair cannot drift apart. */
+
+/* ---- fixtures. A hand-built index, because the shipped 876-row library is a
+   fetch and this page has none (and from file:// cannot have one). 50 rows so
+   the SW_LIMIT = 40 cap is really exercised, with names chosen so the
+   alphabet and the recency order are DIFFERENT lists - a fixture where they
+   agree proves nothing. */
+function LIB55(){
+  var rows = [], i, letters = "abcdefghijklmnopqrstuvwxyz";
+  var eqs = ["barbell", "dumbbell", "machine", "cable", "body only", "kettlebells", "other", null];
+  for (i = 0; i < 50; i++) {
+    rows.push({ id: "Zz_" + letters[i % 26] + "_" + i, n: letters[i % 26].toUpperCase() + "move " + i,
+                eq: eqs[i % eqs.length], pm: [["chest", "back", "biceps", "quads"][i % 4]] });
+  }
+  /* four named rows the tests refer to by hand */
+  rows.push({ id: "Bent_Over_Barbell_Row", n: "Bent-over row",     eq: "barbell",     pm: ["middle back"] });
+  rows.push({ id: "Zebra_Curl",            n: "Zebra curl",        eq: "dumbbell",    pm: ["biceps"] });
+  rows.push({ id: "Aardvark_Press",        n: "Aardvark press",    eq: "machine",     pm: ["chest"] });
+  rows.push({ id: "Zebra_Crunch",          n: "Zebra crunch",      eq: "kettlebells", pm: ["abdominals"] });
+  var lib = P.libraryLoad({ exercises: rows });
+  if (!lib.ok) throw new Error("S55 fixture library: " + JSON.stringify(lib.problems).slice(0, 200));
+  return lib;
+}
+var L55 = LIB55();
+/* The serialisation the whole group compares on. `rows` by mv, because the
+   index hands its own row objects back BY REFERENCE and a deep clone would
+   hide a reordering. */
+function SER55(r){
+  if (!r || typeof r !== "object") return JSON.stringify(r);
+  return JSON.stringify({ ok: r.ok, order: r.order, basis: r.basis, total: r.total,
+    limit: r.limit, query: r.query, rows: (r.rows || []).map(function(x){ return x.mv; }) });
+}
+function MVS55(r){ return r.rows.map(function(x){ return x.mv; }); }
+function NAMES55(r){ return r.rows.map(function(x){ return x.n; }); }
+/* A window holding movements the fixture library DOES carry, chosen so they
+   are alphabetically LAST - so "recent first" and "name ascending" cannot be
+   confused for one another. */
+var REC55 = { "mv_Zebra_Curl": true, "mv_Zebra_Crunch": true };
+
+/* ------------------------------------------------- 1. the new basis exists */
+
+T("S55.A1 B-162 - with no slot, no mv and `rankRecent`, librarySearch ranks on RECENCY and SAYS SO: basis \"recent\", order \"score\", and the two movements he actually trained lead a list whose alphabet would have buried them", function(a){
+  var r = P.librarySearch(L55.index, "", { recent: REC55, rankRecent: true });
+  a.eq(r.ok, true);
+  a.eq(r.basis, "recent", "the sheet prints ONE sentence off this field and must not guess an order");
+  a.eq(r.order, "score", "not alphabetical - which is the whole of B-162");
+  a.deep(MVS55(r).slice(0, 2), ["mv_Zebra_Crunch", "mv_Zebra_Curl"],
+    "the two recent movements first, and BETWEEN THEM the folded name ascending - `Zebra crunch` before `Zebra curl`");
+  /* and they would have been last without it: the fixture is built so the
+     alphabet buries them. */
+  var plain = P.librarySearch(L55.index, "", {});
+  a.eq(plain.rows.indexOf(L55.index.rows.filter(function(x){ return x.mv === "mv_Zebra_Curl"; })[0]), -1,
+    "name-ascending does not even return `Zebra curl` inside the 40-row cap - that is the useless list the branch exists to replace");
+  a.eq(r.limit, 40, "the cap is unchanged");
+  a.eq(r.total, L55.index.rows.length, "`total` is still the whole match set, not the slice");
+});
+
+T("S55.A2 B-162 - a movement in the window outranks one that is not, and the folded-name tie-break under it is intact (SW-ORDER.R2)", function(a){
+  var r = P.librarySearch(L55.index, "", { recent: { "mv_Zebra_Curl": true }, rankRecent: true });
+  a.eq(MVS55(r)[0], "mv_Zebra_Curl", "+2 beats 0");
+  /* everything after row 1 scores 0, so it is the alphabet, in full */
+  var tail = NAMES55(r).slice(1), sorted = tail.slice().sort(function(x, y){
+    var fx = x.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/^ +| +$/g, "");
+    var fy = y.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/^ +| +$/g, "");
+    return fx < fy ? -1 : (fx > fy ? 1 : 0); });
+  a.deep(tail, sorted, "SW-ORDER.R2: recent movements alphabetically, then EVERYTHING ELSE alphabetically");
+});
+
+T("S55.A3 SW-ORDER.R3 - what he TYPED outranks what he TRAINS, by construction: prefix 6 > recent 2, and the constants are the pin", function(a){
+  a.eq(P.SW_SCORE.prefix, 6);
+  a.eq(P.SW_SCORE.recent, 2);
+  a.ok(P.SW_SCORE.prefix > P.SW_SCORE.recent,
+    "a recency bonus must never float a movement he did NOT ask for above one whose name begins with his query");
+  /* `Aardvark press` begins with the query; `Zebra curl` is merely recent. */
+  var r = P.librarySearch(L55.index, "aard", { recent: REC55, rankRecent: true });
+  a.deep(NAMES55(r), ["Aardvark press"], "the query narrows first, and recency cannot smuggle a non-match in");
+  var r2 = P.librarySearch(L55.index, "z", { recent: { "mv_Zebra_Curl": true }, rankRecent: true });
+  a.eq(NAMES55(r2)[0], "Zebra curl", "6 + 2 leads 6 - a row that is both leads a row that is only one");
+});
+
+/* --------------------------------- 2. ABSENT IS THE OLD BEHAVIOUR, exactly */
+
+T("S55.B1 B-162 - with the opt ABSENT the return is byte-identical to the pre-fix one: basis null, order \"name\", the alphabet. This is the Plan Editor's mode:\"form\" list and it must not move", function(a){
+  var r = P.librarySearch(L55.index, "", { recent: REC55 });
+  a.eq(SER55(r), SER55(P.librarySearch(L55.index, "", {})),
+    "handing in a recency window WITHOUT asking for it changes nothing - asking is not getting, and not asking is not getting either");
+  a.eq(r.basis, null);
+  a.eq(r.order, "name");
+  var names = NAMES55(r), i;
+  for (i = 1; i < names.length; i++)
+    a.ok(names[i - 1].toLowerCase() <= names[i].toLowerCase(), "row " + i + " is out of name order: " + names[i - 1] + " / " + names[i]);
+  /* the whole return object, field by field, as a literal - so a new field
+     cannot appear unnoticed */
+  a.deep(Object.keys(r).sort(), ["basis", "limit", "ok", "order", "query", "rows", "total"],
+    "no new field on the return shape");
+});
+
+T("S55.B2 B-162 - the guard is `slot === null`, not `slotMv === null`: a slot that is PRESENT and names nothing the library holds keeps name-ascending and §22.12 #12's sentence, EVEN WITH `rankRecent` set", function(a){
+  /* UX §22.3.1 amendment 1. A slot that names nothing is still a slot, and
+     the notice that describes it is still true. Only "no slot at all" earns
+     the new basis. */
+  var unmapped = { id: "u1a", n: "Something he built", s: 3, lo: 8, hi: 12, k: "hyp" };
+  var withOpt = P.librarySearch(L55.index, "", { slot: unmapped, recent: REC55, rankRecent: true });
+  var without = P.librarySearch(L55.index, "", { slot: unmapped, recent: REC55 });
+  a.eq(withOpt.basis, null, "a PRESENT slot never reaches the recency branch");
+  a.eq(withOpt.order, "name");
+  a.eq(SER55(withOpt), SER55(without), "byte-identical with and without the opt");
+  /* and the equipment tier still wins where it applies */
+  var byEq = P.librarySearch(L55.index, "", { slot: { id: "d3b", n: "Rack chin", implement: "bodyweight" }, recent: REC55, rankRecent: true });
+  a.eq(byEq.basis, "equipment", "the implement maps backwards, so there IS an order to name - and it is not recency");
+  a.eq(SER55(byEq), SER55(P.librarySearch(L55.index, "", { slot: { id: "d3b", n: "Rack chin", implement: "bodyweight" }, recent: REC55 })),
+    "and that path is byte-identical with and without the opt too");
+});
+
+T("S55.B3 B-162 - with a slot that DOES name a movement, every existing return is byte-identical with and without `rankRecent`, over every PHAT slot x a fixed query set", function(a){
+  /* The 42-slot differential, in the harness, on the fixture library. The
+     same instrument on the REAL 876-row library is "Already proven" item 39,
+     where 42 slots x 10 queries hashes to the SAME sha256 on e0a7b57, on
+     d62e87a and on 448c42c. */
+  var qs = ["", "z", "move", "aard", "row", "zzzz", "curl"], n = 0, moved = [];
+  P.PHAT_PLAN.days.forEach(function(d){
+    d.ex.forEach(function(e){
+      qs.forEach(function(q){
+        var w = P.librarySearch(L55.index, q, { slot: e, recent: REC55, rankRecent: true });
+        var o = P.librarySearch(L55.index, q, { slot: e, recent: REC55 });
+        n++;
+        if (SER55(w) !== SER55(o)) moved.push(e.id + " " + JSON.stringify(q));
+      });
+    });
+  });
+  a.eq(n, 42 * qs.length, "42 slots is still the shipped plan's count");
+  a.deep(moved, [], "not one slot's list moved");
+});
+
+/* ------------- 3. THE DEMOTION. `basis` names the order the list IS IN ---- */
+
+T("S55.C1 B-162 cause 1 of 3 - AN EMPTY WINDOW: a fresh install, Diana's first session, or 56 days off. basis comes back null and order follows it back to \"name\", and the return is byte-identical to the opt-absent return", function(a){
+  var r = P.librarySearch(L55.index, "", { recent: {}, rankRecent: true });
+  a.eq(r.basis, null, "ASKING IS NOT GETTING - a window that buys the list nothing reports nothing");
+  a.eq(r.order, "name");
+  a.eq(SER55(r), SER55(P.librarySearch(L55.index, "", {})),
+    "demoting is provably LOSSLESS: the recency clause was the only score this basis could add beyond the prefix bonus, and the prefix bonus fires under basis null too");
+  /* and with `recent` not handed in at all */
+  a.eq(SER55(P.librarySearch(L55.index, "", { rankRecent: true })), SER55(P.librarySearch(L55.index, "", {})));
+});
+
+T("S55.C2 B-162 cause 2 of 3 - A WINDOW THE LIBRARY DOES NOT CARRY: a locally minted movement has an `mv` no library row has, so the window is non-empty and still buys the list nothing", function(a){
+  var minted = { "mv_x_Something_He_Invented": true, "mv_x_And_Another": true };
+  a.eq(P.isMvId("mv_x_Something_He_Invented"), true, "it IS a well-formed mv - isMvId is a token shape, not a library membership test");
+  a.eq(P.libraryRow ? P.libraryRow(L55.index, "mv_x_Something_He_Invented") : null, null,
+    "and the library does not hold it");
+  var r = P.librarySearch(L55.index, "", { recent: minted, rankRecent: true });
+  a.eq(r.basis, null, "a non-empty window is NOT the test - `did any row in this list earn the bonus` is");
+  a.eq(r.order, "name");
+  a.eq(SER55(r), SER55(P.librarySearch(L55.index, "", {})), "byte-identical to the name path");
+});
+
+T("S55.C3 B-162 cause 3 of 3 - A WINDOW THE CALLER EXCLUDED: the movements already on today's cards are exactly the recent ones, so a caller that drops them can empty the window without touching it", function(a){
+  var ex = ["mv_Zebra_Curl", "mv_Zebra_Crunch"];
+  var r = P.librarySearch(L55.index, "", { recent: REC55, rankRecent: true, exclude: ex });
+  a.eq(r.basis, null);
+  a.eq(r.order, "name");
+  a.eq(MVS55(r).indexOf("mv_Zebra_Curl"), -1, "the excluded rows really are gone");
+  a.eq(SER55(r), SER55(P.librarySearch(L55.index, "", { recent: REC55, exclude: ex })),
+    "byte-identical to the opt-absent return WITH THE SAME EXCLUDE - the honest comparison, because the exclude changes the row set on both sides");
+  /* exclude ONE of the two and the basis stands, because one row still earned it */
+  var one = P.librarySearch(L55.index, "", { recent: REC55, rankRecent: true, exclude: ["mv_Zebra_Curl"] });
+  a.eq(one.basis, "recent", "the floor is ONE movement, and at one the sentence is still true");
+  a.eq(MVS55(one)[0], "mv_Zebra_Crunch");
+});
+
+T("S55.C4 B-162 - THE PROPERTY, swept rather than argued: with no query, basis \"recent\" never stands over a list in which no returned row earned the bonus. #61 can never render over an alphabetical list", function(a){
+  /* This is the defect #12 is being replaced for, inverted into a property.
+     Every single-movement window over every row in the library, plus the
+     empty one, plus windows of movements that do not exist. */
+  var rows = L55.index.rows, i, bad = [], win, r;
+  for (i = 0; i < rows.length; i++) {
+    win = {}; win[rows[i].mv] = true;
+    r = P.librarySearch(L55.index, "", { recent: win, rankRecent: true });
+    if (r.basis === "recent" && !r.rows.some(function(x){ return x.mv === rows[i].mv; })) bad.push(rows[i].mv);
+    if (r.basis === "recent" && r.order !== "score") bad.push("order/" + rows[i].mv);
+    if (r.basis === null && r.order !== "name") bad.push("nameorder/" + rows[i].mv);
+  }
+  a.deep(bad, [], "no window in the whole library produces a label the list does not deserve");
+  /* and a mixed window of real + unknown movements still reports honestly */
+  for (i = 0; i < rows.length; i++) {
+    win = {}; win["mv_not_in_this_library_" + i] = true;
+    r = P.librarySearch(L55.index, "", { recent: win, rankRecent: true });
+    a.eq(r.basis, null, "unknown-only window " + i);
+  }
+});
+
+T("S55.C5 B-162 - the two labels are the ONLY thing the demotion moves: the rows are byte-identical in all three causes, so nothing he would have seen changes", function(a){
+  var name = SER55(P.librarySearch(L55.index, "", {}));
+  var causes = [
+    ["empty window", { recent: {}, rankRecent: true }],
+    ["minted mv", { recent: { "mv_x_Nope": true }, rankRecent: true }],
+    ["rankRecent with no window handed in", { rankRecent: true }]
+  ];
+  causes.forEach(function(c){ a.eq(SER55(P.librarySearch(L55.index, "", c[1])), name, c[0]); });
+});
+
+/* --------------------------------- 4. the opt is junk-proof and never throws */
+
+T("S55.D1 - still pure, still never throws: `undefined`, `null`, `7`, `{}`, a string, an array, a malformed index, and `rankRecent` as 7 / \"no\" / {} / a function", function(a){
+  var junk = [undefined, null, 7, {}, "x", [], true,
+    { rankRecent: 7 }, { rankRecent: "no" }, { rankRecent: {} }, { rankRecent: function(){} },
+    { rankRecent: true, recent: 7 }, { rankRecent: true, recent: null }, { rankRecent: true, recent: "x" },
+    { rankRecent: true, slot: 7 }, { rankRecent: true, slot: null }, { rankRecent: true, mv: 7 },
+    { rankRecent: true, mv: "not an mv" }, { rankRecent: true, exclude: 7 }, { rankRecent: true, limit: -1 },
+    { rankRecent: true, limit: "x" }, { rankRecent: false }];
+  junk.forEach(function(o){
+    var r = a.noThrow(function(){ return P.librarySearch(L55.index, "", o); }, "opts " + show(o));
+    a.eq(r.ok, true, "opts " + show(o));
+    a.oneOf(r.basis, ["recent", null], "opts " + show(o) + ": the only two bases reachable with no slot");
+    a.eq(r.order, r.basis === null ? "name" : "score", "opts " + show(o) + ": order and basis never disagree");
+    a.ok(r.rows.length <= 40, "opts " + show(o) + ": the cap holds");
+  });
+  /* a malformed index refuses whole, and the opt cannot change that */
+  [null, undefined, 7, {}, { rows: "no" }, { rows: [], count: "x" }].forEach(function(ix){
+    var r = a.noThrow(function(){ return P.librarySearch(ix, "row", { rankRecent: true, recent: REC55 }); }, "index " + show(ix));
+    a.eq(r.ok, false, "index " + show(ix));
+    a.deep(r.rows, []);
+    a.eq(r.basis, null, "a refusal never claims an order");
+    a.eq(r.order, "name");
+  });
+  /* and the query argument is junk-proof too */
+  [undefined, null, 7, {}, []].forEach(function(q){
+    a.noThrow(function(){ return P.librarySearch(L55.index, q, { rankRecent: true, recent: REC55 }); }, "query " + show(q));
+  });
+});
+
+T("S55.D2 - the exported constants W3 was forbidden to move, and the one the two notices must both name", function(a){
+  a.deep(P.SW_SCORE, { pm: 5, near: 3, eqExact: 2, force: 2, recent: 2, mech: 1, prefix: 6 },
+    "no new scoring input, and no existing weight moved");
+  a.eq(P.SW_LIMIT, 40);
+  a.eq(P.SW_RECENT_DAYS, 56,
+    "56 days IS the `8 weeks` both new notices say out loud (coach §22.10.2). IF THIS CONSTANT MOVES, BOTH LITERALS MOVE - a notice naming a window it no longer reads is #12's false clause again. The literals themselves are UX's live ruling and are deliberately not pinned here");
+  a.eq(P.SW_RECENT_DAYS / 7, 8, "and it is a whole number of weeks, because he trains in weeks");
+});
+
+T("S55.D3 - `recentMovements` reads SAVED sessions only, so the second helping of what he is doing RIGHT NOW may not be in the window (UX §22.20.9 item 4, answered as OBSERVED)", function(a){
+  var plan = P.PHAT_PLAN;
+  var saved = [{ id: 1, date: "2026-10-01", dayId: "d1", planId: "phat",
+    entries: { d1a: { sets: [{ w: 100, r: 5 }], note: "", mv: "mv_Bent_Over_Barbell_Row" } } }];
+  var w = P.recentMovements(saved, plan, "2026-10-08", P.SW_RECENT_DAYS);
+  a.eq(w["mv_Bent_Over_Barbell_Row"], true, "a saved completed set is in the window");
+  /* a DRAFT is not a session and is not an argument to this function at all */
+  a.eq(P.recentMovements.length, 4, "recentMovements(sessions, plan, todayStr, days) - there is no draft parameter and no fifth one");
+  /* the window edge, in both directions */
+  a.deep(P.recentMovements([{ id: 2, date: "2026-08-13", dayId: "d1", planId: "phat",
+    entries: { d1a: { sets: [{ w: 100, r: 5 }], note: "" } } }], plan, "2026-10-08", 56), { "mv_Bent_Over_Barbell_Row": true },
+    "56 days back inclusive");
+  a.deep(P.recentMovements([{ id: 3, date: "2026-08-12", dayId: "d1", planId: "phat",
+    entries: { d1a: { sets: [{ w: 100, r: 5 }], note: "" } } }], plan, "2026-10-08", 56), {},
+    "57 days back is outside it");
+  /* an opened-and-abandoned movement is not something he trains */
+  a.deep(P.recentMovements([{ id: 4, date: "2026-10-01", dayId: "d1", planId: "phat",
+    entries: { d1a: { sets: [{ w: "", r: "" }], note: "" } } }], plan, "2026-10-08", 56), {},
+    "no COMPLETED set, no window entry");
+  a.deep(P.recentMovements(null, plan, "2026-10-08", 56), {}, "and it is junk-proof");
+  a.deep(P.recentMovements(7, 7, 7, 7), {});
+});
+
+/* ============ 5. B-161: the implement an added movement declares ========== */
+
+T("S55.E1 B-161 - `libraryImplementOf` is the whole derivation, and it NEVER guesses: six upstream values map, the seven refused and the 77 unsaid come back null", function(a){
+  var ix = L55.index;
+  /* the fixture library carries one row per equipment value the app meets */
+  var mapped = { barbell: "bb", dumbbell: "db", machine: "machine", cable: "cable", "body only": "bodyweight" };
+  Object.keys(mapped).forEach(function(eq){
+    a.eq(P.libraryImplement(eq), mapped[eq], eq);
+  });
+  a.eq(P.libraryImplement("e-z curl bar"), "bb", "the second barbell value, and it is NOT a round trip");
+  ["kettlebells", "bands", "medicine ball", "exercise ball", "foam roll", "other"].forEach(function(eq){
+    a.eq(P.libraryImplement(eq), null, eq + " is REFUSED - and refused is not the same as absent");
+  });
+  [null, undefined, "", 7, {}, "Barbell ", "BARBELL", "barbel", "smith machine"].forEach(function(v){
+    a.oneOf(P.libraryImplement(v), ["bb", null], "never a nearest for " + show(v));
+  });
+  a.eq(P.libraryImplement("BARBELL"), "bb", "case and surrounding space are folded, because upstream is not tidy");
+  a.eq(P.libraryImplement("smith machine"), null, "but a value this build has never seen is refused, not approximated");
+  /* through the index, which is what the card calls */
+  a.eq(P.libraryImplementOf(ix, "mv_Bent_Over_Barbell_Row"), "bb");
+  a.eq(P.libraryImplementOf(ix, "mv_Zebra_Curl"), "db");
+  a.eq(P.libraryImplementOf(ix, "mv_Aardvark_Press"), "machine");
+  a.eq(P.libraryImplementOf(ix, "mv_Zebra_Crunch"), null, "a kettlebell movement makes NO CLAIM - this is the silence coach §22.10.4 ruled for the 199");
+  a.eq(P.libraryImplementOf(ix, "mv_Not_In_The_Library"), null, "and a movement the index does not hold makes none either");
+  [null, undefined, 7, {}].forEach(function(v){
+    a.eq(a.noThrow(function(){ return P.libraryImplementOf(v, "mv_Zebra_Curl"); }), null, "index " + show(v));
+    a.eq(a.noThrow(function(){ return P.libraryImplementOf(ix, v); }), null, "mv " + show(v));
+  });
+});
+
+T("S55.E2 B-161 / Rule Z2 - `loadWord` at zero is the consumer that was flatly WRONG on an added card: only a bodyweight implement earns the word `bodyweight`, and an UNDECLARED implement - which is what an added movement carried until 718fb33 - reads `zero load`", function(a){
+  a.eq(P.loadWord(0, "bodyweight"), "bodyweight", "he was not holding nothing");
+  ["bb", "db", "cable", "machine", "", null, undefined, 7, {}, "Bodyweight", "bodyweight "].forEach(function(im){
+    a.eq(P.loadWord(0, im), "zero load",
+      show(im) + " at zero is NOT a claim about his body - a mis-logged machine set must not read as one");
+  });
+  /* THE SHIPPED DEFECT, as an assertion: the input index.html used to hand in */
+  a.eq(P.loadWord(0, undefined), "zero load",
+    "this is the exact call the pre-718fb33 added card made - `loadWord(0, e.implement)` on an entry with no implement - and `zero load` is the right answer to the WRONG question");
+  a.eq(P.loadWord(0, P.libraryImplementOf(L55.index, "mv_Not_In_The_Library")), "zero load",
+    "and on the 199 rows I3 refuses, the derivation changes nothing: the word stays `zero load`, because `bodyweight` would be a claim");
+  /* the same call with the derivation live is the whole fix */
+  a.eq(P.loadWord(0, P.libraryImplementOf(L55.index, "mv_Bent_Over_Barbell_Row") || undefined), "zero load");
+  /* `0 kg` is still unreachable (B-32) */
+  [0, "0", "0.0", "", " "].forEach(function(w){
+    a.ne(P.loadWord(w, "bb"), "0 kg", "B-32: the string `0 kg` is never produced");
+  });
+});
+
+T("S55.E3 B-161 consumer 4 - `cardModeFor` seeds his profile's first bar off `ex.implement`, which is the field 718fb33's shim fills on an added card. Absent an implement the engine gives the unit and NO bar, which is the conservative answer and is what the 199 get", function(a){
+  var gym = { bars: [{ n: "Olympic bar", u: "lb", w: 45 }], unit: "lb" };
+  var prefs = { gym: gym };
+  var withBar = P.cardModeFor({ exId: "x_added", ex: { id: "x_added", n: "Barbell Curl", s: 0, lo: 0, hi: 0, k: "", implement: "bb" },
+    prefs: prefs, plan: P.PHAT_PLAN, sessions: [] });
+  var noneEx = P.cardModeFor({ exId: "x_added", ex: { id: "x_added", n: "Alternating Kettlebell Press", s: 0, lo: 0, hi: 0, k: "" },
+    prefs: prefs, plan: P.PHAT_PLAN, sessions: [] });
+  a.eq(withBar.mode.au, "lb", "the device's default unit either way");
+  a.eq(noneEx.mode.au, "lb");
+  a.eq(withBar.mode.bar, 45,
+    "a barbell movement opens ON THE BAR. Without this an added barbell movement opens kg-direct on an lb device, which is invisible ambiguity - B-131's defect");
+  a.eq(withBar.mode.bu, "lb", "and the bar's own unit comes with it");
+  a.eq(noneEx.mode.bar, undefined, "an undeclared implement gets NO bar: " + show(noneEx.mode.bar));
+  a.deep(noneEx.mode, { au: "lb" }, "the unit and nothing else - the conservative answer, and what the 199 get");
+  /* a db implement must not acquire a bar either */
+  var db = P.cardModeFor({ exId: "x_a", ex: { id: "x_a", n: "Arnold press", s: 0, lo: 0, hi: 0, k: "", implement: "db" },
+    prefs: prefs, plan: P.PHAT_PLAN, sessions: [] });
+  a.eq(db.mode.bar, undefined, "a dumbbell is not a bar");
+  /* and the engine never invents a bar the profile does not have */
+  var noProfile = P.cardModeFor({ exId: "x_a", ex: { id: "x_a", n: "Barbell Curl", s: 0, lo: 0, hi: 0, k: "", implement: "bb" },
+    prefs: { gym: { unit: "lb" } }, plan: P.PHAT_PLAN, sessions: [] });
+  a.eq(noProfile.mode.bar, undefined, "no bars on the profile, no bar on the card - never an invented one");
+  /* the tier is what the chip prints, and an added card is on the DEFAULT one */
+  a.eq(withBar.tier, "default", "`Your default` on the chip - the added card never takes the engine's SWAPPED branch, which is why 718fb33 had to put the implement on `ex` as well");
+});
+
+/* =============== 6. B-160: the entry the two doors write ================= */
+
+T("S55.F1 C7's engine half - `addDraftEntry` writes ONE entry, appended last, and nothing else in the draft moves. Both doors call this, so the two entries can only differ by the minted id", function(a){
+  var draft = { schemaVersion: 7, dayId: "d1", planId: "phat", date: "2026-10-08",
+    entries: { d1a: { sets: [{ w: "100", r: "5" }, { w: "", r: "" }], note: "first note" },
+               d1b: { sets: [{ w: "60", r: "8" }], note: "" },
+               d1d: { sets: [{ w: "40", r: "12" }], note: "third note" } },
+    exIx: 2, savedAt: 1 };
+  var before = JSON.stringify(draft);
+  var out = P.addDraftEntry(draft, "mv_Zebra_Curl", "Zebra curl", { plan: P.PHAT_PLAN });
+  a.eq(out.ok, true, JSON.stringify(out.problems || out));
+  a.eq(JSON.stringify(draft), before, "the ARGUMENT is never mutated - the engine returns a new draft");
+  var keys = Object.keys(out.draft.entries);
+  a.deep(keys.slice(0, 3), ["d1a", "d1b", "d1d"], "the existing key ORDER is untouched");
+  a.eq(keys.length, 4);
+  a.eq(keys[3], out.exId, "and the new key is LAST - D8's order, and `at the end` is what he asked for");
+  ["d1a", "d1b", "d1d"].forEach(function(k){
+    a.eq(JSON.stringify(out.draft.entries[k]), JSON.stringify(JSON.parse(before).entries[k]),
+      k + " is byte-identical, sets and note - C1's real content");
+  });
+  a.eq(JSON.stringify(out.draft.entries[out.exId]),
+    JSON.stringify({ sets: [{ w: "", r: "" }], note: "", mv: "mv_Zebra_Curl", n: "Zebra curl" }),
+    "ONE empty set row, an empty note, the movement and its name. No rx, no sw, no implement, no `added` flag on disk");
+  /* the id is minted, never derived from the movement: a duplicate is a real
+     second card, which is UX §22.20.3's ruling on excluding nothing */
+  var again = P.addDraftEntry(out.draft, "mv_Zebra_Curl", "Zebra curl", { plan: P.PHAT_PLAN });
+  a.eq(again.ok, true);
+  a.ne(again.exId, out.exId, "two helpings of the same movement are two cards");
+  a.eq(Object.keys(again.draft.entries).length, 5);
+  a.eq(again.exId.indexOf("mv_"), -1, "the id is not derived from the mv");
+  a.match(out.exId, /^x_[a-z0-9]+$/, "and it is the x_ shape every minted entry id has");
+});
+
+T("S55.F2 C5's engine half - `buildSession` carries `mv` and `n` on a slot-less entry and stamps NO `rx`, NO `sw` and NO `implement`. The implement is derived at read time and is never a stored byte", function(a){
+  var draft = { schemaVersion: 7, dayId: "d1", planId: "phat", date: "2026-10-08",
+    entries: { d1a: { sets: [{ w: "100", r: "5" }, { w: "100", r: "5" }, { w: "100", r: "5" }], note: "" },
+               x_added1: { sets: [{ w: "30", r: "10" }], note: "", mv: "mv_Zebra_Curl", n: "Zebra curl" } },
+    exIx: 1, savedAt: 1 };
+  var s = P.buildSession(draft, "d1", "2026-10-08", 9001, "phat", P.PHAT_PLAN);
+  a.ok(s, "it builds");
+  var e = s.entries.x_added1;
+  a.ok(e, "the added entry is on the saved document");
+  a.eq(JSON.stringify(e), JSON.stringify({ sets: [{ w: 30, r: 10 }], note: "", mv: "mv_Zebra_Curl", n: "Zebra curl" }),
+    "exactly this, in this key order");
+  a.eq(Object.prototype.hasOwnProperty.call(e, "rx"), false, "NO rx - there is no prescription to stamp and a guessed one is worse than none");
+  a.eq(Object.prototype.hasOwnProperty.call(e, "sw"), false, "NO sw - nothing was swapped");
+  a.eq(Object.prototype.hasOwnProperty.call(e, "implement"), false,
+    "NO implement - B-161 is fixed by DERIVING it, so WO-016's later ruling reaches the added card for free instead of being stuck behind a stored byte and a migration");
+  /* the slot entry beside it still gets its stamp, so the absence is specific */
+  a.deep(s.entries.d1a.rx, { s: 3, lo: 3, hi: 5, k: "power" }, "a SLOT entry still carries rx - the absence above is about having no slot, not about the stamp being off");
+  a.eq(P.SCHEMA_VERSION, 7, "and no schema bump was owed or taken");
+  a.eq(P.V_MV, 7);
+});
+
+T("S55.F3 Rule AD1.2 - the added card's silence is BY CONSTRUCTION, not by a branch: the read-side shim is s/lo/hi at zero and k empty, and the role gate refuses every one of them at every set count", function(a){
+  /* index.html's shim is {id, n, s:0, lo:0, hi:0, k:"", mv, added:true}. The
+     object is reconstructed here because the shim itself is in index.html;
+     what is being pinned is that this SHAPE cannot produce a verdict. */
+  var shim = { id: "x_added1", n: "Zebra curl", s: 0, lo: 0, hi: 0, k: "", mv: "mv_Zebra_Curl", added: true };
+  var i, sets, v;
+  for (i = 1; i <= 6; i++) {
+    sets = []; for (var j = 0; j < i; j++) sets.push({ w: 30, r: 10 });
+    v = P.verdict({ ex: shim, sets: sets, prev: null, sessions: [], todayStr: "2026-10-08", plan: P.PHAT_PLAN, exId: "x_added1" });
+    a.eq(!!(v && v.absent), true, i + " completed sets: no verdict, and the reason is the ABSENT shape rather than null");
+    a.eq(v.t, "", i + " sets: no verdict tone");
+    a.eq(v.x, "", i + " sets: no verdict sentence");
+    a.eq(v.x2, "", i + " sets: no second line");
+    a.eq(v.rule, null, i + " sets: no rule fired");
+    a.match(v.absentLine, /No role set for this exercise/,
+      i + " sets: the reason is the ROLE gate (§9.11), which is what `k: \"\"` buys - the silence is structural");
+  }
+  /* and it is the k, not the set count, that does it - the gate is §9.11's */
+  var real = P.verdict({ ex: { id: "d1a", n: "x", s: 3, lo: 3, hi: 5, k: "power" },
+    sets: [{ w: 100, r: 5 }, { w: 100, r: 5 }, { w: 100, r: 5 }], prev: null, sessions: [],
+    todayStr: "2026-10-08", plan: P.PHAT_PLAN, exId: "d1a" });
+  a.eq(real.absent, false,
+    "the same three sets on a real prescription DO earn a verdict, so the silence above is the shim's and not the harness's");
+  a.eq(real.rule, "P1.4");
+});
+
+T("S55.F4 - nothing in the Add path can reach a plan: `addDraftEntry` widens its taken-id set from every plan handed in and writes to NONE of them", function(a){
+  var plans = [P.PHAT_PLAN];
+  var planBefore = JSON.stringify(P.PHAT_PLAN);
+  var plansBefore = JSON.stringify(plans);
+  var draft = { schemaVersion: 7, dayId: "d1", planId: "phat", date: "2026-10-08",
+    entries: { d1a: { sets: [{ w: "100", r: "5" }], note: "" } }, exIx: 0, savedAt: 1 };
+  var out = P.addDraftEntry(draft, "mv_Zebra_Curl", "Zebra curl", { plan: P.PHAT_PLAN, plans: plans });
+  a.eq(out.ok, true);
+  a.eq(JSON.stringify(P.PHAT_PLAN), planBefore, "PHAT_PLAN.days byte-identical - the shipped programme is not ours to edit (C5)");
+  a.eq(JSON.stringify(plans), plansBefore, "and no plan document in the array moved either");
+  /* and the minted id collides with nothing on any plan */
+  var taken = {};
+  P.PHAT_PLAN.days.forEach(function(d){ d.ex.forEach(function(e){ taken[e.id] = true; }); });
+  a.eq(taken[out.exId], undefined, "the minted id is not a slot id on any plan, so no engine can mistake the two");
+  /* and not a slot id on ANY shipped plan either, not just this one. The
+     earlier shape of this assertion was `out.exId.indexOf("d1") === -1`,
+     which went red once in a thirteen-clock sweep because the mint is
+     base36 of the clock and that clock produced `x_...d1...`. A test whose
+     colour depends on the minute is B-146 all over again; the property that
+     matters is id COLLISION, and that is what is asserted. */
+  var everywhere = {};
+  (P.SHIPPED_PLANS || [P.PHAT_PLAN]).forEach(function(pl){
+    (pl.days || []).forEach(function(d){ (d.ex || []).forEach(function(e){ everywhere[e.id] = true; }); });
+  });
+  a.eq(everywhere[out.exId], undefined, "no shipped plan anywhere carries that id");
+  a.match(out.exId, /^x_[a-z0-9]+$/, "and the x_ prefix is what keeps it out of the slot namespace by construction");
+});
+
+T("S55 TRIPWIRE - no fixture in S55 wrote a phat:* key", function(a){
+  a.deep(PHAT_KEY_WRITES, [],
+    "every fixture in this group is in memory. The browser half runs on a SEPARATE origin and is reported under \"Already proven\"");
+});
+
 group("S9 harness budget / W7");
 
 T("W7 - the whole suite runs with no manual input, and in a time that is not pathological (measured, printed, ceiling 60 s)", function(a){
@@ -23675,10 +24178,44 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "<code>index.html</code> &mdash; run 2026-09-29 across <code>index.html</code>, <code>logic.js</code> and this file: " +
     "<b>zero hits in all three</b>. Re-run the grep when a string moves.</p>";
 
+  /* WO-019 W5, 2026-10-08. HALF of this order is in index.html. Each item is
+     a B-20 extraction ASK with a recommendation, not a complaint - and the
+     browser evidence that covers it in the meantime is named. */
+  document.getElementById("untestable").innerHTML +=
+    "<p><b>WO-019 &mdash; six surfaces this page cannot reach, what covers each, and the ASK.</b> " +
+    "<b>(1) <code>cardImplement(e, mvc)</code> and <code>cardEx(e, mvc)</code> are in <code>index.html</code> and this is the ASK " +
+    "worth doing.</b> They are the whole of B-161's fix on the read side and they are <i>pure functions of an entry, a movement " +
+    "reading and a library index</i> &mdash; the only reason they live behind the DOM is that they reach <code>S.lib.index</code> " +
+    "for the index. <b>ASK (B-20, worth doing):</b> move them to <code>logic.js</code> as " +
+    "<code>cardImplement(index, e, mvc)</code>, taking the index as an argument the way every other pure function in this repo " +
+    "takes its data. Four coaching consumers read the answer (I1's <code>&middot; per DB</code>, I2's appendix, Z2's " +
+    "<code>loadWord</code> and <code>cardModeFor</code>'s bar seed); a function that decides what a number in the weight column " +
+    "MEANS is exactly the shape that should not be untestable. S55.E1&ndash;E3 pin the engine under it " +
+    "(<code>libraryImplementOf</code>, <code>loadWord</code>, <code>cardModeFor</code>) and item 45 drove the four consumers on a " +
+    "real screen; nothing here fakes a browser to reach the wiring between them. " +
+    "<b>(2) <code>swHead(res, sw, q)</code> and <code>swKickText(sw, q)</code> read <code>S.swap</code> and call " +
+    "<code>cardMovement(swExOf(&hellip;))</code>.</b> They choose between a kicker and a notice, which is UX &sect;22.3.1's whole " +
+    "rule. <b>ASK (B-20, medium):</b> <code>swHead</code> is a function of <code>(basis, mode, hasQuery, cardName)</code> and would " +
+    "move with its dereference turned into its fourth argument &mdash; which is also what makes the thrown-sheet class " +
+    "structurally unreachable rather than avoided by branch order. S55 pins the <code>basis</code> it reads; mutant M4 proves the " +
+    "branch order is load-bearing. " +
+    "<b>(3) The <code>AD1_VERDICT</code> literal is a <code>const</code> in <code>index.html</code></b>, so the coach's amended " +
+    "third clause cannot be asserted from here. It was read off two real cards (both doors) in item 45 and it is one literal, not " +
+    "two. <b>ASK: none</b> &mdash; it is view copy with no computed part, which is the one shape that belongs there. " +
+    "<b>(4) <code>openAddEx</code>, the delegated <code>#addexbtn</code> handler and <code>swSearch</code>'s " +
+    "<code>mode === \"extra\"</code> call are app wiring.</b> Covered by item 45 end to end. <b>ASK: none.</b> " +
+    "<b>(5) The added card's read-side shim</b> (<code>{s:0, lo:0, hi:0, k:\"\"}</code>) is built in " +
+    "<code>index.html</code>; S55.F3 reconstructs the SHAPE and proves it cannot earn a verdict at any set count, which is the " +
+    "property, but the shim itself is view code. <b>ASK (B-20, low):</b> leave it &mdash; it is three fields and the property " +
+    "under it is pinned. " +
+    "<b>(6) Geometry, focus order and the Summary's write-nothing invariant</b> are not readable from a page with no app in it. " +
+    "Item 45 measured them with Playwright at 320, 393 and 400 px and at 200 % text.</p>";
+
   document.getElementById("manual").innerHTML =
-    "<p><b>Seventeen items. Two to three minutes. Everything else on this page is already covered by " +
-    "automation - see the section under this one for what was measured and how. " +
-    "If you are short of time, do item 13(b) and stop: it is the only one on the list that can lose a number.</b></p><ol>" +
+    "<p><b>Seventeen items, then a separate five-item WO-019 list under them. Two to three minutes each. " +
+    "Everything else on this page is already covered by automation - see the section under this one for what was measured and how. " +
+    "If you are short of time, do item 13(b) in the first list and item 2 in the second, and stop: those two are the only ones " +
+    "that can lose a number.</b></p><ol>" +
 
     "<li><b>Watch the verdict slot while you fill a 3-set exercise (B-24).</b> Start Day 2, open " +
     "<i>Squat</i>. Type set 1 as <code>100</code>/<code>5</code>: <b>the grey verdict line must stay empty.</b> " +
@@ -23900,6 +24437,44 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "whether the row tells you enough to choose. If it does not, that is a UX item, not a bug.</span></li>" +
 
     "<li><b>WO-015 &mdash; the repair notice, on YOUR phone, once.</b> Open the app. Under the start control you should see <b>LOG CORRECTED</b> with three lines: <i>2 pull-up sessions now read Iso-lateral front lat pulldown.</i>, <i>2 dumbbell sessions now read per hand, not the pair total.</i>, <i>Nothing was removed. Every session is still under Recent sessions.</i> <b>(a)</b> Scroll nothing &mdash; the first day row must still be visible above the nav. <b>(b)</b> Open <i>Recent sessions</i> and check 22 Sep: the dumbbell row must read about <b>85&ndash;90 lb</b> per hand, not 170&ndash;180, and the pull-up row must name the pulldown. <b>(c)</b> Tap <b>Dismiss</b>. It must not come back on the next launch. <b>(d)</b> If the card is NOT there, open <code>/diag.html</code> and read section <i>B-131 (WO-015)</i>: <code>log.repairs</code> should be <code>{&quot;b131&quot;:1}</code> and there should be exactly one <code>recover:log</code> key. If <code>repairs</code> is <code>undefined</code> and the loads still read 63/77/77/81, the correction did not apply &mdash; <b>say so and change nothing</b>; the pre-fix bytes are still on disk and that is the designed outcome of a failed keep.<br><span class=\"skipmsg\">Why a phone: every branch of this was driven in a desktop browser (item 44) including the forced keep failure. What only your phone can answer is whether the v6 worker has actually carried the new shell to it, and whether the card is legible and reachable one-handed over the day list at your text size.</span></li></ol>" +
+
+    "<p><b>WO-019 &mdash; <i>Add an exercise</i>. FIVE items, in order, about two minutes, next time you are in the gym.</b> " +
+    "Everything below was driven in a desktop browser at 400, 393 and 320 px (item 45). These five are the ones only your thumb, " +
+    "your gym and your eyes can answer. <b>If you only do one, do item 2.</b></p><ol>" +
+
+    "<li><b>Find it without being told where it is.</b> Log your first set as usual, then go to the LAST card of the session and " +
+    "scroll to the bottom. <b><i>Add an exercise</i> should be the full-width button directly above <code>&larr;</code> / " +
+    "<i>Finish session</i>.</b> Tap <i>Finish session</i> and look again: it is on the Summary too, above " +
+    "<i>&larr; Back</i> / <i>Save session</i>. <b>The question: did you have to hunt for it?</b> It is deliberately NOT on cards " +
+    "1&hellip;n&minus;1 &mdash; from any other card it is still <i>Swap &rarr; Add as well</i>. If that feels wrong in use, say so; " +
+    "that placement is a UX ruling, not a fact.</li>" +
+
+    "<li><b>Add something real, at the end of a real session, and then check the other cards.</b> Tap it, pick a movement, tap " +
+    "<i>Add it</i>. You land on a new last card with one empty row and <i>No prescription</i>. Log a set. Now walk BACK through " +
+    "every other card and confirm <b>every weight, every rep and every note you typed earlier is still exactly as you left it.</b> " +
+    "This is the only item on the list that can lose a number. If anything is missing, <b>do not save</b> &mdash; open " +
+    "<code>/diag.html</code>, read <code>phat:v1:draft</code>, and say what it holds.</li>" +
+
+    "<li><b>Read the load column on what you added, and believe it or don't.</b> If you added a <b>dumbbell</b> movement the target " +
+    "line must read <i>No prescription &middot; per DB</i> &mdash; the number you type is ONE dumbbell. If you added a " +
+    "<b>barbell</b> movement the chip above the rows must name a bar (<i>+ Olympic bar 45 lb</i> or whatever your default is) and " +
+    "the weight column is the ADDED weight, not the total. <b>If the bar it names is not the bar you are holding, tap the chip and " +
+    "fix it</b> &mdash; that is one tap and it sticks. If you added a <b>machine</b> or a <b>kettlebell</b> movement it says nothing " +
+    "about either, which is deliberate: the app does not know, and a guess there is a wrong number on your record. " +
+    "<b>(B-117 is still open: the app does not know which bars your gym has.)</b></li>" +
+
+    "<li><b>The list, on your data.</b> Open the door and DO NOT type. The line above the list should name the order it is actually " +
+    "in, and the first rows should be <b>things you have trained in the last eight weeks</b>. <b>The question is whether that is the " +
+    "right first screen for &ldquo;one more exercise&rdquo;</b> &mdash; if the top of the list is useless to you, the search field is " +
+    "one tap away and the wording of that line is still being settled, so your reaction is the input. Type three letters and the " +
+    "label must change to <i>MATCHES</i>.</li>" +
+
+    "<li><b>Undo, and the escape hatches.</b> On the added card, scroll to the bottom and tap <i>Undo &mdash; remove {movement}</i>. " +
+    "The card goes; <b>nothing else moves.</b> Then open the door again and back out three ways &mdash; <i>Not now</i>, a tap on the " +
+    "dark area outside the sheet, and the <code>&lsaquo;</code> back arrow from the confirm screen. None of them should write " +
+    "anything, and after each one the focus/scroll should put you back where you were. <b>One thing to know before you save: " +
+    "B-05 is still open.</b> Every undo here lives in the draft and expires at <i>Save session</i> &mdash; a movement added by a " +
+    "mis-tap and then saved is permanent.</li></ol>" +
 
     "<p class=\"skipmsg\"><b>One known unknown, and there is nothing to do about it.</b> The full-disk " +
     "behaviour below was proven under Chrome's quota model, which throws when the total exceeds the limit. " +
@@ -25130,6 +25705,133 @@ contract("<b>Neither commit verified here puts anything new on a screen, so the 
     "<b>file:// suite 1027 / 1027 / 0</b>, green on all seven weekdays and on four calendar boundaries.</span></li>" +
 
     "<li><b>WO-015 &mdash; THE B-131 CORRECTION, DRIVEN AGAINST REAL STORAGE. 2026-09-29, on <code>wo-014-library @ 31a3a37</code>.</b> <span class=\"msg\">Rig: a Node static server on <code>http://127.0.0.1</code> over the real tree, Playwright Chromium at <b>400 &times; 852</b> (and 393 and 320), <code>localStorage</code> seeded from an init script <b>before any app script runs</b>, service workers blocked (the app's own <code>reg.scope</code> line then throws once at boot &mdash; the same rig artefact item 28 filtered). Seeds are built by loading the shipping <code>logic.js</code> in a Node <code>vm</code> and reading <code>PHAT.B131_TABLE</code>, so the pre-fix bytes are the table's own <code>from</code> arrays and nothing is transcribed. Scratchpad <code>rig.mjs</code>, <code>seed.mjs</code>, <code>t1.mjs</code>&ndash;<code>t13.mjs</code>, <code>suite.mjs</code>, <code>red.mjs</code>. <b>(1) THE HAPPY PATH, field by field.</b> His pre-fix store in, and on disk after one boot: 12 Sep <code>d1d</code> <b>63/77/77/81 &rarr; 31.5/38.5/38.5/40.5</b>, 22 Sep <code>d1d</code> <b>77.1/81.6/81.6/72.6 &rarr; 38.6/40.8/40.8/36.3</b> with <code>ld.add</code> <b>170/180/180/160 &rarr; 85/90/90/80 lb</b> beside it; both <code>d1b</code> entries keep every load and gain <code>mv:\"x_B131a\" sw:1 n:\"Iso-lateral front lat pulldown\"</code>. A recursive diff of the whole store reports <b>exactly 24 paths moved</b> and no others: the four set arrays, the three meta keys twice, the two entry key-orders, and <code>repairs</code>. <b>All eight notes byte-identical</b>; every <code>rx</code> unchanged; no rep moves; the top-level key order is unchanged with <code>repairs</code> appended. <b>(2) THE KEEP.</b> One <code>phat:v1:recover:log:&lt;ms&gt;</code>, record <code>{key, savedAt, raw}</code>, <b><code>raw</code> === the pre-boot bytes character for character</b>, and the kept copy's <code>repairs</code> is <code>undefined</code>. <b>(3) THE KEEP IS BLOCKING &mdash; four ways, and this is the half that matters.</b> <b>(a)</b> <code>setItem</code> made to THROW on <code>/^phat:v1:recover:log:/</code>: <i>NOT APPLIED - the copy of the log could not be written</i>, <b>63/77/77/81 still on disk</b>, the log <b>byte-identical</b> to the seed, <b>no <code>recover:*</code> key</b>, no marker, no card. <b>(b)</b> <code>setItem</code> made a silent NO-OP on that key (<code>save()</code> returns true, the read finds nothing): <i>NOT APPLIED - the copy of the log did not read back as it was written</i>, same outcome. <b>This is the case <code>save()</code>'s return value alone would have missed.</b> <b>(c)</b> <code>setItem</code> made to TRUNCATE <code>raw</code> by one character: the same refusal, log untouched &mdash; and the truncated keep is left on disk (see the finding). <b>(d)</b> A real quota fill (8 KB then 256 B chunks until <code>setItem</code> throws): no keep, log byte-identical, no marker, no card, and the generic save-refused notice on Home. <b>Unblock and reload and it applies normally.</b> <b>(4) ALL OR NOTHING, seven one-byte corruptions.</b> A rep moved; one character of a note (<i>arm</i> &rarr; <i>Arm</i>); a trailing space on a note; a planted <code>mv</code> on a <code>d1d</code> entry; a planted <code>sw</code> on a <code>d1b</code> entry; a weight moved 68 &rarr; 68.5; a session dated 09-23 instead of 09-22. <b>Every one: the log byte-identical, zero keeps, no card, and a named sentence</b> (<i>the sets are not the bytes the table pins</i> / <i>the note is not the one on the record</i> / <i>the entry already carries mv</i> / <i>session &hellip; is dated 2026-09-23 and the table pins 2026-09-22</i>). <b>The other three entries are left alone in every case.</b> <b>(5) STORES THAT ARE NOT HIS.</b> A real log without either session (Diana's phone): <b>byte-identical in and out, no keep, no card</b>, <i>neither session is on this device</i>. A <code>demo:true</code> store holding both: refused, <i>this device holds demo data</i>. A fresh install: <b>zero localStorage keys written</b>. <b>(6) IDEMPOTENCE, BY BYTES.</b> Second boot on the pass's own output: <i>already applied on this device</i>, <b>still exactly one <code>recover:log</code> key, the same key</b>, and the log byte-identical across the boot. <b><code>log.repairs</code> hand-deleted with the corrected sets left in place: still a no-op, still no second keep</b> &mdash; the post-fix fingerprint catches it, not the stamp. The card does not render there (the stamp is its gate), which is the designed split. <b>(7) THE NOTICE.</b> <code>&lt;section aria-labelledby=\"b131-h\"&gt;</code> on a real <code>&lt;h2 id=\"b131-h\"&gt;Log corrected&lt;/h2&gt;</code>, <b>no <code>role</code>, no <code>aria-live</code></b> &mdash; not a live region, deliberately. Three body lines after 31a3a37; <b><i>not on the pull-up line</i> appears nowhere on Home</b> and the deleted two-word fallback name has <b>zero occurrences in <code>document.body.innerText</code> and zero in <code>#view</code></b> on every branch. <b>Four gating branches driven:</b> name present + 2/2 (three lines); <code>PHAT.B131_N</code> forced empty with <code>nd&gt;0</code> (the pull-up line drops, no empty name, two lines); name empty with <code>nd===0</code> (<b>no card at all</b>, not an empty one); <code>np=0, nd=2</code> (the dumbbell line only). <b>Both singulars</b> on a 22-Sep-only store: <i>1 pull-up session now reads &hellip;</i> / <i>1 dumbbell session now reads per hand, not the pair total.</i> <b>An unrepaired store with the stamp forced on renders no card</b> (counts 0/0). <b>Dismiss:</b> one tap, card gone, focus on <code>#daylist-h</code> (never <code>document.body</code>), <code>phat:v1:prefs</code> gains <code>&quot;b131&quot;:1</code> beside every other key, and a reboot with those prefs renders nothing and writes nothing. <b>(8) NEVER UNDER A THUMB.</b> With a real draft on disk: <b>no card</b> &mdash; and the repair still applied to disk, which is the right split (the notice waits, the numbers do not). Discarding that draft mid-run does <b>not</b> make the card appear: the latch is set once at boot. Tab away to Trend and back: the card returns <b>at the same y (367 px)</b>, unmoved. <b>(9) GEOMETRY.</b> At <b>393 &times; 852</b> the card is <b>222 px</b> (203 at 400, 241 at 320), <i>Or pick any day</i> at y 605 and the <b>first day row fully visible, bottom 720 against a nav top of 788 &mdash; 68 px of clearance</b>. <code>scrollWidth === innerWidth</code> at 393, 400 and 320; <b>zero interactive elements under 44 px</b> (Dismiss is 326 &times; 48). At 200% text nothing overflows. <b>(10) THE MERGE, JOINED UP.</b> <code>mergeOnOpen</code> needs http(s), a signed-in account and <code>sync.js</code>; the engineer proved its two halves separately and said so. <b>It was driven end to end here</b> by serving a stub <code>/sync.js</code> with the same surface (<code>ready/subscribe/pull/push</code>) over the real <code>index.html</code>, so every line of the merge path is the shipping code and only the wire is faked &mdash; item 28's method. Results: a NON-EMPTY device that lacks both sessions pulls the pre-fix rows and writes them <b>corrected</b> (31.5/38.5/38.5/40.5, marker set), <b>no card on that open and the card on the next one</b> (&sect;22.19's rule, observed); an EMPTY device the same, with the keep holding the uncorrected merged bytes; a device already repaired at boot merges to a byte-identical log and re-pushes the corrected set. A second open after a merge is <i>already applied</i>, adds <b>no</b> keep and moves <b>no</b> byte. <b>(11) AFTER THE PASS.</b> A real session logged and saved through Summary: three sessions on disk, <code>repairs</code> intact, all four corrected entries unchanged, still one keep. <b>(12) <code>diag.html</code> reads and writes nothing</b>: two keys in, the same two keys out, byte-identical, and section <i>B-131 (WO-015)</i> prints the marker, the keep with <code>rawBytes=1603</code> and <code>repairs=undefined</code>, and both sessions' <code>d1b</code> / <code>d1d</code> loads with the lb components. <b>Found: one P2 and two P3, none of which loses a number &mdash; in the report.</b> <b>file:// suite 1039 / 1039 / 0.</b></span></li>" +
+    "<li><b>WO-019 W5 &mdash; THE SESSION-LEVEL ADD DOOR, AND THE IMPLEMENT AN ADDED CARD DECLARES. 2026-10-08, on " +
+    "<code>wo-014-library @ 718fb33</code>.</b> <span class=\"msg\">" +
+    "Rig: two Node static servers on <code>http://127.0.0.1</code>, one over a <code>git archive</code> of the branch head and one " +
+    "over a <code>git archive</code> of <b><code>e0a7b57</code></b> (the live build), Playwright Chromium at <b>400 &times; 852</b> " +
+    "and 393 and 320, <code>localStorage</code> seeded from an init script <b>before any app script runs</b>, service workers " +
+    "blocked except in the offline test (the app's own <code>reg.scope</code> line then throws once at boot &mdash; the same rig " +
+    "artefact items 28 and 44 filtered). <b>No working-tree file was touched</b>: every pre-fix byte came from " +
+    "<code>git cat-file blob</code> / <code>git archive</code>. Scratchpad <code>qa5/</code>: <code>serve.mjs</code>, " +
+    "<code>lib.mjs</code>, <code>lib2.mjs</code>, <code>seed.mjs</code>, <code>seed2.mjs</code>, <code>t1.mjs</code>&ndash;" +
+    "<code>t12.mjs</code>, <code>swapseq.mjs</code>, <code>diff.mjs</code>, <code>slothash.mjs</code>, <code>basis.mjs</code>, " +
+    "<code>mut.mjs</code>, <code>killmut.mjs</code>, <code>days.mjs</code>, <code>suite.mjs</code>. " +
+
+    "<b>(C1) THE DRAFT, ON BYTES.</b> Three cards typed (<code>100&times;5</code> + a note, <code>60&times;8</code>, " +
+    "<code>40&times;12</code> + a note), then the new door. Before and after: <b>the entries map is byte-identical with the one new " +
+    "key removed</b>, and the only other top-level field that differs is <code>savedAt</code>. " +
+    "<b>C1's A/B holds</b> &mdash; the identical run on <code>e0a7b57</code> through <i>Add as well</i> moves " +
+    "<code>savedAt</code> the same way, so the criterion stands as <i>the entries map is byte-identical and <code>savedAt</code> " +
+    "is the only other difference</i>. <b>One correction to W4's note:</b> <code>exIx</code> IS in the draft document " +
+    "(<code>index.html:8055</code> writes it); it simply does not MOVE on the add, because <code>flushDraft()</code> runs before " +
+    "<code>S.exIx</code> is reassigned. The first post-boot flush then writes <code>6 &rarr; 7</code> &mdash; <b>identically on both " +
+    "builds and on both doors</b>, no set moves, and the resume lands on the added card. " +
+    "<b>(C2 / C3) RELOAD.</b> With nothing typed into the new card: the draft survives, the offer reads " +
+    "<i>UNFINISHED SESSION &middot; Upper power &middot; Thursday, 8 Oct &middot; 3 sets logged</i>, Resume gives back all three " +
+    "cards with <code>100&times;5 / 60&times;8 / 40&times;12</code>, <b>both notes</b>, and the added movement by name. Typing " +
+    "<code>40&times;8</code> into it and reloading: the draft is byte-identical bar <code>savedAt</code>. <b>Declining</b> leaves " +
+    "<code>phat:v1:draft</code> <code>null</code> and <code>phat:v1:log</code> byte-identical. " +
+    "<b>(C4) UNDO.</b> <code>Undo &mdash; remove {X}</code> returns the entries map to the pre-add bytes exactly; only " +
+    "<code>savedAt</code> differs. " +
+    "<b>(C5) SAVE.</b> The stored entry is <code>{\"sets\":[{\"w\":30,\"r\":10}],\"note\":\"\",\"mv\":\"mv_Barbell_Curl\"," +
+    "\"n\":\"Barbell Curl\"}</code> &mdash; <b>no <code>rx</code>, no <code>sw</code>, no <code>implement</code></b>, while " +
+    "<code>d1a</code> beside it still carries its <code>rx</code>. <code>phat:v1:plans</code> stays <b><code>null</code></b> and " +
+    "<code>PHAT.PHAT_PLAN.days</code> is byte-identical across the save. " +
+    "<b>(C6) THE SUMMARY IS STILL A READ.</b> Reaching it, leaving and returning leaves the draft byte-identical before the tap; " +
+    "the first byte is written by <i>Add it</i>. " +
+    "<b>(C7) NOTHING WAS REBUILT.</b> The same movement through both doors on the branch head, derivation live: " +
+    "<code>{\"sets\":[{\"w\":\"\",\"r\":\"\"}],\"note\":\"\",\"mv\":\"mv_Arnold_Dumbbell_Press\",\"n\":\"Arnold Dumbbell Press\"}</code> " +
+    "<b>byte-identical, differing only in the minted id</b>, and both cards read <i>No prescription &middot; per DB</i>. " +
+    "<b>(C8) 1 TO 6 SETS</b> on the added card: <i>No prescription</i>, AD1's sentence, and <b>no verdict, no rest band, no " +
+    "<code>EXTRA</code> badge, no deload line and no speed line at any count.</b> " +
+    "<b>(C9) COLD OFFLINE.</b> Primed once, then <b>the server was stopped</b> (<code>setOffline</code> blocks the worker too, so " +
+    "it is not the right instrument): a fresh page is served by <code>phat-shell-v7</code>, the door opens, the list returns " +
+    "<b>40 rows</b> with the recency notice, and a set is logged and SAVED with no network. " +
+    "<b>(C10 / C11) GEOMETRY, MEASURED.</b> <code>#addexbtn</code> is <b>368 &times; 52 at 400 px, 361 at 393, 288 at 320</b>, " +
+    "top at <b>y 523</b> of an 852 px viewport with <b>8 px</b> to the navrow, below the note field, " +
+    "<code>scrollWidth === innerWidth</code> at all three widths and <b>zero interactive elements under 44 px</b>. At 200 % text it " +
+    "is 368 &times; 56 and nothing overflows. Focus order is exactly &sect;22.20.7's: " +
+    "<code>&hellip; exnote &rarr; addexbtn &rarr; navprev &rarr; tosum &rarr; discard</code> on the last card and " +
+    "<code>addexbtn &rarr; sumback &rarr; finish &rarr; discard</code> on Summary, with <code>addex.y &lt; bs-slot.y &le; save.y</code>. " +
+    "<b>Absent on cards 1&hellip;n&minus;1</b> (null on card 3 of 7). " +
+    "<b>(C12) HOSTILE INPUT ON THE ADDED CARD, eleven values, a fresh page each, typed AND pasted.</b> " +
+    "<code>7.5.0 .. -3 1e3 \"100 kg\" 999999 7,5 \"  \" 1/2</code> all refuse the save by name &mdash; " +
+    "<i>! Not saved. 1 set needs a fix. Everything you typed is still here. Barbell Curl &middot; set 1 &hellip;</i> &mdash; with the " +
+    "log unmoved; a keystroke keeps the readable prefix, a PASTE is kept verbatim and blocks instead. <code>5.</code> saves as 5 " +
+    "and <code>0100</code> as 100, both correct readings. <b>Nothing vanished silently in any of the twenty-two attempts.</b> " +
+
+    "<b>(ITEM 12, THE HALF THAT MATTERS) THE IMPLEMENT DERIVATION, CASE BY CASE.</b> On an <b>lb</b> device with a 45 lb bar: " +
+    "<b>barbell</b> (<code>mv_Barbell_Curl</code>) seeds his bar and NAMES it &mdash; unit cell <code>+ lb</code>, chip " +
+    "<i>Weight in lb + Olympic bar 45 lb &middot; Your default</i>, aria <i>Added weight in lb on Olympic bar 45 lb</i>; " +
+    "<b>dumbbell</b> reads <b><i>No prescription &middot; per DB</i></b>; <b>machine</b> and <b>kettlebell</b> make " +
+    "<b>no claim, no prompt and no refusal string</b> &mdash; no suffix, no bar, nothing asked. On <b>kg</b>, a <b><code>body " +
+    "only</code></b> movement at <code>0 &times; 12</code> reads <b><i>bodyweight &times; 12</i></b> on Summary where " +
+    "<code>e0a7b57</code> printed <b><i>zero load &times; 12</i></b> &mdash; driven on BOTH builds through <i>Add as well</i>, which " +
+    "is the door that existed there. The other four stay <i>zero load</i>, correctly. " +
+    "<b>ONE SCOPE NOTE, and it is a pre-existing path, not a regression:</b> on an <b>lb</b> device <code>sumRow</code>'s typed-value " +
+    "branch prints <b><code>0 lb &times; 12</code></b> and never reaches <code>loadWord</code>, so Z2's word is unreachable there &mdash; " +
+    "identical on <code>e0a7b57</code>, on a swapped row and on an added one. kg is his default, so the fix lands where he is. " +
+
+    "<b>(THE SWAPPED PATH) BYTE-IDENTICAL, PROVEN AS A SEQUENCE.</b> Twenty-three named DOM snapshots driven identically on both " +
+    "builds and compared character for character: Train, card 1, the sheet's pick state, a query, the confirm state UNTYPED and " +
+    "TYPED, <i>Replace</i>, the draft after it, the bottom-stack put-back, <i>Add as well</i> and its undo, the in-sheet " +
+    "<i>Put {X} back</i> row, a swapped card with <code>0 &times; 12</code> typed, and <i>Make it permanent</i> end to end. " +
+    "<b>IDENTICAL on 20 of 23.</b> The three that differ are the three intended changes and nothing else: " +
+    "<b>#addexbtn</b> on the last card and on Summary, <b>AD1's amended third clause</b> (<i>&hellip; A verdict needs it in your " +
+    "plan.</i> for <i>&hellip; Add it to your plan to get one.</i>), and <b>Summary's zero-load word on a SWAPPED row</b>. " +
+    "That last one, both directions, on a kg device: a <code>bb</code> slot swapped to <code>Chin-Up</code> now reads " +
+    "<b><i>bodyweight &times; 12</i></b> where it read <i>zero load</i>; a <code>bodyweight</code> slot swapped to a MACHINE row now " +
+    "reads <b><i>zero load &times; 12</i></b> where it read <i>bodyweight</i>. <b>An UNSWAPPED <code>db</code> slot at " +
+    "<code>0 &times; 12</code> reads <i>zero load</i> on both builds &mdash; the control, unmoved.</b> <b>The CARD is byte-identical " +
+    "on both builds in both cases</b>, because it already derived a swapped movement's implement on <code>main</code>; only " +
+    "<code>sumRow</code> moved. <i>Make it permanent</i> is byte-identical throughout: the control " +
+    "(<code>Put Leverage High Row in the plan</code>, 48 px), the sheet's three lines, the <code>Change the plan</code> write, the " +
+    "resulting slot, the log's byte-identity and the draft's. " +
+
+    "<b>(THE SEARCH) THE 42-SLOT DIFFERENTIAL, RE-DERIVED ON A SECOND INSTRUMENT.</b> 42 slots &times; 10 queries against the real " +
+    "876-row <code>assets/exercises.json</code>, plus the slot-less opt-absent calls: " +
+    "<b>sha256 <code>4cab4fdd2813ab941b6e405c3984929c2b17b192bc13e4d20a2e09343b0e5ca2</code> on <code>e0a7b57</code>, on " +
+    "<code>d62e87a</code> and on <code>448c42c</code></b>, and the same hash again with <code>rankRecent</code> passed on every " +
+    "slot call. (A different query set from the backend's, so a different digest from its " +
+    "<code>66b955cd&hellip;</code> &mdash; two instruments, one conclusion.) <b>The three demotion causes on the real library:</b> " +
+    "<code>d62e87a</code> answered <code>basis: \"recent\"</code> over an alphabetical list in all three and in <b>185 of 400</b> " +
+    "swept windows; the head answers <code>null</code> in all three and <b>0 of 400</b>. <b>On the no-query case &mdash; the only " +
+    "one the sheet reads <code>basis</code> for &mdash; all 876 single-movement windows are honest.</b> " +
+    "<b>In the app:</b> a fresh device opens the door on <b>#62 over a genuinely alphabetical list</b> (first row " +
+    "<i>3/4 Sit-Up</i>); a device with twelve movements inside 56 days opens on <b>#61 with those twelve first, alphabetically</b>; " +
+    "a typed query shows the <code>MATCHES</code> kicker with the notice hidden, in every mode; no match prints " +
+    "<i>No movement matches \"zzzzqq\".</i> + <i>Clear the search</i>. " +
+
+    "<b>(STATES) The empty-draft Summary</b> carries the control above <i>Nothing logged yet.</i>'s block; <b>a blocked save</b> " +
+    "keeps it present, enabled, above <code>#bs-slot</code>, and the refusal is still there after the sheet closes; <b>a failed or " +
+    "unparseable library</b> gives <i>Could not open the exercise list. It is not on this phone yet. Open the app once with a " +
+    "connection and it will be here.</i> with <code>Not now</code> only, no <code>!</code> marker, and the draft untouched; " +
+    "<b>two taps in one second</b> open one sheet and the second tap never reaches the control, writing nothing; " +
+    "<b>Escape</b> closes it and returns focus to <code>#addexbtn</code>. " +
+    "<b>(DATES) Five real browser timezones at the boundary</b>, clock forced: 23:50 in America/Los_Angeles, 00:10 in Asia/Beirut, " +
+    "Pacific/Kiritimati (UTC+14), the US DST fall-back on 1 Nov and the year boundary in America/New_York. <b>Every saved session " +
+    "carries the LOCAL day, never the UTC one</b>, with the added entry on it. " +
+    "<b>(MUTANTS) Four in <code>index.html</code>, each injection asserted to have matched exactly once, all four killed.</b> " +
+    "M4 removes <code>swHead</code>'s <code>extra</code> branch AND <code>swKickText</code>'s own <code>!sw.exId</code> guard: " +
+    "<b>it does NOT throw</b> &mdash; <code>swExOf(undefined)</code> falls through to <code>exAnywhere</code>, so the sheet opens " +
+    "and prints <b><i>CLOSEST TO EXERCISE NO LONGER IN ANY PLAN</i></b> over a recency-ranked list. The defence is right and the " +
+    "branch order is load-bearing; the stated failure mode in <code>718fb33</code>'s message and in the code comment " +
+    "(&ldquo;a thrown sheet&rdquo;) is wrong, and that is a comment, not a defect. M5 drops " +
+    "<code>args.ex = cardEx(&hellip;)</code> &rarr; the added barbell card opens kg-direct with no bar on an lb device. M6 points " +
+    "<code>sumRow</code> back at <code>e.implement</code> &rarr; <i>bodyweight</i> reverts to <i>zero load</i>. M7 drops the " +
+    "<code>&middot; per DB</code> suffix from the added target. " +
+    "<b>(THE TWO-TAB ATTACK) WO-013's log overlay HOLDS, and B-76 is reproduced unchanged.</b> Tab B resumes the draft, adds a " +
+    "movement and logs <code>32.5 &times; 11</code>; the stale tab A then saves. <b>No earlier session is lost &mdash; all 24 are " +
+    "still on disk, 24 &rarr; 25</b>, which is what the overlay is for. But A writes its own memory of the DRAFT: the saved session " +
+    "holds <code>d1a</code> only, B's card is gone and <b>there is no refusal and no notice</b>. <b>The control run proves it is " +
+    "B-76 and not this order:</b> the identical attack with B typing a set into an EXISTING card (<code>d1h</code>) loses that set " +
+    "the same way, with no Add involved. " +
+    "<b>Found: no defect. One wrong statement in a commit message (M4's failure mode), one overclaiming doc comment in " +
+    "<code>librarySearch</code> (with a non-empty query, <code>basis: \"recent\"</code> can stand while no RETURNED row earned the " +
+    "bonus &mdash; 8 reachable cases; unreachable with no query, which is the only case the sheet reads the field for), and one " +
+    "pre-existing <code>0 lb</code> on Summary. None of them loses a number.</b> " +
+    "<b>file:// suite 1061 / 1061 / 0 on thirteen clocks.</b></span></li>" +
+
     "</ol>";
 })();
 </script>
