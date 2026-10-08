@@ -8339,7 +8339,7 @@ async function keepUndoTap(rec){
      document on disk the commit invented. So the key goes, and memory takes
      the same answer the boot read would have given it. */
   let ok;
-  if(rec.absent){ ok=await del(PLANS); if(ok) adoptPlans({}); }
+  if(rec.absent){ ok=await del(PLANS); if(ok){ adoptPlans({}); backupSoon(PLANS); } }  /* B-173: del() is not save() and pushes nothing, so the undo must - else the next open's M11 adopts the server's plan_meta and he is back on the copy. */
   else ok=await save(PLANS,rec.base,{replace:true});
   if(!ok){ hideToast(); toast(fail,false,4200); return; }
   /* The mark goes only after the plan is back, and in that order: a cleared
