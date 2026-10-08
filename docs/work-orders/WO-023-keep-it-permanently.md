@@ -1,7 +1,29 @@
 # WO-023 — Keep it permanently: promote an added movement into the plan
 
-Filed by `project-manager`, 2026-10-08, from Chady's ask after his first session using WO-019's door.
-Status: **specified**. Nothing built. **Depends on WO-022 and does not start its build without it.**
+Filed by `project-manager`, 2026-10-08. **Re-cut the same day, by Chady.**
+Status: **specified**. W1 closed and signed off. Nothing built.
+
+> ## THE CUT — his words, and what they bind
+>
+> > *"please don't change anything already implemented, it's working as expected. just allow me the 'add an
+> > exercise' when needed and allow me to decide if it's permanent or just for the session."*
+>
+> **The deliverable is exactly that and nothing else.** Two instructions, and the first binds hardest.
+>
+> | | |
+> |---|---|
+> | **Nothing already shipped moves** | §22.7's `Put {X} in the plan` and its read-only line render **exactly as they do today**, literal #47 included. The `Swap` sheet, `Add as well`, the added card, AD1's sentence, `Add an exercise` (§22.20), the navrow, `Finish session`, `Save session` — **untouched**. WO-022's W4 is cut. Its UX section §22.21 stays on disk as a spec for a later order and is not built |
+> | **The whole feature is one new thing** | A control in the added movement's **Summary block** that writes it into the plan, with a form that collects the prescription. That is the order |
+>
+> **Copy-on-write is folded in, not sequenced.** If his active plan is read-only the promote makes the
+> editable copy **as part of that one tap** (W3a). The swap path is not touched, no existing control is
+> re-wired, and nothing waits on the question of which plan he is on — see §5.
+>
+> **B-116 is off this order's critical path.** The coach ruled the prescription is **collected, never
+> guessed**: `s`, `lo`, `hi` are empty fields, `k` is unselected, and there is no pre-fill and **no derived
+> hint line**. The clause B-116 gated is not being built, so the gate came off **because the clause was
+> cut, not because the question was answered.** He has not answered it. B-170 stays open on its own merits
+> and `s` is refused on arithmetic grounds that survive any answer he gives (§6).
 
 ---
 
@@ -10,297 +32,294 @@ Status: **specified**. Nothing built. **Depends on WO-022 and does not start its
 > *"I want to be able to, if I add an exercise during the current session and when I click on finish
 > session, the app should be prompting me do you want to keep it permanently or just for this session."*
 
-**This is the second ask in this repo's history that comes out of real training, and it came back within
-hours of the thing it is about shipping.** WO-019 went live tonight (`4245d13`); he used the door, added a
-movement, and found the one thing the door does not do. That is the feedback loop this project has never
-had. It is worth saying out loud before anything is planned: **the tooling is finally downstream of the
-training.** The standing diagnosis stays suspended.
+**The second ask in this repo's history that comes out of real training, and the first that comes out of a
+thing we shipped the same day.** WO-019 went live (`4245d13`), he used the door, added a movement, and found
+the one thing it does not do. Then he cut the scope himself, which is the same loop running a second time in
+one evening. The standing diagnosis stays suspended.
 
 ---
 
-## 1. Reading of it, and the ruling it reverses
+## 1. The ruling it amends
 
-**He is asking for a prompt that `docs/decisions.md` ruled, eight hours ago, must never exist.**
+**`docs/decisions.md` Decision 4 of 2026-10-08 — "an added movement is never offered to the plan. Nobody
+asks him again."** That ruling read his *"I just want that to be specific to this session"* as a
+prohibition; he meant it as a default. **Amended, not overturned:**
 
-> **Decision 4, 2026-10-08 — "an added movement is never offered to the plan. Nobody asks him again."**
-
-That ruling was made on his own words: *"I don't want that to be reflected on the actual workout plan, I
-just want that to be specific to this session."* The PM read that as a prohibition. **He meant it as a
-default.**
-
-**Amended, not overturned, and the distinction is the whole design:**
-
-| | |
+| Stands | Changes |
 |---|---|
-| What stays true | **Adding never touches the plan.** `swAdd` writes `S.draft.entries` and nothing on its path reaches `phat:v1:plans`. The add confirm keeps saying `The plan does not change.` because at that moment it is true. Session-only remains the default and remains free. |
-| What changes | **After the work exists, there is one explicit control that offers to keep it.** Nothing is written unless he taps it. |
-
-Read that way the two statements are consistent and the second is a refinement of the first. **Decision 4
-is amended in `docs/decisions.md` by this pass, with his sentence and the amendment side by side**, so no
-future session re-litigates it from the half of the record it happens to read.
-
-**It is his call, and he has made it.** The PM's job here is to make sure the prompt cannot cost him a
-number and cannot write a prescription nobody coached.
+| **Adding never touches the plan.** `swAdd` writes `S.draft.entries` and nothing on its path reaches `phat:v1:plans`. The add confirm keeps saying `The plan does not change.` (`index.html:7540`) — at that moment it is true | **After the work exists, one explicit control offers to keep it.** Nothing is written unless he taps it |
 
 ---
 
-## 2. Placement — the PM takes the main session's reading, and claims it also takes Chady's
+## 2. Placement — ruled, and it is not a compromise
 
-He said *"when I click on finish session."* The main session said *the offer belongs on Summary beside
-`Make it permanent`, not as an interstitial.*
+He said *"when I click on finish session."* `Finish session` is `#tosum` (`index.html:3866`) — a
+**navigation to Summary**, not the save. So the screen his tap produces **is** Summary.
 
-**They are the same place, one tap apart, and this is a fact rather than a compromise.** `Finish session`
-is `#tosum` (`index.html:3866`) — it is a **navigation to Summary**, not the save. The save is
-`Save session`, on Summary. So the screen his tap on `Finish session` produces **is** Summary. A control
-in Summary's own stack is what he sees the instant he clicks Finish session, above the save, every time.
+**Ruled: no interstitial. The offer is a persistent block inside the added movement's Summary block, below
+Rule AD1's sentence** — the geometry §22.7 already uses for a promote (*"inside the swapped exercise's
+block, below its verdict — after the reading, not before it"*). An added card has no verdict; it has AD1's
+sentence, which the coach ruled stays unchanged in both places (§25.3.5).
 
-**Ruled: no interstitial. The offer is a persistent block on Summary, inside the added movement's own
-block, below Rule AD1's sentence** — precisely where §22.7 already puts `Put {X} in the plan` for a
-swapped entry, which is *"inside the swapped exercise's block, below its verdict — after the reading, not
-before it."* An added card has no verdict; it has AD1's sentence, which is the reading in its place.
-
-Three reasons, in order of weight:
-
-1. **Consistency of the act.** Promote-a-swap and promote-an-add are one idea. Giving them two different
-   interaction shapes — a quiet block for one, a modal for the other — means the shape is carrying no
-   information and he has to learn both.
-2. **Nothing dismissible goes on the road to `Save session`.** The honest statement of the risk, at its
-   real strength and not inflated: a modal at `#tosum` writes nothing, so it is **not** a P0 data-loss
-   path, and saying otherwise would be rhetoric. What it *is*: a dialog he must clear to reach the exit,
-   on the screen that also hosts `#bs-slot`, where a **blocked save** renders. Training him to swipe a
-   dialog away on the way to the save is training him to swipe away the one message that means a set did
-   not make it. That is a slow cost, it is real, and it is avoidable for free.
-3. **It fires on a screen he already scrolls to the bottom of.** §22.20.1 established that, measured, when
-   it put `Add an exercise` in that same stack.
-
-**If Chady reaffirms a true interstitial, he gets one** and the fallback is specified in W2: a sheet on
-`#tosum`, `Keep it` / `Just today` / dismiss, dismiss **equal to `Just today`** and the navigation to
-Summary completing either way, so no tap and no mis-tap can leave him stranded short of the save.
-**The session must be savable without answering it.** That is non-negotiable in both designs.
+The save path stays clean: **the session must save with the offer unanswered, on the first tap, every
+time.** That clause is not negotiable in any design.
 
 ---
 
-## 3. The crux: an added entry has no prescription, and a plan slot cannot exist without one
+## 3. What the coach ruled — W1, closed (`80d4924`, addendum §25)
 
-This is the first question, it is the coach's, and no code starts before it is answered.
+Transcribed so W2, W3 and W4 do not have to re-derive it. **These rulings are not re-litigated.**
 
-A plan exercise is `{id, n, s, lo, hi, k, implement, lift, cut?, cue?, mv?}` and
-**`addExercise` refuses without `n`, `s`, `lo`, `hi`, `k` and `implement`** (`logic.js:3237`–`3244`). Its
-own header says it: *"`k` and `implement` are REQUIRED. There is no path to an untyped exercise and no
-default is guessed here (WO-004 C-7): the add flow asks, or the add is refused."*
+### 3.1 The prescription — three sources, and which is which (§25.3.1)
 
-An added draft entry is `{sets, note, mv, n}`. What is derivable without inventing coaching:
-
-| Field | Source | Status |
+| Field | Source | Ruling |
 |---|---|---|
-| `n` | the entry's own `n` | **Derivable.** `[Certain]` |
-| `mv` | the entry's own `mv` | **Derivable.** `[Certain]` |
-| `implement` | `PHAT.libraryImplementOf(index, mv)` — **already** how the added card declares one, shipped tonight as B-161's fix under Rule I3.3 | **Derivable, and must reuse that exact derivation.** A second derivation of the same fact is a second fact. `[Certain]` |
-| `lift` | minted fresh by `addExercise` when omitted | **Derivable.** See §4 for why this is not the whole answer |
-| `cue`, `fig` | nothing supplies them | **Absent, and that is a supported state.** Same family as **B-153**, which already records that `make it permanent` leaves `fig`, `cue` and `implement` behind. Not reopened here |
-| `s` | the number of **completed sets he just logged** | An observable fact. Whether an observation is a *prescription* is the coach's call |
-| `lo`, `hi` | the reps he just logged | **Where invention starts.** See the three options below |
-| `k` | **nothing. The library supplies no `k`** — stated in `addExercise`'s own comment | **Not derivable at any price.** The coach rules, and PV1(b) makes the choice consequential |
-| `cut` | nothing | Absent. Means full-volume membership, which is the honest default for a movement he chose to add |
+| `n`, `mv` | the entry | **Written** |
+| `lift` | **minted fresh** | **Written, minted, never joined to an existing slot's `lift`** — joining puts two prescriptions on one Trend line, which is the B-46 collapse and the whole point of the `d1h` / `d5i` pair |
+| `implement` | `PHAT.libraryImplementOf(index, mv)` | **Derived and SHOWN pre-filled and changeable where I3 answers; ASKED where I3 refuses.** See 3.2 — **this is the correction that stops the control dying silently** |
+| `s`, `lo`, `hi` | **him** | **Asked. Empty fields. No pre-fill, no derived hint line** |
+| `k` | **him** | **Asked. No option pre-selected.** Clause **K3.5** |
+| `cut` | **nothing, ever** | **Never written, and `reintroOrder` is never touched.** V1's stored counter is an *index into the day's `reintroOrder` list*, so appending to that list changes what the existing counter means and the app would offer to reintroduce something it never cut |
+| `keyLifts` | **nothing, ever** | A slot with one session of history nominated as a stall subject is a six-week verdict on no evidence |
+| `cue`, `fig` | nothing | Absent, a supported state. B-153's family, not reopened |
 
-### The PM's recommendation to the coach, offered as a recommendation
+**No "Today you did 3 sets of 12–15" line.** The coach drafted one and struck it: the sets are already
+rendered in the same Summary block three inches above the form, and restating them beside an empty field
+turns a fact into a suggestion for no information gained.
 
-**Collect the prescription from him, in the promote sheet, pre-filled from what he just did, and refuse
-until `k` is answered — reusing the Plan Editor's add-exercise contract verbatim.**
+### 3.2 The correction the order needed — `implement` refuses on 199 of 876 rows
 
-That contract already exists and was already coach-reviewed: `ADD` is refused naming the empty field until
-`k` and `implement` are answered (WO-006 B2), the Type line states the consequence of the option chosen,
-and a mismatched rep range warns once (coach Rule K2). Reusing it means **no new coaching surface at
-all** — one sheet, one existing set of rules, one existing set of literals.
+`libraryImplementOf` answers for 677 rows and **I3 refuses 199**. On a refused row it yields nothing and
+`addExercise`'s `PLAN_IMPLEMENTS.indexOf(spec.implement) < 0` predicate **refuses the whole promote** — so a
+kettlebell swing he added, logged and wants to keep would hit a dead control with no stated reason.
 
-**Rejected, and named as rejected so nobody proposes it:** a silent default. `3 × 8–12 hyp` is literally
-the prototype's `addEx` hard-code that **B-57 struck down** — *"a silent guess that decides what the app
-tells him to lift."* It would be that same defect, shipped a second time, through a door built for daily
-use.
+```
+I3 derives a value  -> the form SHOWS it, pre-filled, changeable, not asked. Pre-filling a
+                       derived FACT is not the same act as pre-filling an observed DOSE: a
+                       fact has a source that is not his own fatigue.
+I3 refuses          -> the form ASKS, with WO-006 B2's existing implement control and its
+                       existing refusal. No new string, no silence, and no promote that
+                       dies without saying why.
+```
 
-**Also rejected: refuse and route him to the Plan Editor.** That is what §22.7's read-only line does
-today and it is the behaviour he has just told us is not good enough.
+### 3.3 `k` — asked, and the day does not constrain it (clause K3.5)
+
+Refused until answered, **no option pre-selected** (a pre-selected radio is a default, and B-57 is about
+defaults, not about dialogs). **The picker offers power, hyp and speed on every day of every plan** — no
+field derives `k`, restricting the options *is* the app choosing the protocol, and a mixed-role day is a
+legitimate plan shape the coach authored himself (§23.5, PPL3 has three). `KIND_LINE` states the
+consequence of the option; Rule K2's warn-once range check fires normally, because unlike a swap there is a
+form and all three of `(k, lo, hi)` are being typed for the first time.
+
+### 3.4 Position, and the D8 case (clause AD1.6)
+
+**End of the day, always — including when the draft put the card mid-session via `afterExId`.** A plan is a
+prescription, not a transcript of one session, and added work sits behind the work it must not compromise;
+end-of-day satisfies *never ahead of a power or speed slot* automatically on all five shipped plans and all
+four templates. **AD1.6.3: the slot carries the draft entry's own id**, approved on coaching grounds as
+well as mechanical ones — tonight's sets *are* that slot's own history, so a disclosed cross-slot fallback
+would be the app hedging about a fact it holds directly. **AD1.6.4: nothing about tonight is re-judged** —
+no `rx`, no `sw`, no verdict, no rest target, no Trend line. **AD1.6.5: the day is never substituted and
+never created.** **AD1.6.6: the same movement twice in one day warns, it does not refuse.**
+
+Two literals:
+
+```
+D8 refusal (NEW):
+  That day is not in your plan any more, so there is nowhere to keep this.
+  Today's sets still save.
+
+duplicate movement (REUSED, MOVE_WARN.Q4, index.html:4866):
+  {Day} already holds {name} at {target}. This puts the same movement there
+  twice. Keep one unless you mean both.
+```
+
+The second clause of the D8 refusal is `[Certain]`-required: **any refusal reachable from the road to
+`Save session` states that the session is safe, or it reads as a failed save.**
+
+### 3.5 AD1's last clause stands (§25.3.5)
+
+`A verdict needs it in your plan.` stays, unchanged, on both surfaces, and **must not become conditional on
+whether the control is beside it.** The card outlives the control — the sentence renders on the session card
+from the first set and on Summary after the save, states where there is no control on screen at all. A
+condition above the control that satisfies it is the control's **reason**, not a duplicate of it.
+
+### 3.6 Zero completed sets gets no offer and no explanation of its absence
+
+There is nothing to write a prescription about, and a greyed control is a question he has to answer by
+guessing.
+
+### 3.7 Provenance — clause PV1.2, and it renders never on his current plan
+
+The PV1(b) downgrade is **accepted and disclosed**, gated on
+`phatProvenance(before) === true && phatProvenance(after) === false`. The sentence goes **last in the
+confirm**, never in the Type line: a Type line describes the *option*, PV1.2 describes the *plan*, and
+putting a plan-level fact on an option row makes it look like a property of `hyp`. **On the plan he trains
+on today it is unreachable** — that plan is neither PHAT nor derived from PHAT, so provenance is already
+false. **B-168 is reclassified from P1 to a recorded consequence.**
 
 ---
 
-## 4. The second crux, which nobody has named yet: the promoted slot starts blind
+## 4. What unavoidably touches shipped behaviour — so he decides rather than discovers
 
-`addExercise` **mints a fresh `ex.id`** (`logic.js:3267`). So a naive promote produces a plan slot whose
-id is not the id tonight's sets were logged under. Consequences, traced:
+**Three things, and only the third is a real change. All three are named here because the cut was
+*"don't change anything already implemented"* and honesty about the edges is the whole value of saying it.**
 
-- **Tonight's session is unaffected** — the added entry stays slot-less, so it still gets no `rx`, no
-  `sw`, and no verdict. That is the safe half and it must be pinned, not assumed (C4).
-- **Next session's card for that slot has no prior of its own.** It falls back through **Rule MV1** —
-  `priorFor` crosses slots by movement — **only if** the new slot carries `mv` and tonight's entry carries
-  `mv`. Both do, under §3. So the ghost appears with MV1's words naming the fallback.
-- **But it is a fallback, with a disclosure sentence, forever**, for a slot that could simply have owned
-  its own history.
+1. **The added movement's Summary block gains a control.** This is **new surface on an existing screen**,
+   not a change to an existing control: nothing that renders today renders differently, moves, resizes or
+   changes a word. The block below it (`#bs-slot` → `← Back | Save session` → `DISCARD SESSION`) is
+   untouched. **Not a change to shipped behaviour in any sense he would notice as one.**
+2. **`vSummary` renders one more node.** Its contract — *reaching this screen, leaving it and coming back
+   leaves `phat:v1:draft` byte-identical* — is unchanged and must be **re-proved, not assumed** (C6). The
+   rule governs rendering, not tapping (`docs/decisions.md` 2026-10-08 §6), so a control there is allowed
+   and nobody may "protect" the invariant by refusing it.
+3. **If — and only if — his active plan is read-only, the first promote makes a new plan and activates
+   it.** That is visible, in two places, and it is the one thing he should rule rather than meet:
+   - A new row appears on **Plans**, under `Your plans`, named `{his plan} — my version`, marked active.
+   - **That row reads `0 sessions logged` while the plan he has been lifting on keeps all nine**, because
+     `sessionsUnderPlan` counts by `planId` and the copy has a new one (`index.html:5018`, coach §25.1).
+     True, misleading, and exactly the sort of thing he would report as a bug. Filed as **B-172**.
 
-**PM's position, and it is a backend + coach decision, not a preference:** promote **the entry's own id**
-into the plan, so tonight's sets become that slot's own history from the first moment. It is safe from
-collision **by construction** — `addDraftEntry` mints the entry id against the draft *and* `takenIds` of
-every plan on the device (`logic.js:1588`–`1597`, call site `index.html:7706` passes
-`{plan:sp(), plans:allPlans()}`). `addExercise` cannot do this today; it needs either a caller-supplied id
-or a dedicated primitive. **W3 builds the primitive.**
+   **If he is already on an editable copy, item 3 does not happen at all** — `editableTarget` returns the
+   store byte-identical, `created:false`, and nothing appears anywhere. See §5.
 
-The residual risk is honest and small: ids are scoped per plan document, so a plan arriving later by merge
-from the other account could in principle carry the same id. That is already a possible state (`resolveEx`
-searches across plans) and is **not made worse** here. Named, not solved.
-
-The fallback, if the coach or backend refuses the id-preserving promote: mint fresh and rely on MV1. It
-works and it is disclosed. The PM prefers the first.
-
----
-
-## 5. The third crux: `k` on a power day silently downgrades his coaching
-
-`phatProvenanceReport`'s **PV1(b)** fails a day that holds `k:"power"` together with `k:"hyp"` or
-`k:"speed"` (`logic.js:2981`–`2995`). PHAT's `d1` *Upper power* is all `power`.
-
-So: he adds a face pull at the end of Upper power, promotes it, and the coach-recommended `k:"hyp"`
-**flips `phatProvenance` to `false` on his plan**, which changes ST1's and D1's sentences from the brief's
-assessed diagnosis to the generic one — the one that names *the plan itself* as a candidate cause, which
-the PHAT version deliberately excludes.
-
-**Nothing goes silent** — `keyLifts`, `speedSource`, `reintroOrder` and `reducedWeeks` are all preserved
-by the copy, so SP1, V1, ST1 and D1 all still run. It is a **copy downgrade**, `[Certain]` mechanically,
-and it is exactly the class CLAUDE.md §1 says QA cannot detect: *the code can be perfect and the coaching
-wrong.*
-
-Owner: `strength-coach`, W1 question 3, jointly with WO-022 W1 question 2.
+**Nothing else.** No migration, `SCHEMA_VERSION` stays **7**, zero bytes move in the log store, and no
+session document's shape changes.
 
 ---
 
-## 6. Constraint and backlog check
+## 5. The premise that was an inference, and why nothing waits on it
 
-- **§3.1 no build step** — one sheet, one pure primitive, one control. No conflict.
-- **§3.2 offline-first** — the promote must complete with the network off. Criterion C7.
-- **§3.3 never lose a number** — the live risk, and it is specific: a plan write on the road to
-  `Save session`, with an in-progress draft holding every set of the session in memory. C1–C6.
-- **§3.4 local dates** — `createdAt` on any copy is `PHAT.localDate()`.
-- **§3.5 loads are kg** — untouched. The promoted slot's `implement` is derived, so its load column
-  inherits WO-016's / B-161's meaning rather than declaring a new one.
-- **§3.6 ≥ 44 px** — the control and every sheet row, measured at 400 px with Playwright.
+**Withdrawn:** the PM's claim that every plan he owns is read-only. It is true of the five **shipped** plans
+and it was an **assumption** about which plan he is on. The coach found the contradiction: addendum §22.10
+says nine sessions are logged *"on a copy of the 5-day template"*, and a copy is editable by construction
+(`copyPlan` sets `readOnly: false`).
+
+**Ruled: specify it correct either way and do not block.** `editableTarget`'s two branches *are* the two
+possibilities:
+
+| His active plan | What the promote does | What he sees |
+|---|---|---|
+| **Read-only** (one of the five shipped) | copy → activate → write the slot, inside one tap | §4 item 3 |
+| **Editable** (a stored copy) | write the slot directly. **Store byte-identical apart from the new slot, `created:false`, no copy, no activation** | Only the new slot |
+
+So the build is the same build under either answer, and the answer changes only whether §4 item 3 is
+reachable. **WO-022 stops being a prerequisite** — which is the structural reason the fold-in is right and
+not merely smaller.
+
+**One line settles it, and it is his:** open **Plans**. The active row under **`Your plans`** means a copy,
+editable. The active row among the templates means shipped, read-only. WO-020's export answers it from the
+server side and is already specified.
+
+---
+
+## 6. B-116 — off the critical path, and why that is not an answer
+
+**The clause it gated is cut.** The coach ruled `s`, `lo` and `hi` are asked with empty fields, no pre-fill
+and no hint line (§3.1). There is no derivation to gate.
+
+**Recorded precisely, because the distinction will matter later:** the gate came off **because the clause it
+guarded was cut, not because the question was answered.** He has not answered it. B-170 stays open.
+
+Two further rulings from §25.5 that this order carries forward:
+
+- **`s` is refused on its own merits and an answer to B-116 does not unblock it.** Two arithmetic harms,
+  independent of warm-ups: a **too-high `s` switches the verdict off silently** at the C-11 gate
+  (`completedSets >= ex.s`) — not wrong advice, *no* advice, with nothing on screen to disagree with; and a
+  **too-low `s` makes X1's badge fire every honest week**. A later pass reading *"the pre-fill was blocked
+  on B-116"* as licence to pre-fill all three the moment he replies would be wrong.
+- **`lo` / `hi` pre-fill stays blocked on B-116.** `lo = min logged rep, hi = max logged rep` on a five-set
+  ramp yields `3–12`, permanent, feeding P1/H1, R1's rest row, V1's tier and ST1.
+
+**And a second B-116 route the coach found while in here, accepted and not blocking (§25.4):** the promoted
+slot's prior is tonight's unprescribed entry, which carries **no `rx`**, so Rule PE1 sees no epoch boundary
+and H1 case 3c does not fire. On an ascending ramp H1 prints a false percentage in a **descriptive**
+sentence and issues **no load instruction**; the narrow bad case is an `s` small enough that `Cprev`
+captures a heavy top set, which can print a load instruction. **Accepted — the contaminant is not new**
+(his 12 Sep ramp is already read as prescribed work) and the alternatives cost the ghost and the seed, the
+two things on that card he will actually use. **Required instead: one QA assertion, C13.** Filed as
+**B-171**.
+
+---
+
+## 7. Constraint check
+
+- **§3.1 no build step** — one sheet, two pure functions, one control. No conflict.
+- **§3.2 offline-first** — the whole promote completes with the network off. C7.
+- **§3.3 never lose a number** — the live risk is a plan write on the road to `Save session` with a draft
+  holding the whole session. C1–C4. **The save works unanswered.**
+- **§3.4 local dates** — `PHAT.localDate()` only; `toISOString()` in the diff is a fail.
+- **§3.5 loads are kg** — untouched. `implement` is derived, so the promoted slot's load column inherits
+  B-161's meaning rather than declaring a new one.
+- **§3.6 ≥ 44 px** — the control and every form row, measured at 400 px with Playwright.
 - **§3.7 secrets** — none.
 - **§3.8 `main` always deploys** — starts from `main @ 4245d13`.
-- **Schema** — `SCHEMA_VERSION` stays **7**. The log store is not touched. The plans store gains one
-  exercise object inside a document whose shape is already schema 7. **No migration.**
 - **Open P0s** — none.
-- **Depends on an open order: WO-022.** Without copy-on-write this order's primary path refuses on every
-  plan he owns.
-- **B-165 is inherited, not reopened.** *Added work feeds no engine* — a promoted movement **does** gain
-  `cut` membership (absent ⇒ full volume), so after a promote V1 can finally see it. That is an
-  improvement and it does **not** close B-165, which is about *un*-promoted added work. Stated so nobody
-  claims the close.
-- **B-164 / WO-021 is not blocked by this and does not block it.** A promoted slot has an id with
-  history, so it is on the *good* side of B-164 from its second session onward.
-- **New items filed by this order:** **B-166** (the ask), **B-167** (the dead control / copy-on-write),
-  **B-168** (PV1(b) downgrade), **B-169** (the blind promoted slot), **B-170** (B-116's new consequence
-  class — a warm-up ramp becomes a prescription).
-
----
-
-## 7. B-116, seventh asking — and this time it blocks one clause
-
-**Say it plainly, because six work orders have now said it politely.** *Warm-up sets: logged, marked, or
-omitted?*
-
-Until tonight B-116 only poisoned **reads**: his five-set 20 → 70 kg ramp on `d1a` is read by every engine
-as prescribed work, twenty-six days later. This order makes it poison a **write**.
-
-If `s`, `lo` and `hi` are pre-filled from the sets he logged, and the sets he logged on a movement he has
-never done before include a ramp — **which is the single most likely thing for him to do on exactly that
-movement** — then the pre-fill is `5 × 3–12`, he taps through it with chalky hands, and **a warm-up ramp
-becomes a prescription in his plan, permanently**, feeding P1/H1, R1's rest row, V1's tier and ST1 from
-then on.
-
-**Ruled: the pre-fill is blocked on his answer. The order is not.**
-
-- Without an answer, W3 and W4 ship the promote with **no pre-fill** — he types `s`, `lo`, `hi` and picks
-  `k` in the Plan Editor's existing form. Strictly safe, fully functional, and it still closes B-166.
-- With an answer, W1 rules the pre-fill derivation and W4 adds it.
-
-That is the only escalation available to the PM that is not asking the same question a seventh time in the
-same way: **the question now has a feature attached to it that he can see.** Recorded in
-`docs/decisions.md` as a process failure in its own right — a note inside a work order has failed to get
-this asked six times, so it has stopped being a note.
+- **Schema 7, no migration, zero bytes in the log store.**
+- **Prerequisite** — **none any more.** W3a is inside this order.
 
 ---
 
 ## 8. Work items
 
-### W1 · The prescription, `k`, the position, and the pre-fill — owner: `strength-coach`
+### W1 · [CLOSED, signed off, `80d4924`] The prescription, `k`, the position, the copy — owner: `strength-coach`
 
-**Blocking. No code starts before this lands.** Mandatory under `CLAUDE.md` §1.
+Delivered as addendum §25.3–§25.5, clauses **K3.5** and **AD1.6**, three strings (one new, two reuses),
+plus the `implement` correction and C13. Transcribed in §3 above. **Do not reopen.**
 
-Scope, in: five answers in `docs/coach-audit-addendum.md`, as a clause inside **Rule AD1** where one fits
-— **no new rule id unless genuinely needed**, following WO-021's precedent.
+### W2 · The promote sheet and its confirm — owner: `ux-designer`
 
-1. **Where does the prescription come from?** The PM recommends collecting it with the Plan Editor's
-   existing refuse-until-answered contract, pre-filled where §7 allows. Confirm, correct, or replace.
-   A silent default is rejected by the PM on B-57's record; the coach may overrule that, in writing, with
-   the default stated.
-2. **Is `s` = completed sets logged a defensible prescription, or is an observation not a prescription?**
-   One sentence either way.
-3. **`k`.** What does an added-then-promoted movement get, and **does it depend on the day it lands in**
-   (§5, PV1(b))? If the answer is "whatever he picks", say what the Type line tells him about the
-   consequence — including the provenance downgrade, if W1 of WO-022 rules it must be disclosed.
-4. **Position in the day.** `addExercise` pushes to the end of `day.ex` (`logic.js:3275`), which is where
-   he did it. Confirm that end-of-day is right, and rule what happens when the draft's `dayId` is not in
-   the active plan at all (the D8 state — a resumed draft whose plan moved under it).
-5. **The copy, at two moments.** The add confirm says `The plan does not change.` (`index.html:7540`) and
-   AD1 says `Added today. No sets or reps set, so no verdict. A verdict needs it in your plan.` Both must
-   read as *a default and an option*, not as a contradiction and not as nagging. AD1's last clause now
-   has a control that satisfies it on the same screen — **say whether it still earns its place or whether
-   the control has replaced it.**
+Scope, in: a new §22.22 of `docs/specs/wo-004-screens.md`.
 
-Out: the UI, the words on the button, the sheet layout. Those are W2.
+- **The control**, in the added movement's Summary block, below AD1's sentence. Geometry from §22.20.11's
+  measured numbers, not invented ones. One control per added movement — he may add two.
+- **The form**, which is **WO-006 B2's, reused**: `s` / `lo` / `hi` empty, `k` unselected with `KIND_LINE`
+  as the Type line, `implement` pre-filled and changeable where I3 answers and asked with B2's existing
+  control where it refuses, Rule K2's range warning live, and B2's existing refusal naming the empty field.
+  **No new form.**
+- **The confirm**: the slot facts, then **PV1.2's sentence last, under its gate** (the hook is §22.21.11,
+  left empty on purpose). 300 ms arm — this is the one control on that screen that changes something outside
+  this session.
+- **The refusals and warnings**: the D8 literal (NEW, coach's words, both clauses), MOVE_WARN.Q4 (REUSED)
+  for the duplicate-movement warning — **a warning, not a refusal** — and the plan-write failure in §2.2's
+  shape.
+- **The undo**, and what it restores. One act, one undo. **It must re-read the store and refuse on a
+  mismatch**; a blind byte restore would delete a plan another tab created, which is B-76 / B-128 and has
+  bitten this repo twice (§22.21.10 solved this already — reuse the reasoning).
+- **The negative space, written down**: nothing for an added entry with zero completed sets and **no
+  explanation of its absence** (§3.6); nothing on a session card; nothing after `Save session`; nothing for
+  a swapped entry — that is §22.7's control and two controls in one block is a defect.
+- **If a copy will be made, the confirm says so**, reusing §22.21.3's three plan facts by reference. Do not
+  reword them: they are coach-adjacent and already written.
 
-Acceptance criteria:
-- All five answered, each with a confidence tag, under numbered addendum sections.
-- Question 3's answer is unambiguous about whether the day constrains `k`.
-- If a pre-fill is ruled, it is stated as a derivation a backend engineer can implement without judgement
-  (e.g. *"`s` = completed sets; `lo` = min logged rep; `hi` = max logged rep; clamp to the editor's
-  bounds"*), and it is **conditional on B-116** in writing.
-- Question 5 returns either "AD1's sentence stands" or the replacement literal.
-
-Depends on: — (may run in parallel with WO-022 entirely)
-
-### W2 · The offer: where, what it says, what it refuses — owner: `ux-designer`
-
-Scope, in: a new §22.22 of `docs/specs/wo-004-screens.md`. Covering:
-
-- **The primary design** (§2): a block inside the added movement's Summary block, below AD1's sentence,
-  mirroring §22.7's geometry and its 300 ms arm. One control per added movement — he may add two.
-- **The fallback design**, specified in full but marked *not built unless Chady reaffirms*: the `#tosum`
-  interstitial, `Keep it` / `Just today` / dismiss, **dismiss ≡ `Just today`**, navigation to Summary
-  completing in every branch.
-- **The confirm**, carrying every fact the tap commits to: the prescription he is about to write, the day
-  it lands in, that a copy of the plan is made and becomes active (WO-022's three facts, by reference not
-  by restatement), and that **today's sets are not re-judged**.
-- **The copy for the prescription form**, reusing the Plan Editor's literals wherever they exist and
-  naming every new one.
-- **The refusal states**, in §2.2's shape: the plan write failed; the draft's day is not in the plan; the
-  movement is already in that day (an exact-`mv` duplicate — say what happens, do not let it be
-  discovered).
-- **Undo**, and what it undoes: the slot, or the slot *and* the plan copy. One act, one undo.
-- **The negative space**, written down: nothing appears for an added movement with no completed sets;
-  nothing appears on a session card; nothing appears after `Save session` has run.
-
-Out: §22.21 and §22.7's read-only row, which are WO-022 W2's. **Two UX agents must never be in
-`wo-004-screens.md` at once — this lane and WO-022 W2 are serialised by the main session, not
-concurrent.**
+Out, explicitly: **§22.7, §22.21, literal #47, the `Swap` sheet, `Add as well`, `Add an exercise`, the
+navrow, AD1's sentence, the added card's target slot — none of these may change by one word or one pixel.**
+§22.21 stays on disk unbuilt; this section must not contradict it, and should name it as parked.
 
 Acceptance criteria:
-- §22.22 exists; every literal marked NEW; every size a number at 393 px and 400 px, ≥ 44 on both axes.
-- The primary and fallback designs are both complete enough to build without a second UX pass.
-- One explicit sentence: **the session is savable without answering the offer**, in both designs.
-- No string claims a set is on a chart (§22.16 #5).
-- The duplicate-movement case has a stated behaviour.
+- §22.22 exists; every literal marked NEW or REUSED with its source; every size a number at 393 px and
+  400 px, ≥ 44 on both axes.
+- One explicit sentence: **the session is savable without answering the offer.**
+- A diff-level statement listing which existing sections are **not** touched, so W4 has a boundary it can
+  check itself against.
+- No string claims a set is on a chart (CH1 / §22.16 #5 still bind).
+- The `0 sessions logged` consequence (B-172) is either worded or explicitly declared out of scope with a
+  reason — not left silent.
 
-Depends on: W1 (for the prescription's shape and the copy at both moments)
+Depends on: W1 (closed)
 
-### W3 · `promoteDraftEntry` — one pure primitive — owner: `backend-engineer`
+### W3a · `editableTarget` — owner: `backend-engineer`
+
+Scope, in: exactly WO-022 §3 W3, verbatim, exported on `window.PHAT`, pure, no DOM, no clock.
+Consumed **only** by the promote.
+
+Acceptance criteria: WO-022 W3's list in full, plus coach §25.6's addition —
+- **`state.reintro` and `lastReintroDate` are untouched by `editableTarget`.** They are not its to write.
+- The editable-active-plan branch returns a **byte-identical** store and `created:false`.
+
+Depends on: —
+
+### W3b · `promoteDraftEntry` — owner: `backend-engineer`
 
 Scope, in: `logic.js` only.
 
@@ -308,134 +327,158 @@ Scope, in: `logic.js` only.
 promoteDraftEntry(plan, dayId, exId, entry, spec, index) -> {ok, plan, exId, lift, problems}
 ```
 
-- Writes a new exercise into `plan`'s day `dayId`, **carrying `exId` verbatim** (§4), refusing if that id
-  is already taken anywhere in that plan.
-- `n` and `mv` come from `entry`; `implement` is derived through the **existing**
-  `libraryImplementOf(index, mv)` call path and is never re-implemented; `s`, `lo`, `hi`, `k` come from
-  `spec` and are validated by the **same predicates `addExercise` uses** — shared, not copied.
-- Refuses a `readOnly` plan, exactly as `addExercise` does. The caller pairs it with
-  `PHAT.editableTarget` (WO-022 W3).
-- Returns a **new** plan; the argument is never mutated; `ok:false` returns the original untouched.
-- No clock, no DOM, no globals.
+- **Carries `exId` verbatim** (AD1.6.3), refusing if that id is taken anywhere in the plan.
+- `n` and `mv` from `entry`. `implement` from `libraryImplementOf(index, mv)` **when it answers** and from
+  `spec` **when it refuses**. `s`, `lo`, `hi`, `k` from `spec`, validated by the **same predicates
+  `addExercise` uses — shared, not copied.** Two copies of one validator is two validators and they drift.
+- **Mints a fresh `lift`. Never joins an existing one.**
+- **Writes no `cut`. Never touches `reintroOrder`. Never adds to `keyLifts`.**
+- **Pushes to the end of `day.ex`**, regardless of the draft's `afterExId` order.
+- Refuses an unresolvable `dayId` (AD1.6.5) and a `readOnly` plan.
+- Returns a new plan; the argument is never mutated; `ok:false` returns it untouched.
 
-Out: the store write, the UI, any change to `addExercise`'s signature, any change to `addDraftEntry`.
+Out: the store write, any UI, any change to `addExercise`'s or `addDraftEntry`'s signatures.
 
 Acceptance criteria:
 - Pure: the input plan is `JSON.stringify`-identical after every call, including every refusal.
-- The promoted slot's `id` **equals the draft entry's id**, and `resolveEx` finds it.
-- `n`, `mv` and `implement` on the slot match the entry and the library derivation exactly; `implement` is
-  produced by the same code path the added card already uses (asserted by comparing the two outputs, not
-  by re-deriving).
-- Missing or invalid `s` / `lo` / `hi` / `k` is refused with the same `problems` shapes `addExercise`
-  emits — asserted field by field, so the two can never drift.
-- A duplicate id anywhere in the plan is refused and the plan is untouched.
-- An unknown `dayId` is refused and the plan is untouched.
-- **`phatProvenanceReport(after)` is asserted explicitly for a `hyp` slot promoted into `d1`**, pinning
-  §5's downgrade as a known, tested fact rather than a surprise.
-- Zero bytes change in any session document: a saved session built from the same draft before and after
-  the promote is byte-identical except where W1 ruled otherwise.
+- The promoted slot's `id` equals the draft entry's id and `resolveEx` finds it.
+- `implement` on the derived path is produced by the same code path the added card already uses — asserted
+  by comparing the two outputs, never by re-deriving. On an I3-refused `mv` with no `spec.implement` the
+  call **refuses with a stated problem** rather than emitting an invalid plan.
+- Missing or invalid `s` / `lo` / `hi` / `k` refuses with the **same `problems` shapes `addExercise`
+  emits**, asserted field by field so the two cannot drift.
+- `cut` absent on the new slot; `reintroOrder` and `keyLifts` deep-equal to before, on all five shipped
+  plans; `lift` not equal to any existing `lift` in the plan.
+- The new slot is the **last** element of `day.ex`.
+- A duplicate id, an unknown `dayId`, or a read-only plan each refuse with the plan untouched.
+- `phatProvenanceReport(after)` asserted explicitly for a `hyp` slot promoted into PHAT's `d1`, pinning the
+  PV1.2 gate's input as a tested fact.
 
-Depends on: W1, WO-022 W3
+Depends on: W1 (closed)
 
 ### W4 · Build the offer — owner: `frontend-engineer`
 
-Scope, in: `index.html` only. The Summary block from §22.22, the prescription sheet, the confirm with its
-300 ms arm, the tap path `editableTarget` → `promoteDraftEntry` → `save()` (read-before-write, WO-013),
-the toast and the undo.
+Scope, in: `index.html` only. The Summary block from §22.22, the form, the confirm with its 300 ms arm, the
+tap path `editableTarget` → `promoteDraftEntry` → `save()` (read-before-write, WO-013), the toast and the
+undo.
 
-Out: `logic.js`, `tests.html`, the interstitial fallback unless Chady has reaffirmed it, any pre-fill
-unless W1 ruled one under §7.
+**Out, and this is the cut: no existing control, string, size or presence rule changes.** Specifically not
+`index.html:4014` (§22.7's branch, including literal #47), not the `Swap` sheet, not `Add as well`, not
+`Add an exercise`, not the navrow, not AD1's sentence, not the added card. If the build appears to require
+one of those to move, **stop and raise it** — do not move it.
 
 Acceptance criteria:
-- **The offer renders only for an added entry with at least one completed set, only on Summary, only
-  before the save.**
-- `vSummary` still writes nothing on render: reaching Summary, leaving it and coming back leaves
-  `phat:v1:draft` **byte-identical** (the screen's own criterion 1, `index.html:3990`). Re-run, do not
-  assume — and do not "protect" it by refusing the control (`docs/decisions.md`, 2026-10-08 §6).
-- Tapping the offer and confirming: the plan has the new slot at the end of the draft's day, with the
-  draft entry's id; the active plan is editable; the toast names the day.
-- Tapping `Not now`, the scrim or Escape: `phat:v1:plans` byte-identical.
-- `Save session` works, with the offer unanswered, on the first tap, every time.
+- The offer renders **only** for an added entry with ≥ 1 completed set, **only** on Summary, **only** before
+  the save, and never for a swapped entry.
+- Zero completed sets ⇒ **no control and no explanatory line.**
+- `Save session` works on the first tap with the offer unanswered, every time.
+- `vSummary` writes nothing on render: reach Summary, leave, come back ⇒ `phat:v1:draft` byte-identical.
+- Declining anywhere (`Not now`, scrim, Escape) ⇒ `phat:v1:plans` byte-identical.
+- The whole flow completes with the network off.
 - Measured at 400 px with Playwright: every target ≥ 44 px, nothing in a top corner.
-- With the network off, the whole flow completes.
+- **A diff audit against W2's not-touched list: no line of the swap flow, §22.7's branch or §22.20's
+  control is modified.** This is a criterion, not a courtesy.
 
-Depends on: W2, W3
+Depends on: W2, W3a, W3b
 
 ### W5 · Verify — owner: `qa-engineer`
 
-Scope, in: regression tests in `tests.html` for W3, a browser pass for W4, and these criteria.
+Scope, in: regression tests in `tests.html` for W3a and W3b, a browser pass for W4, and these criteria.
+**C2, C5, C8, C9, C10 and C11 are re-homed from WO-022 W5 and keep their meaning.**
 
-**Data criteria. The first four are the reason this order is not three lines.**
-
-- **C1 · The promote cannot cost a set.** Nine cards, sets typed on seven of them including a half-typed
-  row and a notes-only entry, one added movement with three sets. Promote. Then `Save session`.
-  **Every one of the seven cards' numbers is in the saved session, byte for byte, including the
-  notes-only entry and the half-typed row's committed value.** Then do it again and reload *between* the
-  promote and the save: the draft comes back with all of it, and declining the draft discards it and
-  leaves the promoted plan standing.
-- **C2 · The promote cannot cost the session on a failed plan write.** Force the plans write to fail
-  (quota, stub): the refusal renders, `phat:v1:plans` is byte-identical, **and `Save session` then saves
-  the whole session including the added entry.**
-- **C3 · A stale tab cannot eat the promote and the promote cannot eat a stale tab.** Two tabs, both with
-  a draft. Tab A promotes and saves. Tab B saves its own session from older memory. **Both sessions are
-  on disk and the promoted slot is still in the plan.** This is the B-76 class; WO-013's lock and overlay
-  are what it is testing.
-- **C4 · Today's sets are not re-judged by the promote.** The added entry in the saved session has **no
-  `rx`** and **no `sw`**, and its card's verdict before and after the promote is the same string.
-- **C5 · Next session sees it.** Start the next session on that day: the promoted slot is on the card
-  list, at the end, its ghost shows tonight's numbers **as its own prior, with no MV1 fallback
-  disclosure** (that is §4's whole point — if the disclosure appears, the id was not carried and the order
-  failed its own design).
-- **C6 · The history differential.** Every verdict and every history read over every slot on his real
-  export, before the promote and after it: identical except for the one new slot. Same shape as WO-014's
-  differential hash.
-- **C7 · Offline and local dates.** The whole flow with the network off; `createdAt` correct at 23:30 and
-  00:30 local in a non-UTC zone.
-- **C8 · Provenance is observed, not discovered.** Promote a `hyp` movement into `d1` and record what
-  ST1's and D1's sentences become. If W1 ruled a disclosure, it renders. **If W1 ruled the downgrade
-  unacceptable, this is a fail, not a finding.**
-- **C9 · Backup round trip.** The new slot and the plan copy push and pull back; the merge adds nothing
-  and removes nothing on the device that made them.
-- **C10 · Suite.** Green, zero skips, zero named failures, three meta-tripwires intact, no fixture writing
-  a `phat:*` key. Count read from the file.
-- **C11 · Red-first.** W3's tests against the pre-W3 `logic.js` from `git cat-file blob`, red for the
-  stated reason.
-- **C12 · Reachability.** The offer is **absent** for an added entry with zero completed sets, absent on
-  every session card, absent after the save, and absent for a swapped entry (that is §22.7's control, and
-  two controls in one block is a defect).
+- **C1 · The promote cannot cost a set.** Nine cards, sets typed on seven including a half-typed row and a
+  notes-only entry, one added movement with three sets. Promote. Then `Save session`. **Every one of the
+  seven cards' numbers is in the saved session byte for byte**, including the notes-only entry. Repeat with
+  a reload *between* the promote and the save: the draft comes back with all of it; declining it discards
+  the draft and leaves the promoted plan standing.
+- **C2 · The promote cannot cost the session on a failed plan write.** Force the plans write to fail: the
+  refusal renders, `phat:v1:plans` is byte-identical, **and `Save session` then saves the whole session
+  including the added entry.**
+- **C3 · A stale tab cannot eat the promote and the promote cannot eat a stale tab.** Two tabs, both with a
+  draft. Tab A promotes and saves; Tab B saves its own session from older memory. **Both sessions are on
+  disk and the promoted slot is still in the plan.** B-76's class; WO-013's lock and overlay are what this
+  tests. Then the same against the undo (§22.21.10's refuse-on-mismatch).
+- **C4 · Today's sets are not re-judged.** The added entry in the saved session has **no `rx`** and **no
+  `sw`**, and its card's verdict string before and after the promote is identical.
+- **C5 · Next session sees it as its own.** Start the next session on that day: the promoted slot is in the
+  card list, **last**, its ghost shows tonight's numbers **as its own prior with no MV1 fallback
+  disclosure.** If the disclosure appears the id was not carried and the order failed its own design.
+- **C6 · Summary still writes nothing on render.** Byte-identity of `phat:v1:draft` across reach / leave /
+  return, **before** the control is tapped.
+- **C7 · Offline and local dates.** Whole flow network-off; any `createdAt` correct at 23:30 and 00:30
+  local in a non-UTC zone.
+- **C8 · Provenance is observed, not discovered — and run it on PHAT or a PHAT copy, NOT on his export.**
+  (Coach §25.6's correction: on his plan it tests nothing, because provenance is already false.) Promote a
+  `hyp` movement into `d1`, record ST1's and D1's sentences, and assert PV1.2's disclosure renders under its
+  gate and **does not render** on a plan where provenance was already false.
+- **C9 · Backup round trip.** The new slot, and the plan copy if one was made, push and pull back; the merge
+  **adds nothing and removes nothing** on the device that made them; the other account's `activePlanId` is
+  unchanged.
+- **C10 · Suite.** Green, zero skips, zero named failures, three meta-tripwires intact, no fixture writing a
+  `phat:*` key. Count read from the file and recorded.
+- **C11 · Red-first.** W3a's and W3b's tests run against the pre-change `logic.js` from `git cat-file blob`
+  and go red for their stated reasons.
+- **C12 · Reachability.** Absent at zero completed sets, absent on every session card, absent after the
+  save, absent on a swapped entry.
+- **C13 · The ramp case is observed, not discovered** (coach §25.4, required). Promote a movement whose
+  session holds a five-set ascending ramp, `s` typed as 3; **record** H1's exact string on the next
+  session's card. Repeat with `s` typed as 5 and record H1.3b's string. **Neither is asserted correct —
+  both are recorded**, so the day B-116 is answered the fix has a before-picture. **If H1's tonnage branch
+  ever gains a load instruction on the "up" side, reclassify to P1 and the `lastFor` exclusion is the fix.**
+- **C14 · Nothing shipped moved.** A diff audit plus a browser pass: §22.7's read-only line renders verbatim
+  including literal #47, `Add as well` and `Add an exercise` are unchanged, AD1's sentence is unchanged on
+  the card and on Summary, and the unswapped verdict/history differential over his real export is
+  **identical** to `main @ 4245d13` except for the one new slot. **This is the criterion that enforces the
+  cut.**
+- **C15 · The copy's session count.** If a copy is made, record what the Plans row reads (`0 sessions
+  logged`, B-172) rather than letting it surprise someone.
 
 Depends on: W4
 
 ### W6 · Ship — owner: `release-engineer`
 
-Scope, in: merge to `main`, the 61-file deploy, byte-verify, the `sw.js` VERSION judgement stated.
+Scope, in: merge to `main`, the 61-file manual deploy per `docs/deploy.md`, byte-verify, and the `sw.js`
+VERSION judgement **stated** by its own header rule (file list unchanged ⇒ no bump; state it, never assume
+it).
 
-Acceptance criteria: `PASS 61/61`; live `/logic.js` contains `promoteDraftEntry`; cold offline reload
-renders; deploy record written into this order.
+Out: `.vercelignore`, `docs/deploy.md` §7, the GitHub App — `CLAUDE.md` §2 is explicit.
 
-Depends on: W5, **and WO-022 W6 is already live or shares this deploy.**
+Acceptance criteria: `PASS 61/61` against production; live `/logic.js` contains `promoteDraftEntry` and
+`editableTarget`; a cold offline reload renders; deploy record written into this order.
+
+Depends on: W5
 
 ---
 
-## 9. Risks
+## 9. Sequence
+
+**W2 ∥ W3a ∥ W3b → W4 → W5 → W6.** W1 is closed. Nothing is blocked on Chady. W3a and W3b are independent
+of each other and of W2.
+
+---
+
+## 10. Risks
 
 | Risk | Severity | Handling |
 |---|---|---|
-| **A plan write on the road to `Save session` loses sets** | the only P0 class this project has | C1, C2, C3. No interstitial. The offer is on Summary, after `Finish session`, and the save works unanswered |
-| **A warm-up ramp becomes a permanent prescription** | P1, wrong advice forever, QA cannot detect it | §7. The pre-fill is blocked on B-116; the order ships without it |
-| **`k` on a power day silently downgrades ST1 / D1 copy** | P1, wrong-sentence class | §5, W1 Q3, C8. **B-168** |
-| **A silent `3 × 8–12 hyp` default** | P1, and it is B-57 shipped twice | Rejected in §3 by name; the coach may overrule only in writing |
-| **The promoted slot starts blind and leans on MV1 forever** | P2 | §4, W3's id-carrying promote, C5. **B-169** |
-| **"Which plan is active" changes mid-session, unannounced** | P2 | WO-022 W2's three facts, stated before the tap |
-| **A promoted slot inherits no `cue` and no `fig`** | P3 | Known, B-153's family, not reopened. The photograph is absent; the card still renders (UX §11: a missing figure removes the node) |
-| **Two UX agents in `wo-004-screens.md`** | process | WO-022 W2 and WO-023 W2 are serialised by the main session |
-| **Cross-plan id collision after a merge** | P3 | Already possible today; not made worse. Named in §4 |
+| **A plan write on the road to `Save session` loses sets** | the only P0 class here | C1, C2, C3. No interstitial. Save works unanswered |
+| **The cut is violated by accident** — a shipped string or control moves because it was convenient | P1 against his explicit instruction | W2's not-touched list, W4's diff audit, **C14** |
+| **The promote dies silently on an I3-refused movement** | P1, a dead control with no reason | §3.2: ask on a refusal. W3b refuses with a stated problem rather than emitting an invalid plan |
+| **A guessed prescription** | P1, B-57 shipped twice | Collected, never guessed. Coach declines to overrule B-57 and says so for the record |
+| **`s` typed too high switches the verdict off silently** | P1 | He types it; `KIND_LINE` and K2 are live; C13 records the ramp case |
+| **A new plan appears and reads `0 sessions logged`** | P3 display | §4 item 3, **B-172**, C15. Only if his plan is read-only |
+| **H1 compares against an unprescribed baseline** | P2, accepted | §6, **B-171**, C13's recording |
+| **PV1.2 downgrade** | recorded consequence, not a defect | B-168 reclassified; unreachable on his current plan |
+| Cross-plan id collision after a merge | P3 | Already possible; not made worse |
 
-## 10. Needs from Chady
+## 11. Needs from Chady
 
-1. **B-116, seventh asking. One sentence: warm-up sets — logged, marked, or omitted?** This is the only
-   item that gates a clause of this order rather than being a note in it.
-2. **Does he want the true interstitial on `Finish session`?** The PM recommends no and has given the
-   reason (§2). The offer is one tap away either way. If he says yes, W2's fallback is built as specified.
-3. **Nothing else.** The prescription, `k`, the position and the copy are agent decisions — the coach's.
-   The placement is the PM's unless he overrules it. Copy-on-write's naming is UX's.
+1. **One line, and it changes nothing about the build: open Plans — is the active row under `Your plans`,
+   or among the templates?** It decides whether §4 item 3 is reachable at all. Nothing waits on it (§5).
+2. **If it is among the templates: is he content that the first promote creates `{plan} — my version` and
+   makes it active?** The alternative is refusing the promote on a read-only plan, which is the behaviour
+   he has just said is not good enough. **PM recommendation: proceed, with the confirm saying so.**
+3. **B-116 is still owed and no longer gates anything here.** *When you log a warm-up ramp — the 20, 40,
+   55, 70 on bench — are those rows in the app as sets, or do you only log the working sets?* One sentence.
+   It unblocks a pre-fill nobody is building yet, and it is the last thing standing between him and typing
+   four numbers once per promoted movement.

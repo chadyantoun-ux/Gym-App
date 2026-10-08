@@ -4517,6 +4517,10 @@ negotiable and it is the only part of the placement question the PM will not tra
 
 ### Decision 3 — this is two orders, and the split is about who decides, not about size. `[Certain]`
 
+> **AMENDED THE SAME EVENING BY CHADY — see §8b below before acting on this.** The split stands as an
+> analysis and is overruled as a plan: WO-022's build half is cut, its coach and UX lanes are parked, and
+> `editableTarget` folds into WO-023's promote. Do not read this section alone.
+
 **WO-022 (copy-on-write) → WO-023 (the promote).**
 
 Every plan on his device is `readOnly: true` — PHAT plus WO-018 T3's four — and both plan-write primitives
@@ -4560,6 +4564,12 @@ copied plan is not renaming it, not reordering it, and not changing a load. It i
 the wrong kind to the right day.**
 
 ### Decision 5 — B-116 stops being asked and starts blocking one clause. `[Certain]` that the mechanism is new; `[Likely]` that blocking is the right escalation
+
+> **SUPERSEDED IN PART — see §8b.** The coach then ruled the whole prescription collected with no pre-fill
+> at all, so the clause this blocked **no longer exists to be built** and B-116 is off WO-023's critical
+> path. **The gate came off because the clause was cut, not because he answered.** B-116 is still owed, it
+> still blocks any future `lo` / `hi` derivation, and `s` is now refused on its own arithmetic regardless of
+> his answer.
 
 *Warm-up sets: logged, marked, or omitted?* Unanswered at six askings, across six work orders.
 
@@ -4637,6 +4647,51 @@ fact is a second fact.**
 **Not his, and nobody should ask him:** the prescription source, `k`, the position in the day, the copy at
 both moments (the coach's); the placement geometry, the copy's name, the refusal strings (UX's); whether
 the promote carries the entry's id (backend's, with Decision 6 as the position to argue against).
+
+### 8b. He narrowed the scope himself, the same evening, and the orders were re-cut to match. `[Certain]`
+
+> *"please don't change anything already implemented, it's working as expected. just allow me the 'add an
+> exercise' when needed and allow me to decide if it's permanent or just for the session."*
+
+**Recorded as his decision, not ours.** Decision 3 above split this into two orders and gave WO-022 a build
+half that re-wires `Put {X} in the plan` — a control he already uses — and retires literal #47 with it.
+**He refused that, and he was right to:** the user-visible value of WO-022's build half is a *swap* promote
+he never asked for, and the cost is a change to a working screen on the way to delivering something else.
+
+**The re-cut, and the one structural consequence worth keeping:**
+
+- WO-022's **W1 (coach sign-off) and W2 (§22.21 + the §22.7 amendment) stay on disk, closed and parked** —
+  the right eventual answer to B-167, specified and deliberately unbuilt. **W4 / W5 / W6 are cut.** A
+  one-line status marker at the top of §22.21 is owed, because a spec ahead of its code is a trap for the
+  next session that reads it, and it is `ux-designer`'s to write rather than the PM's.
+- **W3 (`editableTarget`) folds into WO-023 as W3a**: if his active plan is read-only the promote makes the
+  copy inside its own tap. **No existing control is touched.** WO-022 stops being a prerequisite.
+- **And that fold dissolves a question nobody could answer.** The coach found that WO-022 §6's *"every plan
+  he owns is `readOnly`"* was the PM's **inference** from the five shipped plans being read-only, while
+  addendum §22.10 says his nine sessions are *"on a copy of the 5-day template"* — and a copy is editable by
+  construction. The PM had already told the main session the swap control was dead for him on the strength
+  of that inference; **the claim is withdrawn pending observation.** `editableTarget`'s two branches *are*
+  the two possibilities, so the build is identical under either answer and **nothing waits on it.** One line
+  settles it and it is his: **Plans → is the active row under `Your plans`, or among the templates.**
+- **B-116 comes off WO-023's critical path, and the reason is recorded so it cannot be misread later: the
+  gate came off because the clause it guarded was cut, not because the question was answered.** He has not
+  answered it. `strength-coach` §25.3.1 ruled the prescription collected, never guessed — empty fields, no
+  pre-fill, no hint line — so there is no derivation left for B-116 to gate. It stays open, it still blocks
+  any future `lo` / `hi` derivation, and the coach added the correction the PM had wrong: **`s` is refused on
+  its own arithmetic and an answer to B-116 does not unblock it.**
+
+**What still unavoidably touches shipped behaviour, named so he decides rather than discovers:** the added
+movement's Summary block gains a control (new surface, not a changed control); `vSummary` renders one more
+node and its write-nothing invariant must be re-proved; and **if his active plan is read-only, the first
+promote creates `{plan} — my version`, activates it, and that row reads `0 sessions logged` while the plan
+he has been lifting on keeps all nine** (B-172, `sessionsUnderPlan` counts by `planId`). If he is already on
+a copy, none of the third item happens.
+
+**The lesson, which is the second one of these in one evening:** Decision 1 recorded that *"I just want X"*
+is a default and not a prohibition. This one is the mirror image — **when he says a thing works, the
+smallest order that leaves it alone is the correct order**, even when a larger one is already written, signed
+off and specified down to the pixel. The parked work cost one coach pass and one UX pass and it is not
+wasted; shipping it anyway would have been.
 
 ### 9. The standing diagnosis, at its twelfth asking — and the first time the answer is not "yes"
 

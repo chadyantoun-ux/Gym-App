@@ -1,11 +1,45 @@
 # WO-022 — Copy-on-write: a plan change on a read-only plan makes an editable copy
 
 Filed by `project-manager`, 2026-10-08, out of Chady's ask for a *keep it permanently* prompt (WO-023).
-Status: **specified**. Nothing built.
 
-**This order exists because every plan on his device is `readOnly`, so every control that writes a plan
-is dead on arrival.** It is the prerequisite half of WO-023 and it has standalone value: it brings `Put
-{X} in the plan` (UX §22.7) back to life, and he swaps far more often than he adds.
+> ## STATUS — RE-CUT 2026-10-08 BY CHADY. READ THIS BEFORE ANYTHING BELOW.
+>
+> His words: *"please don't change anything already implemented, it's working as expected. just allow me
+> the 'add an exercise' when needed and allow me to decide if it's permanent or just for the session."*
+>
+> **That is a direct refusal of this order's build half.** W4 wires a changed control into §22.7 — the
+> swap flow he already uses — and the UX lane retires literal #47 with it. He has not asked for that and
+> has now said not to do it.
+>
+> | Item | Status after the re-cut |
+> |---|---|
+> | **W1** `strength-coach` | **Closed, signed off** — addendum §25.1, §25.2, clause **PV1.2**. `80d4924` |
+> | **W2** `ux-designer` | **Closed, and parked.** §22.21 of `docs/specs/wo-004-screens.md` plus the in-place amendment to §22.7's read-only row. `c89d2ae`. **Specified, deliberately unbuilt** — it is the right eventual answer to B-167 and it is not this build |
+> | **W3** `backend` — `editableTarget` | **Moved to WO-023 as W3a.** It is the only item the promote needs, and it changes no existing surface |
+> | **W4** `frontend` | **CUT.** No control on an existing screen changes. §22.7 renders exactly what it renders today, including #47 |
+> | **W5** `qa` · **W6** `release` | **CUT as this order's.** W3a's criteria ride WO-023 W5 / W6 |
+>
+> **What this order is now: the home of the eventual swap-path copy-on-write, with its coach sign-off and
+> its screen spec already written and waiting.** It ships when he asks for it. Nothing in it is wasted
+> and nothing in it is scheduled.
+>
+> **A hazard the re-cut creates, named so it cannot bite:** §22.21 and the amended §22.7 row are **on disk
+> and ahead of the code**. A future session reading `docs/specs/wo-004-screens.md` will find a spec for a
+> control that does not exist and an amendment that was not applied. A one-line status marker at the top
+> of §22.21 saying so is owed, and it is **`ux-designer`'s to write** — the PM does not edit a UX-owned
+> section's body. Until it exists, this banner is the record.
+
+**The premise in this order's original framing was an inference, not an observation, and it may be false.**
+See §5 — the coach found that §22.10 of the addendum says nine sessions are logged *"on a copy of the 5-day
+template"*, and a copy is editable by construction. **The re-cut makes that harmless**: folded into the
+promote, copy-on-write is one branch of one function whose other branch is a byte-identical no-op, so the
+build is correct either way and nothing waits on the answer.
+
+---
+
+**Original framing, kept for the record:** this order existed because every plan on his device was believed
+to be `readOnly`, so every control that writes a plan is dead on arrival. It brings `Put {X} in the plan`
+(UX §22.7) back to life, and he swaps far more often than he adds.
 
 ---
 
@@ -71,7 +105,16 @@ All verified against `main @ 4245d13`, which is production.
 
 ## 3. Work items
 
-### W1 · Does a copy of a shipped plan still carry the shipped plan's coaching? — owner: `strength-coach`
+### W1 · [CLOSED, signed off, `80d4924`] Does a copy still carry the shipped plan's coaching? — owner: `strength-coach`
+
+**Answered in addendum §25.1 and §25.2.** (a) Confirmed, with two additions the order did not name: **no
+advice engine filters history by `planId`** (`planIdOf`'s only caller is `sessionsUnderPlan`, a display
+count), and **`state.reintro` is keyed by `dayId`**, so V1's week-5 ramp counter survives a copy — had it
+been plan-keyed, a copy would have silently reset it. (b) The PV1(b) downgrade is **accepted and
+disclosed under clause PV1.2's truth-condition gate** (`phatProvenance` true before and false after), and
+**on the plan he trains on today it renders never**, because that plan is neither PHAT nor derived from it
+— so **B-168 is unreachable on his real data** and is reclassified from P1 to a recorded consequence.
+(c) `"PHAT — my version"` carries no coaching claim; signed off, no change.
 
 Mandatory under `CLAUDE.md` §1: this reaches the stall detector, the deload check and `PROGRAM`.
 
@@ -99,7 +142,13 @@ Acceptance criteria:
 
 Depends on: —
 
-### W2 · The flow and the words for "this needs a plan you can edit" — owner: `ux-designer`
+### W2 · [CLOSED AND PARKED, `c89d2ae`] The flow and the words — owner: `ux-designer`
+
+**Delivered as §22.21 of `docs/specs/wo-004-screens.md`, with §22.7's read-only row amended in place and
+literal #47 retired — and it is deliberately NOT BUILT.** The re-cut keeps it on disk as the spec for the day he
+asks for the swap-path control. It is ahead of the code; see the banner. One sentence of it is reused by
+WO-023 and only one: **PV1.2's provenance disclosure**, which moves into the promote's confirm (§22.21.11
+is the hook and it was left empty on purpose).
 
 Scope, in: a new §22.21 of `docs/specs/wo-004-screens.md`, plus an in-place amendment to §22.7's
 read-only row. Covering:
@@ -128,7 +177,11 @@ Acceptance criteria:
 
 Depends on: — (parallel with W1; W1's answer lands as an amendment if it adds a line)
 
-### W3 · `editableTarget` — one pure function — owner: `backend-engineer`
+### W3 · [MOVED TO WO-023 AS W3a] `editableTarget` — one pure function — owner: `backend-engineer`
+
+**The spec below stands verbatim and is the thing that gets built — under WO-023, consumed only by the
+promote.** One criterion is added there by coach §25.6: **`state.reintro` and `lastReintroDate` are
+untouched by `editableTarget`** — they are not its to write, and the criterion makes that visible.
 
 Scope, in: a new pure function in `logic.js`, exported on `window.PHAT`, no DOM, no globals, no clock:
 
@@ -163,7 +216,10 @@ Acceptance criteria:
 Depends on: W1 (for the provenance expectation only — the function may be written first and the
 assertion stated last)
 
-### W4 · Wire §22.7's dead control through it — owner: `frontend-engineer`
+### W4 · [CUT BY CHADY, 2026-10-08] Wire §22.7's dead control through it — owner: `frontend-engineer`
+
+**Do not build this.** It changes a control he already uses and he has said not to. `index.html:4014`
+renders exactly what it renders today.
 
 Scope, in: `index.html` only. The read-only branch at `:4014` gains the control W2 specifies; the tap
 runs `PHAT.editableTarget`, persists through the existing `save()` path (read-before-write, WO-013), then
@@ -184,7 +240,10 @@ Acceptance criteria:
 
 Depends on: W2, W3
 
-### W5 · Verify — owner: `qa-engineer`
+### W5 · [CUT — these criteria ride WO-023 W5] Verify — owner: `qa-engineer`
+
+**C1, C2, C4, C5, C6, C7, C8, C9, C10 and C11 below are re-homed to WO-023 W5 verbatim**, because the
+thing they verify is now built there. C3 is superseded by WO-023's C1, which is stricter.
 
 Scope, in: the criteria below, regression tests in `tests.html` for W3, a browser pass for W4.
 
@@ -219,7 +278,7 @@ Scope, in: the criteria below, regression tests in `tests.html` for W3, a browse
 
 Depends on: W4
 
-### W6 · Ship — owner: `release-engineer`
+### W6 · [CUT — rides WO-023 W6] Ship — owner: `release-engineer`
 
 Scope, in: merge to `main`, the 61-file manual deploy per `docs/deploy.md`, byte-verify, and the `sw.js`
 VERSION judgement by its own header rule (file list unchanged ⇒ no bump; **state the judgement, never
@@ -254,3 +313,31 @@ So it is an acceptance criterion rather than a question:
 
 What is **not** ruled here, and belongs to WO-023: what happens when the copy is made **and edited** in
 the same breath, which is exactly what a promote does.
+
+---
+
+## 5. The contradiction the coach found, and why the re-cut makes it harmless
+
+**Two documents disagree about the one fact this order was premised on, and the PM resolved it by
+inference rather than observation. That was wrong and it is corrected here.**
+
+| Claim | Source | If true |
+|---|---|---|
+| Every plan he owns is `readOnly` | **WO-022 §6, the PM's own** — inferred from *"all five shipped plans are `readOnly: true`"*, which is true, by assuming his active plan is one of the five | Copy-on-write is a prerequisite for any promote |
+| Nine sessions are logged *"on a copy of the 5-day template"* | `docs/coach-audit-addendum.md` §22.10, written 2026-09-29 | **A copy is editable by construction** (`copyPlan` sets `readOnly: false`), so he already has an editable active plan and **copy-on-write is never reached** |
+
+They cannot both be true. The PM told the main session the swap control was dead for him on the strength
+of the first, and that claim is **withdrawn pending observation**: it is true of the five shipped plans and
+it is an assumption about which plan he is on.
+
+**Ruled: the build does not wait on the answer, because `editableTarget`'s two branches are exactly the two
+possibilities.** Read-only active plan ⇒ copy, activate, then write. Editable active plan ⇒ **write
+directly, byte-identical store, `created:false`, no copy, no activation, nothing on the Plans screen
+changes.** The function was already specified that way (§3 W3), so the correct build is the same build
+under either answer, and the only thing the answer changes is **whether he ever sees a new plan appear** —
+which is §4 of WO-023, the one consequence he is owed a decision on.
+
+**How to settle it, one line, and it is his to run:** open **Plans**. The active plan's row is marked
+active. If it sits under **`Your plans`** it is a copy and editable; if it sits with the templates it is
+shipped and read-only. WO-020's export answers the same question from the other side, and WO-020 is
+already specified and already gated on him.
