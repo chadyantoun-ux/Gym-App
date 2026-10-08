@@ -4150,3 +4150,170 @@ noticing an injury he reported twice, and the plan on the table is four more spl
 one of these that is about him rather than about the app.** Everything else here is tooling, and the
 tooling is not the bottleneck — and the first thing anybody should do with the two notes is not route
 them, it is **ask him how the forearm is.**
+
+---
+
+## 2026-10-08 — the feature he asked for already ships; the door is the defect; an added movement is never offered to the plan
+
+Ruled by the `project-manager` on Chady's ask of 2026-10-08, which is **the first ask in this repo's
+history that comes from training rather than from imagining training.** Orders filed: **WO-019** (the
+session-level Add) and **WO-020** (read his data). New items: **B-160**, **B-161**, **B-162**, **B-163**.
+
+### 0. Two facts established before anything was ruled, because both change the plan
+
+**Production is byte-identical to `main @ e0a7b57` on all four shell files**, verified by the PM with
+`curl` and `git cat-file blob` (`index.html`, `logic.js`, `sync.js`, `sw.js`; `sw.js` `v7`,
+`SCHEMA_VERSION 7`, `repairB131` present). So WO-015, WO-017 and WO-018 T2/T2a/T3 are all **live**, there
+is **no undeployed lane**, `main` is deployable and deployed, and this ask starts from a clean tree. The
+`wo-014-library` branch name is vestigial — it points at the same commit as `main` and `origin/main`.
+
+**The feature he asked for shipped on 2026-09-29.** `Add as well` (WO-014 W5, `index.html:7365`) satisfies
+every clause of his sentence: it appends to the end of the session, carries `mv` and `n`, logs sets, reps,
+load, unit and note, renders `No prescription` plus Rule AD1's verdict sentence, offers `Undo — remove {X}`
+for the rest of the session, and touches **no** plan document. Nothing needs building to make his ask true.
+
+### 1. Decision — the defect is the door, and it is named precisely rather than described vaguely
+
+**Ruled: this is a discoverability defect (B-160), not a missing capability.** Three causes, and the second
+is the one that matters:
+
+1. The only entry point is a button labelled `Swap`, on an exercise card, whose **accessible name** is
+   `Swap {movement} for another movement` (`index.html:3638`) — assistive technology is told, explicitly,
+   that this control is about replacing.
+2. **His moment is the end of the session, and `vSession` is a paged one-card-at-a-time view** keyed on
+   `S.exIx`. There is no scrolling list of cards, so *"a control below the last card"* — the PM's own first
+   instinct — **is not a place that exists.** The candidates are the last card's footer, the card chrome,
+   the header, or the Summary. This is recorded because the PM's instinct was wrong on a fact about the
+   screen, and the next session should not repeat it.
+3. UX §22.5 built `Add as well` as the **no-loss fallback** for a card that already holds a typed set,
+   where `Replace` must be withheld. Correct rule; it is also why Add is subordinate to Swap. It was
+   designed as the answer to a refusal, not as a thing he would seek.
+
+### 2. Decision — `Add as well` stays, and this is not a style preference
+
+**Ruled: `Add as well` is not a redundant second door. It is the only non-destructive exit from a card that
+already holds a typed set**, where UX §22.5 withholds `Replace` precisely so a typed set cannot be
+destroyed. Deleting it in the name of "one door per action" would leave that card with no forward action —
+a data-loss-adjacent regression dressed as simplification.
+
+UX **may demote** it (label, weight, or dropping it from the *untyped* case, where a session-level door
+serves). UX **may not remove it from the typed case.** The PM will accept either demotion without
+re-opening it.
+
+The general rule, which is the part worth keeping: **two doors to one engine call are fine when they answer
+two different questions asked at two different moments.** The swap sheet answers *instead of this?* at the
+point of the pick; the session-level door answers *one more?* at the end. The defect was never that two
+doors existed — it was that there was one, behind a word that means something else.
+
+### 3. Decision — "UX and frontend only" is nearly right and wrong in one load-bearing place
+
+The PM was asked to confirm that this needs no data-model work, so nobody rebuilds a working path.
+**Confirmed for storage: no new key, no new field, no schema bump, `SCHEMA_VERSION` stays 7, zero stored
+bytes move, no migration.** `addDraftEntry`, the `{sets, note, mv, n}` entry, the `added:true` read-side
+shim, Rule AD1 and UX §22.9 are complete and are **not to be re-specified or reimplemented.** WO-019 W4's
+criterion C7 makes a rebuild fail: *the entry the new door writes must be byte-identical to the entry
+`Add as well` writes for the same movement.*
+
+**The correction: `librarySearch` has no ranking basis when there is no slot, and it suppresses the recency
+bonus with it (B-162).** `basis:null`, `order:"name"`, and every scoring clause — recency included
+(`logic.js:5108`) — is gated on `order === "score"`. A session-level door passing no slot therefore opens on
+**the alphabetically first 40 of 876 movements**, under a notice reading `Ordered by name. This slot does
+not name a movement.` which is **false when there is no slot at all.** That defeats Rule SW-ORDER's own
+stated reason for existing and it is a pure-function change, not a CSS one.
+
+**Ruled: a new `basis:"recent"`** — one branch, one literal, no new scoring input, no new data, `recentMovements`
+already pure and already passed in. Rejected alternatives, recorded so they are not re-proposed:
+ranking against the card he happened to be on (at the end of a session that card is a calf raise, so the
+list would rank calves), and ranking against the whole day (a new scoring input, a bigger change than the
+ask). Accepting name-ascending is the explicit fallback **only** if `strength-coach` refuses recency as a
+presented order, and it costs a keyboard with chalky hands.
+
+### 4. Decision — an added movement is never offered to the plan. Nobody asks him again.
+
+His words: *"I want that to be by session — so when I add an exercise on a session I don't want that to be
+reflected on the actual workout plan, I just want that to be specific to this session."*
+
+**Ruled, and it is already true by construction.** `swAdd` writes `S.draft.entries` and nothing on its path
+reaches `phat:v1:plans` or `PHAT_PLAN`. `make it permanent` (UX §22.7) re-points a **slot** at a movement;
+an added movement **has no slot**, so there is nothing to re-point and no question to put to him. This is
+not a feature gap to be filled later and not a prompt to be added. WO-019 W4's criterion C5 asserts it on
+bytes: `phat:v1:plans` byte-identical before and after a save, and the shipped PHAT plan's `days`
+byte-identical.
+
+### 5. Decision — WO-016 ships before WO-019, and the reason is not priority theatre
+
+**Ruled: WO-016 (B-150, the load column) first. WO-019 ships on WO-016's deploy or immediately after it,
+never before.** W1 (ux) and W2 (coach) may start as soon as WO-016's UX lane is out of
+`docs/specs/wo-004-screens.md` — **two UX agents must never be in that file at once** — and W3 (backend)
+may run in parallel with WO-016's build, because `librarySearch` is a function WO-016 has no reason to
+open. Only W6 (release) is held.
+
+Four reasons, and the third is new evidence:
+
+1. B-150 produces a **wrong number on screen every session**. WO-019 produces none — the capability is
+   already correct. Wrong numbers outrank a hidden button.
+2. WO-019 **deliberately widens B-150's blast radius**, which B-150's own backlog row predicted for the
+   swap: *"the swap can land him on a dumbbell or a bodyweight movement mid-session."* A discoverable Add
+   is a faster road to the same place.
+3. **B-161, filed today: an added movement carries no `implement` at all** (`index.html:3933`). So
+   `loadWord(0, undefined)` prints `zero load` where `bodyweight` is true, `cardModeFor` seeds no bar on an
+   added barbell movement, and I1/I2's `per DB` cannot fire — an added dumbbell movement's load column has
+   **no declared meaning whatsoever.** That is B-150 by a fifth route and the worst of the five: the other
+   four at least know which implement they are wrong about.
+4. WO-016 has to rule the slot-less card's load column anyway. One order, one surface, one QA round.
+
+**B-161 is deliberately not folded into WO-019, and the reason is the rule, not the three lines.** The fix
+is three lines — `PHAT.libraryImplement(eq)` already exists and the Plan Editor already uses it, so the
+implement is derivable at read time from the picked library row through `mv`, for **zero stored bytes and no
+migration** (storing it on the entry is a schema bump that inherits B-153's whole question). But it changes
+what three coaching rules *say* on a card, which is `strength-coach`'s, and it is **the same question
+WO-016 exists to answer.** Folding it in means ruling B-150 by a side door, days before the order that owns
+it — which is the failure this repo already wrote down as *"nothing moves after the pin."* Routed to WO-016;
+its own three-line order if WO-016 slips past a week.
+
+### 6. Decision — the Summary may host a control, and its write-nothing rule is about rendering
+
+`vSummary`'s contract (`index.html:3990`) is that *reaching this screen, leaving it and coming back leaves
+`phat:v1:draft` byte-identical*, and that is criterion 1 of the screen, not a preference.
+
+**Ruled: that rule governs rendering, not tapping.** A deliberate tap that writes the draft and then
+navigates away — which is exactly what `swAdd` already does — does not violate it. So the Summary is an
+eligible host, and nobody should "protect" the invariant by refusing the control. WO-019 W4's criterion C6
+re-runs the byte-identity check **before** the control is tapped, so it cannot be lost by accident either.
+
+### 7. Decision — reading his data is its own order, and it needs two artefacts, not one
+
+**Ruled: WO-020, and it ships no code and writes no store.** The PM cannot read his data (the permission
+layer refuses the live Supabase project; RLS correctly blocks an anonymous read), so the order's product is
+*the smallest thing to hand Chady*.
+
+**It is two things and pretending otherwise would be wrong:** one **export per storage context** (the device
+half — Safari and the home-screen icon are two separate stores, observed in WO-011) and **one SQL query**
+(the server half, in WO-020 §2(B)). Q1 — *did the B-131 repair reach the server* — is precisely the question
+of whether the two agree, so neither artefact can answer it alone. `diag.html` is the third thing and is
+asked for **only if they disagree**; it answers *which context am I looking at*, which may not be a live
+question.
+
+Recorded so it is not rediscovered: **the server cannot show whether the repair *mark* was set.**
+`log.repairs.b131` lives on the log **store** and only session **documents** are pushed (`buildSession` →
+`{id, date, dayId, planId?, entries}`). The corrected **bytes** are the evidence, and they are better
+evidence. The discriminators are in WO-020 §2(B) as literals.
+
+**And the standing justification for doing this at all, on the record:** the last time anyone read his real
+data (2026-09-29) it produced B-155 — the pain detector deaf to negated recovery, twice, across seventeen
+days — and closed half of B-131. Both were invisible to 977 passing tests. **Reading his data has the
+highest defect yield per hour in this repo and is the only activity that has ever found a wrong-advice bug
+nobody imagined.** It should be a standing item after every few sessions, not a response to a request.
+
+### 8. The standing diagnosis, suspended once — and what replaces it
+
+Nine times this repo has recorded that the training effort was the bottleneck and the tooling was not. **He
+has been training since 22 Sep, on a new split, and he used the swap for real.** This ask is field feedback,
+not another rebuild, and it is the first of its kind here.
+
+**What replaces the diagnosis is a sharper one, and it should be raised in its place from now on: a feature
+nobody can find did not ship.** `Add as well` was built, specified, click-listed by QA end to end, deployed
+and byte-verified — and it was invisible to the one person it was built for, for sixteen days of real
+training. Every acceptance criterion passed. **The gap between "QA drove it" and "he found it" is a gap no
+criterion in `CLAUDE.md` §5 currently closes**, and the cheapest instrument against it is not a test: it is
+asking him, after a feature ships, whether he used it.
