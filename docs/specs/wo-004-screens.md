@@ -4755,7 +4755,7 @@ Exit:   Change the plan · Not now / scrim / Escape.
 | Arm delay | 300 ms on `Change the plan`, WO-001 §1F. It is the one control in §22 that changes something outside this session |
 | On confirm | `setExerciseMovement(plan, exId, mv, n)` (W4). **The slot id does not move** — the slot keeps its id, its position, its `s` / `lo` / `hi` / `k` and its whole history. Sheet closes. Toast `{day} now has {new}.` **NEW** + `Undo`; undo toast `{day} has {original} again.` **NEW** |
 | Write failed | `Could not change the plan. Nothing changed.` **NEW**, in §2.2's refusal shape. The session and its saved sets are untouched — this control is downstream of the log write |
-| Read-only plan | Button **absent**. In its place, one line: `Today only. The PHAT plan is read-only — duplicate it in Plans to keep a change.` **NEW** |
+| Read-only plan | ~~Button **absent**. In its place, one line: `Today only. The PHAT plan is read-only — duplicate it in Plans to keep a change.` **NEW**~~ **AMENDED 2026-10-08 (WO-022 W2) — the button is PRESENT and the line is DELETED. See §22.21.** A read-only active plan is not a reason to withhold the control; it is the one case the control exists for. The trigger renders exactly as the `Trigger` row above describes — same label, same class, same size — and the tap opens **§22.21's confirm** instead of this section's. #47 is **retired**, and **no string on Summary says "read-only" any more**: the whole consequence is one tap away in the sheet, and a screen whose job is the reading does not pre-announce a storage property. Dropping `Today only.` costs nothing — the mark on the entry already says the swap happened, and a button reading `Put {new} in the plan` already says it is not in the plan. **This row supersedes the `Presence` row's clause *only when the active plan is editable***; presence is now **a swapped entry, on Summary, never an added movement, in either plan state**. Every other row in this table describes the **editable** path only. §22.21 gives the read-only path's, and carries `Body line 1`–`3` (#41 · #42 · #42b) into it **verbatim, as paragraph 1** |
 
 **Why the consequence is spelled out in three sentences and not one.** Coach §22.4.6 owns *which* facts
 the confirmation carries and is `[Certain]` there are three; I own the words. They map one to one:
@@ -5704,3 +5704,314 @@ the build enforced and I am now writing down.
 existing component, and the component already ships a different size for the same control in another
 state, **the shipped size wins and the section is corrected** — unless the shipped size is below 44 px, in
 which case it is a defect and escalates. An engineer does not need to ask.
+
+---
+
+## 22.21 Copy-on-write — `Put {X} in the plan` on a read-only plan (WO-022 W2, 2026-10-08)
+
+**This section turns a refusal into the control it was refusing to be.** §22.16 #1 has recorded since
+2026-09-28 that `Put {new} in the plan` is unreachable for Chady: every plan on his device is
+`readOnly: true` — the shipped PHAT plan plus WO-018 T3's four — so the branch at `index.html:4014` has
+only ever rendered #47, the honest line that routes him to the Plans screen to do by hand what one tap
+should do. I named copy-on-write as the answer then and declined to specify it, because it changes which
+plan is active and that is a decision of its own. WO-022 is that decision. Here is the flow.
+
+**The headline, and the reason this is worth building over anything that adds a feature: it costs zero
+extra taps.** §22.7's editable path is two taps — trigger, commit. This is two taps. The copy is not a
+step he takes; it is a thing the app does because it must, and the only cost is one paragraph of
+sentences in a sheet he is already reading.
+
+**What this control does not do: it does not change today's session.** Every set already typed stays
+typed, nothing is saved by the tap, and the day's prescriptions are byte-identical before and after —
+`copyPlan` → `clonePlan` edits no `s`, `lo`, `hi` or `k`. The one thing it changes about tonight is which
+`planId` the save records, and `rx` is the same either way (WO-022 §4, criterion C11).
+
+### 22.21.1 Flow
+
+```
+Flow:   Make a copy I can change
+Entry:  The SAME trigger as §22.7 — `Put {new} in the plan`, inside a swapped exercise's block on
+        Summary, below its verdict. There is no second door, no Settings route and no Plans
+        detour. The only difference from §22.7 is which sheet opens, and he cannot tell which
+        until it is open, because the question is the same question.
+Exit:   Make a copy and change it · Not now / scrim / Escape · Undo (while the toast stands).
+Writes: ONE patch of `phat:v1:plans` — `{plans, activePlanId}` together — through `save()`, on the
+        commit tap and on the undo tap. Nothing else on the device is read or written. The log
+        store and the draft are not touched in either direction.
+```
+
+Which sheet opens is decided by the active plan's `readOnly`, read at the tap and not cached:
+editable → §22.7's confirm, unchanged. Read-only → this one.
+
+### 22.21.2 The sheet, at 393 px
+
+```
+[REF] layout — modal confirm, bottom-anchored, scrim over the whole viewport
+
+│  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   │
+│  ┃ Put Machine row in the plan?           ┃   │ h2, 17 px/800, focused on open
+│  ┃                                        ┃   │
+│  ┃ It replaces Seated cable row on Pull   ┃   │ paragraph 1 — §22.7's #41 · #42 ·
+│  ┃ from your next session. Your Seated    ┃   │ #42b, VERBATIM, the slot's facts
+│  ┃ cable row sets stay where they are.    ┃   │
+│  ┃ They stop being this slot's last       ┃   │
+│  ┃ numbers. The next verdict reads your   ┃   │
+│  ┃ Machine row sets.                      ┃   │
+│  ┃                                        ┃   │ 8 px
+│  ┃ A copy called PHAT — my version        ┃   │ paragraph 2 — the plan's facts,
+│  ┃ becomes the plan you are on. Nothing   ┃   │ #67 · #68 · #69
+│  ┃ else moves — every logged set stays,   ┃   │
+│  ┃ and every other card reads as it does  ┃   │
+│  ┃ now. PHAT stays in Plans, read-only.   ┃   │
+│  ┃                                        ┃   │
+│  ┃ [  Make a copy and change it        ]  ┃   │ 361 × 48, ghost + danger, ARMED 300 ms
+│  ┃ [  NOT NOW                          ]  ┃   │ 361 × 52, primary, LOWEST — the safe tap
+│  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛   │   sits in the slot the trigger occupied
+```
+
+**The slot's facts first, the plan's facts second, and the order is a ruling.** He tapped a button about
+a movement; the answer to what he asked comes first, and the consequence he did not ask for comes
+second — last read before his thumb lands, which is where the fact that changes which plan he is on
+belongs. It is also the only order that lets §22.7's three sentences be carried **verbatim**: they are
+coach-ruled (§22.4.6, `[Certain]` on three facts) and are not mine to reword.
+
+**Why two paragraphs and not one.** Paragraph 1 ends on *they stop being this slot's last numbers* and
+paragraph 2 opens on *nothing else moves*. Run together in one block those two read as a contradiction.
+Split, with `else` doing the scoping, they read as what they are: one thing moves, and it is the one he
+asked to move. A single six-sentence paragraph is the version of this sheet that gets him to doubt it.
+
+### 22.21.3 The three facts, and that all three are true
+
+The order names three facts the confirm must carry. Each one is checkable against the code, which is why
+none of them is reassurance.
+
+| Fact | Sentence | Why it is true, not comfort |
+|---|---|---|
+| (a) A copy is made and **becomes the plan you are on** | #67 `A copy called {copyName} becomes the plan you are on.` | `editableTarget` returns `created:true` with `activePlanId` pointed at the copy. One sentence carries both halves — that a copy exists, and that it is the active one — because they are one act and he must not be able to read one without the other |
+| (b) **Nothing in your history moves** | #68 `Nothing else moves — every logged set stays, and every other card reads as it does now.` | `copyPlan` → `clonePlan` (`logic.js:3440`) preserves **every `day.id` and every `ex.id`**. History is keyed on the slot id (WO-014's central ruling), so every prior, every ghost, every sparkline and every verdict basis resolves to the same bytes it did before the tap. `prefs.gym.ex[exId]` is keyed on the slot id too, so the load chip and the unit do not move either. An in-progress draft's entry ids still resolve, so the session on screen is unaffected. `keyLifts`, `speedSource`, `reintroOrder` and `reducedWeeks` are cloned, so SP1 / V1 / ST1 / D1 keep working and nothing drops to an ABSENT state |
+| (c) The original **stays read-only in Plans** | #69 `{source} stays in Plans, read-only.` | `copyPlan` mints a new `planId`; `writePlan` adds, never replaces, and refuses a shipped `planId` outright. The source document is not written at all |
+
+**`every other card reads as it does now` is the honest spelling of (b), and it is deliberate on three
+counts.** It is *checkable* — he can leave the sheet, walk two cards and see it. It is *scoped* by
+`other`, so it does not contradict paragraph 1. And it says nothing about a chart: Rule CH1 and §22.16 #5
+bind here as hard as anywhere, and a sheet that promised the sparkline one tap before the sparkline drops
+a line would be the `Discard` defect again.
+
+**No provenance sentence is owed by this flow, and that is a finding, not an omission.** The only edit
+this flow makes to the copy is `setExerciseMovement`, which writes `mv` and `n` and nothing else
+(`logic.js:3325`–`3326`). `phatProvenanceReport` reads `derivedFrom`, the four key lifts' ids and their
+`s`/`lo`/`hi`, each day's `k` values and the count of non-empty days (`logic.js:2959`–`2999`) — it reads
+no `mv` and no `n`. So `phatProvenance(copy after this flow) === phatProvenance(source)` for all five
+shipped plans, and the stall-advice copy, the deload copy and `PROGRAM` are the same sentences before and
+after. **PV1(b) is not reachable from this control.** §22.21.11 holds the hook for the edit that *is*.
+
+### 22.21.4 The copy's name — shown, not asked
+
+**Ruled: shown. There is no text field in this flow and there will not be one.** He is on Summary, mid
+or post-session, out of breath, one thumb, hands chalky. A keyboard between him and a plan change buys a
+name he will not think about and costs the two things this app is for — speed and not dropping the
+phone. Renaming already lives in the Plan Editor, where he is sitting down.
+
+**The scheme — and it is `copyPlan`'s own, not a second naming authority.**
+
+| | |
+|---|---|
+| Base form | **`{source} — my version`** — `copyPlan`'s shipped default (`logic.js:3444`), reached by passing no `name`. `PHAT — my version`. The dash is U+2014, which is inside the shipped font's `unicode-range` (`U+2000-206F`, `assets/archivo-inline.css`) — no per-glyph fallback |
+| On a collision | **`{source} — my version {k}`**, `k` the lowest integer ≥ 2 whose name is free in the store, compared on the trimmed name, case-insensitively. `PHAT — my version 2`. Reachable: he can switch back to a read-only plan in Plans and swap again. Two rows reading `PHAT — my version` in the Plans list is a man who cannot tell which plan he lifts on, and nothing in `validatePlan` or `planRowProblems` prevents it today |
+| Where the name is resolved | **Inside `editableTarget`, from the store** — never in a view. A name computed in a view is a name two views can disagree about |
+| How the sheet knows it before the write | `editableTarget` is pure and moves zero bytes until `save()`. **The sheet prints `editableTarget(store, localDate()).plan.name` — the same call the commit makes** — so what he reads is what Plans will read, by construction and not by two code paths agreeing |
+| No date, ever | A plan is not an event. `PHAT — my version · 8 Oct` tells him nothing about which of two plans he trains on, and it would put `localDate()` into a *name* — a string that outlives the day it was made and then lies about nothing in particular. `createdAt` already records the date, in the field for it |
+| No `k` in the name, no count, no claim | The name names its source and that he changed it. **It makes no coaching claim**, which is W1 question 3's concern; `— my version` is the clause that keeps it honest. If `strength-coach` rules that a name containing `PHAT` is a claim even so, **this row is where the replacement token lands and no other section moves** |
+
+### 22.21.5 Interactions, tap by tap
+
+| # | Tap | What changes on screen | What reaches disk |
+|---|---|---|---|
+| 0 | — | The trigger stands in the swapped block on Summary, below the verdict. No line beside it, no "read-only" anywhere | nothing |
+| 1 | `Put {new} in the plan` | The sheet opens, scrim over the viewport, focus on the h2. The commit is present but **inert for 300 ms** — not disabled, not greyed | **nothing.** §22.21 writes no byte before tap 2 |
+| 2 | `Make a copy and change it` | Sheet closes. Summary repaints: the block's mark and the trigger are **gone** — the slot now holds this movement, so there is nothing left to put in the plan. Toast #70 with `Undo`, 6 s | **one** `save(PLANS, {plans, activePlanId})`. One patch, both keys, read-before-write (WO-013) |
+| 2′ | `Not now` · scrim · `Escape` | Sheet closes. Focus returns to the trigger, which is still there. **Byte-identical**: `phat:v1:plans` unchanged, the draft unchanged, no prefs write | nothing |
+| 3 | `Undo`, while the toast stands | Summary repaints with the block's mark and the trigger back. Toast #72 | one `save(PLANS, {plans, activePlanId})` restoring the pre-tap-2 bytes, **after re-reading and matching** (§22.21.10) |
+
+**One commit tap, one write, one refusal.** `editableTarget` mints the copy in memory, `setExerciseMovement`
+re-points the slot **on the copy** in memory, and one `save()` puts the pair on disk. That is why #71 can
+say `Nothing changed.` and mean it: there is no intermediate state in which the copy exists and the slot
+does not, on disk or anywhere a reader can see.
+
+**Two swapped entries, both tapped.** The first commit makes the plan editable, so the second trigger
+opens **§22.7's** sheet, not this one. That is correct and not a glitch — the second tap genuinely does
+less, and the sheet that says less is the sheet that is true. The undo is latest-only (`toastUndo.fn`
+holds one function): committing the second swap withdraws the first's undo, and the way back from there
+is the Plan Editor. Shipped §22.7 behaviour, restated so nobody reads §22.21.10 as a promise of two.
+
+### 22.21.6 States — every one
+
+| State | What renders |
+|---|---|
+| **Empty** | No swapped entry on Summary → **nothing renders.** No placeholder, no disabled button, no "you have not swapped anything" line. There is no empty state for this control because there is no question to answer |
+| **First run** | Identical to every run. This control has no history, no cache and no onboarding. The first time he sees it is the only interesting time, and the sheet is the onboarding |
+| **Loading** | **None, anywhere.** No library fetch, no network call, no deferred module. The trigger is in the first paint of the block and the sheet opens synchronously. §22.10's loading states have no counterpart here |
+| **Success** | Toast #70 + `Undo`, 6 s visible. The trigger and the swap mark leave the block in the same paint |
+| **Preview refuses** (`editableTarget` → `ok:false` before any sheet: an absent or unknown `activePlanId`) | The trigger's slot carries **#71** instead of the button, in §2.2's refusal shape **without** the `!` marker — nothing he typed is at risk. **Believed unreachable** (a store that cannot resolve an active plan cannot have painted the card above it) and specified anyway, because a control that silently disappears teaches him the app is unreliable and one that refuses out loud teaches him what happened |
+| **Write refuses** (`validatePlan`, `planStoreUpsert` or `save()` fails; `S.blockWrites[PLANS]`) | The sheet **stays open** and **#71** renders in `#dr-sheet-err` as `.sheet .rule`, above the button stack. `Not now` is right there. Focus does not move; the sentence is announced assertively (§22.21.9). `phat:v1:plans` byte-identical, session and draft untouched |
+| **Demo data** (`S.plansMeta.demo === true`) | #71, same shape. **Finding, not fixed here:** this is the one state where the sentence does not name its cause. A demo-specific literal is a string he would see once at most, and C-14 already refuses demo data at every other boundary. Filed for the PM |
+| **Undo refuses** | Toast **#72a**. The copy is still there and still active, and the sentence says so rather than claiming nothing changed — see §22.21.10 |
+| **Offline** | **Identical to online, in every row above.** `localStorage` is the source of truth; the Supabase push is best-effort and never gates the toast, the repaint or the undo. The copy reaches the server on the next push and `mergeStores` treats `activePlanId` as the device's own, so Diana's active plan does not move (`logic.js:7232`) |
+| **Toast expired, still on Summary** | The undo is gone. No persistent undo control is added to Summary by this section — that would be a new control on Summary and is §22.7's table to change, not mine |
+| **He leaves Summary** | The undo is withdrawn with the toast (`hideToast()` on `goSum` / `leaveSum` / `go`). **Required, not incidental:** a byte-restore of the plans store offered from a screen two navigations away is a restore against a store he may have edited in between |
+
+### 22.21.7 Copy — the literals
+
+Numbering continues §22.12's register, which **this lane does not edit** (§22.12 is not mine; it ends at
+#65). The rows below are final and ready to paste; the PM owes §22.12 the pointer.
+
+| # | Where | When | String |
+|---|---|---|---|
+| 66 | summary, button | swapped entry, **read-only** active plan | `Put {new} in the plan` — **#39 verbatim, reused, not a new literal.** The label does not change with the plan's `readOnly`: the question he is asking is identical and a second wording would invent a second question. `.ghostbtn.sumperm` |
+| 67 | sheet body, paragraph 2, sentence 1 | — | `A copy called {copyName} becomes the plan you are on.` **NEW** |
+| 68 | sheet body, paragraph 2, sentence 2 | — | `Nothing else moves — every logged set stays, and every other card reads as it does now.` **NEW.** `else` is load-bearing: it scopes the claim against paragraph 1's `They stop being this slot's last numbers.` **No clause in this sentence mentions a chart** (Rule CH1, §22.16 #5) |
+| 69 | sheet body, paragraph 2, sentence 3 | — | `{source} stays in Plans, read-only.` **NEW.** `read-only` appears here and nowhere else in the flow — as a property of the plan he is leaving, which is the only place it is useful |
+| 70 | summary, toast | copy made and slot re-pointed | `{day} now has {new}. You are on {copyName}.` **NEW** + `Undo`. Two sentences because the receipt owes both acts, and the second is the one he did not ask for. It is #44 plus the plan clause; #44 is not reused as-is, because a receipt that reports half of a two-part write is the kind of silence §22.19 calls the worse case of losing a number |
+| 71 | sheet refusal (`#dr-sheet-err`, `.sheet .rule`) **or** the trigger's own slot on a preview refusal | any write or preview failure | `Could not make an editable copy. Nothing changed.` **NEW**, §2.2's refusal shape **without** the `!` marker. Not #46 — the thing that failed is the copy, and a sentence naming the plan change would point him at the half of the act that never started |
+| 72 | summary, toast | undone | `{day} has {original} again. You are back on {source}.` **NEW.** #45 plus the plan clause, for #70's reason. Both reversions, in the order they will matter to him |
+| 72a | summary, toast | the undo's own write failed, or the store moved under it | `Could not undo. You are still on {copyName}.` **NEW.** It deliberately does **not** say `Nothing changed.` — nothing changed *by the undo*, but he is standing somewhere he just asked to leave, and a refusal that leaves him not knowing which plan he is on is worse than no refusal. Every other `Could not …` in this spec ends on what is true; this one does too, and what is true is where he is |
+
+Substitutions, all through `esc()`: `{new}` the movement picked · `{original}` the movement the slot
+carried · `{day}` the day's name · `{source}` the read-only plan's `name` · `{copyName}` the resolved
+name from §22.21.4, read off the same `editableTarget` call that commits.
+
+**Voice check.** No exclamation marks, no emoji, no congratulation for making a copy. Second person only
+where he acts or stands (`the plan you are on`, `You are on …`). Every `Could not …` ends on something
+true. No sentence in the sheet is longer than the shortest sentence that is still accurate, and the one
+reassurance in the flow (#68) is checkable from a surface two taps away.
+
+### 22.21.8 Sizes — measured, at 393 px and at 400 px
+
+**Every height below is the shipped CSS's, not a number I chose** — §22.20.11's rule, applied before the
+build gets a chance to deviate. `.sheet .primary{min-height:52px}` and
+`.sheet .ghostbtn{min-height:var(--key)}` (= 48) are `index.html:671`–`672`; `.sumperm{min-height:var(--key)}`
+is `:1140`. Widths are exact: `.sheet` is `padding:18px var(--s4) var(--s4)` with `width:100%` to
+`max-width:var(--col)` (520), and `.pad` is `padding:0 var(--s4)`, so content width is the viewport minus
+32 px at both widths measured.
+
+| Control | Class / selector | W at 393 | W at 400 | H | Where the number comes from |
+|---|---|---|---|---|---|
+| Trigger `Put {new} in the plan` | `.ghostbtn.sumperm` | **361** | **368** | **48** | `min-height:var(--key)`; content box is 12 + 12 + 15.6 ≈ 40, so `min-height` governs. A label that wraps to two lines grows it to ≈ 56 — `Put Iso-lateral front lat pulldown in the plan` is 45 characters and does wrap at 393. **It wraps; it never truncates and never shrinks.** Both states clear 44 |
+| Commit `Make a copy and change it` | `.sheet .ghostbtn.danger`, `[data-sheet="danger"]`, upper | **361** | **368** | **48** | `.sheet .ghostbtn`. **Not 52.** §22.7's `Primary` row asks for 52 and the shipped `askSheet` renders the commit as the *ghost danger* control at 48 — §22.20.11's rule says the shipped size wins. One line at both widths: 25 characters, `.ghostbtn` is **not** uppercase (no `text-transform` at `index.html:479`–`481`), 13 px/800 at .05 em ≈ 215 px inside 337 px of content box |
+| `Not now` | `.sheet .primary`, `[data-sheet="safe"]`, **lowest** | **361** | **368** | **52** | `.sheet .primary{min-height:52px}`; content box is 16 + 16 + 18 = 50, so `min-height` governs. **Not 56** — `.primary`'s base 56 (`:478`) is overridden inside a sheet |
+| Gap between the two | `.sheet .btns>button+button` | — | — | **12** | `var(--s3)` |
+| Body block (both paragraphs) | **NEW** `.sheet .detwrap`, `overflow-y:auto; max-height:52vh` | **361** | **368** | **171 at 100 % text** (8 line boxes at 20.3 + one 8 px paragraph gap) | §22.21.12 (1). 52vh = **443 px at 852**, so at 100 % the box is never scrolled, shows no scrollbar and **the rendered sheet is byte-for-byte what it would be without the rule** |
+| Whole sheet | `#modal .sheet` | 393 | 400 | **367 at 100 % text** = 43 % of an 852 px viewport | 18 + 6 + 22 + 6 + 171 + 16 + 48 + 12 + 52 + 16. Nothing below the fold, nothing under the tab dock (`#modal` is `z-index:60`, bottom-anchored, scrim over all of it) |
+| Toast message | `#toast .msg` | **271** (361 − 88 for `Undo` − 2 gap) | **278** | **50 at two lines** (9 + 9 + 2 × 16) | #70 is 55 characters and wraps to two lines at both widths. The toast grows upward from `bottom:92px`; it covers only Summary content and `reserveDock()` already reserves for it |
+| `Undo` | `#toast button` | **≥ 88** | **≥ 88** | **48** | `min-width:88px; min-height:var(--key)` (`:705`). §0.4 row 23's floor, shipped |
+
+**Which of these are exact and which are owed a Playwright pass.** Exact, from the CSS and the two
+viewport widths: every width, and the 48 / 52 / 12 / 88 heights. Computed, from Archivo's advance widths
+at 13 px and 14 px: the wrap points, the 8-line body, the 171 px block and the 367 px sheet — these are
+**W4's to confirm with a measurement, and W5's to record**, at 393 × 852 and 400 px, at 100 % and at
+200 % text. If a measured line count differs, nothing in this section changes but §22.21.12 (1)'s
+arithmetic.
+
+### 22.21.9 A11y
+
+| | |
+|---|---|
+| Dialog | `askSheet`'s shipped shell, unchanged: `role="dialog" aria-modal="true" aria-labelledby="dr-confirm-title"`, scrim, `Escape` cancels, `Tab` trapped inside (`index.html:6674`) |
+| Focus on open | The `h2` (`tabindex="-1"`). Shipped |
+| Focus order | h2 → *(body, not focusable)* → *(`#dr-sheet-err`, not focusable)* → **`Make a copy and change it`** → **`Not now`**. DOM order and visual order agree; the safe control is last in both, which is why a stray second tap lands on it |
+| Focus on `Not now` / scrim / `Escape` | **Back to the trigger.** This needs the trigger to have an id and `askSheet` to be called with `back` pointing at it — §22.7's call passes `back:null` and drops focus to `<body>`. **Required here**, and it fixes §22.7's path for free |
+| Focus on commit | The trigger no longer exists after the commit, so focus may not return to it. **It moves to the swapped block's name element**, made programmatically focusable (`tabindex="-1"`), because that is where the changed reading is. **Not** the toast's `Undo`: a transient control that `hidden`s itself after 6 s is a focus target that disappears under a screen-reader user |
+| Live region | One region, `#bs-live`, through `announce()` — §2.6 allows exactly one and nothing here adds a second. The toast already routes through it (`toastUndo` calls `announce`, and sets the control's `aria-label` to `{message} Undo.`) |
+| **The refusal must be announced** | `sheetErr()` writes `#dr-sheet-err` and **announces nothing today** — a refusal that is silent to a screen reader. **Required for this path: `announce(msg, true)`, assertive.** The cheapest implementation is one line inside `sheetErr()`, which also fixes §22.7's #46 and §22.20's sheet refusals. I endorse that; it is an improvement, not a contradiction of either section |
+| The 300 ms arm and assistive tech | The commit is `pointer-events:none` for 300 ms and the handler also guards on `Date.now() < sheetState.armAt` — so a keyboard or switch activation inside the window fails **silently and unannounced**. Reaching it needs focus-on-h2 plus two `Tab`s plus `Enter` inside 300 ms, which is not a reachable human interval. **Recorded, not fixed.** If it is ever fixed, the fix is `aria-disabled="true"` for the window and nothing else — never `disabled`, which would move focus |
+| Contrast, measured against §0.5 | `.sheet .det` is `--dim` (`--t70`) = **7.0 : 1 on `--surface`** at 14 px — passes AA with room, and `--faint` and `.45` are forbidden inside a sheet (§22.11's rule). `.sheet .rule` is `--bone` = **12.7 : 1**. The trigger sits on `--bg` (`.sumex` has no background; `#app` is `--bg`): label `--bone` = **14.8 : 1**, border `--line` (`.45`) = **4.0 : 1**, over the 3 : 1 non-text floor. The toast is `--bg` on `--amber` = **9.3 : 1**. The retired #47 was `--faint` on `--bg` = **5.3 : 1** and passed — it is deleted for scope, not for contrast, and that distinction matters so nobody "restores" it as an accessibility fix |
+| Colour alone | The commit's `.danger` red-hi is **redundant**. The label names the act, the stack's order names which is safe, and the greyscale test (§0.5) passes on words and position. The red here reads *this changes something outside the session*, which is exactly what §22.7's `Change the plan` uses it for — it does not mean *destroys*, and nothing in this flow destroys |
+| Pinch-zoom · 200 % text | §0.6 binds. The body block's `overflow-y:auto` at `max-height:52vh` is what keeps the 200 % case inside the viewport: 316 px of chrome at 200 % plus 443 px of body = **759 px < 852**, nothing clipped, nothing overlapping, both buttons reachable without scrolling the sheet. Without it the sheet computes to **≈ 925 px** and pushes the heading off the top |
+| Names | Every visible label is its own accessible name. **No `aria-label` prefix is needed on the trigger** — unlike #65, this control is read with the swapped block's name and verdict immediately above it in the reading order, so `Put Machine row in the plan` cannot be mistaken for a session action |
+
+### 22.21.10 The undo — one act, one undo, and what it restores
+
+**Copy-and-activate-and-re-point is one act and it gets one undo.** Not three, not a per-step back-out.
+The commit is a single `save()` of a single patch, so the undo is a single restore of the bytes that
+patch replaced.
+
+**What the undo restores:**
+
+1. `phat:v1:plans` to its pre-tap bytes — **the copy is removed from `plans` and `activePlanId` names the
+   read-only plan again.**
+2. The slot reads its original movement on every card, on Summary and in every verdict basis, because the
+   document that said otherwise is gone.
+3. **The swap for today is untouched.** The entry keeps its own `mv` and its `sw` mark, the card keeps its
+   swapped reading, and the trigger comes back. Taking the swap away would be a data loss dressed as an
+   undo: the plan change was one act, the swap was a different one, logged earlier, and he undid the first.
+4. The draft is untouched in both directions — every typed set, every note, every load-chip state. Neither
+   the commit nor the undo reads or writes `phat:v1:log` or `phat:v1:draft`.
+
+**And one guard that is not optional.** The undo is a **byte restore**, so it must **re-read
+`phat:v1:plans` and refuse if it no longer matches what the commit wrote.** A blind restore would delete a
+plan another tab created in between — the B-76 / B-128 class, which has bitten this repo twice. On a
+mismatch, or on a failed write, nothing is written and **#72a** says where he is. The undo is reachable
+only while the toast stands, and it is withdrawn when he leaves Summary, which bounds that window to
+seconds on one screen.
+
+### 22.21.11 The WO-023 provenance hook — the slot, and deliberately no literal in it
+
+`phatProvenance` PV1(b) fails any day holding `k:"power"` beside `k:"hyp"` or `k:"speed"`, and PHAT's
+`d1` *Upper power* is all `power`. So **a later edit to the copy can flip `phat` to `false` and downgrade
+ST1's and D1's copy from the brief's assessed diagnosis to the generic lines.** Not silence — a different
+sentence, which is worse to discover by accident.
+
+**That edit is not in this flow** (§22.21.3: `setExerciseMovement` touches `mv` and `n`, and
+`phatProvenanceReport` reads neither), so **this sheet carries no provenance sentence and must not grow
+one.** `strength-coach` is ruling, in parallel, whether he must be told at the moment of the edit
+(WO-022 W1 question 2). **I am not writing that literal.** Here is where it sits when it exists:
+
+| | |
+|---|---|
+| Primary host | The confirm of whichever control commits the **kind-changing** plan edit — WO-023's promote-an-added-movement confirm, and the Plan Editor's `Add exercise` commit (WO-006 B2's form). One sentence, **a new last line of the body**, directly below the existing body's final sentence and **above** `#dr-sheet-err` |
+| Shape | `.sheet .det`, same paragraph treatment as #67–#69, `--dim`. **Not `.sheet .rule`** — it is a consequence, not a refusal, and spending the red-hi rule on it would make a correct edit look like a rejected one |
+| Live region | None needed. The sheet is new on open and the h2 takes focus, so the sentence is in the reading order from the first frame |
+| Gate | Rendered exactly when the pending edit flips `phatProvenanceReport(...).placement` from `true` to `false`. **Computed on the pending document, not guessed from the slot's `k`** — the predicate already exists and a second, cheaper test in a view is how two surfaces come to disagree about one fact |
+| Second host, if the coach rules the disclosure must follow the **fact** rather than the **act** | The surface that speaks the downgraded sentence — ST1's and D1's blocks. That is a different section and a different order; **naming both so the choice is the coach's and not an implementation accident** |
+| What this section promises | Only the slot. No wording, no gate literal, no row in §22.12. If the coach's answer is *no disclosure*, nothing in §22.21 changes |
+
+### 22.21.12 Dependencies, and what I could not settle
+
+1. **`askSheet` needs a second body paragraph and a scroll wrapper.** It renders one `<p class="det">`
+   from `cfg.body` (`index.html:8224`). This section needs two paragraphs inside one
+   `overflow-y:auto; max-height:52vh` block. **Required: when the second paragraph is absent, every
+   existing call site renders byte-for-byte what it renders today** — the WO-010 D8 class of
+   requirement. One optional field and one CSS rule; frontend's shape to choose.
+2. **`editableTarget` resolves the copy's name.** WO-022 W3's signature is `editableTarget(store,
+   todayStr)` and takes no `name`. §22.21.4 puts the collision-safe name inside it, because it has the
+   store and a view does not. **This is a one-line addition to W3's scope and the acceptance criterion
+   that follows it: on a store already holding `{source} — my version`, the minted name is
+   `{source} — my version 2`.** Backend's to implement; I am stating it, not designing it.
+3. **The commit must save `{plans, activePlanId}` as one patch.** `writePlanDoc` saves
+   `{plans}` only (`index.html:7800`) and `setActivePlan`'s caller saves `{activePlanId}` only (`:5570`).
+   Two writes here would mean a reachable state where the copy exists and is not active. **One patch, and
+   it is why #71 can say `Nothing changed.`**
+4. **The trigger needs an id and `askSheet` needs `back`.** §22.21.9's focus rows. §22.7's `back:null` is
+   a focus bug on a shipped path; fixing it here fixes it there.
+5. **`sheetErr` should announce.** §22.21.9. One line, three sections better.
+6. **§22.7's `Primary` and `Safe, lowest` rows are stale against the build** — they read `full × 52` for
+   both, and the shipped `askSheet` renders the commit at 48 (`.sheet .ghostbtn`) and `Not now` at 52
+   (`.sheet .primary`), with `Not now` as the primary. By §22.20.11's own rule the shipped sizes win and
+   those rows are owed a correction. **I did not edit them: this lane owns §22.21 and §22.7's read-only
+   row, nothing else.** Recorded for whoever next owns that table.
+7. **§22.12's register ends at #65 and is owed #66–#72a.** §22.21.7 holds them, final and ready to paste.
+   Not mine to add.
+8. **Demo mode's refusal does not name its cause** (§22.21.6). One literal would fix it; I judge it not
+   worth a string he sees once. The PM's call if it disagrees.
+
+### 22.21.13 Out of scope, deliberately
+
+Renaming the copy anywhere in this flow (the Plan Editor already does it, sitting down) · a plan
+**picker** on Summary · any second door to copy-on-write — Settings, Plans, the day card · the added
+movement's promote offer, which is **WO-023 W2** and not this section · a persistent undo control on
+Summary (that is a new control in §22.7's table) · deleting a copy from this flow · editing or deleting a
+**saved** session (B-05, still open and still the thing that would make a mis-tap recoverable) · what
+happens when the copy is made **and edited in the same breath** (WO-022 §4's own deferral, WO-023's) ·
+the provenance literal (§22.21.11) · warm-up sets (B-116) · plate math (B-10) · a rest timer (B-09) ·
+anything on Home, Trend, Weight or Diet · any change to the set rows, the ghost row, the `ld` row or the
+load chip.
