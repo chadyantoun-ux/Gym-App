@@ -4435,3 +4435,218 @@ as prescribed work, sixteen days of training later.
 **Six orders have now been planned around a question one sentence from him closes.** Recorded as a standing
 item, not as a note in a work order, because five work orders have proved that a note in a work order does
 not get it asked.
+
+---
+
+## 2026-10-08, fifth pass — Decision 4 is amended by the man it was made about; "when I click on finish session" and "on Summary" are one tap apart; and B-116 stops being asked and starts blocking
+
+WO-019 went live tonight (`4245d13`, byte-verified, 1061 / 1061). He used the door, added a movement, and
+came back within hours:
+
+> *"I want to be able to, if I add an exercise during the current session and when I click on finish
+> session, the app should be prompting me do you want to keep it permanently or just for this session."*
+
+**This is the second ask in this repo's history that comes out of real training, and the first that comes
+out of a thing we shipped the same day.** Recorded before any ruling, because it is the most important
+fact in the pass: for the first time the tooling is downstream of the training rather than a substitute for
+it. The standing diagnosis stays suspended, and the correct response to a loop that is finally closed is to
+keep its latency low — which is the real justification for Decision 5 below.
+
+### Decision 1 — Decision 4 of this morning is amended, not overturned, and the distinction is the design. `[Certain]`
+
+Eight hours ago this file ruled, under the heading *"an added movement is never offered to the plan. Nobody
+asks him again"*:
+
+> His words: *"I want that to be by session — so when I add an exercise on a session I don't want that to
+> be reflected on the actual workout plan, I just want that to be specific to this session."* **Ruled, and
+> it is already true by construction.** … This is not a feature gap to be filled later and not a prompt to
+> be added.
+
+**That ruling read a default as a prohibition.** He was describing what should happen when he *adds*; the
+PM wrote it down as what must never happen *at all*. He has now said which he meant, and it is his call
+either way.
+
+**The amendment, and both halves are load-bearing:**
+
+| Stands | Changes |
+|---|---|
+| **Adding never touches the plan.** `swAdd` writes `S.draft.entries` and nothing on its path reaches `phat:v1:plans` or `PHAT_PLAN`. The add confirm keeps saying `The plan does not change.` (`index.html:7540`) because **at that moment it is true**. Session-only is the default and stays free | **After the work exists, one explicit control offers to keep it.** Nothing is written unless he taps it. The prompt is not part of adding; it is a separate, later act on a different screen |
+
+Read that way the two sentences of his are consistent and the second refines the first. The PM's error was
+not mis-hearing him — it was **converting a preference about one moment into a rule about every moment**,
+and then writing that rule down with the word *never* in it, which is how a ruling becomes something a
+future session defends instead of re-reads. `docs/backlog.md`'s copy of the old paragraph now carries the
+amendment inline, so neither half can be read alone.
+
+**The general lesson, which is the part worth keeping:** when he says *"I just want X"*, X is almost always
+a default and almost never a prohibition. A ruling that forecloses a direction needs him to have foreclosed
+it, in words, not to have failed to ask for it.
+
+### Decision 2 — "when I click on finish session" and "on Summary" are the same place, one tap apart. No interstitial. `[Certain]` on the mechanism, `[Likely]` on the judgement
+
+He named a placement: *"when I click on finish session, the app should be prompting me."* The main session
+disagreed with it and recommended Summary instead, beside the existing promote control.
+
+**Both are satisfied by the same build, and this is a fact rather than a compromise.** `Finish session` is
+`#tosum` (`index.html:3866`) — a **navigation to Summary**. The save is `Save session`, on Summary. So the
+screen his tap on `Finish session` produces **is** Summary. A control in Summary's own stack is what he
+sees the instant he clicks Finish session, above the save, every time he ends a session.
+
+**Ruled: the offer is a persistent block inside the added movement's Summary block, below Rule AD1's
+sentence** — exactly where §22.7 puts `Put {X} in the plan` for a swapped entry (*"inside the swapped
+exercise's block, below its verdict — after the reading, not before it"*). An added card has no verdict; it
+has AD1's sentence, which is the reading in its place.
+
+Three reasons, and the second is stated at its real strength rather than inflated:
+
+1. **Consistency of the act.** Promote-a-swap and promote-an-add are one idea. Two different interaction
+   shapes for one idea means the shape carries no information and he has to learn both.
+2. **Nothing dismissible goes on the road to `Save session` — and this is not a P0 claim.** A modal at
+   `#tosum` writes nothing, so calling it a data-loss path would be rhetoric and this file does not do
+   that. What it **is**: a dialog he must clear to reach the exit, on the screen that also hosts
+   `#bs-slot`, where a **blocked save** renders. Training him to swipe a dialog away on the way to the
+   save is training him to swipe away the one message that means a set did not make it. A slow cost, a
+   real one, and avoidable for free.
+3. **It lands where he already scrolls.** §22.20.1 established that with measurements when it put
+   `Add an exercise` in that same stack.
+
+**If he reaffirms the interstitial he gets it**, and WO-023 W2 specifies it in full: a sheet on `#tosum`,
+`Keep it` / `Just today` / dismiss, **dismiss ≡ `Just today`**, and the navigation to Summary completing in
+every branch. **In both designs the session is savable without answering the offer.** That clause is not
+negotiable and it is the only part of the placement question the PM will not trade.
+
+### Decision 3 — this is two orders, and the split is about who decides, not about size. `[Certain]`
+
+**WO-022 (copy-on-write) → WO-023 (the promote).**
+
+Every plan on his device is `readOnly: true` — PHAT plus WO-018 T3's four — and both plan-write primitives
+refuse one on sight (`addExercise` at `logic.js:3231`, `setExerciseMovement` at `:3312`). So the promote
+has nothing to write to. UX recorded the answer on 2026-09-28 (§22.16 #1) and **deliberately declined to
+specify it**: copy-on-write *"silently changes which plan is active, which is a decision and an order of
+its own."*
+
+**Ruled: it stays its own order.** "Which plan am I on" is a decision Chady makes once, for every promote
+path there will ever be. Ruling it inside the added-movement order would rule it by a side door days
+before the order that needs it — the failure this file already named twice today (§5 of the fourth pass,
+and *"nothing moves after the pin"*). And WO-022 is independently valuable: `Put {X} in the plan` has been
+a **dead control on his Summary since the day it shipped**, and B-164's own finding is that he swaps far
+more often than he adds. **WO-022 is worth more than the ask that surfaced it.** Filed as B-167.
+
+What makes it cheap, and it was verified rather than hoped: **`copyPlan` → `clonePlan` is a deep copy that
+preserves every `day.id` and every `ex.id`** (`logic.js:3440`). History is keyed on the slot id (WO-014's
+central ruling), so a copy moves no prior, no ghost, no sparkline and no verdict basis, and an in-progress
+draft's entry ids still resolve. `keyLifts`, `speedSource`, `reintroOrder` and `reducedWeeks` are cloned
+with it, so SP1, V1, ST1 and D1 keep running on a copy. **A copy is coaching-identical to its source until
+the first edit.** The first edit is where it gets interesting — Decision 4.
+
+### Decision 4 — a promote can silently change what the stall detector says, and that is the coach's, not QA's. `[Certain]` on the mechanism
+
+`phatProvenanceReport`'s **PV1(b)** fails any day that holds `k:"power"` together with `k:"hyp"` or
+`k:"speed"` (`logic.js:2981`–`2995`). PHAT's `d1` *Upper power* is all `power`.
+
+So: he adds a face pull at the end of Upper power, promotes it with the obvious `k:"hyp"`, and
+`phatProvenance` on his plan flips to `false` — which swings ST1 from `ST1_PHAT_LINES` to `ST1_GENERIC`
+and D1's copy with it, **including the generic version's third candidate cause, the plan itself, which the
+PHAT version deliberately excludes because a coach assessed that split** (`logic.js:9173`–`9184`).
+
+**Nothing goes silent.** The four plan-scoped tables are cloned, so every engine still runs. It is a
+*sentence* change, not an absence — which is precisely the class `CLAUDE.md` §1 says QA cannot detect:
+*the code can be perfect and the coaching wrong.* Filed as **B-168**, routed to WO-022 W1 for the general
+rule and WO-023 W1 Q3 for the promote case, and pinned as a test either way so it is an observed fact
+rather than a surprise six weeks from now.
+
+**Recorded because it is counter-intuitive and will be rediscovered otherwise:** the dangerous edit to a
+copied plan is not renaming it, not reordering it, and not changing a load. It is **adding one exercise of
+the wrong kind to the right day.**
+
+### Decision 5 — B-116 stops being asked and starts blocking one clause. `[Certain]` that the mechanism is new; `[Likely]` that blocking is the right escalation
+
+*Warm-up sets: logged, marked, or omitted?* Unanswered at six askings, across six work orders.
+
+**Until tonight B-116 poisoned only reads.** His five-set 20 → 70 kg ramp on `d1a` is read by every engine
+as prescribed work, twenty-six days later. That is bad and it is bounded: a wrong verdict is one screen and
+the next session overwrites it.
+
+**WO-023 makes it poison a write.** If `s`, `lo` and `hi` on a promoted slot are pre-filled from the sets
+he just logged, and those sets are a ramp — **the single most likely shape on a movement he has never done
+before, which is exactly what an *added* movement is** — then `5 × 3–12` goes into his plan **permanently**
+and feeds P1/H1, R1's rest row, V1's tier and ST1 from then on. He taps through it with chalky hands at the
+end of a workout.
+
+**Ruled: the pre-fill clause is blocked on his answer. The order is not.** Without an answer WO-023 ships
+with no pre-fill and he types `s`, `lo`, `hi` and picks `k` in the Plan Editor's existing
+refuse-until-answered form — strictly safe, fully functional, and it still closes B-166. With an answer,
+the coach rules the derivation and the frontend adds it.
+
+**Filed as B-170, with an id, a severity and an owner.** The reason is a process finding and belongs here
+rather than in a work order: **six orders have proved that a note inside a work order does not get a
+question asked.** The note mechanism failed six times; repeating it a seventh time in the same words would
+be the PM's failure, not his. Attaching the question to a feature he can see, and to a clause that visibly
+does not ship without it, is the only escalation available that is not the same ask again.
+
+### Decision 6 — a promoted slot carries the draft entry's own id. `[Likely]`, and the fallback is honest
+
+`addExercise` mints a fresh `ex` id (`logic.js:3267`), so a naive promote writes a slot whose id is **not**
+the id tonight's sets were logged under. Traced all the way through:
+
+- **Tonight's session is unaffected** — the added entry stays slot-less, so no `rx`, no `sw`, no verdict.
+  That is the safe half and WO-023's C4 pins it rather than assuming it.
+- **Next session's card has no prior of its own** and reaches tonight's numbers only through **Rule MV1**'s
+  cross-slot fallback by movement. It works — both the slot and the entry carry `mv` — and it prints a
+  disclosure sentence naming the fallback **forever**, on a slot that could simply have owned its history.
+
+**Ruled, as a recommendation strong enough to build against: promote the entry's own id.** It is
+collision-safe **by construction**, which is the part that was checked rather than assumed:
+`addDraftEntry` mints the entry id against the draft *and* `takenIds` of every plan on the device
+(`logic.js:1588`–`1597`), and the call site passes `{plan:sp(), plans:allPlans()}`
+(`index.html:7706`). `addExercise` cannot carry a caller-supplied id, so WO-023 W3 builds
+`promoteDraftEntry` sharing `addExercise`'s validators rather than copying them — **two copies of one
+validator is two validators, and they drift.**
+
+Residual, named and not solved: ex ids are scoped per plan document, so a plan arriving later by merge from
+the other account could in principle collide. That is already a possible state (`resolveEx` searches across
+plans) and is not made worse here. Filed as part of **B-169**.
+
+### Decision 7 — a silent prescription default is refused by name, because it is a defect this repo already struck down. `[Certain]`
+
+A plan exercise cannot exist without `s`, `lo`, `hi`, `k` and `implement` — `addExercise` enforces it and
+its own header says why: *"no default is guessed here (WO-004 C-7): the add flow asks, or the add is
+refused."* An added entry has none of them, because **Rule AD1 forbids inventing a prescription**, which is
+exactly why the card gives no verdict and why that card is correct.
+
+So a promote must get them from somewhere. **`3 × 8–12 hyp` is refused, by name, in advance.** That is
+literally the prototype's `addEx` hard-code that **B-57** struck down as *"a silent guess that decides what
+the app tells him to lift"*, and shipping it now would be that same defect a second time, behind a door
+built for daily use.
+
+**The PM's recommendation to the coach — and it is a recommendation, the coach rules:** collect the
+prescription in the promote sheet using the **Plan Editor's existing contract**, which refuses `ADD` naming
+the empty field until `k` and `implement` are answered (WO-006 B2) and warns once on a mismatched rep range
+(Rule K2). It was already coach-reviewed, so reusing it adds **no new coaching surface at all**.
+`implement` is already derivable and already derived — `libraryImplementOf` through `mv`, Rule I3.3, shipped
+tonight as B-161's fix — and WO-023 must reuse that exact call path, because **a second derivation of one
+fact is a second fact.**
+
+### 8. What is Chady's in this pass, and what is not
+
+**His, and only two things:**
+1. **B-116. One sentence.** It gates one clause and nothing else.
+2. **Does he want the true interstitial on `Finish session`?** The PM recommends no, with the reason in
+   Decision 2. The offer is one tap away either way.
+
+**Not his, and nobody should ask him:** the prescription source, `k`, the position in the day, the copy at
+both moments (the coach's); the placement geometry, the copy's name, the refusal strings (UX's); whether
+the promote carries the entry's id (backend's, with Decision 6 as the position to argue against).
+
+### 9. The standing diagnosis, at its twelfth asking — and the first time the answer is not "yes"
+
+Eleven times this file has recorded that the training effort is the bottleneck, not the tooling. **Tonight
+it is not true.** He trained, he used a feature that shipped the same day, he hit its edge, and he reported
+it in one sentence that names the moment, the trigger and the choice he wants. That is the loop this
+project was built to have and has never had.
+
+The diagnosis stays on the record and stays suspended. **What replaces it is a latency standard:** when the
+loop is closed, the thing that matters is how long it takes an ask of his to become a shipped behaviour,
+and the only two things slowing WO-023 down are a coaching question nobody can answer for him and a
+read-only plan nobody can write to. Both are now orders with owners. If the next ask is another rebuild,
+another format or another tool, the diagnosis comes straight back off the shelf.
