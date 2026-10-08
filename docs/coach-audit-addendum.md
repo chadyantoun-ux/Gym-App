@@ -8980,3 +8980,549 @@ its particle form.
 again on 22 September. It is 29 September. Whatever the app does next, someone should ask him how the
 forearm is, and if the answer is still the same, the fifth session should not open on `d1b` at all.
 That is a conversation, not a regex, and this document cannot have it for him.
+
+---
+
+# 25. WO-022 W1 + WO-023 W1 — copy-on-write's provenance, and the promoted slot's prescription — 2026-10-08
+
+Two orders, two gates, one pass. **No new rule id is minted.** Three clauses land inside rules that
+already own the ground: **PV1.2** (the provenance-change disclosure), **K3.5** (`k` on a promoted
+movement), **AD1.6** (promotion — what is written, what is asked, what is never written). `I3` needs no
+amendment: the promote is an I3 path (1) write fed by path (4)'s derivation, and both are already
+written down.
+
+**Three strings total, two of them reuses.** Everything else the promote needs already ships in the
+Plan Editor's add-exercise form.
+
+## 25.0 Rulings at a glance
+
+| # | Order | Question | Ruling | Tag |
+|---|---|---|---|---|
+| a | WO-022 | Is a copy coaching-identical before any edit? | **Confirmed, and the PM's reading is sound for a reason it does not name.** Every day id and ex id survives *and* **no advice engine filters history by `planId`** — the only reader of `planIdOf` is `sessionsUnderPlan`, a confirmation count. Plus the one the PM missed: `state.reintro` is keyed by **dayId**, so V1's reintroduction counter survives too. Two non-identities, both display-only. | `[Certain]` |
+| b | WO-022 | Which edits keep provenance, which break it? Is the PV1(b) downgrade acceptable, and must he be told? | **Table in 25.2. The downgrade is acceptable — it is the app becoming more honest, not less useful.** Disclosed, **but only when it is true**: gated on `phatProvenance(before) === true && phatProvenance(after) === false`. **On the plan Chady trains on today it renders never** — his active plan is not PHAT and not derived from PHAT, so provenance is already false. **B-168 is unreachable on his real data.** Clause **PV1.2**, literal in 25.2.4. | `[Certain]` on the gate and on unreachability; `[Opinion]` on accepting rather than widening PV1 |
+| c | WO-022 | Does `"PHAT — my version"` carry a coaching claim that stops being true? | **No. Sign off, no change.** The name asserts descent, not conformance; `— my version` is the clause that says it is not PHAT. No engine reads a name (`copyPlan`'s own comment: renaming can never change which rules a plan may run). | `[Certain]` |
+| 1 | WO-023 | Where does the prescription come from? | **Confirmed: the Plan Editor's refuse-until-answered contract, reused verbatim. I decline to overrule B-57.** Three-way split, 25.3.1: `n`/`mv`/`lift` written, `implement` **derived and shown** (asked only where I3 refuses — 199 of 876 rows, which the order's table misses), `s`/`lo`/`hi`/`k` **asked, never pre-filled**. | `[Certain]` |
+| 2 | WO-023 | Is `s` = completed sets logged a prescription? | **An observation is not a prescription.** And for `s` the refusal does not rest on B-116 alone: a too-high `s` **switches the verdict off** at the C-11 gate (`completedSets >= ex.s`) and a too-low one makes X1's badge fire every week. | `[Certain]` |
+| 3 | WO-023 | `k`, and does the day constrain it? | **He picks it. The day does not constrain it, and the picker is not restricted by day.** Clause **K3.5**. The consequence of the choice is already stated by `KIND_LINE`; the provenance sentence is appended to the **confirm**, not to the Type line, and only under PV1.2's gate. | `[Certain]` on asking; `[Certain]` on not restricting |
+| 4 | WO-023 | Position in the day, and the D8 case | **End of the day, always — including when the draft put the card mid-session.** Added work is additional volume and goes after the work it must not compromise; end-of-day satisfies "never ahead of a power or speed slot" automatically on all five shipped plans. **D8: refuse. Never substitute a day, never create one.** Literal in 25.3.4. | `[Certain]` on the refusal; `[Opinion]` on end-of-day over transcript order |
+| 5 | WO-023 | Does AD1's last clause still earn its place? | **It stands, unchanged, in both places, and it must not become conditional on the control's presence.** §22.10.1's reasoning holds one layer out: a condition sentence above the control that satisfies it is the control's reason, not a duplicate of it. | `[Certain]` |
+| — | both | **Found while in here.** The promote makes tonight's unprescribed sets the slot's **H1 comparison baseline**, and X1's `C` on a five-set ramp is the warm-ups. A second B-116 route the orders do not name — and it is a new *instance* of a live defect, not a new class. **Does not block.** 25.4. | `[Certain]` on reachability; `[Likely]` P2 |
+| — | WO-022 | **A premise to check before W3.** WO-022 §6 says every plan he owns is `readOnly`; §22.10 of this document says nine sessions "on a copy of the 5-day template". A copy is **not** read-only. One of those is wrong and it decides whether WO-022 is a prerequisite at all. WO-020's export settles it. | `[Certain]` the two documents disagree |
+
+---
+
+## 25.1 (a) A copy is coaching-identical before any edit. Confirmed, and here is the part that was not checked
+
+**The PM's reading is correct.** `[Certain]`. One sentence, as asked: *`copyPlan` → `clonePlan` preserves
+every `day.id` and every `ex.id`, no advice engine keys history on `planId`, and the four coaching
+tables are deep-cloned, so every prior, ghost, seed, verdict, e1RM point, stall subject, speed target
+and reduced-volume tier is byte-for-byte the same on the copy as on its source.*
+
+**What I verified rather than inherited**, because "ids are preserved" is necessary and not sufficient —
+a copy would still orphan history if anything read history *through* the plan id:
+
+| Checked | Result |
+|---|---|
+| Does any rule filter sessions by `planId`? | **No.** `planIdOf` has exactly one caller, `sessionsUnderPlan` (`logic.js:3918`), and that is a count a confirmation names. P1, H1, ST1, SP1, D1, V1, W1, `lastFor`, `priorFor`, `e1rmByDate`, `painWindow` and `liftDays` all read entries by `exId`. `[Certain]` |
+| `keyLifts` / `speedSource` / `reintroOrder` / `reducedWeeks` | Cloned. SP1, V1, ST1 and D1 keep the same declared subjects; nothing goes to an ABSENT state. `[Certain]` |
+| **`state.reintro` — the one the order does not name** | Keyed by **dayId**, not by `planId` (`logic.js:2325`, WO-004 C-5). So V1's per-day reintroduction counter and `lastReintroDate` survive the copy. **Had it been keyed by plan, a copy would have silently reset the week-5 ramp to zero** — a real coaching loss, invisible, and exactly the class this gate exists for. `[Certain]` |
+| Rule PE1's `rx` epochs | Unchanged, because `copyPlan` edits no prescription. WO-022 §4's C11 is the right assertion and I expect it to pass. `[Certain]` |
+| `derivedFrom` | Carried. `phatProvenanceReport` on a copy of PHAT returns the same three fields as on PHAT: `derivedFrom === "phat"`, the four key-lift ids in order, their `s/lo/hi` equal, each on its own day, no day mixing kinds, five days held. `[Certain]` |
+| `declaredMvOf`'s "stored self" (`logic.js:2062`) | **Differs mechanically and cannot differ observably before an edit.** The copy's re-minted `planId` has no second document in the chain, so the declared basis is `null` = *unknown*, which "may never manufacture a skip" and falls back to `mv`. It can only matter once a slot's `mv` has been re-pointed, and at the moment of the copy none has. Named so it is not discovered later. `[Certain]` |
+
+**Two non-identities, both display, neither feeding a rule.** `[Certain]`
+
+1. **The name.** Every surface that prints the plan's name prints a different string after the copy. No
+   rule reads it.
+2. **`sessionsUnderPlan` resets to zero on the copy.** The day the copy is made it has no sessions
+   attributed and the source keeps all nine. Any confirmation that names a session count against a plan
+   will read `0` while nine sessions sit against the old id. True, misleading, and **not mine to word** —
+   flagged for UX and for QA's C1, which should assert the count's behaviour rather than let it surprise
+   someone.
+
+---
+
+## 25.2 (b) What the first edit costs, and the one sentence he is owed
+
+### 25.2.1 The table, transcribable
+
+Read off `phatProvenanceReport` (`logic.js:2959`–`3000`) against a copy of PHAT. `prescription` gates
+ST1's and D1's diagnosis; `placement` additionally gates `phat`, and `prescription && !placement` is what
+puts `PLACEMENT_LINES` on the Plans screen.
+
+**Keeps provenance whole** — `[Certain]`, each verified against the predicate:
+
+| Edit | Why it survives |
+|---|---|
+| Rename the plan, a day, or an exercise | No field in the predicate |
+| Change a `cue`, a `fig`, an `implement` | Not read |
+| **Change a slot's `mv` — "make it permanent", the swap promote** | Not read. **WO-022's standalone half costs nothing at all.** |
+| Add or remove `cut`; change `reducedWeeks` | Not read |
+| Reorder exercises inside a day; reorder days (`moveDay`) | Only `dayIdOfEx` is read, and it does not move |
+| Edit `s`/`lo`/`hi` on a **non**-key-lift slot | Only the four key lifts' numbers are compared |
+| Delete a non-key-lift slot, while its day still holds something | Clauses (a) and (c) still hold |
+| **Append a `power` slot to `d1` or `d2`; a `hyp` slot to `d3`, `d4` or `d5`** | No day gains a mixed pair. **This is the promote that costs nothing** |
+
+**Breaks it** — `[Certain]`:
+
+| Edit | Breaks | Consequence |
+|---|---|---|
+| Edit a key lift's `s`, `lo` or `hi` | `prescription` → false, `placement` → null | ST1 and D1 go generic. No Plans-screen line (there is no placement to speak about — PV1's design) |
+| Change a key lift's `k`, or raise its `hi` above 8 | `prescription` (via `planKeyLiftIds`'s HD1.2 filter dropping it) | Same |
+| Remove a key lift from `keyLifts`, reorder them, or delete a key-lift slot | `prescription` | Same |
+| Move a key lift to another day | `placement` only | ST1 and D1 go generic **and** `PLACEMENT_LINES` renders on Plans |
+| **Append a `hyp` or `speed` slot to `d1`/`d2`, or a `power` slot to a day holding either** | `placement` only — **PV1(b)** | Same. **This is B-168** |
+| Empty a day, or delete one, leaving fewer than five held | `placement` only | Same |
+
+**The asymmetry I am naming and deliberately not fixing.** `[Likely]`. PV1 fails **open** for the 38
+non-key slots: he can rewrite every one of them and ST1 still says *the split isn't the problem*. That is
+a weakness in a shipped rule, it is not created by either order, and widening PV1 now would make the
+downgrade fire *more* often for a gain of one sentence's specificity. Recorded; not reopened in this pass.
+
+### 25.2.2 The downgrade is acceptable, and the reason inverts the order's framing
+
+WO-023 §5 calls it a **copy downgrade** and files it as a P1 wrong-sentence class. **The mechanics are
+right and the valuation is backwards.** `[Certain]` on the mechanics, `[Opinion]` held firmly on the
+valuation.
+
+What `phat: false` actually costs him, measured rather than asserted:
+
+```
+ST1 phat      "Week 7 and no progress on Row, Squat."
+              "This is the check we agreed on. The split isn't the problem and neither is the diet."
+              "Either the sets aren't close enough to failure, or you aren't eating enough."
+              "Fix one, not both, and give it three weeks."
+
+ST1 generic   "Week 7 and no progress on Row, Squat."
+              "Six weeks of data and the numbers have not moved. Change one thing — how hard the
+               sets are, how much you are eating, or the plan — and give it three weeks."
+
+D1 T3 phat    "Nine weeks straight. Take a deload week before something makes you."
+D1 T3 generic "Nine weeks straight with no lighter week. Take one: same weights, two sets per
+               exercise, stop two reps short of the top of the range."
+```
+
+Three facts, in order of weight:
+
+1. **The measurement never moves.** `stallReport` is Epley, `r <= 8`, two 21-day blocks, 1.025. The
+   deload triggers are T1, T2 and T3 unchanged. **Nothing he acts on changes.** What changes is one
+   paragraph of diagnosis.
+2. **The generic sentence is the more honest sentence on an edited plan.** It differs from the brief's by
+   naming a third candidate cause — *the plan* — which the PHAT version excludes because a coach assessed
+   that split and ruled it out. **The instant he appends a slot nobody assessed, that exclusion is no
+   longer earned.** Keeping the brief's three lines on an edited plan would be the app asserting a
+   clearance it does not have. `[Certain]`. PV1's own code comment already says this: *"false costs one
+   sentence of specificity — never a wrong claim."*
+3. **Mixing roles inside a day is not a coaching error, and I can prove it from my own work.**
+   `PPL3_PLAN` (§23.5) puts a `power` 5–8 compound at the head of every day and `hyp` 8–15 work behind
+   it — three mixed days out of three, authored and signed off in this document. PV1(b) is a test for
+   *"is this still the day structure the brief specified"*, not for *"is this day coherent"*. So the flag
+   going false says the plan is no longer PHAT's placement. It does not say the plan got worse.
+
+**Rejected, in writing, so nobody proposes them:**
+
+- **Forcing `k:"power"` on anything promoted into a power day** to preserve the flag. `[Certain]` no.
+  That routes P1's load-driven progression and R1's 120–180 s rest onto a face pull or a lateral raise,
+  and P1 would tell him to add 2.5 kg to a 15-rep movement. **A label is never worth a wrong protocol.**
+- **Amending PV1(b) to ignore appended slots.** It needs a per-slot provenance marker — a new stored
+  field, a schema change, and a new way for a plan document to lie about itself — bought for one
+  paragraph. `[Opinion]`, and I would hold it.
+- **Nudging him toward `power` in the form so the flag survives.** That is the tail wagging the dog, and
+  it is the same defect as a silent default wearing a hint.
+
+### 25.2.3 He is told — but only when it is true
+
+```
+Rule: PV1.2 — the provenance-change disclosure (a clause of PV1; PV1's predicate is
+      unchanged and is stated at logic.js:2925–2958 and in the WO-007 decision record)
+Applies to:   every edit path that writes a plan from outside the Plan Editor — WO-022's
+              swap promote and WO-023's add promote. NOT the Plan Editor itself, which has
+              MOVE_WARN and PLACEMENT_LINES already.
+Inputs:       phatProvenance(plan before the write), phatProvenance(plan after the write),
+              the target day's name, the kinds held by the target day after the write.
+              Minimum data: both plan documents. The rule is a comparison, not a prediction.
+Logic:        PV1.2.1  THE GATE IS THE TRUTH CONDITION, NOT THE EDIT SHAPE. The sentence
+                       renders iff  before === true AND after === false.  An edit that
+                       changes nothing about provenance says nothing about provenance.
+              PV1.2.2  IT IS COMPUTED ON THE PROSPECTIVE PLAN, BEFORE THE WRITE, and shown
+                       in the CONFIRM — last, after the facts about the slot. Rule CH1.2:
+                       a confirmation is evaluated against the world after the tap, and
+                       this one is literally a statement about that world.
+              PV1.2.3  ONE INTERPOLATION, DERIVED WITHOUT JUDGEMENT. The word names the
+                       NON-POWER kind in the collision:
+                         promoted k is "hyp"   -> "hypertrophy"
+                         promoted k is "speed" -> "speed"
+                         promoted k is "power" -> "hypertrophy" if the target day holds a
+                                                  hyp slot, else "speed"
+              PV1.2.4  NO STANDING LINE IS ADDED ANYWHERE. The standing statement of this
+                       fact already ships: PLACEMENT_LINES on the Plans screen, which
+                       begins rendering by itself the moment prescription is true and
+                       placement is false. One fact, two surfaces, both already designed.
+              PV1.2.5  IT IS NOT A WARNING AND IT MAY NOT REFUSE. No danger styling, no
+                       second tap, no "are you sure". It is a consequence, stated once.
+Output copy:  {Day} would hold power and {hypertrophy|speed} work together. Each exercise
+              keeps its own rule and rest. The six-week check will treat this plan as
+              yours, not PHAT.
+Not enough data: not applicable. Both documents exist at the moment of the tap or there is
+              no tap. If either cannot be computed, render NOTHING — never a hedge.
+```
+
+**It is a reuse, and that is deliberate.** This is `MOVE_WARN.Q1` (`index.html:4864`), minted by me for
+WO-007's re-split, with exactly one clause dropped: `Put the power sets first.` **It is dropped because
+AD1.6 has already done it** — a promoted slot lands at the end of the day, behind every power set, so the
+instruction would be correcting something he did not do. `[Certain]` on dropping it, `[Opinion]` on the
+rest of the wording, which is already shipping and already read by him once.
+
+**What this means for his actual device, stated plainly because it changes the order's priority.** His
+active plan is the 5-day template or a copy of it. Either way `derivedFrom` is `"ppl5"`, which is not
+`"phat"`, so `phatProvenanceReport` returns `phat: false` **today, before any promote** — ST1 and D1
+already speak the generic copy on every session he has logged. **PV1.2 cannot fire on his plan, and
+B-168 cannot either.** It becomes reachable the day he switches to PHAT or to a copy of PHAT, which he
+may well do, which is why the clause is ruled rather than waived.
+
+**Consequence for QA, and it is a correction to WO-023 C8:** C8 must be run on **PHAT or a PHAT copy**,
+not on his export. Run on his export it will record "no change" and pass while testing nothing.
+
+---
+
+## 25.3 WO-023's five answers
+
+### 25.3.1 (1) Where the prescription comes from — three sources, and which is which
+
+**The PM's recommendation is confirmed. I decline to overrule B-57 and I am not going to be talked into
+it later either.** `[Certain]`. §22.3 already ruled that a guessed prescription *"becomes a confident
+recommendation next week… the app writing a programme and then grading him against it"*, and a default
+offered inside a sheet he taps through with chalky hands is a guess with a dialog around it.
+
+The order's §3 table is right about six fields and **wrong about one**, and the wrong one would have
+refused in production:
+
+| Field | Source | Ruling |
+|---|---|---|
+| `n`, `mv` | the entry | **Written.** `[Certain]` |
+| `lift` | **minted fresh** | **Written, minted, never joined.** `[Certain]` — see below |
+| `implement` | `PHAT.libraryImplementOf(index, mv)` | **Derived and SHOWN, not asked — except where I3 refuses.** See below. `[Certain]` |
+| `s`, `lo`, `hi` | **him** | **Asked. Empty fields. No pre-fill, no derived hint line.** `[Certain]` |
+| `k` | **him** | **Asked. No pre-selection.** K3.3 unchanged, K3.5 below. `[Certain]` |
+| `cut` | **nothing, ever** | **Never written, and `reintroOrder` is never touched.** `[Certain]` — see below |
+| `keyLifts` | **nothing, ever** | **A promoted slot is never nominated a key lift.** `[Certain]` — see below |
+| `cue`, `fig` | nothing | Absent, a supported state. B-153's family, not reopened |
+
+**`implement` — the correction.** WO-023 §3 marks it `[Certain]` derivable. It is derivable for 677 of
+876 library rows and **I3 refuses 199 of them** (§22.1's I3.1a, a number I put in this document precisely
+so it would be load-bearing). On a refused row `libraryImplementOf` yields nothing, and
+`addExercise`'s `PLAN_IMPLEMENTS.indexOf(spec.implement) < 0` predicate **refuses the whole promote** —
+so a kettlebell swing he added, logged and wants to keep would hit a dead control with no stated reason.
+
+```
+Ruling. The promote is an I3 path (1) write — the add-exercise form — fed by path (4)'s
+read-time derivation:
+  I3 derives a value   -> the form SHOWS it, pre-filled, changeable, not asked. It is a fact
+                          about the apparatus and the one thing the library genuinely knows
+                          (§22.2's closing line). Pre-filling a derived FACT is not the same
+                          act as pre-filling an observed DOSE, and the difference is that a
+                          fact has a source that is not his own fatigue.
+  I3 refuses           -> the form ASKS, with WO-006 B2's existing implement control and
+                          WO-006 B2's existing refusal. No new string, no silence, and no
+                          promote that dies without saying why.
+```
+
+**`lift` — minted fresh, never joined to an existing slot's `lift`.** `[Certain]`. If the day's plan
+already holds the same movement at another prescription, joining them puts two prescriptions' series on
+one Trend line, which is the B-46 collapse and is the whole point of the `d1h` / `d5i` pair.
+
+**`cut` — never written, and this is not just "absent is the honest default".** `[Certain]`, and it is a
+data constraint the order does not state. `cut:1` means *drop for weeks 1–4, reintroduce one per session
+from week 5*. A slot created in week 9 has no week 1 to have been dropped from, so the tier is
+meaningless on it. Worse: V1's stored counter is **an index into the day's `reintroOrder` list**
+(`logic.js:3746`–`3754`), so appending to that list silently changes what the existing counter *means* and
+the app would offer to "reintroduce" an exercise it never cut. **The promote writes no `cut` and does not
+touch `reintroOrder`. Ever.**
+
+**`keyLifts` — never.** `[Certain]`. ST1's and D1's subjects are declared, and a slot with one session of
+history nominated as a stall subject is a six-week verdict on no evidence.
+
+### 25.3.2 (2) `s` — an observation is not a prescription
+
+**One sentence, as asked: an observation is not a prescription, and the number of sets he got through at
+the end of a session is the weakest observation in the log.** `[Certain]`.
+
+**And the refusal does not rest on B-116, which matters because B-116 may be answered tomorrow.** Two
+independent harms, both arithmetic rather than opinion:
+
+- **A too-high `s` switches the verdict off, silently.** The verdict gate is `completedSets >= ex.s`
+  against the prescription (B-24, B-50, WO-004 C-11). Write `s:5` off a five-set ramp and a correct
+  three-set effort next week produces **no verdict at all** — not wrong advice, *no* advice, with no
+  sentence explaining why. That is the worst failure shape this app has, because there is nothing on
+  screen to disagree with.
+- **A too-low `s` makes X1 fire every week.** Write `s:2` because the gym closed, and every honest
+  three-set session afterwards carries `1 set past the prescription. Counted in today's volume, not in
+  the verdict.`
+
+**So: no pre-fill for `s`, `lo` or `hi`, and no derived hint line beside the fields either.** `[Certain]`
+on `s` for the reasons above. On `lo`/`hi` the binding reason is B-116, stated in 25.5 as §7 requires.
+**And no "Today: 3 sets, 12–15 reps" line**, which I drafted and struck: the sets he logged are already
+rendered in the same Summary block, three inches above the form. Restating them next to an empty field
+turns a fact into a suggestion for no information gained.
+
+### 25.3.3 (3) `k` — asked, and the day does not constrain it
+
+```
+Rule: K3.5 — `k` on a movement promoted out of a session (a clause of K3; K3.1–K3.4 unchanged)
+Applies to:   WO-023's promote, all five shipped plans and every user plan.
+Inputs:       him. NEVER the library, NEVER the day, NEVER the reps he just logged,
+              NEVER `mechanic`, `force` or `level`.
+Logic:        K3.5.1  IT IS ASKED AND REFUSED UNTIL ANSWERED. K3.3's contract (WO-006 B2),
+                      reused verbatim. No option is pre-selected: a pre-selected radio is a
+                      default, and B-57 is about defaults, not about dialogs.
+              K3.5.2  THE DAY DOES NOT CONSTRAIN IT. The picker offers power, hyp and speed
+                      on every day of every plan. Three reasons, in order of weight:
+                      (i) K3.1 — no field derives `k`, and a day's existing kinds are no
+                      more a derivation than `mechanic` is; (ii) restricting the options IS
+                      the app choosing the protocol, which is B-57 wearing a dropdown;
+                      (iii) a mixed-role day is a legitimate plan shape — PPL3 has three of
+                      them, written in §23.5 of this document.
+              K3.5.3  THE CONSEQUENCE OF THE CHOICE IS STATED BY `KIND_LINE`, unchanged.
+                      That is the Type line WO-006 B2 and Rule K2 already ship.
+              K3.5.4  THE PROVENANCE CONSEQUENCE IS NOT IN THE TYPE LINE. It is PV1.2's
+                      sentence, in the confirm, under PV1.2.1's gate. A Type line describes
+                      the OPTION; PV1.2 describes the PLAN. Putting a plan-level fact on an
+                      option row makes it look like a property of `hyp`, which it is not.
+              K3.5.5  RULE K2 FIRES NORMALLY. It reads (k, lo, hi), all three of which are
+                      being typed here for the first time, so unlike a swap (K3.4) there IS
+                      a form and the warn-once range check applies as written.
+Output copy:  none of its own. KIND_LINE and PV1.2 carry everything.
+Not enough data: `k` unanswered IS the not-enough-data state and its answer is a refusal,
+              not a guess. WO-006 B2's existing refusal names the empty field.
+```
+
+**Worked examples.**
+
+1. He adds a face pull at the end of **Pull** on the 5-day template, logs `25 × 15, 25 × 15, 25 × 14`,
+   promotes it, types `3`, `12`, `15` and picks `hyp`. `p2` already holds six `hyp` slots. Provenance was
+   already false (`derivedFrom: "ppl5"`), so PV1.2's gate is `false → false`: **no sentence**. The slot
+   lands as `p2g`, last on Pull. `[Certain]`
+2. **The boundary PV1.2 exists for.** Same movement, but he has switched to PHAT, WO-022 has made him
+   `PHAT — my version`, and the day is `d1` *Upper power* — eight `power` slots. He picks `hyp`. Gate is
+   `true → false`, so the confirm's last line reads
+   `Upper power would hold power and hypertrophy work together. Each exercise keeps its own rule and rest. The six-week check will treat this plan as yours, not PHAT.`
+   He taps through. Next time ST1 fires it speaks the one-sentence generic version, and the Plans screen
+   starts carrying `PLACEMENT_LINES` under *What PHAT — my version does not declare*. Both are correct.
+3. **The same tap, `power` chosen instead.** `d1` stays all-power, `placement` holds, `phat` stays true,
+   **no sentence renders**, and ST1 keeps the brief's three lines. This is the case that proves the gate
+   is on the truth condition and not on the act: the identical control, the identical day, one different
+   answer, and the app says one less thing because there is one less thing that is true.
+4. **Failing case — what a day-constrained picker would do.** `d1` offers `power` only. He accepts it on a
+   3 × 15 face pull. R1 now gives it 120 s ready / 180 s cap, and P1 tells him `Top of range on all 3
+   sets. Go to 2.5 kg next session.` on a rope he is pulling to his forehead. **The flag survived and the
+   coaching is wrong**, which is the trade K3.5.2 refuses. `[Certain]`
+
+### 25.3.4 (4) Position in the day, and the D8 refusal
+
+```
+Rule: AD1.6 — promoting an added movement into the plan (a clause of AD1; AD1.1–AD1.5 unchanged)
+Applies to:   WO-023's offer, Summary only, before the save, for an added entry with at
+              least one Z1-completed set. Every role.
+Inputs:       the draft entry (n, mv, sets), the editable target plan (WO-022), the draft's
+              dayId, and the spec he typed.
+Logic:        AD1.6.1  IT LANDS AT THE END OF THE DAY. `addExercise`'s existing push is
+                       correct and is not changed. End-of-day holds even when the draft put
+                       the card mid-session via `afterExId`: a plan is a prescription, not a
+                       transcript of one session, and added work is additional volume that
+                       must sit behind the work it would otherwise compromise.
+              AD1.6.2  THE "NEVER AHEAD OF POWER OR SPEED" CONSTRAINT IS SATISFIED BY
+                       AD1.6.1 AND NEEDS NO CHECK. All five shipped plans and all four
+                       templates lead every day with their heaviest or fastest work, so the
+                       end of a day is behind all of it. If a future plan does not, this
+                       clause is the one to revisit — stated so the dependency is visible.
+              AD1.6.3  THE SLOT CARRIES THE DRAFT ENTRY'S OWN ID (WO-023 §4). Approved on
+                       coaching grounds, not only mechanical ones: tonight's sets ARE that
+                       slot's own history — his work, that movement, that session — so a
+                       disclosed cross-slot fallback under MV1.2 would be the app hedging
+                       about a fact it holds directly.
+              AD1.6.4  NOTHING ABOUT TONIGHT IS RE-JUDGED. No `rx`, no `sw`, no verdict, no
+                       rest target, no Trend line for this session. AD1.2 and AD1.5 govern
+                       the entry until it is saved. WO-023 C4 is the right assertion.
+              AD1.6.5  THE DAY IS NEVER SUBSTITUTED AND NEVER CREATED. If the draft's
+                       `dayId` does not resolve in the editable plan, the offer does not
+                       render; if a race lets the tap through, it REFUSES and writes zero
+                       bytes. Promoting into "the first day", "today's weekday" or a new
+                       day would be the app choosing a training day for him.
+              AD1.6.6  THE SAME MOVEMENT TWICE IN ONE DAY WARNS, IT DOES NOT REFUSE. Two
+                       rep ranges on one movement in one day is a real technique and PHAT
+                       ships it across days (d1h / d5i). Reuse MOVE_WARN.Q4 verbatim.
+Output copy:  D8 refusal (NEW):
+                That day is not in your plan any more, so there is nowhere to keep this.
+                Today's sets still save.
+              duplicate movement (REUSED, MOVE_WARN.Q4, index.html:4866):
+                {Day} already holds {name} at {target}. This puts the same movement there
+                twice. Keep one unless you mean both.
+Not enough data: an added entry with zero completed sets gets NO OFFER and no explanation
+              of its absence. There is nothing to write a prescription about and a greyed
+              control is a question he has to answer by guessing.
+```
+
+**On the D8 literal.** Two clauses and both are load-bearing: the first says why the control cannot do
+what it says, the second says the thing he actually cares about at `Finish session`. `[Opinion]` on the
+wording, **`[Certain]` on the second clause being present** — any refusal reachable from the road to
+`Save session` states that the session is safe, or it reads as a failed save. It deliberately does **not**
+route him to the Plan Editor: the day is gone, so there is nothing there to do, and §22.7's
+route-him-elsewhere line is the behaviour he has just told us is not good enough.
+
+**One mechanical note for the backend, not a ruling.** `docs/decisions.md:1651` already refuses switching
+the active plan while a draft is held, so the common route into D8 — he changes plans mid-session — is
+closed upstream. The reachable routes are a deleted day and a draft resumed across a plan edit. The clause
+stands regardless; a refusal that can only fire rarely still has to be right.
+
+### 25.3.5 (5) AD1's last clause stands
+
+**`A verdict needs it in your plan.` stays, unchanged, on both surfaces, and must not become conditional
+on whether the control is beside it.** `[Certain]`.
+
+Three reasons, in order of weight:
+
+1. **The card outlives the control.** The offer renders on Summary, before the save, for an entry with a
+   completed set. The sentence renders on the **session card** from the first set, and on Summary after
+   the save, and tomorrow on a restored draft. In most of the states it is read there is no control on
+   the screen at all, and in those states it is the only statement of the condition.
+2. **A condition above the control that satisfies it is the control's reason, not a duplicate of it.**
+   §22.10.1 amended this clause precisely so it states a *condition* and not an *instruction*. A
+   condition and its remedy reading in sequence is how the rest of this app already works — C7a's shape
+   names what is missing and what switches it on, and here the thing that switches it on finally exists
+   as a tap. Strip the sentence and the control becomes a button with no stated purpose; keep it and the
+   pair reads as one thought.
+3. **Conditioning it on the control's presence is the rejected option from §22.10.1 one layer out.** A
+   literal whose truth depends on which surface or which state renders it is a literal that will
+   eventually be wrong on the same card. `[Certain]`.
+
+**And nothing is added.** I considered a fourth clause pointing at the offer (*"Keep it below."*) and
+reject it: it is a navigation instruction inside a verdict slot, it is false on the session card, and
+§22.9(b)'s refusal of new mid-session sentences stands.
+
+---
+
+## 25.4 Found while in here — the promote has a second B-116 route, and the orders do not name it
+
+**Tonight's unprescribed sets become the promoted slot's H1 comparison baseline, and X1's `C` on a
+five-set ramp is the warm-ups.** `[Certain]` on reachability, `[Likely]` P2.
+
+The chain, traced rather than supposed:
+
+1. AD1.6.3 carries the entry's id, so from next session `lastFor` finds tonight's entry as the slot's own
+   prior. That is the order's design goal and C5 asserts it.
+2. The entry carries **no `rx`**, and Rule PE1 reads a missing `rx` as *the plan's current prescription*
+   (`logic.js:3201`). So PE1 sees no epoch boundary between tonight and the prescription written after
+   tonight, and H1 case 3c — the clause that exists to stop a comparison measuring a plan edit — **does
+   not fire**.
+3. Next session H1 case 4d compares `C` to `Cprev`, and X1 fixes `C` as *the first `ex.s` completed sets
+   in row order*. On his `d1a` five-set ramp (20 → 70 kg, 12 Sep) the first three completed sets are
+   **the warm-ups**.
+
+Consequences, by direction, and the direction decides the severity:
+
+- **Ascending ramp (the likely shape):** `Cprev` is light, next session's tonnage is far higher, and H1
+  prints `Volume up 240% — 1,840 kg against 540 kg.` A false number in a descriptive sentence. **No load
+  instruction** — H1.4d's "up" branch issues none, and H1's load increases come from range compliance,
+  which reads this session only.
+- **The narrow bad case:** `s` typed small enough that `Cprev` captures a heavy top set. Then tonnage
+  reads down and H1.4d prints `Volume down 18%. Add a rep or 2.5 kg next time.` — **a load instruction
+  computed against a session that had no prescription.**
+- **`s` larger than tonight's completed count:** `Cprev.length < s` → H1.3b, `Last logged session was
+  short. Not comparable. This becomes your baseline.` **Correct and safe by accident**, and worth pinning
+  so it stays that way.
+
+**Ruling: accept, do not block, and do not add a mechanism.** `[Likely]`, and the proportionality is the
+argument. Writing an `rx` onto tonight's entry would store a prescription he never had (worse than the
+problem). Excluding tonight's entry from `lastFor` would cost the ghost and the seed — the two things on
+that card he will actually use — to protect one descriptive percentage. And the contaminant is **not new**:
+his 12 Sep ramp is already read as prescribed work by every engine, twenty-six days on. The promote
+creates a new *instance* of a live defect, not a new class of one.
+
+**What I require instead, and it is one QA assertion, not a string.** WO-023 W5 gains a criterion:
+
+> **C13 · The ramp case is observed, not discovered.** Promote a movement whose session holds a five-set
+> ascending ramp, with `s` typed as 3. Record H1's exact string on the next session's card. Then repeat
+> with `s` typed as 5 and record H1.3b's string. Neither is asserted correct — both are **recorded**, so
+> that the day B-116 is answered the fix has a before-picture. **If H1's tonnage branch ever gains a load
+> instruction on the "up" side, this is reclassified P1 and the `lastFor` exclusion is the fix.**
+
+---
+
+## 25.5 B-116, seventh asking — the clause it blocks, and the clause it does not
+
+**Stated in writing, as WO-023 §7 requires.**
+
+- **Blocked on B-116: any pre-fill of `lo` and `hi` from the reps he logged.** If warm-up sets are
+  *logged as work*, the derivation `lo = min logged rep, hi = max logged rep` on a five-set ramp yields
+  `3–12`, and he taps through it with chalky hands into a **permanent** prescription feeding P1/H1, R1's
+  rest row, V1's tier and ST1. **No derivation of `lo` or `hi` may be specified, built or shipped until
+  he answers.** If he answers *marked* or *omitted*, the derivation becomes specifiable and I will write
+  it then — one section, one paragraph, with its clamps.
+- **NOT blocked on B-116, and this is the part the order does not say: `s` is refused on its own
+  merits.** 25.3.2's two harms are arithmetic and survive any answer he gives. **An answer to B-116 does
+  not unblock `s`.** A later pass that reads §7 and takes "the pre-fill was blocked on B-116" as licence
+  to pre-fill all three the moment he replies would be wrong, and this sentence exists to stop it.
+- **Also not blocked, and it ships either way: everything in 25.3.** The order is correct that it can
+  ship without the pre-fill. It can, and it should — he types four numbers once per promoted movement,
+  on Summary, sitting down, and gets a prescription nobody guessed.
+
+**The seventh asking, in his terms rather than ours.** *When you log a warm-up ramp — the 20, 40, 55, 70
+on bench — are those rows in the app as sets, or do you only log the working sets?* One sentence. It now
+decides a field in a form he can see, and it is the last thing standing between him and a pre-filled one.
+
+---
+
+## 25.6 What changes, by work item
+
+| Item | What this section gives it |
+|---|---|
+| WO-022 W1 | **Closed.** (a) confirmed with two additions (no `planId` filter anywhere; `state.reintro` is dayId-keyed). (b) table in 25.2.1, acceptance in 25.2.2, clause **PV1.2** with its literal. (c) the name carries no coaching claim — sign off, no change |
+| WO-022 W2 (ux) | **One sentence to place: PV1.2's, last in the confirm, under its gate.** Plus the `sessionsUnderPlan` display note in 25.1. Nothing else of mine enters §22.21 |
+| WO-022 W3 (backend) | `phatProvenance(copy) === phatProvenance(source)` for all five shipped plans is the right assertion and my reading is that it passes. **Add: `state.reintro` and `lastReintroDate` are untouched by `editableTarget`** — they are not its to write, and the criterion makes that visible |
+| WO-023 W1 | **Closed.** Five answers, clauses **K3.5** and **AD1.6**, three strings (one new, two reuses) |
+| WO-023 W2 (ux) | The form is WO-006 B2's, reused: `s`/`lo`/`hi` empty, `k` unselected, `implement` pre-filled when I3 derives and asked when it refuses, `KIND_LINE` as the Type line, K2's range warning live. The confirm carries the slot facts then PV1.2's sentence last. Two literals from me: the D8 refusal (NEW) and MOVE_WARN.Q4 (REUSED). **No derived "today you did…" line** |
+| WO-023 W3 (backend) | `promoteDraftEntry` writes no `cut`, never touches `reintroOrder`, never adds to `keyLifts`, mints a fresh `lift`, pushes to the end of `day.ex`, and refuses an unresolvable `dayId`. `implement` comes from `libraryImplementOf` when it answers and from `spec` when it does not |
+| WO-023 W5 (qa) | **C8 is corrected: run it on PHAT or a PHAT copy, not on his export** — on his plan it tests nothing. **New C13** in 25.4. Pin H1.3b's string for the `s`-too-large case |
+| B-168 | **Not a defect. Ruled acceptable, disclosed under PV1.2's gate, and unreachable on his current plan.** Recommend the PM reclassify it from P1 to a recorded consequence |
+
+---
+
+## 25.7 Needs from Chady, and one for the PM
+
+1. **B-116, seventh asking.** 25.5. One sentence. It is the only thing gating a clause.
+2. **Nothing else.** `k`, the position, `cut`, `keyLifts`, the name and the provenance sentence are all
+   agent calls and all of them are made above.
+
+**For the PM, before W3 of either order:** WO-022 §6 states that every plan he owns is `readOnly`, and
+§22.10 of this document states that nine sessions are logged *"on a copy of the 5-day template"* — and a
+copy is editable by construction. **Those cannot both be true.** If he is already on a copy, WO-022 is
+not a prerequisite for WO-023 and the two orders can ship independently; if he is on the shipped `ppl5`,
+WO-022 blocks as written. WO-020's export answers it in one line and it changes the sequencing, not the
+rulings.
+
+---
+
+## 25.8 Verdict
+
+**WO-022 W1 — sign off, with one clause added.** (a) confirmed; (c) confirmed with no change. (b) the
+PV1(b) downgrade is **accepted and disclosed under PV1.2's truth-condition gate**, and the order's
+valuation of it is corrected: the generic sentence is the *more honest* sentence on an edited plan, the
+measurement never moves, and mixing roles inside a day is a plan shape I authored myself in §23.5.
+
+**WO-023 W1 — sign off with changes, five answers and one correction the order needed.** The prescription
+is collected, never guessed (B-57 not overruled, and I will not overrule it later). `s` is an observation
+and an observation is not a prescription — refused on its own merits, not only on B-116's. `k` is asked
+and the day does not constrain it. End of the day, and the D8 case refuses rather than substitutes. AD1's
+last clause stands. **The correction: `implement` is derivable for 677 of 876 rows and I3 refuses 199, so
+the promote must ask on a refusal or it dies as a dead control** — which is the same failure WO-022 exists
+to fix, arriving by a new door.
+
+**Three strings, and only one of them is new.** PV1.2's sentence is `MOVE_WARN.Q1` minus one clause;
+the duplicate-movement warning is `MOVE_WARN.Q4` verbatim; the D8 refusal is new and is two clauses, the
+second of which says his sets are safe.
+
+**And the thing that is not a product ruling.** This is the second ask in a row that came out of a
+session he actually trained, and both arrived within hours of the feature they were about. Five sessions
+in eight days. Whatever else is true of this repo, the training is no longer the bottleneck, and the
+right response to that is to keep the surfaces small and the questions few — which is why this section
+mints no rule id, adds one sentence to one confirm, and leaves four fields empty for him to fill.
