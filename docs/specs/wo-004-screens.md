@@ -4948,6 +4948,11 @@ kind of clause that is wrong-by-default if nobody names it — which is why it i
 | 64 | sheet, button | confirm, `extra` mode, primary and only | `Add it` **NEW 2026-10-08.** Not `Add as well` — *as well as what?* has no referent with no slot — and not `Add to today`, which is three words for the thing #63 just said in six. `Add it` is already this app's word for *put this exercise in my session* on Rule V1's offer block (`id="v1-add"`), and one word for one action across two screens is the vocabulary rule §20.1 set. Full × 52. **No `Replace` and no `Add as well` in this mode** |
 | 65 | session last card + summary, button | accessible name on #60 | `Add an exercise to today's session` **NEW 2026-10-08.** Visible text is a prefix (WCAG 2.5.3, as #2). It carries `today's session` because a screen reader user reaches this control with no sheet open and no body text under it, and `Add an exercise` alone is the one reading of this control that could mean the plan |
 
+**This register ends at #65. #66–#92 are numbered here but written in their own sections, and are not
+duplicated into this table — the section is authoritative and the literals there are final and
+paste-ready.** §22.21.7 owns **#66–#72a** (copy-on-write, specified and unbuilt — see §22.21's status
+marker). §22.22.11 owns **#73–#92** (the added movement's promote). Added 2026-10-08.
+
 Substitutions beyond §0.8: `{original}` the movement the slot carried before the swap, escaped ·
 `{new}` the movement picked, escaped · `{query}` the typed query, escaped · `{Equipment}` the library's
 `eq` word, sentence-cased. **Every one of these goes through `esc()`** — library names are upstream data
@@ -5709,6 +5714,12 @@ which case it is a defect and escalates. An engineer does not need to ask.
 
 ## 22.21 Copy-on-write — `Put {X} in the plan` on a read-only plan (WO-022 W2, 2026-10-08)
 
+> **STATUS — SPECIFIED, NOT BUILT. Added 2026-10-08.** This section and the §22.7 read-only amendment
+> are design ahead of code: WO-022 W4 was cut when Chady said *"please don't change anything already
+> implemented, it's working as expected."* Nothing below ships today — `index.html:4014` still renders
+> **#47** and the trigger still routes him to Plans by hand. Read every sentence here as a proposal on
+> the shelf, never as behaviour on the phone, and do not cite it as shipped precedent.
+
 **This section turns a refusal into the control it was refusing to be.** §22.16 #1 has recorded since
 2026-09-28 that `Put {new} in the plan` is unreachable for Chady: every plan on his device is
 `readOnly: true` — the shipped PHAT plan plus WO-018 T3's four — so the branch at `index.html:4014` has
@@ -6118,7 +6129,7 @@ of five things, decided in this order:
 | 1 | Not Summary, or after `Save session`, or a **swapped** entry, or a plan slot, or `e.gone` (D5) | **Nothing.** Never a session card, never a swapped block — that is §22.7's control and two controls in one block is a defect |
 | 2 | Added entry, **zero completed sets** (including a notes-only entry) | **Nothing, and no explanation of its absence** (coach §3.6). There is nothing to write a prescription about and a greyed control is a question he answers by guessing |
 | 3 | Added entry, ≥ 1 completed set, but the draft's `dayId` does **not** resolve in the plan the promote would write | **#90**, the D8 sentence, as plain `.sumnote` text — no enclosure, no red. §22.22.5 states why that treatment and not a refusal box |
-| 4 | Added entry, ≥ 1 completed set, day resolves, but `editableTarget` refuses, or the plans store is demo (`S.plansMeta.demo === true`), or `S.blockWrites[PLANS]` | **#89** (or **#91** for demo), as plain `.sumnote` text |
+| 4 | Added entry, ≥ 1 completed set, day resolves, but `editableTarget` refuses, or the plans store is demo (`S.plansMeta.demo === true`), or `S.blockWrites[PLANS]` | **#89** (or **#91** for demo, or **#92** for a broken stored active plan), as plain `.sumnote` text |
 | 5 | Added entry, ≥ 1 completed set, day resolves, a target plan exists | **The trigger, #73.** `.ghostbtn.sumperm`, full × 48 |
 | — | The entry has **already been promoted this session** | **#86**, the receipt, as plain `.sumnote` text. Replaces the trigger; see §22.22.15 for the fact this reads |
 
@@ -6131,6 +6142,18 @@ literal does not move.**
 
 **Row 4's demo case names its cause**, which is the gap §22.21.6 recorded and declined to fix. It costs no
 new string: `DEMO_STORE` is already on disk and already says the right thing.
+
+**Row 4 splits one more way — ADDED 2026-10-08, for coach §25.9.2.** `editableTarget` has two unlike
+reasons to refuse and they do not deserve one sentence. When `activePlanId` names a **stored** plan that
+fails `validatePlan`, the refusal is not *the store will not take a write* — it is *the plan he lifts on
+is unreadable*, and the coach refuses to repoint him at a PHAT copy because PHAT's `keyLifts`,
+`speedSource` and `reintroOrder` would then start speaking about slots he never programmed. That state
+renders **#92** in this slot, plain `.sumnote`, same treatment and same reasoning as #89–#91 (§22.22.5):
+it is a state he did not attempt, not a refusal of an act. Every other `editableTarget` refusal keeps
+**#89**. On the tap race #92 renders in `#dr-sheet-err` as `.sheet .rule`, exactly as #90 does, and
+`sheetErr()` announces it (§22.22.16 (2)). The line is read-only prose — it offers no control, no retry
+and no self-repair — so nothing else in this section moves and the five-condition order above is
+unchanged.
 
 ### 22.22.4 The form — WO-006 B2's, reused, with four fields dropped
 
@@ -6362,7 +6385,8 @@ a navigation instruction inside a receipt is the clause §25.3.5 rejected.
 ### 22.22.11 Copy — the literals
 
 Numbering continues §22.12's register. **§22.21.7 claims #66–#72a**, so this section starts at **#73**.
-§22.12 is not this lane's to edit; the PM owes it the pointer for both.
+§22.12 is not this lane's to edit; the PM owes it the pointer for both. **AMENDED 2026-10-08 — the
+pointer is in (§22.12, after the table), and **#92** was added to this family for coach §25.9.2.**
 
 | # | Where | When | String |
 |---|---|---|---|
@@ -6385,6 +6409,7 @@ Numbering continues §22.12's register. **§22.21.7 claims #66–#72a**, so this
 | 89 | `#dr-sheet-err` as `.sheet .rule`, **or** the control's slot as `.sumnote` on a preview refusal | any write or preview failure | `Could not keep it. Nothing changed. Today's sets still save.` **NEW** |
 | 90 | the control's slot as `.sumnote`, **or** `#dr-sheet-err` on the tap race | the draft's day is not in the plan | `That day is not in your plan any more, so there is nowhere to keep this. Today's sets still save.` — **the coach's, §25.3.4, REUSED verbatim, both clauses.** It deliberately does not route him to the Plan Editor: the day is gone, so there is nothing there to do |
 | 91 | the control's slot as `.sumnote` | `S.plansMeta.demo === true` | `Sample data is loaded. Leave it before saving a plan. Today's sets still save.` — **`DEMO_STORE` REUSED verbatim** (`index.html:4858`) as the first two sentences, plus the session clause. A composition, not an edit of the literal |
+| 92 | the control's slot as `.sumnote`, **or** `#dr-sheet-err` on the tap race | `activePlanId` names a **stored** plan that fails `validatePlan`, so `editableTarget` refuses (coach §25.9.2) | `The plan you are on will not load, so there is nowhere to keep this. Export from Settings, then open diag.html. Today's sets still save.` **NEW 2026-10-08.** First clause takes #90's grammar exactly — same slot, same class of fact, so the family reads as one voice. **It offers no repair**: the coach is `[Certain]` that repointing him at a PHAT copy would hand ST1, D1, SP1 and V1 a `keyLifts`, `speedSource` and `reintroOrder` he never programmed, so this sentence names the two things that preserve his data and diagnose it — Export, then `diag.html` — and nothing the app would attempt on its own. **`diag.html` is written as the file name, lower case, because that is what he types.** Ends on the session clause per §22.22.11's rule |
 
 **Reused from WO-006 B2, verbatim, and not numbered here** because §22.12 does not own them: the field
 labels `Sets` · `Reps from` · `Reps to` · `Type` · `Implement`; `KIND_LBL` and `IMPL_LBL`'s option labels;
@@ -6400,7 +6425,7 @@ read-only plan's `name`.
 **Voice check.** No exclamation marks, no emoji, no congratulation for keeping an exercise. Second person
 only where he acts or stands. **Every refusal reachable from the road to `Save session` ends on
 `Today's sets still save.`** — the coach is `[Certain]` that clause must be present, and this section
-applies it to all four refusals and not only to D8, because a refusal on this screen that does not say it
+applies it to all five refusals (#88 · #89 · #90 · #91 · #92) and not only to D8, because a refusal on this screen that does not say it
 reads as a failed save. No string claims a set is on a chart. No string tells him where to navigate.
 
 ### 22.22.12 Sizes — measured, at 393 px and at 400 px
@@ -6562,9 +6587,12 @@ see it first.
    to check a set. **Unmeasured:** whether he ever makes that navigation with the form open.
 8. **§22.12's register is owed #66–#72a by §22.21.7 and #73–#91 by this section.** Not this lane's table to
    edit; both sets are final and ready to paste. The PM owes the pointer.
+   **CLOSED 2026-10-08 — the pointer is in §22.12, after the table; the range from this section is
+   #73–#92.**
 9. **§22.21's status marker is still owed** (the backlog records it as `ux-designer`'s). I did not write it:
    this lane is forbidden to touch §22.21 by one word. **This section names §22.21 as parked, specified and
    unbuilt, in its own opening, which is as close as it may come.**
+   **CLOSED 2026-10-08 — the marker is the blockquote at the top of §22.21.**
 
 ### 22.22.17 B-172 — `0 sessions logged`, and my call
 
